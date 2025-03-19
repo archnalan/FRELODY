@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34607.119
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SongsWithChords", "SongsWithChords\SongsWithChords.csproj", "{62C513B5-3F1D-4E6C-8FD7-DC976DA4533D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FRELODYCOMM", "SongsWithChords\FRELODYCOMM.csproj", "{62C513B5-3F1D-4E6C-8FD7-DC976DA4533D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SongalUI", "SongalUI\SongalUI.csproj", "{15F98635-045E-4036-86F9-EF6BBD2DF72F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FRELODYLIB", "FRELODYLIB\FRELODYLIB.csproj", "{1591C26C-517B-4EA5-ADEA-E2084B8F98A1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +17,10 @@ Global
 		{62C513B5-3F1D-4E6C-8FD7-DC976DA4533D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{62C513B5-3F1D-4E6C-8FD7-DC976DA4533D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{62C513B5-3F1D-4E6C-8FD7-DC976DA4533D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{15F98635-045E-4036-86F9-EF6BBD2DF72F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{15F98635-045E-4036-86F9-EF6BBD2DF72F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{15F98635-045E-4036-86F9-EF6BBD2DF72F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{15F98635-045E-4036-86F9-EF6BBD2DF72F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1591C26C-517B-4EA5-ADEA-E2084B8F98A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1591C26C-517B-4EA5-ADEA-E2084B8F98A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1591C26C-517B-4EA5-ADEA-E2084B8F98A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1591C26C-517B-4EA5-ADEA-E2084B8F98A1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

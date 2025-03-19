@@ -1,4 +1,6 @@
-﻿using SongsWithChords.Dtos.UserDtos;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using SongsWithChords.Dtos.UserDtos;
 using System.Security.Claims;
 using System.Text.Json;
 

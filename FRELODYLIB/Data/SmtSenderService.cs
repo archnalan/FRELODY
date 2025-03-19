@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Configuration;
 using SongsWithChords.Dtos.AuthDtos;
 using SongsWithChords.Models.SubModels;
 using System.Text;

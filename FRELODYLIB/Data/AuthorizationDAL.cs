@@ -1,8 +1,12 @@
 ﻿using AutoMapper;
 using Google.Apis.Auth;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.Web.CodeGeneration.DotNet;
 using Newtonsoft.Json;
@@ -17,6 +21,7 @@ using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.Extensions.Hosting;
 
 namespace SongsWithChords.Data
 {
@@ -105,13 +110,22 @@ namespace SongsWithChords.Data
 
         public async Task<ServiceResult<List<ComboBoxDto>>> GetUsersForComboBoxes()
         {
-            var result = await _context.Users.AsNoTracking().Select(x => new ComboBoxDto
+            try
             {
-                IdString = x.Id,
-                ValueText = $"{x.FirstName ?? ""} {x.LastName ?? ""}"
+                var result = await _context.Users.AsNoTracking().Select(x => new ComboBoxDto
+                {
+                    IdString = x.Id,
+                    ValueText = $"{x.FirstName ?? ""} {x.LastName ?? ""}"
 
-            }).ToListAsync();
-            return ServiceResult<List<ComboBoxDto>>.Success(result);
+                }).ToListAsync();
+                return ServiceResult<List<ComboBoxDto>>.Success(result);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error while getting users for combo boxes. {ex}", ex);
+                return ServiceResult<List<ComboBoxDto>>.Failure(new ServerErrorException("Error while getting users for combo boxes. Please try again later"));
+            }
         }
 
         //OAuth
