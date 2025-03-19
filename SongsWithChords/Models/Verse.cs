@@ -1,0 +1,23 @@
+﻿using SongsWithChords.Models.SubModels;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace SongsWithChords.Models
+{
+	public class Verse:BaseEntity
+	{
+		[Key]
+		public Guid Id { get; set; }
+
+        public Guid SongId { get; set; }
+
+		[Range(0, 24)]		
+		public int VerseNumber { get; set; }
+
+		[MaxLength(100)]
+        public string? VerseTitle { get; set; }
+
+		public virtual ICollection<LyricLine>? LyricLines { get; set; }
+	}
+
+}
