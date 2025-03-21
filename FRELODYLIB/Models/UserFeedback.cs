@@ -1,4 +1,5 @@
-﻿using SongsWithChords.Models.SubModels;
+﻿using FRELODYSHRD.ModelTypes;
+using SongsWithChords.Models.SubModels;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -23,12 +24,5 @@ namespace SongsWithChords.Models
 
         [ForeignKey(nameof(SongId))]
         public Song? Song { get; set; }
-    }
-
-    public enum FeedbackStatus 
-    {
-        Pending,
-        UnderReview,
-        Addressed
     }
 }

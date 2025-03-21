@@ -7,7 +7,11 @@ namespace SongsWithChords.Dtos
 	{
         public long Id { get; set; }
         public string ChordName { get; set; }
-		public string? ChordAudioFilePath { get; set; }
+        public int? PartNumber { get; set; } // verse or bridge number
+        public int? LineNumber { get; set; }
+        public int? ChordNumber { get; set; }
+
+        public string? ChordAudioFilePath { get; set; }
 
 		public ChordType? ChordType { get; set; }
 

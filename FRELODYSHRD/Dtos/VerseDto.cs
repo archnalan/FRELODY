@@ -1,6 +1,4 @@
-﻿using SongsWithChords.Models.SubModels;
-using SongsWithChords.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using SongsWithChords.Dtos.SubDtos;
 
@@ -18,6 +16,6 @@ namespace SongsWithChords.Dtos
         [MaxLength(100)]
         public string? VerseTitle { get; set; }
 
-        public virtual ICollection<LyricLine>? LyricLines { get; set; }
+        public virtual ICollection<LyricLineDto>? LyricLines { get; set; }
     }
 }

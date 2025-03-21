@@ -1,5 +1,4 @@
-﻿using SongsWithChords.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace SongsWithChords.Dtos
 {

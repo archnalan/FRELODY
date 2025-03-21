@@ -10,8 +10,11 @@ namespace SongsWithChords.Dtos
 		ErrorMessage = "Invalid Chord Format!")]
 		public string ChordName { get; set; }
 		public Guid LineId { get; set; }
+		public int? PartNumber { get; set; } // verse or bridge number
+        public int? LineNumber { get; set; }
+		public int? ChordNumber { get; set; }
 
-		public long? UIChordNo { get; set; }
+        public long? UIChordNo { get; set; }
 
         [Range(1, 3)]
 		public ChordDifficulty? ChordDifficulty { get; set; }

@@ -1,7 +1,6 @@
 ﻿using SongsWithChords.Areas.Admin.Interfaces;
 using SongsWithChords.Dtos;
 using SongsWithChords.Dtos.WithUploads;
-using SongsWithChords.UI_Dtos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 

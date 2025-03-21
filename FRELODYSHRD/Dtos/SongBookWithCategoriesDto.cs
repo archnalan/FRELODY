@@ -1,5 +1,4 @@
 ﻿using SongsWithChords.Dtos.SubDtos;
-using SongsWithChords.Models;
 using System.ComponentModel.DataAnnotations;
 
 namespace SongsWithChords.Dtos
@@ -43,6 +42,6 @@ namespace SongsWithChords.Dtos
 		[StringLength(50)]
 		public string? Language { get; set; }
 
-		public ICollection<Category>? Categories { get; set; }
+		public ICollection<CategoryDto>? Categories { get; set; }
 	}
 }

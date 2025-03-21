@@ -1,5 +1,4 @@
-﻿using SongsWithChords.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 
 namespace SongsWithChords.Dtos
@@ -8,10 +7,11 @@ namespace SongsWithChords.Dtos
 	{
         public Guid? Id { get; set; }
         public long LyricLineOrder { get; set; }
+        public int? PartNumber { get; set; }// verse or bridge number: chorus number can be null
         public Guid? VerseId { get; set; }
         public Guid? ChorusId { get; set; }
         public Guid? BridgeId { get; set; }
-        public ICollection<LyricSegment>? LyricSegments { get; set; }
+        public ICollection<LyricSegmentDto>? LyricSegments { get; set; }
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {

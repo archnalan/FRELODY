@@ -16,8 +16,9 @@ namespace SongsWithChords.Models
         public string Lyric { get; set; }		
 		
 		public long LyricOrder { get; set; }
+		public int LineNumber { get; set; }
 
-		[NotMapped]
+        [NotMapped]
 		[TextFileValidation(".txt", ".pdf")]
 		public IFormFile? LyricUpload { get; set; }
 

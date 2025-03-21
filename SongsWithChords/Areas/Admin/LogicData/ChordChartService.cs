@@ -4,7 +4,6 @@ using SongsWithChords.Dtos;
 using SongsWithChords.Dtos.WithUploads;
 using SongsWithChords.Models;
 using SongsWithChords.ServiceHandler;
-using SongsWithChords.UI_Dtos;
 using LanguageExt.Common;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;

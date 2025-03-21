@@ -1,11 +1,10 @@
 ﻿using SongsWithChords.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using SongsWithChords.Models.SubModels;
-using SongsWithChords.Models;
 using SongsWithChords.Dtos.SubDtos;
 using SongsWithChords.Interfaces;
 using Microsoft.AspNetCore.Http;
+using FRELODYSHRD.Dtos;
 
 namespace SongsWithChords.Dtos
 {
@@ -49,9 +48,9 @@ namespace SongsWithChords.Dtos
 
         public Guid? CategoryId { get; set; }
 
-        public virtual ICollection<Verse>? Verses { get; set; }
-        public virtual ICollection<Bridge>? Bridges { get; set; }
-        public virtual ICollection<Chorus>? Choruses { get; set; }
-        public virtual ICollection<UserFeedback>? Feedback { get; set; }        
+        public virtual ICollection<VerseDto>? Verses { get; set; }
+        public virtual ICollection<BridgeDto>? Bridges { get; set; }
+        public virtual ICollection<ChorusDto>? Choruses { get; set; }
+        public virtual ICollection<UserFeedbackDto>? Feedback { get; set; }        
     }
 }

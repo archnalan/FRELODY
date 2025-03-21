@@ -1,5 +1,4 @@
-﻿using SongsWithChords.UI_Dtos;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SongsWithChords.Data.Infrastructure;
@@ -58,48 +57,48 @@ namespace SongsWithChords.Controllers
 			return Ok(Song);
 		}
 
-		[HttpGet("chords")]
-		public async Task<IActionResult> GetSongsWithChords()
-		{
-			var Songs = await _context.Songs
-						.Include(h => h.Verses)
-						.ThenInclude(v => v.LyricLines)
-						.ThenInclude(ll => ll.LyricSegments)
-						.ThenInclude(ls => ls.Chord)
-						.ThenInclude(c => c.ChordCharts)
-						.ToListAsync();
+		//[HttpGet("chords")]
+		//public async Task<IActionResult> GetSongsWithChords()
+		//{
+		//	var Songs = await _context.Songs
+		//				.Include(h => h.Verses)
+		//				.ThenInclude(v => v.LyricLines)
+		//				.ThenInclude(ll => ll.LyricSegments)
+		//				.ThenInclude(ls => ls.Chord)
+		//				.ThenInclude(c => c.ChordCharts)
+		//				.ToListAsync();
 
-			var SongWithChords = Songs
-						.OrderBy(h => h.SongNumber)
-						.Select(h => new SongChordsUIDto
-						{
-							Title = h.Title,
-                            SongNumber = h.SongNumber,
-							Verses = h.Verses.OrderBy(v => v.VerseNumber).Select(v => new VerseUIDto
-							{
-								VerseNumber = v.VerseNumber,
-								LyricLines = v.LyricLines.OrderBy(ll => ll.LyricLineOrder).Select(ll => new LyricLineUIDto
-								{
-									LyricLineOrder = ll.LyricLineOrder,
-									LyricSegments = ll.LyricSegments.OrderBy(ls => ls.LyricOrder).Select(ls => new LyricSegmentUIDto
-									{
-										LyricOrder = ls.LyricOrder,
-										Chord = ls.Chord == null ? null : new ChordUIDto
-										{
-											Id = ls.Chord.Id,
-											ChordCharts = ls.Chord.ChordCharts.OrderBy(cc => cc.FretPosition).Select(cc => new ChordChartUIDto
-											{
-												Id = cc.Id,
-												FretPosition = cc.FretPosition
-											}).ToList()
-										}
-									}).ToList()
-								}).ToList()
-							}).ToList()
-						}).ToList();
+		//	var SongWithChords = Songs
+		//				.OrderBy(h => h.SongNumber)
+		//				.Select(h => new SongChordsUIDto
+		//				{
+		//					Title = h.Title,
+  //                          SongNumber = h.SongNumber,
+		//					Verses = h.Verses.OrderBy(v => v.VerseNumber).Select(v => new VerseUIDto
+		//					{
+		//						VerseNumber = v.VerseNumber,
+		//						LyricLines = v.LyricLines.OrderBy(ll => ll.LyricLineOrder).Select(ll => new LyricLineUIDto
+		//						{
+		//							LyricLineOrder = ll.LyricLineOrder,
+		//							LyricSegments = ll.LyricSegments.OrderBy(ls => ls.LyricOrder).Select(ls => new LyricSegmentUIDto
+		//							{
+		//								LyricOrder = ls.LyricOrder,
+		//								Chord = ls.Chord == null ? null : new ChordUIDto
+		//								{
+		//									Id = ls.Chord.Id,
+		//									ChordCharts = ls.Chord.ChordCharts.OrderBy(cc => cc.FretPosition).Select(cc => new ChordChartUIDto
+		//									{
+		//										Id = cc.Id,
+		//										FretPosition = cc.FretPosition
+		//									}).ToList()
+		//								}
+		//							}).ToList()
+		//						}).ToList()
+		//					}).ToList()
+		//				}).ToList();
 
-			return Ok(SongWithChords);
-		}
+		//	return Ok(SongWithChords);
+		//}
 
 
 	}

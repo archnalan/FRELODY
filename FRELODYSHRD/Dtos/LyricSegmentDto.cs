@@ -1,10 +1,9 @@
-﻿using SongsWithChords.Data;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using SongsWithChords.Models.SubModels;
-using SongsWithChords.Models;
 using SongsWithChords.Dtos.SubDtos;
 using Microsoft.AspNetCore.Http;
+using SongsWithChords.Data;
+using FRELODYSHRD.Dtos;
 
 namespace SongsWithChords.Dtos
 {
@@ -18,6 +17,8 @@ namespace SongsWithChords.Dtos
 
         public long LyricOrder { get; set; }
 
+        public int LineNumber { get; set; }
+
         [NotMapped]
         [TextFileValidation(".txt", ".pdf")]
         public IFormFile? LyricUpload { get; set; }
@@ -30,6 +31,6 @@ namespace SongsWithChords.Dtos
         public Guid? LyricLineId { get; set; }
 
         [ForeignKey(nameof(ChordId))]
-        public virtual Chord? Chord { get; set; }
+        public virtual ChordDto? Chord { get; set; }
     }
 }

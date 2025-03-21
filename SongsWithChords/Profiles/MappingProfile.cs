@@ -6,8 +6,6 @@ using SongsWithChords.Dtos.UserDtos;
 using SongsWithChords.Dtos.WithUploads;
 using SongsWithChords.Models;
 using SongsWithChords.Models.SubModels;
-using SongsWithChords.UI_Dtos;
-
 namespace SongsWithChords.Profiles
 {
 	public class MappingProfile:Profile
@@ -62,16 +60,7 @@ namespace SongsWithChords.Profiles
             CreateMap<ChordChart, ChartCreateDto>().ReverseMap();
             CreateMap<ChordChart, ChartEditDto>().ReverseMap();
             CreateMap<ChordChart, ChartWithUploadsDto>().ReverseMap();
-
-            ///////////////////////////////////////////////////////////////////////////////////////////
-
-            CreateMap<Song, SongChordsUIDto>().ReverseMap();
-            CreateMap<Verse, VerseUIDto>().ReverseMap();
-            CreateMap<LyricLine, LyricLineUIDto>().ReverseMap();
-            CreateMap<LyricSegment, LyricSegmentUIDto>().ReverseMap();
-            CreateMap<Chord, ChordUIDto>().ReverseMap();
-            CreateMap<ChordChart, ChordChartUIDto>().ReverseMap();
-
+            
             ///////////////////////////////////////////////////////////////////////////////////////////
 
             CreateMap<User, CreateUserResponseDto>().ReverseMap();
