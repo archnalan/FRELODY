@@ -5,17 +5,17 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
-using SongsWithChords.Data.Infrastructure;
-using SongsWithChords.Dtos.AuthDtos;
-using SongsWithChords.Dtos.UserDtos;
-using SongsWithChords.Models.SubModels;
-using SongsWithChords.ServiceHandler;
+using FRELODYAPP.Data.Infrastructure;
+using FRELODYAPP.Dtos.AuthDtos;
+using FRELODYAPP.Dtos.UserDtos;
+using FRELODYAPP.Models.SubModels;
+using FRELODYAPP.ServiceHandler;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace SongsWithChords.Data
+namespace FRELODYAPP.Data
 {
     public class TokenService : TokenServiceBase
     {

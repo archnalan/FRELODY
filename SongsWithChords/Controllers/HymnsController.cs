@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SongsWithChords.Data.Infrastructure;
+using FRELODYAPP.Data.Infrastructure;
 
-namespace SongsWithChords.Controllers
+namespace FRELODYAPP.Controllers
 {
     [Route("api/[controller]")]
 	[ApiController]
@@ -58,7 +58,7 @@ namespace SongsWithChords.Controllers
 		}
 
 		//[HttpGet("chords")]
-		//public async Task<IActionResult> GetSongsWithChords()
+		//public async Task<IActionResult> GetFRELODYAPP()
 		//{
 		//	var Songs = await _context.Songs
 		//				.Include(h => h.Verses)

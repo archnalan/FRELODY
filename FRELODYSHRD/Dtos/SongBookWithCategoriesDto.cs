@@ -1,7 +1,7 @@
-﻿using SongsWithChords.Dtos.SubDtos;
+﻿using FRELODYAPP.Dtos.SubDtos;
 using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Dtos
+namespace FRELODYAPP.Dtos
 {
 	public class SongBookWithCategoriesDto:BaseEntityDto
 	{

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Dtos.WithUploads
+namespace FRELODYAPP.Dtos.WithUploads
 {
 	public class ChartWithUploadsDto
 	{

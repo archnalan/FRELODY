@@ -1,10 +1,10 @@
-﻿using SongsWithChords.Areas.Admin.Interfaces;
-using SongsWithChords.Dtos;
-using SongsWithChords.Dtos.WithUploads;
+﻿using FRELODYAPP.Areas.Admin.Interfaces;
+using FRELODYAPP.Dtos;
+using FRELODYAPP.Dtos.WithUploads;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace SongsWithChords.Areas.Admin.ApiControllers
+namespace FRELODYAPP.Areas.Admin.ApiControllers
 {
 	[Route("api/[controller]")]
 	[ApiController]

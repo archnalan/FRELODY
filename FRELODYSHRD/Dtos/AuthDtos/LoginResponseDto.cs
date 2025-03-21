@@ -1,4 +1,4 @@
-﻿namespace SongsWithChords.Dtos.AuthDtos
+﻿namespace FRELODYAPP.Dtos.AuthDtos
 {
     public class LoginResponseDto
     {

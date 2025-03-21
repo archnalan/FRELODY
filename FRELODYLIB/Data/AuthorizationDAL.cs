@@ -10,20 +10,20 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.Web.CodeGeneration.DotNet;
 using Newtonsoft.Json;
-using SongsWithChords.Data.Infrastructure;
-using SongsWithChords.Dtos.AuthDtos;
-using SongsWithChords.Dtos.SubDtos;
-using SongsWithChords.Dtos.UserDtos;
-using SongsWithChords.Extensions;
-using SongsWithChords.Models.SubModels;
-using SongsWithChords.ServiceHandler;
+using FRELODYAPP.Data.Infrastructure;
+using FRELODYAPP.Dtos.AuthDtos;
+using FRELODYAPP.Dtos.SubDtos;
+using FRELODYAPP.Dtos.UserDtos;
+using FRELODYAPP.Extensions;
+using FRELODYAPP.Models.SubModels;
+using FRELODYAPP.ServiceHandler;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Hosting;
 
-namespace SongsWithChords.Data
+namespace FRELODYAPP.Data
 {
     public class AuthorizationDAL : IAuthorizationDAL
     {

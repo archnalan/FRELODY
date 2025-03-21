@@ -1,10 +1,10 @@
-﻿using SongsWithChords.Data;
+﻿using FRELODYAPP.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using SongsWithChords.Interfaces;
+using FRELODYAPP.Interfaces;
 
-namespace SongsWithChords.Areas.Admin.ViewModels
+namespace FRELODYAPP.Areas.Admin.ViewModels
 {
 	public class SongViewModel
 	{

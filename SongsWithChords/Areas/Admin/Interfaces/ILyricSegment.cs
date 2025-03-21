@@ -1,7 +1,7 @@
-﻿using SongsWithChords.Dtos;
-using SongsWithChords.ServiceHandler;
+﻿using FRELODYAPP.Dtos;
+using FRELODYAPP.ServiceHandler;
 
-namespace SongsWithChords.Areas.Admin.Interfaces
+namespace FRELODYAPP.Areas.Admin.Interfaces
 {
 	public interface ILyricSegment
 	{

@@ -1,8 +1,8 @@
-﻿using SongsWithChords.Models.SubModels;
+﻿using FRELODYAPP.Models.SubModels;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SongsWithChords.Models
+namespace FRELODYAPP.Models
 {
 	public class Verse:BaseEntity
 	{
@@ -17,7 +17,7 @@ namespace SongsWithChords.Models
 		[MaxLength(100)]
         public string? VerseTitle { get; set; }
 
-		public virtual ICollection<LyricLine>? LyricLines { get; set; }
+        public virtual ICollection<LyricLine>? LyricLines { get; set; }
 	}
 
 }

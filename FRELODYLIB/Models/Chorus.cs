@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using SongsWithChords.Models.SubModels;
+using FRELODYAPP.Models.SubModels;
 
-namespace SongsWithChords.Models
+namespace FRELODYAPP.Models
 {
 	public class Chorus:BaseEntity
 	{
@@ -16,9 +16,6 @@ namespace SongsWithChords.Models
 
         public string? ChorusTitle { get; set; }
 
-		[ForeignKey(nameof(SongId))]
-		public virtual Song? Song { get; set; }
-
-		public virtual ICollection<LyricLine>? LyricLines { get; set; }
+        public virtual ICollection<LyricLine>? LyricLines { get; set; }
 	}
 }

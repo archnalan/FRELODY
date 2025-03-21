@@ -1,14 +1,14 @@
 ﻿using AutoMapper;
-using SongsWithChords.Dtos;
-using SongsWithChords.Models;
+using FRELODYAPP.Dtos;
+using FRELODYAPP.Models;
 using LanguageExt.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
-using SongsWithChords.Data.Infrastructure;
+using FRELODYAPP.Data.Infrastructure;
 
-namespace SongsWithChords.Areas.Admin.ApiControllers
+namespace FRELODYAPP.Areas.Admin.ApiControllers
 {
     [Route("admin/[controller]")]
 	[ApiController]
@@ -25,7 +25,8 @@ namespace SongsWithChords.Areas.Admin.ApiControllers
 		}
 
 		//GET admin/api_verses
-		
+
+		[HttpGet]
 		public async Task<IActionResult> Index()
 		{
 			var verses = await _context.Verses

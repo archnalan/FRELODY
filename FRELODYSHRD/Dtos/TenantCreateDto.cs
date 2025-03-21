@@ -1,6 +1,6 @@
-﻿using SongsWithChords.Dtos.SubDtos;
+﻿using FRELODYAPP.Dtos.SubDtos;
 
-namespace SongsWithChords.Dtos
+namespace FRELODYAPP.Dtos
 {
     public class TenantCreateDto 
     {

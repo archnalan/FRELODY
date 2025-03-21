@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using SongsWithChords.Dtos.UserDtos;
+using FRELODYAPP.Dtos.UserDtos;
 using System.Security.Claims;
 using System.Text.Json;
 
-namespace SongsWithChords.Data.Infrastructure
+namespace FRELODYAPP.Data.Infrastructure
 {
     public interface ITenantProvider
     {

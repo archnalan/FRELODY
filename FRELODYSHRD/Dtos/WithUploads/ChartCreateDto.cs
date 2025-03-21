@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
-using SongsWithChords.Data;
+using FRELODYAPP.Data;
 using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Dtos.WithUploads
+namespace FRELODYAPP.Dtos.WithUploads
 {
 	public class ChartCreateDto
 	{

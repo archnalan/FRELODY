@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Models.SubModels
+namespace FRELODYAPP.Models.SubModels
 {
     public class BaseEntity : IBaseEntity
     {

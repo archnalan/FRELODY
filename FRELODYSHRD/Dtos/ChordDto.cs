@@ -1,6 +1,6 @@
-﻿using SongsWithChords.Dtos;
-using SongsWithChords.Dtos.SubDtos;
-using SongsWithChords.Interfaces;
+﻿using FRELODYAPP.Dtos;
+using FRELODYAPP.Dtos.SubDtos;
+using FRELODYAPP.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;

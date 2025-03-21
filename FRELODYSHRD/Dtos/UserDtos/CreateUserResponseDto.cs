@@ -1,4 +1,4 @@
-﻿namespace SongsWithChords.Dtos.UserDtos
+﻿namespace FRELODYAPP.Dtos.UserDtos
 {
     public class CreateUserResponseDto
     {

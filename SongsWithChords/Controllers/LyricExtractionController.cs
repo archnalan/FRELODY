@@ -1,8 +1,8 @@
-﻿using SongsWithChords.Data;
-using SongsWithChords.Interfaces;
+﻿using FRELODYAPP.Data;
+using FRELODYAPP.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace SongsWithChords.Controllers
+namespace FRELODYAPP.Controllers
 {
 	public class LyricExtractionController : Controller
 	{

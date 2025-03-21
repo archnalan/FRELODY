@@ -1,13 +1,13 @@
-﻿using SongsWithChords.Models;
-using SongsWithChords.Models.SubModels;
+﻿using FRELODYAPP.Models;
+using FRELODYAPP.Models.SubModels;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using SongsWithChords.Interfaces;
+using FRELODYAPP.Interfaces;
 using System.Reflection.Emit;
 using Microsoft.AspNetCore.Identity;
 
-namespace SongsWithChords.Data.Infrastructure
+namespace FRELODYAPP.Data.Infrastructure
 {
     public partial class SongDbContext : IdentityDbContext<User>
     {
@@ -60,50 +60,42 @@ namespace SongsWithChords.Data.Infrastructure
             builder.Entity<Song>()
                 .HasMany(song => song.Verses)
                 .WithOne()
-                .HasForeignKey(verse => verse.SongId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(verse => verse.SongId);
 
             builder.Entity<Song>()
                 .HasMany(song => song.Choruses)
                 .WithOne()
-                .HasForeignKey(chorus => chorus.SongId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(chorus => chorus.SongId);
 
             builder.Entity<Song>()
                 .HasMany(song => song.Bridges)
                 .WithOne()
-                .HasForeignKey(bridge => bridge.SongId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(bridge => bridge.SongId);
 
             builder.Entity<Verse>()
                 .HasMany(verse => verse.LyricLines)
                 .WithOne()
-                .HasForeignKey(line => line.VerseId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(line => line.VerseId);
 
             builder.Entity<Chorus>()
                 .HasMany(chorus => chorus.LyricLines)
                 .WithOne()
-                .HasForeignKey(line => line.ChorusId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(line => line.ChorusId);
 
             builder.Entity<Bridge>()
                 .HasMany(bridge => bridge.LyricLines)
                 .WithOne()
-                .HasForeignKey(line => line.BridgeId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(line => line.BridgeId);
 
             builder.Entity<LyricLine>()
                 .HasMany(line => line.LyricSegments)
                 .WithOne()
-                .HasForeignKey(segment => segment.LyricLineId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(segment => segment.LyricLineId);
 
             builder.Entity<UserFeedback>()
                 .HasOne(fb => fb.Song)
                 .WithMany(song => song.Feedback)
-                .HasForeignKey(fb => fb.SongId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(fb => fb.SongId);
 
             builder.Entity<ChordChart>()
                 .HasOne<Chord>()
@@ -114,21 +106,18 @@ namespace SongsWithChords.Data.Infrastructure
             builder.Entity<LyricSegment>()
                 .HasOne(segment => segment.Chord)
                 .WithMany(chord => chord.LyricSegments)
-                .HasForeignKey(segment => segment.ChordId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(segment => segment.ChordId);
 
             // Configure SongBook and Category
             builder.Entity<Category>()
                 .HasOne(category => category.SongBook)
                 .WithMany(songBook => songBook.Categories)
-                .HasForeignKey(category => category.SongBookId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(category => category.SongBookId);
 
             builder.Entity<Song>()
                 .HasOne<Category>()
                 .WithMany(category => category.Songs)
-                .HasForeignKey(song => song.CategoryId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(song => song.CategoryId);
 
             // Configure Chord properties to be stored as strings
             builder.Entity<Chord>()

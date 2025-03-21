@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace SongsWithChords.ServiceHandler
+namespace FRELODYAPP.ServiceHandler
 {
 	public class NotFoundException: Exception
     {

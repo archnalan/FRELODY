@@ -1,7 +1,7 @@
-﻿using SongsWithChords.Models.SubModels;
+﻿using FRELODYAPP.Models.SubModels;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SongsWithChords.Models
+namespace FRELODYAPP.Models
 {
 	public class LyricLine:BaseEntity
 	{

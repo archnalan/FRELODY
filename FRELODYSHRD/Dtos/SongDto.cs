@@ -1,12 +1,12 @@
-﻿using SongsWithChords.Data;
+﻿using FRELODYAPP.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using SongsWithChords.Dtos.SubDtos;
-using SongsWithChords.Interfaces;
+using FRELODYAPP.Dtos.SubDtos;
+using FRELODYAPP.Interfaces;
 using Microsoft.AspNetCore.Http;
 using FRELODYSHRD.Dtos;
 
-namespace SongsWithChords.Dtos
+namespace FRELODYAPP.Dtos
 {
     public class SongDto : BaseEntityDto
     {

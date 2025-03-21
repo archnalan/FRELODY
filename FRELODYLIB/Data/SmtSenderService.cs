@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
-using SongsWithChords.Dtos.AuthDtos;
-using SongsWithChords.Models.SubModels;
+using FRELODYAPP.Dtos.AuthDtos;
+using FRELODYAPP.Models.SubModels;
 using System.Text;
 
-namespace SongsWithChords.Data
+namespace FRELODYAPP.Data
 {
     public class SmtpSenderService
     {

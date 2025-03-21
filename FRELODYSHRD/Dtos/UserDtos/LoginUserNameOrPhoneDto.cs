@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Dtos.UserDtos
+namespace FRELODYAPP.Dtos.UserDtos
 {
     public class LoginUserNameOrPhoneDto
     {

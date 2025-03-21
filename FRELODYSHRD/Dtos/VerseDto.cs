@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using SongsWithChords.Dtos.SubDtos;
+using FRELODYAPP.Dtos.SubDtos;
 
-namespace SongsWithChords.Dtos
+namespace FRELODYAPP.Dtos
 {
     public class VerseDto: BaseEntityDto
     {

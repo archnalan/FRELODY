@@ -1,9 +1,9 @@
 ﻿using AutoMapper;
 using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
-using SongsWithChords.Dtos;
-using SongsWithChords.Interfaces;
-using SongsWithChords.Models;
+using FRELODYAPP.Dtos;
+using FRELODYAPP.Interfaces;
+using FRELODYAPP.Models;
 using LanguageExt.ClassInstances.Const;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -11,9 +11,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using System.Linq;
-using SongsWithChords.Data.Infrastructure;
+using FRELODYAPP.Data.Infrastructure;
 
-namespace SongsWithChords.Areas.Admin.ApiControllers
+namespace FRELODYAPP.Areas.Admin.ApiControllers
 {
     [Route("admin/[controller]")]
 	[ApiController]

@@ -5,8 +5,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SongsWithChords.Dtos.SubDtos;
-using SongsWithChords.Dtos;
+using FRELODYAPP.Dtos.SubDtos;
+using FRELODYAPP.Dtos;
 
 namespace FRELODYSHRD.Dtos
 {

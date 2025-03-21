@@ -8,7 +8,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 
-namespace SongsWithChords.Data
+namespace FRELODYAPP.Data
 {
 	public class TextFileValidationAttribute:ValidationAttribute
 	{

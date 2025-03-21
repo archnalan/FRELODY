@@ -1,9 +1,9 @@
-﻿using SongsWithChords.Data;
-using SongsWithChords.Interfaces;
+﻿using FRELODYAPP.Data;
+using FRELODYAPP.Interfaces;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SongsWithChords.Areas.Admin.ViewModels
+namespace FRELODYAPP.Areas.Admin.ViewModels
 {
 	public class LyricSegmentViewModel
 	{

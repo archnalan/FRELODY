@@ -1,9 +1,9 @@
-﻿using SongsWithChords.Interfaces;
+﻿using FRELODYAPP.Interfaces;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using SongsWithChords.Models.SubModels;
+using FRELODYAPP.Models.SubModels;
 
-namespace SongsWithChords.Models
+namespace FRELODYAPP.Models
 {
 	public class Chord:BaseEntity
 	{

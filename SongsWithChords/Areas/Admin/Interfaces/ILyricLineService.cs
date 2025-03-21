@@ -1,8 +1,8 @@
-﻿using SongsWithChords.Dtos;
-using SongsWithChords.Dtos.CompositeDtos;
-using SongsWithChords.ServiceHandler;
+﻿using FRELODYAPP.Dtos;
+using FRELODYAPP.Dtos.CompositeDtos;
+using FRELODYAPP.ServiceHandler;
 
-namespace SongsWithChords.Areas.Admin.Interfaces
+namespace FRELODYAPP.Areas.Admin.Interfaces
 {
 	public interface ILyricLineService
 	{

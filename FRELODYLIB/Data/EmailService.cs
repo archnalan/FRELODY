@@ -1,9 +1,9 @@
 ﻿using DocumentFormat.OpenXml.Vml;
 using Microsoft.Extensions.Configuration;
 using MimeKit;
-using SongsWithChords.Dtos.AuthDtos;
+using FRELODYAPP.Dtos.AuthDtos;
 
-namespace SongsWithChords.Data
+namespace FRELODYAPP.Data
 {
     public class EmailService : IEmailService
     {

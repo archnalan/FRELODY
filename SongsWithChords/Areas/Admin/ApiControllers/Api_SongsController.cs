@@ -1,14 +1,14 @@
 ﻿using AutoMapper;
 using DocumentFormat.OpenXml.Office.CoverPageProps;
-using SongsWithChords.Dtos;
-using SongsWithChords.Models;
+using FRELODYAPP.Dtos;
+using FRELODYAPP.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SongsWithChords.Data.Infrastructure;
+using FRELODYAPP.Data.Infrastructure;
 
-namespace SongsWithChords.Areas.Admin.ApiControllers
+namespace FRELODYAPP.Areas.Admin.ApiControllers
 {
     [Route("admin/[controller]")]
 	[ApiController]
@@ -24,6 +24,7 @@ namespace SongsWithChords.Areas.Admin.ApiControllers
 			_mapper = mapper;
 		}
 
+		[HttpGet]
 		public async Task<IActionResult> Index()
 		{
 			var Songs = await _context.Songs

@@ -1,16 +1,16 @@
 ﻿using AutoMapper;
-using SongsWithChords.Areas.Admin.Interfaces;
-using SongsWithChords.Areas.Admin.LogicData;
-using SongsWithChords.Dtos;
-using SongsWithChords.Dtos.CompositeDtos;
+using FRELODYAPP.Areas.Admin.Interfaces;
+using FRELODYAPP.Areas.Admin.LogicData;
+using FRELODYAPP.Dtos;
+using FRELODYAPP.Dtos.CompositeDtos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Metadata.Ecma335;
 using System.Transactions;
-using SongsWithChords.Data.Infrastructure;
+using FRELODYAPP.Data.Infrastructure;
 
-namespace SongsWithChords.Areas.Admin.ApiControllers
+namespace FRELODYAPP.Areas.Admin.ApiControllers
 {
     [Route("api/[controller]")]
 	[ApiController]

@@ -1,14 +1,14 @@
 ﻿using AutoMapper;
-using SongsWithChords.Areas.Admin.Interfaces;
-using SongsWithChords.Dtos;
-using SongsWithChords.Models;
-using SongsWithChords.ServiceHandler;
+using FRELODYAPP.Areas.Admin.Interfaces;
+using FRELODYAPP.Dtos;
+using FRELODYAPP.Models;
+using FRELODYAPP.ServiceHandler;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Web.Http.ModelBinding;
-using SongsWithChords.Data.Infrastructure;
+using FRELODYAPP.Data.Infrastructure;
 
-namespace SongsWithChords.Areas.Admin.LogicData
+namespace FRELODYAPP.Areas.Admin.LogicData
 {
     public class ChordService : IChordService
 	{

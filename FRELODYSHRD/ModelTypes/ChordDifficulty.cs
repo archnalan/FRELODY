@@ -1,4 +1,4 @@
-﻿namespace SongsWithChords.Interfaces
+﻿namespace FRELODYAPP.Interfaces
 {
 	public enum ChordDifficulty
 	{

@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http;
-using SongsWithChords.Data;
-using SongsWithChords.Interfaces;
-using SongsWithChords.Models.SubModels;
+using FRELODYAPP.Data;
+using FRELODYAPP.Interfaces;
+using FRELODYAPP.Models.SubModels;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SongsWithChords.Models
+namespace FRELODYAPP.Models
 {
 	public class Song:BaseEntity
 	{
@@ -17,7 +17,6 @@ namespace SongsWithChords.Models
 		public string Title { get; set; }
 
 		[Required]
-		[Display(Name ="SDAH-")]
 		public long? SongNumber { get; set; }
 
 		[Required]

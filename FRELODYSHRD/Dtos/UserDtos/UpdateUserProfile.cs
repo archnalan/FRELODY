@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Dtos.UserDtos
+namespace FRELODYAPP.Dtos.UserDtos
 {
     public class UpdateUserProfile
     {

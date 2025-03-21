@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Dtos.AuthDtos
+namespace FRELODYAPP.Dtos.AuthDtos
 {
     public class ResetPasswordDto
     {

@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 
-namespace SongsWithChords.Extensions
+namespace FRELODYAPP.Extensions
 {
     [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
     public class OneRequiredPropAttribute : ValidationAttribute

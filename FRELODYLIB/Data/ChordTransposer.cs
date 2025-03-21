@@ -1,9 +1,9 @@
-﻿using SongsWithChords.Interfaces;
+﻿using FRELODYAPP.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SongsWithChords.Data
+namespace FRELODYAPP.Data
 {
 	public class ChordTransposer:IChordHandler
 	{

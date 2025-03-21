@@ -1,16 +1,16 @@
 ﻿using AutoMapper;
-using SongsWithChords.Areas.Admin.Interfaces;
-using SongsWithChords.Dtos;
-using SongsWithChords.Dtos.WithUploads;
-using SongsWithChords.Models;
-using SongsWithChords.ServiceHandler;
+using FRELODYAPP.Areas.Admin.Interfaces;
+using FRELODYAPP.Dtos;
+using FRELODYAPP.Dtos.WithUploads;
+using FRELODYAPP.Models;
+using FRELODYAPP.ServiceHandler;
 using LanguageExt.Common;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
-using SongsWithChords.Data.Infrastructure;
+using FRELODYAPP.Data.Infrastructure;
 
-namespace SongsWithChords.Areas.Admin.LogicData
+namespace FRELODYAPP.Areas.Admin.LogicData
 {
     public class ChordChartService : IChordChartService
 	{

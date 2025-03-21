@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using SongsWithChords.ServiceHandler;
+using FRELODYAPP.ServiceHandler;
 using System.Net;
 
-namespace SongsWithChords.Data
+namespace FRELODYAPP.Data
 {
     public class SecurityUtilityService
     {

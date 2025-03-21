@@ -1,12 +1,12 @@
 ﻿using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.Packaging;
-using SongsWithChords.Interfaces;
+using FRELODYAPP.Interfaces;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf.Canvas.Parser.Listener;
 using System.Text.RegularExpressions;
 
-namespace SongsWithChords.Data
+namespace FRELODYAPP.Data
 {
 	public class LyricExtractor:ILyricHandler
 	{

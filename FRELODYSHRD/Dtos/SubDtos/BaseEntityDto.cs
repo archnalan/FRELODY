@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Dtos.SubDtos
+namespace FRELODYAPP.Dtos.SubDtos
 {
     public class BaseEntityDto : IBaseEntityDto
     {

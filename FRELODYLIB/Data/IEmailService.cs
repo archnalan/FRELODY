@@ -1,6 +1,6 @@
-﻿using SongsWithChords.Dtos.AuthDtos;
+﻿using FRELODYAPP.Dtos.AuthDtos;
 
-namespace SongsWithChords.Data
+namespace FRELODYAPP.Data
 {
     public interface IEmailService
     {

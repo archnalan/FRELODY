@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
-using SongsWithChords.Data;
+using FRELODYAPP.Data;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SongsWithChords.Dtos.SubDtos;
+using FRELODYAPP.Dtos.SubDtos;
 
 namespace FRELODYSHRD.Dtos
 {

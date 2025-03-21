@@ -1,4 +1,4 @@
-﻿namespace SongsWithChords.Dtos.CompositeDtos
+﻿namespace FRELODYAPP.Dtos.CompositeDtos
 {
 	public class LineVerseCreateDto
 	{

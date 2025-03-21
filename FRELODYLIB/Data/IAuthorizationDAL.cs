@@ -1,10 +1,10 @@
-﻿using SongsWithChords.Dtos.AuthDtos;
-using SongsWithChords.Dtos.SubDtos;
-using SongsWithChords.Dtos.UserDtos;
-using SongsWithChords.ServiceHandler;
+﻿using FRELODYAPP.Dtos.AuthDtos;
+using FRELODYAPP.Dtos.SubDtos;
+using FRELODYAPP.Dtos.UserDtos;
+using FRELODYAPP.ServiceHandler;
 using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Data
+namespace FRELODYAPP.Data
 {
     public interface IAuthorizationDAL
     {

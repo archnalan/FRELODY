@@ -1,8 +1,8 @@
-﻿using SongsWithChords.Interfaces;
+﻿using FRELODYAPP.Interfaces;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SongsWithChords.Areas.Admin.ViewModels
+namespace FRELODYAPP.Areas.Admin.ViewModels
 {
 	public class ChorusViewModel
 	{

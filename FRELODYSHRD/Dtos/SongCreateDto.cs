@@ -1,9 +1,9 @@
-﻿using SongsWithChords.Data;
+﻿using FRELODYAPP.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 
-namespace SongsWithChords.Dtos
+namespace FRELODYAPP.Dtos
 {
 	public class SongCreateDto
 	{

@@ -1,12 +1,12 @@
 ﻿using AutoMapper;
-using SongsWithChords.Dtos;
-using SongsWithChords.Dtos.AuthDtos;
-using SongsWithChords.Dtos.CompositeDtos;
-using SongsWithChords.Dtos.UserDtos;
-using SongsWithChords.Dtos.WithUploads;
-using SongsWithChords.Models;
-using SongsWithChords.Models.SubModels;
-namespace SongsWithChords.Profiles
+using FRELODYAPP.Dtos;
+using FRELODYAPP.Dtos.AuthDtos;
+using FRELODYAPP.Dtos.CompositeDtos;
+using FRELODYAPP.Dtos.UserDtos;
+using FRELODYAPP.Dtos.WithUploads;
+using FRELODYAPP.Models;
+using FRELODYAPP.Models.SubModels;
+namespace FRELODYAPP.Profiles
 {
 	public class MappingProfile:Profile
 	{

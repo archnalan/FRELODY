@@ -1,7 +1,7 @@
-﻿using SongsWithChords.Interfaces;
+﻿using FRELODYAPP.Interfaces;
 using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Dtos
+namespace FRELODYAPP.Dtos
 {
 	public class ChordEditDto
 	{

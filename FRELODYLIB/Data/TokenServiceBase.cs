@@ -1,4 +1,4 @@
-﻿namespace SongsWithChords.Data
+﻿namespace FRELODYAPP.Data
 {
     public abstract class TokenServiceBase
     {

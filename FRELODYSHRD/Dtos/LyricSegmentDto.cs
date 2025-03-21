@@ -1,11 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using SongsWithChords.Dtos.SubDtos;
+using FRELODYAPP.Dtos.SubDtos;
 using Microsoft.AspNetCore.Http;
-using SongsWithChords.Data;
+using FRELODYAPP.Data;
 using FRELODYSHRD.Dtos;
 
-namespace SongsWithChords.Dtos
+namespace FRELODYAPP.Dtos
 {
     public class LyricSegmentDto : BaseEntityDto
     {

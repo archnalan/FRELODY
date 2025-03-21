@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace SongsWithChords.Models.SubModels
+namespace FRELODYAPP.Models.SubModels
 {
     public class User : IdentityUser, IBaseEntity
     {

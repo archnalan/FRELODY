@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Dtos
+namespace FRELODYAPP.Dtos
 {
 	public class SongBookDto
 	{

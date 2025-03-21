@@ -1,6 +1,6 @@
 ﻿using DocumentFormat.OpenXml.Wordprocessing;
 
-namespace SongsWithChords.Dtos.SubDtos
+namespace FRELODYAPP.Dtos.SubDtos
 {
     public class ComboBoxDto : BaseEntityDto
     {

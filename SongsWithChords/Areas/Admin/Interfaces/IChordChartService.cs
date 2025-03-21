@@ -1,8 +1,8 @@
-﻿using SongsWithChords.Dtos.WithUploads;
-using SongsWithChords.Models;
-using SongsWithChords.ServiceHandler;
+﻿using FRELODYAPP.Dtos.WithUploads;
+using FRELODYAPP.Models;
+using FRELODYAPP.ServiceHandler;
 
-namespace SongsWithChords.Areas.Admin.Interfaces
+namespace FRELODYAPP.Areas.Admin.Interfaces
 {
 	public interface IChordChartService	
 	{		

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 
-namespace SongsWithChords.Data
+namespace FRELODYAPP.Data
 {
 	public class FileExtensionValidationAttribute:ValidationAttribute
 	{

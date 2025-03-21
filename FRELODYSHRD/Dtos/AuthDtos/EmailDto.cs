@@ -1,7 +1,7 @@
 ﻿using DocumentFormat.OpenXml.Wordprocessing;
-using SongsWithChords.Dtos.SubDtos;
+using FRELODYAPP.Dtos.SubDtos;
 
-namespace SongsWithChords.Dtos.AuthDtos
+namespace FRELODYAPP.Dtos.AuthDtos
 {
     public class EmailDto : BaseEntityDto
     {

@@ -1,4 +1,4 @@
-﻿namespace SongsWithChords.ServiceHandler
+﻿namespace FRELODYAPP.ServiceHandler
 {
     public class ServiceResult<T>
     {

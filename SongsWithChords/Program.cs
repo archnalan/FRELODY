@@ -1,11 +1,18 @@
 using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
-using SongsWithChords.Areas.Admin.Interfaces;
-using SongsWithChords.Areas.Admin.LogicData;
-using SongsWithChords.Models;
+using FRELODYAPP.Areas.Admin.Interfaces;
+using FRELODYAPP.Areas.Admin.LogicData;
+using FRELODYAPP.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using SongsWithChords.Data.Infrastructure;
-using SongsWithChords.Data;
+using FRELODYAPP.Data.Infrastructure;
+using FRELODYAPP.Data;
+using FRELODYAPP.Models.SubModels;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.OpenApi.Models;
+using System.Reflection;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +22,9 @@ builder.Services.AddDbContext<SongDbContext>(options =>
 	options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddScoped<ITenantProvider, TenantProvider>();
+
+builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = true)
 	.AddEntityFrameworkStores<SongDbContext>();
 builder.Services.AddControllersWithViews();
 
@@ -29,7 +38,7 @@ builder.Services.AddScoped<IChordService, ChordService>();
 builder.Services.AddScoped<ILyricSegment, LyricSegmentService>();
 builder.Services.AddScoped<ILyricLineService, LyricLineService>();
 builder.Services.AddScoped<IVerseService, VerseService>();
-
+builder.Services.AddScoped<ITenantProvider, TenantProvider>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<SmtpSenderService>();
 builder.Services.AddScoped<FileValidationService>();
@@ -52,6 +61,84 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddCors(options =>
 					options.AddPolicy("AllowAll", builder => 
 					builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+
+// Configure controllers to properly handle areas for API documentation
+builder.Services.AddControllers(options => {
+    // Add convention to include area name in the route for Swagger
+    options.Conventions.Add(new RouteTokenTransformerConvention(
+        new SlugifyParameterTransformer()));
+});
+
+// Add Swagger services
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "FRELODYAPP API",
+        Version = "v1",
+        Description = "API for managing songs with chords and lyrics",
+        Contact = new OpenApiContact
+        {
+            Name = "FRELODY",
+            Email = "support@example.com"
+        }
+    });
+
+    // Enable JWT Authentication in Swagger UI
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+
+    // Properly handle area-prefixed routes
+    options.DocumentFilter<AddAreaRouteDocumentFilter>();
+
+    // Configure operation IDs to avoid duplicates
+    options.CustomOperationIds(apiDesc =>
+    {
+        var controllerName = apiDesc.ActionDescriptor.RouteValues["controller"];
+        var actionName = apiDesc.ActionDescriptor.RouteValues["action"];
+        var areaName = apiDesc.ActionDescriptor.RouteValues.ContainsKey("area") ?
+            apiDesc.ActionDescriptor.RouteValues["area"] : string.Empty;
+
+        if (!string.IsNullOrEmpty(areaName))
+        {
+            return $"{areaName}_{controllerName}_{actionName}";
+        }
+
+        return $"{controllerName}_{actionName}";
+    });
+
+    // Include XML comments if you have them
+    /*
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+    */
+});
 
 var app = builder.Build();
 
@@ -76,7 +163,18 @@ using (var scope = app.Services.CreateScope())
 	if (app.Environment.IsDevelopment())
 	{
 		app.UseMigrationsEndPoint();
-	}
+    // Add Swagger middleware only in development
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "FRELODYAPP API v1");
+        options.RoutePrefix = string.Empty;
+        options.DocumentTitle = "FRELODYAPP API Documentation";
+        options.DefaultModelsExpandDepth(-1); // Hide models section by default
+        options.EnableDeepLinking(); // Enable direct linking to operations
+        options.DisplayRequestDuration(); // Display request duration
+    });
+}
 	else
 	{
 		app.UseExceptionHandler("/Home/Error");
@@ -98,3 +196,28 @@ app.MapControllerRoute(
 app.MapRazorPages();
 
 app.Run();
+
+// Helper class for handling Area routes in Swagger
+public class AddAreaRouteDocumentFilter : IDocumentFilter
+{
+    public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
+    {
+        var paths = new OpenApiPaths();
+
+        foreach (var path in swaggerDoc.Paths)
+        {
+            paths.Add(path.Key, path.Value);
+        }
+
+        swaggerDoc.Paths = paths;
+    }
+}
+
+// Helper class for route transformations
+public class SlugifyParameterTransformer : IOutboundParameterTransformer
+{
+    public string TransformOutbound(object value)
+    {
+        return value == null ? null : Regex.Replace(value.ToString(), "([a-z])([A-Z])", "$1-$2").ToLower();
+    }
+}
