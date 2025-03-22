@@ -1,13 +1,16 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using FRELODYAPP.Dtos;
+using FRELODYSHRD.ModelTypes;
+using System.ComponentModel.DataAnnotations;
 
 
-namespace FRELODYAPP.Dtos
+namespace FRELODYSHRD.Dtos.CreateDtos
 {
-	public class LyricLineCreateDto:IValidatableObject
-	{
-        public Guid? Id { get; set; }
+    public class LyricLineCreateDto : IValidatableObject
+    {
         public long LyricLineOrder { get; set; }
+        public SongSection PartName { get; set; }
         public int? PartNumber { get; set; }// verse or bridge number: chorus number can be null
+        public int? RepeatCount { get; set; }
         public Guid? VerseId { get; set; }
         public Guid? ChorusId { get; set; }
         public Guid? BridgeId { get; set; }

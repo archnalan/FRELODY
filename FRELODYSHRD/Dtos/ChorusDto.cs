@@ -12,7 +12,6 @@ namespace FRELODYSHRD.Dtos
 {
     public class ChorusDto : BaseEntityDto
     {
-        [Key]
         public Guid Id { get; set; }
 
         public Guid SongId { get; set; }

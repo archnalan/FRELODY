@@ -16,6 +16,8 @@ namespace FRELODYAPP.Models
 
         public string? ChorusTitle { get; set; }
 
+        public int? RepeatCount { get; set; }
+
         public virtual ICollection<LyricLine>? LyricLines { get; set; }
 	}
 }

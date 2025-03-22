@@ -6,9 +6,12 @@ using FRELODYAPP.Dtos.UserDtos;
 using FRELODYAPP.Dtos.WithUploads;
 using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
+using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.EditDtos;
+using FRELODYSHRD.Dtos.HybridDtos;
 namespace FRELODYAPP.Profiles
 {
-	public class MappingProfile:Profile
+    public class MappingProfile:Profile
 	{
         public MappingProfile()
         {

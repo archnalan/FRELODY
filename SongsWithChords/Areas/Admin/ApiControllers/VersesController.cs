@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Reflection.Metadata.Ecma335;
 using System.Transactions;
 using FRELODYAPP.Data.Infrastructure;
+using FRELODYSHRD.Dtos.EditDtos;
 
 namespace FRELODYAPP.Areas.Admin.ApiControllers
 {

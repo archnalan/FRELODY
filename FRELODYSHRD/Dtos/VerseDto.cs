@@ -16,6 +16,8 @@ namespace FRELODYAPP.Dtos
         [MaxLength(100)]
         public string? VerseTitle { get; set; }
 
+        public int? RepeatCount { get; set; }
+
         public virtual ICollection<LyricLineDto>? LyricLines { get; set; }
     }
 }

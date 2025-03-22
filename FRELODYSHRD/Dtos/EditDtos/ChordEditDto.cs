@@ -1,10 +1,10 @@
 ﻿using FRELODYAPP.Interfaces;
 using System.ComponentModel.DataAnnotations;
 
-namespace FRELODYAPP.Dtos
+namespace FRELODYSHRD.Dtos.EditDtos
 {
-	public class ChordEditDto
-	{
+    public class ChordEditDto
+    {
         public long Id { get; set; }
         public string ChordName { get; set; }
         public int? PartNumber { get; set; } // verse or bridge number
@@ -13,9 +13,9 @@ namespace FRELODYAPP.Dtos
 
         public string? ChordAudioFilePath { get; set; }
 
-		public ChordType? ChordType { get; set; }
+        public ChordType? ChordType { get; set; }
 
         [Range(1, 3)]
-		public ChordDifficulty? Difficulty { get; set; }			
-	}
+        public ChordDifficulty? Difficulty { get; set; }
+    }
 }

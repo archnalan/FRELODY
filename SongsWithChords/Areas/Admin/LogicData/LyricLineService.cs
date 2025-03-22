@@ -45,7 +45,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 			return ServiceResult<LyricLineDto>.Success(lyricLineDto);
 		}
 
-		public async Task<ServiceResult<LyricLineDto>> CreateVerseLineAsync(LineVerseCreateDto verselineDto)
+        public async Task<ServiceResult<LyricLineDto>> CreateVerseLineAsync(LineVerseCreateDto verselineDto)
 		{
 			if (verselineDto == null)
 				return ServiceResult<LyricLineDto>.Failure( new 

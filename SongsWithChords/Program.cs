@@ -13,6 +13,8 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using FRELODYAPIs.Areas.Admin.Interfaces;
+using FRELODYAPIs.Areas.Admin.LogicData;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +35,7 @@ builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddHttpContextAccessor();
 
 // Register chart service
+builder.Services.AddScoped<ISongService,SongService>();
 builder.Services.AddScoped<IChordChartService, ChordChartService>();
 builder.Services.AddScoped<IChordService, ChordService>();
 builder.Services.AddScoped<ILyricSegment, LyricSegmentService>();

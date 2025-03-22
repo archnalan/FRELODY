@@ -1,9 +1,10 @@
 ﻿using FRELODYAPP.Dtos;
 using FRELODYAPP.ServiceHandler;
+using FRELODYSHRD.Dtos.CreateDtos;
 
 namespace FRELODYAPP.Areas.Admin.Interfaces
 {
-	public interface IVerseService
+    public interface IVerseService
 	{
 		Task<ServiceResult<List<VerseDto>>> GetAllVersesAsync();
 

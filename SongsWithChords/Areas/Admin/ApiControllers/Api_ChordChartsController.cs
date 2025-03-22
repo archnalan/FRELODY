@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using FRELODYAPP.Models;
-using FRELODYAPP.Dtos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +10,9 @@ using Microsoft.IdentityModel.Tokens;
 using FRELODYAPP.Interfaces;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using FRELODYAPP.Data.Infrastructure;
+using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.EditDtos;
+using FRELODYSHRD.Dtos.HybridDtos;
 
 namespace FRELODYAPP.Areas.Admin.ApiControllers
 {

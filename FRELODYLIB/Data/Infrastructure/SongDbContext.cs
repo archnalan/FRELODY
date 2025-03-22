@@ -132,6 +132,10 @@ namespace FRELODYAPP.Data.Infrastructure
                 .Property(c => c.SongPlayLevel)
                 .HasConversion(new EnumToStringConverter<PlayLevel>());
 
+            builder.Entity<LyricLine>()
+                .Property(e => e.PartName)
+                .HasConversion<string>();
+
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
 

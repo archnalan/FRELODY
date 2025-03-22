@@ -1,4 +1,4 @@
-﻿namespace FRELODYAPP.Dtos
+﻿namespace FRELODYSHRD.Dtos.CreateDtos
 {
     public class PageCreateDto
     {

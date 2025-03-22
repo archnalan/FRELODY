@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
-using FRELODYAPP.Dtos;
 using FRELODYAPP.Interfaces;
 using FRELODYAPP.Models;
 using LanguageExt.ClassInstances.Const;
@@ -12,6 +11,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using System.Linq;
 using FRELODYAPP.Data.Infrastructure;
+using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.EditDtos;
+using FRELODYSHRD.Dtos.HybridDtos;
 
 namespace FRELODYAPP.Areas.Admin.ApiControllers
 {

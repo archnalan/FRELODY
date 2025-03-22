@@ -1,9 +1,11 @@
-﻿using FRELODYAPP.Dtos;
-using FRELODYAPP.ServiceHandler;
+﻿using FRELODYAPP.ServiceHandler;
+using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.EditDtos;
+using FRELODYSHRD.Dtos.HybridDtos;
 
 namespace FRELODYAPP.Areas.Admin.Interfaces
 {
-	public interface IChordService
+    public interface IChordService
 	{
 		Task<ServiceResult<List<ChordEditDto>>> GetAllChordsAsync();
 		Task<ServiceResult<List<ChordWithChartsDto>>> GetChordsWithChartsAsync();

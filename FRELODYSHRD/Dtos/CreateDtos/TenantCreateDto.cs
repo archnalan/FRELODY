@@ -1,8 +1,8 @@
 ﻿using FRELODYAPP.Dtos.SubDtos;
 
-namespace FRELODYAPP.Dtos
+namespace FRELODYSHRD.Dtos.CreateDtos
 {
-    public class TenantCreateDto 
+    public class TenantCreateDto
     {
         public string TenantName { get; set; }
         public string? Address { get; set; }

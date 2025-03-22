@@ -17,6 +17,8 @@ namespace FRELODYAPP.Models
 		[MaxLength(100)]
         public string? VerseTitle { get; set; }
 
+		public int? RepeatCount { get; set; }
+
         public virtual ICollection<LyricLine>? LyricLines { get; set; }
 	}
 

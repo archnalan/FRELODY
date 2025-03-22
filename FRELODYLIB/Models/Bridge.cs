@@ -17,6 +17,8 @@ namespace FRELODYAPP.Models
 		[StringLength(100)]
         public string? BridgeTitle { get; set; }
 
-		public virtual ICollection<LyricLine>? LyricLines { get; set; }
+        public int? RepeatCount { get; set; }
+
+        public virtual ICollection<LyricLine>? LyricLines { get; set; }
 	}
 }

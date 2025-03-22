@@ -1,6 +1,8 @@
-﻿namespace FRELODYAPP.Dtos.CompositeDtos
+﻿using FRELODYSHRD.Dtos.CreateDtos;
+
+namespace FRELODYAPP.Dtos.CompositeDtos
 {
-	public class CreateFullVerseDto
+    public class CreateFullVerseDto
 	{
 		public VerseCreateDto verseCreate {  get; set; }
 		public List<LineVerseCreateDto> linesCreate { get; set; }

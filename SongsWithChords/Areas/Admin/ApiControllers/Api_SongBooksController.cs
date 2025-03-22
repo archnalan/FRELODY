@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FRELODYAPP.Data.Infrastructure;
+using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.HybridDtos;
 
 namespace FRELODYAPP.Areas.Admin.ApiControllers
 {
