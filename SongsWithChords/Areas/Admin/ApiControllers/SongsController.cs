@@ -31,6 +31,18 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
 
         [HttpPost]
         [ProducesResponseType(typeof(SongDto), 200)]
+        public async Task<ActionResult<SongDto>> CreateSimpleSong([FromBody] SimpleSongCreateDto song)
+        {
+            var songResult = await _songService.CreateSimpleSong(song);
+
+            if (!songResult.IsSuccess)
+                return StatusCode(songResult.StatusCode, new { message = songResult.Error.Message });
+
+            return Ok(songResult.Data);
+        }
+
+        [HttpPost]
+        [ProducesResponseType(typeof(SongDto), 200)]
         public async Task<ActionResult<SongDto>> CreateFullSong([FromBody] FullSongCreateDto song)
         {
             var songResult = await _songService.CreateFullSong(song);

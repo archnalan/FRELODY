@@ -9,6 +9,8 @@ using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.ModelTypes;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace FRELODYAPIs.Areas.Admin.LogicData
 {
@@ -29,6 +31,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 try
                 {
+                    // Create and save the Song first
                     var song = s.Adapt<Song>();
                     song.Slug = s.Title.ToLower().Replace(" ", "-");
                     await _context.Songs.AddAsync(song);
@@ -48,7 +51,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             SongSection.Verse);
                     }
 
-                    // Process bridges and their nested entities
                     if (s.Bridges != null && s.Bridges.Any())
                     {
                         var bridges = await CreateSongParts<Bridge, BridgeCreateDto>(
@@ -62,7 +64,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             SongSection.Bridge);
                     }
 
-                    // Process choruses and their nested entities
                     if (s.Choruses != null && s.Choruses.Any())
                     {
                         var choruses = await CreateSongParts<Chorus, ChorusCreateDto>(
@@ -97,9 +98,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
-        /// <summary>
-        /// Creates song parts (verses, bridges, choruses) with proper foreign key relationships
-        /// </summary>
         private async Task<List<TPart>> CreateSongParts<TPart, TDto>(
             IEnumerable<TDto> partDtos,
             Guid songId,
@@ -119,9 +117,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             return parts;
         }
 
-        /// <summary>
-        /// Processes lyric lines and segments for song parts (verses, bridges, choruses)
-        /// </summary>
         private async Task ProcessLyricLinesForParts<TPart, TDto>(
             IEnumerable<TDto> partDtos,
             List<TPart> savedParts,
@@ -134,7 +129,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 if (partDto.LyricLines != null && partDto.LyricLines.Count > 0)
                 {
-                    // Find the saved part entity
                     var savedPart = savedParts.FirstOrDefault(p => matchPartFunc(partDto, p));
                     if (savedPart != null)
                     {
@@ -154,7 +148,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         await _context.LyricLines.AddRangeAsync(lyricLines);
                         await _context.SaveChangesAsync();
 
-                        // Now add lyric segments for each line
                         foreach (var lineDto in partDto.LyricLines)
                         {
                             if (lineDto.LyricSegments != null && lineDto.LyricSegments.Any())
@@ -168,6 +161,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                         var segment = segmentDto.Adapt<LyricSegment>();
                                         segment.LineNumber = (int)lineDto.LyricLineOrder;
                                         segment.LyricLineId = line.Id;
+                                        // Use the segment's order value if available, otherwise use position
+                                        segment.LyricOrder = segmentDto.LyricOrder;
                                         segments.Add(segment);
                                     }
                                     await _context.LyricSegments.AddRangeAsync(segments);
@@ -181,7 +176,206 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         }
         #endregion
 
-        
+        #region Create Simple Song
+        public async Task<ServiceResult<SongDto>> CreateSimpleSong(SimpleSongCreateDto songDto)
+        {
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    // Create and save the Song first
+                    var song = new Song
+                    {
+                        Title = songDto.Title,
+                        SongNumber = songDto.SongNumber,
+                        Slug = songDto.Title.ToLower().Replace(" ", "-")
+                    };
+                    await _context.Songs.AddAsync(song);
+                    await _context.SaveChangesAsync();
+
+                    if (songDto.SongLyrics == null || !songDto.SongLyrics.Any())
+                    {
+                        await transaction.CommitAsync();
+                        var songDtoResult = song.Adapt<SongDto>();
+                        return ServiceResult<SongDto>.Success(songDtoResult);
+                    }
+
+                    // Group segments by song part and part number
+                    var songPartGroups = songDto.SongLyrics
+                        .GroupBy(s => new { s.PartName, s.PartNumber })
+                        .OrderBy(g => g.Key.PartName)
+                        .ThenBy(g => g.Key.PartNumber);
+
+                    foreach (var partGroup in songPartGroups)
+                    {
+                        var partName = partGroup.Key.PartName;
+                        var partNumber = partGroup.Key.PartNumber;
+
+                        // Create the appropriate song part based on the type
+                        Guid partId = await CreateSongPart(song.Id, partName, partNumber);
+
+                        if (partId != Guid.Empty)
+                        {
+                            // Group segments by lyric line number
+                            var lyricLineGroups = partGroup
+                                .GroupBy(s => s.LineNumber)
+                                .OrderBy(g => g.Key);
+
+                            foreach (var lineGroup in lyricLineGroups)
+                            {
+                                var lineNumber = lineGroup.Key;
+
+                                // Create the lyric line
+                                var lyricLine = new LyricLine
+                                {
+                                    PartName = partName,
+                                    PartNumber = partNumber,
+                                    LyricLineOrder = lineNumber
+                                };
+
+                                // Set the appropriate foreign key based on the part type
+                                SetPartIdForLyricLine(lyricLine, partId, partName);
+
+                                await _context.LyricLines.AddAsync(lyricLine);
+                                await _context.SaveChangesAsync();
+
+                                // Create lyric segments for this line
+                                var segments = new List<LyricSegment>();
+
+                                foreach (var segmentDto in lineGroup)
+                                {
+                                    segments.Add(new LyricSegment
+                                    {
+                                        Lyric = segmentDto.Lyric,
+                                        LineNumber = lineNumber,
+                                        LyricLineId = lyricLine.Id,
+                                        ChordId = segmentDto.ChordId,
+                                        LyricOrder = segmentDto.SegmentOrder // Use the explicit segment order
+                                    });
+                                }
+
+                                await _context.LyricSegments.AddRangeAsync(segments);
+                            }
+                        }
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    var createdSong = await GetSongById(song.Id);
+                    if (createdSong.IsSuccess)
+                    {
+                        return ServiceResult<SongDto>.Success(createdSong.Data);
+                    }
+                    else
+                    {
+                        var songDtoResult = song.Adapt<SongDto>();
+                        return ServiceResult<SongDto>.Success(songDtoResult);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error in CreateSimpleSong: {Message}", ex.Message);
+                    return ServiceResult<SongDto>.Failure(ex);
+                }
+            }
+        }
+
+        private async Task<Guid> CreateSongPart(Guid songId, SongSection partType, int partNumber)
+        {
+            switch (partType)
+            {
+                case SongSection.Verse:
+                    var verse = new Verse
+                    {
+                        SongId = songId,
+                        VerseNumber = partNumber
+                    };
+                    await _context.Verses.AddAsync(verse);
+                    await _context.SaveChangesAsync();
+                    return verse.Id;
+
+                case SongSection.Chorus:
+                    var chorus = new Chorus
+                    {
+                        SongId = songId,
+                        ChorusNumber = partNumber
+                    };
+                    await _context.Choruses.AddAsync(chorus);
+                    await _context.SaveChangesAsync();
+                    return chorus.Id;
+
+                case SongSection.Bridge:
+                    var bridge = new Bridge
+                    {
+                        SongId = songId,
+                        BridgeNumber = partNumber
+                    };
+                    await _context.Bridges.AddAsync(bridge);
+                    await _context.SaveChangesAsync();
+                    return bridge.Id;
+
+                default:
+                    _logger.LogWarning("Unsupported song part type: {PartType}", partType);
+                    return Guid.Empty;
+            }
+        }
+
+        private void SetPartIdForLyricLine(LyricLine lyricLine, Guid partId, SongSection partType)
+        {
+            switch (partType)
+            {
+                case SongSection.Verse:
+                    lyricLine.VerseId = partId;
+                    break;
+                case SongSection.Chorus:
+                    lyricLine.ChorusId = partId;
+                    break;
+                case SongSection.Bridge:
+                    lyricLine.BridgeId = partId;
+                    break;
+            }
+        }
+        #endregion
+
+        #region Create Lines
+        private async Task<ServiceResult<bool>> LinesCreateAsync(ICollection<LineCreateDto> lines)
+        {
+            try
+            {
+                var lyricLines = lines.Adapt<List<LyricLine>>();
+                await _context.LyricLines.AddRangeAsync(lyricLines);
+                await _context.SaveChangesAsync();
+
+                foreach (var line in lines)
+                {
+                    if (line.LyricSegments != null && line.LyricSegments.Any())
+                    {
+                        var lyricSegments = new List<LyricSegment>();
+
+                        foreach (var segmentDto in line.LyricSegments)
+                        {
+                            var segment = segmentDto.Adapt<LyricSegment>();
+                            segment.LineNumber = (int)line.LyricLineOrder;
+                            segment.LyricLineId = lyricLines.FirstOrDefault(l => l.LyricLineOrder == segment.LineNumber)?.Id;
+                            segment.LyricOrder = segmentDto.LyricOrder; // Use explicit segment number
+                            lyricSegments.Add(segment);
+                        }
+
+                        await _context.LyricSegments.AddRangeAsync(lyricSegments);
+                    }
+                }
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<bool>.Failure(ex);
+            }
+        }
+        #endregion
+
         #region Get Song by Id
         public async Task<ServiceResult<SongDto>> GetSongById(Guid id)
         {
@@ -190,13 +384,13 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 var song = await _context.Songs
                     .Include(s => s.Verses)
                         .ThenInclude(v => v.LyricLines)
-                            .ThenInclude(ll => ll.LyricSegments)
+                            .ThenInclude(ll => ll.LyricSegments.OrderBy(s => s.LyricOrder))
                     .Include(s => s.Bridges)
                         .ThenInclude(b => b.LyricLines)
-                            .ThenInclude(ll => ll.LyricSegments)
+                            .ThenInclude(ll => ll.LyricSegments.OrderBy(s => s.LyricOrder))
                     .Include(s => s.Choruses)
                         .ThenInclude(c => c.LyricLines)
-                            .ThenInclude(ll => ll.LyricSegments)
+                            .ThenInclude(ll => ll.LyricSegments.OrderBy(s => s.LyricOrder))
                     .FirstOrDefaultAsync(s => s.Id == id);
 
                 var songDto = song.Adapt<SongDto>();
