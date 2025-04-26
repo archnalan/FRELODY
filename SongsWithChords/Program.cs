@@ -15,6 +15,7 @@ using System.Text.RegularExpressions;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPIs.Areas.Admin.LogicData;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,7 +53,10 @@ builder.Services.AddControllers()
 	.AddJsonOptions(options =>
 	{
 		options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
-	});
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 
 builder.Services.AddLogging();
 //builder.Services.AddScoped<TextFileUploadService>();

@@ -381,16 +381,23 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         {
             try
             {
+                if (id == Guid.Empty)
+                    return ServiceResult<SongDto>.Failure(
+                        new BadRequestException("Invalid song ID."));
+
                 var song = await _context.Songs
-                    .Include(s => s.Verses)
-                        .ThenInclude(v => v.LyricLines)
-                            .ThenInclude(ll => ll.LyricSegments.OrderBy(s => s.LyricOrder))
-                    .Include(s => s.Bridges)
-                        .ThenInclude(b => b.LyricLines)
-                            .ThenInclude(ll => ll.LyricSegments.OrderBy(s => s.LyricOrder))
-                    .Include(s => s.Choruses)
-                        .ThenInclude(c => c.LyricLines)
-                            .ThenInclude(ll => ll.LyricSegments.OrderBy(s => s.LyricOrder))
+                    .Include(s => s.Verses.OrderBy(v => v.VerseNumber))
+                        .ThenInclude(v => v.LyricLines.OrderBy(ll => ll.LyricLineOrder))
+                            .ThenInclude(ll => ll.LyricSegments.OrderBy(ls => ls.LyricOrder))
+                                .ThenInclude(ls => ls.Chord)
+                    .Include(s => s.Bridges.OrderBy(b => b.BridgeNumber))
+                        .ThenInclude(b => b.LyricLines.OrderBy(ll => ll.LyricLineOrder))
+                            .ThenInclude(ll => ll.LyricSegments.OrderBy(ls => ls.LyricOrder))
+                                .ThenInclude(ls => ls.Chord)
+                    .Include(s => s.Choruses.OrderBy(c => c.ChorusNumber))
+                        .ThenInclude(c => c.LyricLines.OrderBy(ll => ll.LyricLineOrder))
+                            .ThenInclude(ll => ll.LyricSegments.OrderBy(ls => ls.LyricOrder))
+                                .ThenInclude(ls => ls.Chord)
                     .FirstOrDefaultAsync(s => s.Id == id);
 
                 var songDto = song.Adapt<SongDto>();

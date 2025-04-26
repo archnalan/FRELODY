@@ -9,6 +9,8 @@ using FRELODYAPP.Data.Infrastructure;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
 using FRELODYSHRD.Dtos.HybridDtos;
+using FRELODYSHRD.Dtos;
+using Mapster;
 
 namespace FRELODYAPP.Areas.Admin.LogicData
 {
@@ -79,7 +81,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 			return ServiceResult<ChordWithChartsDto>.Success(chordDto);
 		}
 
-		public async Task<ServiceResult<ChordEditDto>> CreateChordAsync([FromBody] ChordCreateDto chordDto)
+		public async Task<ServiceResult<ChordEditDto>> CreateChordAsync(ChordCreateDto chordDto)
 		{
 			if (chordDto == null) return ServiceResult<ChordEditDto>.Failure(new
 				BadRequestException("Chord data is Required"));
@@ -105,6 +107,34 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 			var newChord = _mapper.Map<Chord, ChordEditDto>(chord);
 
 			return ServiceResult<ChordEditDto>.Success(newChord);
+		}
+
+		public async Task<ServiceResult<ChordSimpleDto>> CreateSimpleChordAsync(ChordSimpleDto chordDto)
+		{
+			if (chordDto == null) return ServiceResult<ChordSimpleDto>.Failure(new
+				BadRequestException("Chord data is Required"));
+
+			var chordExists = await _context.Chords
+							.AnyAsync(ch => ch.ChordName == chordDto.ChordName);
+
+			if (chordExists) return ServiceResult<ChordSimpleDto>.Failure(new
+				ConflictException($"Chord: {chordDto.ChordName} already exists."));
+
+			var chord = chordDto.Adapt<Chord>();
+
+			try
+			{
+				await _context.Chords.AddAsync(chord);
+				await _context.SaveChangesAsync();
+			}
+			catch (Exception ex)
+			{
+				return ServiceResult<ChordSimpleDto>.Failure(new Exception(ex.Message));
+			}
+
+			var newChord = chord.Adapt<ChordSimpleDto>();
+
+			return ServiceResult<ChordSimpleDto>.Success(newChord);
 		}
 
 		public async Task<ServiceResult<ChordEditDto>> UpdateChordAsync(ChordEditDto chordDto)
