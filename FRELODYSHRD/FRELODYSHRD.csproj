@@ -12,8 +12,4 @@
     <PackageReference Include="Microsoft.AspNetCore" Version="2.3.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Dtos\NewFolder\" />
-  </ItemGroup>
-
 </Project>

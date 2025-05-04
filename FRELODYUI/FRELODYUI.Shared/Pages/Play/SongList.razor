@@ -1,0 +1,139 @@
+﻿@layout UserLayout
+@page "/songs"
+
+<div class="container-fluid bg-light vh-100">
+    <div class="position-sticky top-0 bg-light py-3 z-10">
+        <div class="container">
+            <h2 class="text-center mb-4">Song Library</h2>
+            <div class="row">
+                <div class="col-8">
+                    <div class="input-group">
+                        <input @onchange="(e) => HandleSearch(e)" type="text" class="form-control" placeholder="Search..." />
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    </div>
+                </div>
+                <div class="col-4 d-flex justify-content-end">
+                    <a href="create/step1" class="btn btn-primary">Add Song <i class="bi bi-file-earmark-plus"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container mt-5">
+        @if (isLoading)
+        {
+            <div class="d-flex justify-content-center align-items-center" style="height: 256px;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(error))
+        {
+            <div class="alert alert-danger" role="alert">
+                @error
+                <button class="btn btn-sm btn-link" @onclick="@(async () => await LoadSongs())">Try Again</button>
+            </div>
+        }
+        else if (songs.Count == 0)
+        {
+            <div class="alert alert-info" role="alert">
+                No songs found. Please add songs to your library.
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                @foreach (var song in filteredSongs)
+                {
+                    <div class="col-12 col-md-6 col-lg-4 col-xl-3 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <h5 class="card-title">
+                                    <span class="font-weight-light">@song.IdString</span>
+                                    <span class="ms-2">@song.ValueText</span>
+                                </h5>
+                                <div class="d-flex justify-content-end">
+                                    <button class="btn btn-outline-secondary btn-sm me-2" @onclick="() => NavigateToDetails(song.IdString)">Details</button>
+                                    <button class="btn btn-primary btn-sm" @onclick="() => NavigateToPlay(song.IdString)">Play</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<ComboBoxDto> songs = new List<ComboBoxDto>();
+    private List<ComboBoxDto> filteredSongs = new List<ComboBoxDto>();
+    private bool isLoading = true;
+    private string error = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSongs();
+    }
+
+    private async Task LoadSongs()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            var response = await _songsApi.GetSongs();
+            if (response != null)
+            {
+                songs = response.ToList();
+                filteredSongs = new List<ComboBoxDto>(songs);
+                error = string.Empty;
+            }
+            else
+            {
+                songs = new List<ComboBoxDto>();
+                filteredSongs = new List<ComboBoxDto>();
+                error = "No songs found";
+            }
+        }
+        catch (Exception ex)
+        {
+            songs = new List<ComboBoxDto>();
+            filteredSongs = new List<ComboBoxDto>();
+            error = $"Error fetching songs: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleSearch(ChangeEventArgs e)
+    {
+        var searchQuery = (e.Value?.ToString() ?? "").ToLower();
+        var normalizedQuery = searchQuery.TrimStart('0');
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            filteredSongs = songs.Where(s =>
+                s.Id.ToString().Contains(normalizedQuery) ||
+                s.ValueText.ToLower().Contains(searchQuery)
+            ).ToList();
+        }
+        else
+        {
+            filteredSongs = new List<ComboBoxDto>(songs);
+        }
+        StateHasChanged();
+    }
+
+    private void NavigateToDetails(string id)
+    {
+        _navManager.NavigateTo($"/player/details/{id}");
+    }
+
+    private void NavigateToPlay(string id)
+    {
+        _navManager.NavigateTo($"/player/{id}");
+    }
+}
