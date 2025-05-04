@@ -24,7 +24,17 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 			_context = context;
 			_mapper = mapper;
 		}
+	
+		public async Task<ServiceResult<List<ChordSimpleDto>>> GetChordsAsync()
+		{
+			var chords = await _context.Chords
+								.OrderBy(c => c.ChordName)
+								.ToListAsync();
 
+			var chordsDto =chords.Adapt<List<ChordSimpleDto>>();
+
+			return ServiceResult<List<ChordSimpleDto>>.Success(chordsDto);
+		}
 		public async Task<ServiceResult<List<ChordEditDto>>> GetAllChordsAsync()
 		{
 			var chords = await _context.Chords

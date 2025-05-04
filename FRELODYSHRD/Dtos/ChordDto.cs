@@ -12,7 +12,6 @@ namespace FRELODYSHRD.Dtos
 {
     public class ChordDto : BaseEntityDto
     {
-        [Key]
         public long Id { get; set; }
 
         [StringLength(15)]

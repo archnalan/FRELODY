@@ -2,6 +2,7 @@
 using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Dtos;
+using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Models;
 using FRELODYAPP.ServiceHandler;
 using FRELODYLIB.Interfaces;
@@ -23,6 +24,55 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             _context = context;
             _logger = logger;
         }
+
+        #region Get Songs
+        public async Task<ServiceResult<List<ComboBoxDto>>> GetSongsAsync()
+        {
+            try
+            {
+                var songs = await _context.Songs
+                    .Select(s => new ComboBoxDto
+                    {
+                        Id = s.SongNumber > 0 ? (int)s.SongNumber : 0,
+                        ValueText = s.Title,
+                        IdString = s.Id.ToString(),
+                    })
+                    .ToListAsync();
+                return ServiceResult<List<ComboBoxDto>>.Success(songs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetSongs");
+                return ServiceResult<List<ComboBoxDto>>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Get Song by Category
+        public async Task<ServiceResult<List<SongDto>>> GetSongsByCategory(Guid categoryId)
+        {
+            try
+            {
+                var songs = await _context.Songs
+                    .Where(s => s.CategoryId == categoryId)
+                    .Select(s => new SongDto
+                    {
+                        Id = s.Id,
+                        Title = s.Title,
+                        Slug = s.Slug,
+                        SongNumber = s.SongNumber,
+                        CategoryId = s.CategoryId,
+                    })
+                    .ToListAsync();
+                return ServiceResult<List<SongDto>>.Success(songs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetSongsByCategory");
+                return ServiceResult<List<SongDto>>.Failure(ex);
+            }
+        }
+        #endregion
 
         #region Create Song
         public async Task<ServiceResult<SongDto>> CreateFullSong(FullSongCreateDto s)
@@ -250,7 +300,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                         LineNumber = lineNumber,
                                         LyricLineId = lyricLine.Id,
                                         ChordId = segmentDto.ChordId,
-                                        LyricOrder = segmentDto.SegmentOrder // Use the explicit segment order
+                                        LyricOrder = segmentDto.LyricOrder 
                                     });
                                 }
 
@@ -399,6 +449,28 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             .ThenInclude(ll => ll.LyricSegments.OrderBy(ls => ls.LyricOrder))
                                 .ThenInclude(ls => ls.Chord)
                     .FirstOrDefaultAsync(s => s.Id == id);
+
+                var songDto = song.Adapt<SongDto>();
+                return ServiceResult<SongDto>.Success(songDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetSongById");
+                return ServiceResult<SongDto>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Get Song details by Id
+        public async Task<ServiceResult<SongDto>> GetSongDetailsById(Guid id)
+        {
+            try
+            {
+                if (id == Guid.Empty)
+                    return ServiceResult<SongDto>.Failure(
+                        new BadRequestException("Invalid song ID."));
+
+                var song = await _context.Songs.FirstOrDefaultAsync(s => s.Id == id);
 
                 var songDto = song.Adapt<SongDto>();
                 return ServiceResult<SongDto>.Success(songDto);

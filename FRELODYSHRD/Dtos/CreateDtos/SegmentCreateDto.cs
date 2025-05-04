@@ -15,6 +15,6 @@ namespace FRELODYSHRD.Dtos.CreateDtos
         public long? ChordId { get; set; }
         public int PartNumber { get; set; } // SongSection value number
         public SongSection PartName { get; set; }
-        public int SegmentOrder { get; set; } // Maps to LyricOrder in the database
+        public int LyricOrder { get; set; } 
     }
 }

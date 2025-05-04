@@ -8,7 +8,9 @@ namespace FRELODYAPP.Areas.Admin.Interfaces
 {
     public interface IChordService
 	{
-		Task<ServiceResult<List<ChordEditDto>>> GetAllChordsAsync();
+        Task<ServiceResult<List<ChordSimpleDto>>> GetChordsAsync();
+
+        Task<ServiceResult<List<ChordEditDto>>> GetAllChordsAsync();
 		Task<ServiceResult<List<ChordWithChartsDto>>> GetChordsWithChartsAsync();
 		Task<ServiceResult<ChordEditDto>> GetChordByIdAsync(long id);
 		Task<ServiceResult<ChordWithChartsDto>> GetChordWithChartsByIdAsync(long id);

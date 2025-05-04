@@ -17,6 +17,17 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
             _chordService = chordService;
         }
 
+        [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<ChordSimpleDto>), 200)]
+        public async Task<IActionResult> GetChords()
+        {
+            var chordResult = await _chordService.GetChordsAsync();
+            if (!chordResult.IsSuccess)
+                return StatusCode(chordResult.StatusCode, new { message = chordResult.Error.Message });
+
+            return Ok(chordResult.Data);
+        }
+
         [HttpPost]
         [ProducesResponseType(typeof(ChordEditDto), 200)]
         public async Task<ActionResult> CreateChord([FromBody]ChordCreateDto chordDto)
@@ -40,5 +51,6 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
             
             return Ok(chordResult.Data);
         }
+
     }
 }
