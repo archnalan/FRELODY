@@ -42,7 +42,7 @@ namespace FRELODYAPP.Data.Infrastructure
             base.OnModelCreating(builder);
 
             // Configure global query filters for entities implementing IBaseEntity
-            builder.Entity<Tenant>().HasQueryFilter(x => x.TenantId == _tenantId && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Tenant>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongBook>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Category>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Song>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
@@ -101,7 +101,7 @@ namespace FRELODYAPP.Data.Infrastructure
                 .HasOne<Chord>()
                 .WithMany(chord => chord.ChordCharts)
                 .HasForeignKey(chart => chart.ChordId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<LyricSegment>()
                 .HasOne(segment => segment.Chord)
@@ -119,6 +119,13 @@ namespace FRELODYAPP.Data.Infrastructure
                 .WithMany(category => category.Songs)
                 .HasForeignKey(song => song.CategoryId);
 
+            builder.Entity<Category>()
+                .HasOne<Category>()
+                .WithMany()
+                .HasForeignKey(c => c.ParentCategoryId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Configure Chord properties to be stored as strings
             builder.Entity<Chord>()
                 .Property(c => c.Difficulty)
@@ -135,6 +142,12 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<LyricLine>()
                 .Property(e => e.PartName)
                 .HasConversion<string>();
+
+            builder.Entity<User>(b =>
+            {
+                b.HasIndex(u => u.TenantId);
+                b.HasQueryFilter(u => u.TenantId == _tenantId);
+            });
 
             foreach (var entityType in builder.Model.GetEntityTypes())
             {

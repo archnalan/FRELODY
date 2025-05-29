@@ -24,9 +24,8 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.Bridge", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int?>("BridgeNumber")
                         .HasColumnType("int");
@@ -51,12 +50,13 @@ namespace FRELODYLIB.Migrations
                     b.Property<int?>("RepeatCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("SongId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("SongId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -77,9 +77,8 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.Category", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("CategorySlug")
                         .HasMaxLength(255)
@@ -103,18 +102,21 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid?>("ParentCategoryId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("ParentCategoryId")
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("SongBookId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("ParentCategoryId1")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("SongBookId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int?>("Sorting")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -128,6 +130,8 @@ namespace FRELODYLIB.Migrations
 
                     b.HasIndex("ParentCategoryId");
 
+                    b.HasIndex("ParentCategoryId1");
+
                     b.HasIndex("SongBookId");
 
                     b.HasIndex("TenantId");
@@ -137,11 +141,8 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.Chord", b =>
                 {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ChordAudioFilePath")
                         .HasMaxLength(255)
@@ -171,9 +172,9 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -192,16 +193,15 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.ChordChart", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ChartAudioFilePath")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<long?>("ChordId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("ChordId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -227,9 +227,9 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -250,9 +250,8 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.Chorus", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int?>("ChorusNumber")
                         .HasColumnType("int");
@@ -276,12 +275,13 @@ namespace FRELODYLIB.Migrations
                     b.Property<int?>("RepeatCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("SongId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("SongId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -302,15 +302,14 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.LyricLine", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("BridgeId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("BridgeId")
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("ChorusId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("ChorusId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -338,12 +337,12 @@ namespace FRELODYLIB.Migrations
                     b.Property<int?>("RepeatCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("VerseId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("VerseId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -368,12 +367,11 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.LyricSegment", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<long?>("ChordId")
-                        .HasColumnType("bigint");
+                    b.Property<string>("ChordId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -392,23 +390,26 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("LyricFileContent")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("LyricFilePath")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<Guid?>("LyricLineId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("LyricLineId")
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<long>("LyricOrder")
-                        .HasColumnType("bigint");
+                    b.Property<int>("LyricOrder")
+                        .HasColumnType("int");
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -431,11 +432,8 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.Page", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Content")
                         .IsRequired()
@@ -463,9 +461,9 @@ namespace FRELODYLIB.Migrations
                     b.Property<int?>("Sorting")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -489,12 +487,11 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.Song", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("CategoryId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("CategoryId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -518,16 +515,19 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<long?>("SongNumber")
+                    b.Property<int?>("SongNumber")
                         .IsRequired()
-                        .HasColumnType("bigint");
+                        .HasColumnType("int");
 
                     b.Property<string>("SongPlayLevel")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TextFileContent")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TextFilePath")
                         .HasMaxLength(255)
@@ -565,9 +565,8 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.SongBook", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Author")
                         .HasMaxLength(255)
@@ -617,9 +616,9 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -721,8 +720,8 @@ namespace FRELODYLIB.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
@@ -797,9 +796,8 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.Tenant", b =>
                 {
-                    b.Property<Guid>("TenantId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Address")
                         .HasColumnType("nvarchar(max)");
@@ -844,6 +842,10 @@ namespace FRELODYLIB.Migrations
                     b.Property<string>("TaxIdentificationNumber")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("TenantName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -851,7 +853,7 @@ namespace FRELODYLIB.Migrations
                     b.Property<string>("Website")
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("TenantId");
+                    b.HasKey("Id");
 
                     b.HasIndex("DateCreated");
 
@@ -868,17 +870,27 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.UserFeedback", b =>
                 {
-                    b.Property<long>("FeedbackId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("FeedbackId"));
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FullName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -887,26 +899,21 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<Guid?>("SongId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("SongId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int?>("Status")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("UserComment")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("UserId")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.HasKey("FeedbackId");
+                    b.HasKey("Id");
 
                     b.HasIndex("DateCreated");
 
@@ -925,9 +932,8 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.Verse", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -945,12 +951,13 @@ namespace FRELODYLIB.Migrations
                     b.Property<int?>("RepeatCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("SongId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("SongId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasMaxLength(255)
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("VerseNumber")
                         .HasColumnType("int");
@@ -1129,11 +1136,16 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.Category", b =>
                 {
+                    b.HasOne("FRELODYAPP.Models.Category", null)
+                        .WithMany()
+                        .HasForeignKey("ParentCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("FRELODYAPP.Models.Category", "ParentCategory")
                         .WithMany("SubCategories")
-                        .HasForeignKey("ParentCategoryId");
+                        .HasForeignKey("ParentCategoryId1");
 
-                    b.HasOne("FRELODYAPP.Models.SongBook", "SongBook")
+                    b.HasOne("FRELODYAPP.Models.SongBook", null)
                         .WithMany("Categories")
                         .HasForeignKey("SongBookId");
 
@@ -1143,8 +1155,6 @@ namespace FRELODYLIB.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("ParentCategory");
-
-                    b.Navigation("SongBook");
                 });
 
             modelBuilder.Entity("FRELODYAPP.Models.Chord", b =>
@@ -1160,7 +1170,7 @@ namespace FRELODYLIB.Migrations
                     b.HasOne("FRELODYAPP.Models.Chord", null)
                         .WithMany("ChordCharts")
                         .HasForeignKey("ChordId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("FRELODYAPP.Models.Tenant", null)
                         .WithMany()

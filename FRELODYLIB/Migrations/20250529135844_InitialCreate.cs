@@ -41,7 +41,7 @@ namespace FRELODYLIB.Migrations
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    TenantId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -66,7 +66,7 @@ namespace FRELODYLIB.Migrations
                 name: "Tenants",
                 columns: table => new
                 {
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     TenantName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     BusinessRegNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TaxIdentificationNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -82,11 +82,12 @@ namespace FRELODYLIB.Migrations
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
-                    ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true)
+                    ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Tenants", x => x.TenantId);
+                    table.PrimaryKey("PK_Tenants", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -225,8 +226,7 @@ namespace FRELODYLIB.Migrations
                 name: "Chords",
                 columns: table => new
                 {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     ChordName = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: false),
                     Difficulty = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ChordType = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -235,7 +235,7 @@ namespace FRELODYLIB.Migrations
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -244,7 +244,7 @@ namespace FRELODYLIB.Migrations
                         name: "FK_Chords_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -252,8 +252,7 @@ namespace FRELODYLIB.Migrations
                 name: "Pages",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Title = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: false),
                     Slug = table.Column<string>(type: "nvarchar(25)", maxLength: 25, nullable: false),
                     Content = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
@@ -262,7 +261,7 @@ namespace FRELODYLIB.Migrations
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -271,7 +270,7 @@ namespace FRELODYLIB.Migrations
                         name: "FK_Pages_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -279,7 +278,7 @@ namespace FRELODYLIB.Migrations
                 name: "SongBooks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Title = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Slug = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     SubTitle = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
@@ -294,7 +293,7 @@ namespace FRELODYLIB.Migrations
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -303,7 +302,7 @@ namespace FRELODYLIB.Migrations
                         name: "FK_SongBooks_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -311,9 +310,9 @@ namespace FRELODYLIB.Migrations
                 name: "ChordCharts",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     FilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ChordId = table.Column<long>(type: "bigint", nullable: true),
+                    ChordId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     FretPosition = table.Column<int>(type: "int", nullable: true),
                     ChartAudioFilePath = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
                     PositionDescription = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
@@ -321,7 +320,7 @@ namespace FRELODYLIB.Migrations
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -331,12 +330,12 @@ namespace FRELODYLIB.Migrations
                         column: x => x.ChordId,
                         principalTable: "Chords",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ChordCharts_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -344,17 +343,18 @@ namespace FRELODYLIB.Migrations
                 name: "Categories",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    ParentCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ParentCategoryId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     Sorting = table.Column<int>(type: "int", nullable: true),
                     CategorySlug = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    SongBookId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    SongBookId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    ParentCategoryId1 = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -362,6 +362,12 @@ namespace FRELODYLIB.Migrations
                     table.ForeignKey(
                         name: "FK_Categories_Categories_ParentCategoryId",
                         column: x => x.ParentCategoryId,
+                        principalTable: "Categories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Categories_Categories_ParentCategoryId1",
+                        column: x => x.ParentCategoryId1,
                         principalTable: "Categories",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -373,7 +379,7 @@ namespace FRELODYLIB.Migrations
                         name: "FK_Categories_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -381,21 +387,22 @@ namespace FRELODYLIB.Migrations
                 name: "Songs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Title = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    SongNumber = table.Column<long>(type: "bigint", nullable: false),
+                    SongNumber = table.Column<int>(type: "int", nullable: false),
                     Slug = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     SongPlayLevel = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TextFileContent = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TextFilePath = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
                     WrittenDateRange = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     WrittenBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     History = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    CategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CategoryId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -409,7 +416,7 @@ namespace FRELODYLIB.Migrations
                         name: "FK_Songs_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -417,15 +424,16 @@ namespace FRELODYLIB.Migrations
                 name: "Bridges",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SongId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    SongId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     BridgeNumber = table.Column<int>(type: "int", nullable: true),
                     BridgeTitle = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    RepeatCount = table.Column<int>(type: "int", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -440,7 +448,7 @@ namespace FRELODYLIB.Migrations
                         name: "FK_Bridges_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -448,15 +456,16 @@ namespace FRELODYLIB.Migrations
                 name: "Choruses",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SongId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    SongId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     ChorusNumber = table.Column<int>(type: "int", nullable: true),
                     ChorusTitle = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RepeatCount = table.Column<int>(type: "int", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -471,7 +480,7 @@ namespace FRELODYLIB.Migrations
                         name: "FK_Choruses_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -479,21 +488,22 @@ namespace FRELODYLIB.Migrations
                 name: "UserFeedback",
                 columns: table => new
                 {
-                    FeedbackId = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    UserComment = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    SongId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Comment = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    FullName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    SongId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     UserId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     Status = table.Column<int>(type: "int", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserFeedback", x => x.FeedbackId);
+                    table.PrimaryKey("PK_UserFeedback", x => x.Id);
                     table.ForeignKey(
                         name: "FK_UserFeedback_Songs_SongId",
                         column: x => x.SongId,
@@ -503,7 +513,7 @@ namespace FRELODYLIB.Migrations
                         name: "FK_UserFeedback_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -511,15 +521,16 @@ namespace FRELODYLIB.Migrations
                 name: "Verses",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SongId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    SongId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     VerseNumber = table.Column<int>(type: "int", nullable: false),
                     VerseTitle = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    RepeatCount = table.Column<int>(type: "int", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -534,7 +545,7 @@ namespace FRELODYLIB.Migrations
                         name: "FK_Verses_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -542,17 +553,19 @@ namespace FRELODYLIB.Migrations
                 name: "LyricLines",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     LyricLineOrder = table.Column<long>(type: "bigint", nullable: false),
+                    PartName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     PartNumber = table.Column<int>(type: "int", nullable: true),
-                    VerseId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ChorusId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    BridgeId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RepeatCount = table.Column<int>(type: "int", nullable: true),
+                    VerseId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    ChorusId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    BridgeId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -571,7 +584,7 @@ namespace FRELODYLIB.Migrations
                         name: "FK_LyricLines_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_LyricLines_Verses_VerseId",
@@ -584,18 +597,19 @@ namespace FRELODYLIB.Migrations
                 name: "LyricSegments",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Lyric = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    LyricOrder = table.Column<long>(type: "bigint", nullable: false),
+                    LyricOrder = table.Column<int>(type: "int", nullable: false),
                     LineNumber = table.Column<int>(type: "int", nullable: false),
+                    LyricFileContent = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     LyricFilePath = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    ChordId = table.Column<long>(type: "bigint", nullable: true),
-                    LyricLineId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ChordId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    LyricLineId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: true),
                     ModifiedBy = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 255, nullable: true)
+                    TenantId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -614,7 +628,7 @@ namespace FRELODYLIB.Migrations
                         name: "FK_LyricSegments_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
-                        principalColumn: "TenantId",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -736,6 +750,11 @@ namespace FRELODYLIB.Migrations
                 name: "IX_Categories_ParentCategoryId",
                 table: "Categories",
                 column: "ParentCategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Categories_ParentCategoryId1",
+                table: "Categories",
+                column: "ParentCategoryId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Categories_SongBookId",

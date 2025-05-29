@@ -13,7 +13,7 @@ namespace FRELODYAPP.Models.SubModels
         [StringLength(255)]
         public string? ModifiedBy { get; set; }
 
-        [StringLength(255)]
+        [StringLength(450)] //Due to Primary key length
         public virtual string? TenantId { get; set; } 
     }
     public interface IBaseEntity
