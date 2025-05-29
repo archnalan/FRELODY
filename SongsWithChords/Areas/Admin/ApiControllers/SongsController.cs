@@ -32,7 +32,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
 
         [HttpPost]
         [ProducesResponseType(typeof(SongDto), 200)]
-        public async Task<ActionResult<SongDto>> CreateSong([FromBody] SimpleSongCreateDto song)
+        public async Task<ActionResult> CreateSong([FromBody] SimpleSongCreateDto song)
         {
             var songResult = await _songService.CreateSong(song);
 

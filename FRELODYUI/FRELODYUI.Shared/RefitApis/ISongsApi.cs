@@ -6,18 +6,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FRELODYSHRD.Dtos.CreateDtos;
 
 namespace FRELODYUI.Shared.RefitApis
 {
     public interface ISongsApi
     {
         [Get("/api/Songs/GetSongs")]
-        Task<IEnumerable<ComboBoxDto>> GetSongs();
+        Task<IApiResponse<IEnumerable<ComboBoxDto>>> GetSongs();
 
         [Get("/api/Songs/GetSongWithChordsById/{id}")]
-        Task<IEnumerable<SongDto>> GetSongWithChordsById(Guid id);
+        Task<IApiResponse<SongDto>> GetSongWithChordsById(string id);
 
         [Get("/api/Songs/GetSongDetailsById/{id}")]
-        Task<IEnumerable<SongDto>> GetSongDetailsById(Guid id);
+        Task<IApiResponse<SongDto>> GetSongDetailsById(string id);
+
+        [Post("/api/Songs/CreateSong")]
+        Task<IApiResponse<SongDto>> CreateSong([Body] SimpleSongCreateDto song);
     }
 }

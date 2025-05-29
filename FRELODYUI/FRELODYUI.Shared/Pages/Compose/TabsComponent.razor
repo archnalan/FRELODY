@@ -1,23 +1,23 @@
 ﻿
 <div class="bg-light d-flex justify-content-center align-items-center py-4">
     <div class="d-flex flex-column w-100">
-        <div class="p-2 border border-secondary rounded flex-wrap d-flex justify-content-start align-items-center gap-2 font-weight-bold text-primary bg-light">
+        <div class="p-2 border rounded rounded-3 flex-wrap d-flex justify-content-start align-items-center gap-2 fw-bold text-primary bg-light">
             @foreach (var item in Items)
             {
                 <div class="@GetTabClass(item.Id)" @onclick="() => SetSelectedTab(item.Id)">
-                    <div class="mr-3">
-                        @item.Title @(Items.IndexOf(item) + 1)
+                    <div class="me-3">
+						<span class="fw-normal">@item.Title @(Items.IndexOf(item) + 1)</span>
                     </div>
-                    <button class="btn btn-sm btn-link text-primary"
+                    <button class="btn btn-sm btn-link text-primary text-decoration-none"
                             @onclick="() => HandleTabRemove(item.Id)">
-                        <span aria-hidden="true">&times;</span>
+                        <span aria-hidden="true" class="m-0 fs-4 rounded-circle">&times;</span>
                     </button>
                 </div>
             }
-            <button class="btn btn-sm btn-link text-primary"
+            <button class="btn btn-sm btn-link text-primary text-decoration-none"
                     @onclick="HandleAddTab"
                     disabled="@(Items.Count >= ItemsCountLimit)">
-                <span aria-hidden="true">+</span>
+                <span aria-hidden="true" class="m-0 fs-5">+</span>
             </button>
         </div>
 
@@ -54,8 +54,8 @@
 
     private string GetTabClass(int id) =>
         SelectedTab == id
-            ? "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded border border-primary bg-white text-primary shadow cursor-pointer"
-            : "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded cursor-pointer hover-bg-light";
+            ? "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded rounded-3 border border-primary bg-white text-primary shadow cursor-pointer"
+            : "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded rounded-3 cursor-pointer hover-light";
 
     private void SetSelectedTab(int id) => SelectedTab = id;
 

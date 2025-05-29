@@ -85,7 +85,7 @@
             var response = await _songsApi.GetSongs();
             if (response != null)
             {
-                songs = response.ToList();
+                songs = response.Content!.ToList();
                 filteredSongs = new List<ComboBoxDto>(songs);
                 error = string.Empty;
             }

@@ -1,9 +1,9 @@
 ﻿@page "/compose"
 
-<div class="w-100 d-flex flex-column justify-content-center bg-light p-4">
-    <h1 class="h2 font-weight-bold mb-4 text-center">Song Editor</h1>
+<div class="w-100 d-flex flex-column justify-content-center px-4">
+	<h3 class="fw-bold text-center mb-3">Song Editor</h3>
 
-    <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
         <div class="d-flex flex-grow-1">
             <input type="number" 
                    @bind="SongNumber" 
@@ -13,7 +13,7 @@
                    
             <input type="text" 
                    @bind="SongTitle" 
-                   class="form-control w-auto" 
+                   class="form-control w-50" 
                    placeholder="Song Title" />
         </div>
         <button @onclick="HandleSongSave" class="btn btn-primary">
@@ -56,7 +56,7 @@
             }
             };
     }
-    private void HandleSongSave()
+    private async Task HandleSongSave()
     {
         var allSegments = AllVerseSegments.Values.SelectMany(v => v).ToList();
         var songData = new SimpleSongCreateDto
@@ -66,7 +66,17 @@
             SongLyrics = allSegments
         };
 
-        // Validation and API call would go here
+		var songResult = await _songsApi.CreateSong(songData);
+		if (songResult.IsSuccessStatusCode)
+		{
+			// Handle success, e.g., show a message or redirect
+			Console.WriteLine("Song saved successfully!");
+		}
+		else
+		{
+			// Handle error, e.g., show an error message
+			Console.WriteLine("Failed to save song: " + songResult.Error.Message);
+		}
     }
 
     private void HandleVerseUpdate(int verseId, List<SegmentCreateDto> segments)
