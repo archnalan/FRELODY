@@ -6,9 +6,9 @@ namespace FRELODYAPP.Dtos.WithUploads
 {
 	public class ChartEditDto
 	{
-		public Guid Id { get; set; }
+		public string Id { get; set; }
 		public string FilePath { get; set; }
-		public int? ChordId { get; set; }
+		public string? ChordId { get; set; }
 
 		[Range(1, 24)]
 		public int FretPosition { get; set; }
@@ -19,7 +19,9 @@ namespace FRELODYAPP.Dtos.WithUploads
 		[FileExtensionValidation(new string[] { ".png", ".jpg", ".gif", ".tiff", ".svg" })]
 		public IFormFile? ChartUpload { get; set; }
 
-		[FileExtensionValidation(new string[] { ".mp3", ".avi", ".mp4", ".aac", ".wav" })]
+		public string? ChartBase64ImageContent { get; set; }
+
+        [FileExtensionValidation(new string[] { ".mp3", ".avi", ".mp4", ".aac", ".wav" })]
 		public IFormFile? ChartAudioUpload { get; set; }
 
 		[StringLength(100)]

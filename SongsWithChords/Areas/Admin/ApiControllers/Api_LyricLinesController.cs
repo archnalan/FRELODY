@@ -38,7 +38,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("{id}")]
-		public async Task<IActionResult> GetLyricLineById(Guid id)
+		public async Task<IActionResult> GetLyricLineById(string id)
 		{
 			var lyricLine = await _context.LyricLines.FindAsync(id);
 
@@ -50,7 +50,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("verse/{id}")]
-		public async Task<IActionResult> GetLyricLinesInVerse(Guid id)
+		public async Task<IActionResult> GetLyricLinesInVerse(string id)
 		{
 			var lyricLines = await _context.LyricLines
 								.Where(ll => ll.VerseId == id)
@@ -65,7 +65,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("bridge/{id}")]
-		public async Task<IActionResult> GetLyricLinesInBridge(Guid id)
+		public async Task<IActionResult> GetLyricLinesInBridge(string id)
 		{
 			var lyricLines = await _context.LyricLines
 								.Where(ll => ll.BridgeId == id)
@@ -80,7 +80,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 		
 		[HttpGet("chorus/{id}")]
-		public async Task<IActionResult> GetLyricLinesInChorus(Guid id)
+		public async Task<IActionResult> GetLyricLinesInChorus(string id)
 		{
 			var lyricLines = await _context.LyricLines
 								.Where(ll => ll.ChorusId == id)
@@ -143,7 +143,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 			var errors = new List<string>();
 			var noRepeatLineOrder = new System.Collections.Generic
-										.HashSet<(long? LyricOrder, Guid? VerseId)>();
+										.HashSet<(long? LyricOrder, string? VerseId)>();
 
 			foreach(var verselineDto in verselineDtos)
 			{
@@ -258,7 +258,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 			var errors = new List<string>();
 			var noRepeatLineOrder = new System.Collections.Generic
-										.HashSet<(long? LyricOrder, Guid? BridgeId)>();
+										.HashSet<(long? LyricOrder, string? BridgeId)>();
 
 			foreach (var bridgeLineDto in bridgeLineDtos)
 			{
@@ -373,7 +373,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 			var errors = new List<string>();
 			var noRepeatLineOrder = new System.Collections.Generic
-										.HashSet<(long? LyricOrder, Guid? ChorusId)>();
+										.HashSet<(long? LyricOrder, string? ChorusId)>();
 
 			foreach (var chorusLineDto in chorusLineDtos)
 			{
@@ -442,7 +442,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 
 		[HttpPut("edit_verse/{id}")]
-		public async Task<IActionResult> EditVerseLine(Guid id, LyricLineDto verseLineDto)
+		public async Task<IActionResult> EditVerseLine(string id, LyricLineDto verseLineDto)
 		{
 			if (verseLineDto == null) return BadRequest("Verse data is required.");
 
@@ -496,7 +496,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpPut("edit_bridge/{id}")]
-		public async Task<IActionResult> EditBridgeLine(Guid id, LyricLineDto bridgeLineDto)
+		public async Task<IActionResult> EditBridgeLine(string id, LyricLineDto bridgeLineDto)
 		{
 			if (bridgeLineDto == null) return BadRequest("Bridge data is required.");
 
@@ -550,7 +550,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpPut("edit_chorus/{id}")]
-		public async Task<IActionResult> EditChorusLine(Guid id, LyricLineDto chorusLineDto)
+		public async Task<IActionResult> EditChorusLine(string id, LyricLineDto chorusLineDto)
 		{
 			if (chorusLineDto == null) return BadRequest("Chorus data is required.");
 
@@ -624,7 +624,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpDelete("by_ids")]
-		public async Task<IActionResult> DeleteLines(List<Guid> ids)
+		public async Task<IActionResult> DeleteLines(List<string> ids)
 		{
 			if (ids == null || ids.Count == 0) return BadRequest("LyricLine Ids are required.");
 

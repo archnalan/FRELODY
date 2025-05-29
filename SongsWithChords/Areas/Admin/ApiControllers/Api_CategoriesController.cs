@@ -40,7 +40,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 		//GET admin/api_categories/{id}
 		[HttpGet("{id}")]
-		public async Task<IActionResult> GetCategoryByID(int id)
+		public async Task<IActionResult> GetCategoryByID(string id)
 		{			
 			var category = await _context.Categories.FindAsync(id);
 
@@ -53,7 +53,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 		//GET admin/api_categories/by_ids
 		[HttpGet("by_ids")]
-		public async Task<IActionResult> GetCategoriesByID(Guid[] ids)
+		public async Task<IActionResult> GetCategoriesByID(string[] ids)
 		{
 			//Find match in Db
 			var categories = await _context.Categories
@@ -120,7 +120,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 			var createdCategories = new List<CategoryDto>();
 			 
 			var errors = new List<string>();
-			var readyCategories = new HashSet<(string name, Guid? parentCategoryId)>();
+			var readyCategories = new HashSet<(string name, string? parentCategoryId)>();
 
 			foreach(var categoryDto in categoryDtos)
 			{
@@ -235,7 +235,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		//PUT admin/api_categories/edit
 		[HttpPut]
 		[Route("edit/{id}")]
-		public async Task<IActionResult> Edit(Guid id, CategoryDto categoryDto)
+		public async Task<IActionResult> Edit(string id, CategoryDto categoryDto)
 		{
 			if (categoryDto == null) return BadRequest("Category Data is required");
 
@@ -252,7 +252,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
         
 		[NonAction]
-        public async Task<IActionResult> EditCategory(Guid id, CategoryDto categoryDto)
+        public async Task<IActionResult> EditCategory(string id, CategoryDto categoryDto)
 		{
 			if (categoryDto == null) return BadRequest("Category Data is required");
 

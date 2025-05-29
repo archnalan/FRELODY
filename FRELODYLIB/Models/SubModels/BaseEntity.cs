@@ -4,7 +4,8 @@ namespace FRELODYAPP.Models.SubModels
 {
     public class BaseEntity : IBaseEntity
     {
-
+        [Key]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
         public DateTime? DateCreated { get; set; }
         public DateTime? DateModified { get; set; }
         public bool? IsDeleted { get; set; }
@@ -13,7 +14,7 @@ namespace FRELODYAPP.Models.SubModels
         public string? ModifiedBy { get; set; }
 
         [StringLength(255)]
-        public virtual Guid? TenantId { get; set; } 
+        public virtual string? TenantId { get; set; } 
     }
     public interface IBaseEntity
     {
@@ -21,6 +22,6 @@ namespace FRELODYAPP.Models.SubModels
         DateTime? DateModified { get; set; }
         bool? IsDeleted { get; set; }
         string? ModifiedBy { get; set; }
-        Guid? TenantId { get; set; }
+        string? TenantId { get; set; }
     }    
 }

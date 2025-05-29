@@ -3,10 +3,10 @@
     public class LyricSegmentCreateDto
     {
         public string Lyric { get; set; }
-        public long LyricOrder { get; set; }
+        public int LyricOrder { get; set; }
         public int LineNumber { get; set; }
-        public long? UISegNo { get; set; }
-        public Guid? LyricLineId { get; set; }
-        public long? ChordId { get; set; }
+        public int? UISegNo { get; set; }
+        public string? LyricLineId { get; set; }
+        public string? ChordId { get; set; }
     }
 }

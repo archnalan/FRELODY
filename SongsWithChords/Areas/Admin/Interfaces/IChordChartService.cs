@@ -14,17 +14,25 @@ namespace FRELODYAPP.Areas.Admin.Interfaces
 		/// <param name="id">The ID of the chord chart.</param>
 		/// <returns>A service result containing the chord chart DTO or an error message.</returns>
 		/// <exception cref="ApplicationException">Thrown when the chord chart with the specified ID does not exist.</exception>
-		Task<ServiceResult<ChartWithUploadsDto>> GetChordChartByIdAsync(Guid id);
+		Task<ServiceResult<ChartWithUploadsDto>> GetChordChartByIdAsync(string id);
 
-		//Task<(ChartWithUploadsDto, string)> GetChordChartByIdAsync(int id);
-		//Task<(ChartWithParentChordDto, string)> GetChordChartWithChordByIdAsync(int id);
-
-		/// <summary>
-		/// creates a chord chart 
+        /// <summary>
+		/// Get chord charts by parent chord ID.
 		/// </summary>
-		/// <param name="chordChartDto"></param>
-		/// <returns></returns>
-		Task<ServiceResult<ChartEditDto>> CreateChordChartAsync(ChartCreateDto chordChartDto);
+		/// <param name="chordId">Parent chord ID.</param>
+		/// <returns>A service result containing a list of chord charts or an error message.</returns>
+		/// <exception cref="ApplicationException">Thrown when no chord charts are found for the specified parent chord ID.</exception>"
+		Task<ServiceResult<List<ChartWithUploadsDto>>> GetChordChartsByParentChordIdAsync(string chordId);
+
+        //Task<(ChartWithUploadsDto, string)> GetChordChartByIdAsync(int id);
+        //Task<(ChartWithParentChordDto, string)> GetChordChartWithChordByIdAsync(int id);
+
+        /// <summary>
+        /// creates a chord chart 
+        /// </summary>
+        /// <param name="chordChartDto"></param>
+        /// <returns></returns>
+        Task<ServiceResult<ChartEditDto>> CreateChordChartAsync(ChartCreateDto chordChartDto);
 
 		/// <summary>
 		/// Updates a chord chart
@@ -38,6 +46,6 @@ namespace FRELODYAPP.Areas.Admin.Interfaces
 		/// </summary>
 		/// <param name="id"></param>
 		/// <returns></returns>
-		Task<ServiceResult<bool>> DeleteChordChartByIdAsync(Guid id);
+		Task<ServiceResult<bool>> DeleteChordChartByIdAsync(string id);
 	}
 }

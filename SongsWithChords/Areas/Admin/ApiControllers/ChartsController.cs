@@ -30,7 +30,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("{id}")]
-		public async Task<IActionResult> GetChordChartById(Guid id)
+		public async Task<IActionResult> GetChordChartById(string id)
 		{
 
 			var chartResult = await _chartService.GetChordChartByIdAsync(id);
@@ -59,7 +59,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpPut("edit/{id}")]
-		public async Task<IActionResult> EditChordChart(Guid id, [FromForm]ChartEditDto chartEditDto)
+		public async Task<IActionResult> EditChordChart(string id, [FromForm]ChartEditDto chartEditDto)
 		{
 			if (chartEditDto == null) return BadRequest("Chord Chart data is required.");
 
@@ -77,7 +77,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpDelete("{id}")]
-		public async Task<IActionResult> DeleteChordChart(Guid id)
+		public async Task<IActionResult> DeleteChordChart(string id)
 		{
 			var removalResult = await _chartService.DeleteChordChartByIdAsync(id);
 

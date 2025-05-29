@@ -5,9 +5,6 @@ namespace FRELODYAPP.Models
 {
 	public class SongBook:BaseEntity
 	{
-		[Key]
-		public Guid Id { get; set; }
-
 		[Required]
 		[StringLength(50)]
 		public string Title { get; set; }

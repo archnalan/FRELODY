@@ -129,7 +129,7 @@ namespace FRELODYAPP.Data
         }
 
         //OAuth
-        public async Task<ServiceResult<LoginResponseDto>> ExternalLoginCallback(string code, Guid tenantId)
+        public async Task<ServiceResult<LoginResponseDto>> ExternalLoginCallback(string code, string tenantId)
         {
             var client = new HttpClient();
             var uri = new Uri("https://oauth2.googleapis.com/token");
@@ -299,7 +299,7 @@ namespace FRELODYAPP.Data
         }
 
         public async Task<ServiceResult<LoginResponseDto>> LoginUserNameOrPhone(
-            [OneRequiredProp(new string[] { "UserName", "PhoneNumber" })] LoginUserNameOrPhoneDto userLogin, Guid tenantId)
+            [OneRequiredProp(new string[] { "UserName", "PhoneNumber" })] LoginUserNameOrPhoneDto userLogin, string tenantId)
         {
             try
             {
@@ -343,7 +343,7 @@ namespace FRELODYAPP.Data
             }
         }
 
-        private async Task<ServiceResult<LoginResponseDto>> LoginUserNoPassword(User userFromDb, Guid tenantId)
+        private async Task<ServiceResult<LoginResponseDto>> LoginUserNoPassword(User userFromDb, string tenantId)
         {
             var token = await _tokenService.GenerateTokens(userFromDb, tenantId);
 
@@ -358,7 +358,7 @@ namespace FRELODYAPP.Data
             return ServiceResult<LoginResponseDto>.Success(token);
         }
 
-        public async Task<ServiceResult<CreateUserResponseDto>> CreateUser([Required] CreateUserDto createUserDto, Guid tenantId)
+        public async Task<ServiceResult<CreateUserResponseDto>> CreateUser([Required] CreateUserDto createUserDto, string tenantId)
         {
             var tenantExists = await _context.Tenants.AnyAsync(x => x.TenantId == tenantId);
 

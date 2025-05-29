@@ -7,7 +7,7 @@ namespace FRELODYAPP.Dtos.WithUploads
 	public class ChartCreateDto
 	{
 		public string FilePath { get; set; }
-		public int? ChordId { get; set; }
+		public string? ChordId { get; set; }
 
 		[Range(1, 24)]
 		public int FretPosition { get; set; }

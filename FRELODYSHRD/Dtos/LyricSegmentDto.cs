@@ -9,13 +9,11 @@ namespace FRELODYAPP.Dtos
 {
     public class LyricSegmentDto : BaseEntityDto
     {
-        public Guid? Id { get; set; }
-
         [Required]
         [StringLength(200)]
         public string Lyric { get; set; }
 
-        public long LyricOrder { get; set; }
+        public int LyricOrder { get; set; }
 
         public int LineNumber { get; set; }
 
@@ -26,9 +24,9 @@ namespace FRELODYAPP.Dtos
         [StringLength(255)]
         public string? LyricFilePath { get; set; }
 
-        public long? ChordId { get; set; }
+        public string? ChordId { get; set; }
 
-        public Guid? LyricLineId { get; set; }
+        public string? LyricLineId { get; set; }
 
         [ForeignKey(nameof(ChordId))]
         public virtual ChordSimpleDto? Chord { get; set; }

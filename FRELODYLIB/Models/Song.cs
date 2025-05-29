@@ -9,15 +9,12 @@ namespace FRELODYAPP.Models
 {
 	public class Song:BaseEntity
 	{
-		[Key]
-		public Guid Id { get; set; }
-
 		[Required]
 		[StringLength(100)]
 		public string Title { get; set; }
 
 		[Required]
-		public long? SongNumber { get; set; }
+		public int? SongNumber { get; set; }
 
 		[Required]
 		[StringLength(200)]
@@ -28,8 +25,10 @@ namespace FRELODYAPP.Models
         [NotMapped]
 		[TextFileValidation(".txt", ".pdf")]
 		public IFormFile? TextUpload { get; set; }
+        
+        public string? TextFileContent { get; set; }
 
-		[StringLength(255)]
+        [StringLength(255)]
         public string? TextFilePath { get; set; }
 
         [StringLength(100)]
@@ -41,7 +40,7 @@ namespace FRELODYAPP.Models
 		[StringLength(255)]
 		public string? History { get; set; }
 
-        public Guid? CategoryId { get; set; }
+        public string? CategoryId { get; set; }
 
         public virtual ICollection<Verse>? Verses { get; set; }
 

@@ -9,7 +9,7 @@ namespace FRELODYAPP.Data.Infrastructure
     public interface ITenantProvider
     {
         string GetUserId();
-        Guid GetTenantId();
+        string GetTenantId();
         UserClaimsDto GetCurrentUser();
     }
 
@@ -24,7 +24,7 @@ namespace FRELODYAPP.Data.Infrastructure
             _logger = logger;
         }
 
-        public Guid GetTenantId()
+        public string GetTenantId()
         {
             try
             {
@@ -38,27 +38,19 @@ namespace FRELODYAPP.Data.Infrastructure
                     if (string.IsNullOrEmpty(tenantIdString))
                     {
                         _logger.LogWarning("TenantId is missing in the claims.");
-                        return Guid.Empty;
+                        return string.Empty;
                     }
 
-                    if (Guid.TryParse(tenantIdString, out Guid tenantId))
-                    {
-                        return tenantId;
-                    }
-                    else
-                    {
-                        _logger.LogWarning("TenantId in claims is not a valid GUID: {TenantId}", tenantIdString);
-                        return Guid.Empty;
-                    }
+                    return tenantIdString;
                 }
 
                 _logger.LogWarning("User identity is not available.");
-                return Guid.Empty;
+                return string.Empty;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while getting TenantId.");
-                return Guid.Empty;
+                return string.Empty;
             }
         }
 

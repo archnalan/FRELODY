@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using FRELODYAPP.Areas.Admin.Interfaces;
+﻿using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Dtos;
 using FRELODYAPP.Models;
 using FRELODYAPP.ServiceHandler;
@@ -8,46 +7,64 @@ using Microsoft.EntityFrameworkCore;
 using System.Web.Http.ModelBinding;
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYSHRD.Dtos.CreateDtos;
+using Mapster;
 
 namespace FRELODYAPP.Areas.Admin.LogicData
 {
     public class VerseService : IVerseService
 	{
 		private readonly SongDbContext _context;
-		private readonly IMapper _mapper;
 
-		public VerseService(SongDbContext context, IMapper mapper)
+		public VerseService(SongDbContext context)
 		{
 			_context = context;
-			_mapper = mapper;
 		}
 
 		public async Task<ServiceResult<List<VerseDto>>> GetAllVersesAsync()
 		{
-			var verses = await _context.Verses
-							.OrderBy(v => v.VerseNumber)
-							.ToListAsync();
+			try
+            {
+                var verses = await _context.Verses
+                            .OrderBy(v => v.VerseNumber)
+                            .ToListAsync();
 
-			var versesDto = _mapper.Map<List<VerseDto>>(verses).ToList();
+                var versesDto = verses.Adapt<List<VerseDto>>();
 
-			return ServiceResult<List<VerseDto>>.Success(versesDto);
+                return ServiceResult<List<VerseDto>>.Success(versesDto);
+
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<List<VerseDto>>.Failure(new
+                    Exception($"An error occurred while retrieving verses: {ex.Message}"));
+            }
+           
 		}
 
-		public async Task<ServiceResult<VerseDto>> GetVerseByIdAsync(Guid id)
+		public async Task<ServiceResult<VerseDto>> GetVerseByIdAsync(string id)
 		{
-			var verse = await _context.Verses.FindAsync(id);
+			try
+			{
+                var verse = await _context.Verses.FindAsync(id);
 
-			if (verse == null) return ServiceResult<VerseDto>.Failure(
-				new NotFoundException($"Verse with ID:{id} does not exist."));
+                if (verse == null) return ServiceResult<VerseDto>.Failure(
+                    new NotFoundException($"Verse with ID:{id} does not exist."));
 
-			var verseDto = _mapper.Map<VerseDto>(verse);
+                var verseDto = verse.Adapt<VerseDto>();
 
-			return ServiceResult<VerseDto>.Success(verseDto);
+                return ServiceResult<VerseDto>.Success(verseDto);
+            }
+			catch (Exception ex) 
+			{
+                return ServiceResult<VerseDto>.Failure(new
+                    Exception($"An error occurred while retrieving verse with ID:{id}. {ex.Message}"));
+            }
+			
 		}		
 
 		public async Task<ServiceResult<VerseDto>> CreateVerseAsync(VerseCreateDto verseDto)
 		{
-			if (verseDto == null) return ServiceResult<VerseDto>.Failure( new
+            if (verseDto == null) return ServiceResult<VerseDto>.Failure( new
 				BadRequestException("Verse data is required."));		
 
 			var SongInDb = await _context.Songs.FindAsync(verseDto.SongId);
@@ -64,7 +81,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				return ServiceResult<VerseDto>.Failure(new
 				ConflictException($"Verse Number {verseDto.VerseNumber} already exists for this Song"));
 
-			var verse = _mapper.Map<Verse>(verseDto);
+			var verse = verseDto.Adapt<Verse>();
 			try
 			{
 				await _context.Verses.AddAsync(verse);
@@ -76,12 +93,12 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				Exception(ex.Message));
 			}
 
-			var newVerseDto = _mapper.Map<VerseDto>(verse);
+			var newVerseDto = verse.Adapt<VerseDto>();
 
 			return ServiceResult<VerseDto>.Success(newVerseDto);
 		}
 
-		public async Task<ServiceResult<VerseDto>> EditVerseAsync(Guid id, VerseDto verseEdit)
+		public async Task<ServiceResult<VerseDto>> EditVerseAsync(string id, VerseDto verseEdit)
 		{
 			if (verseEdit == null) return ServiceResult<VerseDto>.Failure(new
 				BadRequestException("Verse data is required."));
@@ -111,12 +128,12 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 			if (SongInDb == null)
 				return ServiceResult<VerseDto>.Failure(new
 				BadRequestException($"Parent Song with ID: {verseEdit.SongId} does not exist"));
-
-			var verse = _mapper.Map(verseEdit, verseInDb);
+			
+			verseEdit.Adapt(verseInDb);
 
 			try
 			{
-				_context.Verses.Update(verse);
+				_context.Verses.Update(verseInDb);
 				await _context.SaveChangesAsync();
 			}
 			catch (Exception ex)
@@ -125,14 +142,17 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				Exception (ex.Message));
 			}
 
-			var newVerseDto = _mapper.Map<VerseDto>(verse);
+			var newVerseDto = verseInDb.Adapt<VerseDto>();
 
 			return ServiceResult<VerseDto>.Success(newVerseDto);
 		}
 
-		public async Task<ServiceResult<bool>> DeleteVerseAsync(Guid id)
+		public async Task<ServiceResult<bool>> DeleteVerseAsync(string id)
 		{
-			var verse = await _context.Verses.FindAsync(id);
+            if (string.IsNullOrEmpty(id)) return ServiceResult<bool>.Failure(new
+                BadRequestException("Verse ID is required."));
+
+            var verse = await _context.Verses.FindAsync(id);
 
 			if (verse == null) return ServiceResult<bool>.Failure(new
 				NotFoundException($"Verse with ID:{id} does not exist."));

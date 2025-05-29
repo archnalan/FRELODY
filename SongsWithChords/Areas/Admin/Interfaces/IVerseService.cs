@@ -8,12 +8,12 @@ namespace FRELODYAPP.Areas.Admin.Interfaces
 	{
 		Task<ServiceResult<List<VerseDto>>> GetAllVersesAsync();
 
-		Task<ServiceResult<VerseDto>> GetVerseByIdAsync(Guid id);
+		Task<ServiceResult<VerseDto>> GetVerseByIdAsync(string id);
 
 		Task<ServiceResult<VerseDto>> CreateVerseAsync(VerseCreateDto verseDto);
 
-		Task<ServiceResult<VerseDto>> EditVerseAsync(Guid id, VerseDto verseEdit);
+		Task<ServiceResult<VerseDto>> EditVerseAsync(string id, VerseDto verseEdit);
 
-		Task<ServiceResult<bool>> DeleteVerseAsync(Guid id);
+		Task<ServiceResult<bool>> DeleteVerseAsync(string id);
 	}
 }

@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using FRELODYAPP.Areas.Admin.Interfaces;
+﻿using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Dtos;
 using FRELODYAPP.Models;
 using FRELODYAPP.ServiceHandler;
@@ -8,17 +7,16 @@ using Microsoft.EntityFrameworkCore;
 using System.Web.Http.ModelBinding;
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYSHRD.Dtos.CreateDtos;
+using Mapster;
 
 namespace FRELODYAPP.Areas.Admin.LogicData
 {
     public class LyricSegmentService : ILyricSegment
 	{
 		private readonly SongDbContext _context;
-		private readonly IMapper _mapper;
-		public LyricSegmentService(SongDbContext context, IMapper mapper)
+		public LyricSegmentService(SongDbContext context)
 		{
 			_context = context;
-			_mapper = mapper;
 		}
 
 		public async Task<ServiceResult<List<LyricSegmentDto>>> GetAllSegmentsAsync()
@@ -27,21 +25,34 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 							.OrderBy(ch => ch.LyricOrder)
 							.ToListAsync();
 
-			var lyricSegmentsDto = _mapper.Map<List<LyricSegmentDto>>(lyricSegments);
+			var lyricSegmentsDto = lyricSegments.Adapt<List<LyricSegmentDto>>();
 
 			return ServiceResult<List<LyricSegmentDto>>.Success(lyricSegmentsDto);
 		}
 
-		public async Task<ServiceResult<LyricSegmentDto>> GetSegmentByIdAsync(Guid id)
+		public async Task<ServiceResult<LyricSegmentDto>> GetSegmentByIdAsync(string id)
 		{
-			var lyricSegment = await _context.LyricSegments.FindAsync(id);
+           
+			try
+            {
+                if (string.IsNullOrEmpty(id))
+                    return ServiceResult<LyricSegmentDto>.Failure(new
+                        BadRequestException("Lyric Segment ID is required."));
 
-			if (lyricSegment == null) return ServiceResult<LyricSegmentDto>.Failure(new
-				NotFoundException($"Lyric Segment with ID:{id} does not exist."));
+                var lyricSegment = await _context.LyricSegments.FindAsync(id);
 
-			var lyricSegmentDto = _mapper.Map<LyricSegmentDto>(lyricSegment);
+                if (lyricSegment == null) return ServiceResult<LyricSegmentDto>.Failure(new
+                    NotFoundException($"Lyric Segment with ID:{id} does not exist."));
 
-			return ServiceResult<LyricSegmentDto>.Success(lyricSegmentDto);
+                var lyricSegmentDto = lyricSegment.Adapt<LyricSegmentDto>();
+
+                return ServiceResult<LyricSegmentDto>.Success(lyricSegmentDto);
+            }
+			catch (Exception ex) 
+			{
+				return ServiceResult<LyricSegmentDto>.Failure(new
+					ServerErrorException($"Error retrieving segment with ID: {id}. Details: {ex.Message}"));
+            }           
 		}
 
 		public async Task<ServiceResult<LyricSegmentDto>> CreateSegmentAsync(LyricSegmentCreateDto segmentDto)
@@ -66,7 +77,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				return ServiceResult<LyricSegmentDto>.Failure(new
 					ConflictException($"Invalid! Lyric with same OrderNo:{segmentDto.LyricOrder} already exists on this Lyric Line"));
 
-			var lyricSegment = _mapper.Map<LyricSegment>(segmentDto);
+			var lyricSegment = segmentDto.Adapt<LyricSegment>();
 			try
 			{
 				_context.LyricSegments.Add(lyricSegment);
@@ -78,12 +89,12 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 					Exception($"Error Creating segment: {lyricSegment.Lyric}. Details:{ex.Message}"));
 			}
 
-			var newLyricSegmentDto = _mapper.Map<LyricSegmentDto>(lyricSegment);
+			var newLyricSegmentDto = lyricSegment.Adapt<LyricSegmentDto>();
 
 			return ServiceResult<LyricSegmentDto>.Success(newLyricSegmentDto);
 		}
 
-		public async Task<ServiceResult<LyricSegmentDto>> EditSegmentAsyc(Guid id, LyricSegmentDto segmentDto)
+		public async Task<ServiceResult<LyricSegmentDto>> EditSegmentAsyc(string id, LyricSegmentDto segmentDto)
 		{
 			if (segmentDto == null) return ServiceResult<LyricSegmentDto>.Failure(new
 				BadRequestException("Lyric Segment data is required."));		
@@ -113,11 +124,11 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 			if (segmentToEdit == null) return ServiceResult<LyricSegmentDto>.Failure(new
 				NotFoundException($"Lyric of ID:{id} does not exist"));
 
-			var segment = _mapper.Map(segmentDto, segmentToEdit);
+            segmentDto.Adapt(segmentToEdit);
 
 			try
 			{
-				_context.LyricSegments.Update(segment);
+				_context.LyricSegments.Update(segmentToEdit);
 				await _context.SaveChangesAsync();
 			}
 			catch (DbUpdateException dbEx)
@@ -131,12 +142,12 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				Exception($"Error updating lyric segment: {segmentDto.Lyric}. Details: {ex.Message}"));
 			}
 
-			var editedSegmentDto = _mapper.Map<LyricSegmentDto>(segment);
+			var editedSegmentDto = segmentToEdit.Adapt<LyricSegmentDto>();
 
 			return ServiceResult<LyricSegmentDto>.Success(editedSegmentDto);
 		}
 
-		public async Task<ServiceResult<bool>> DeleteSegmentAsync(Guid id)
+		public async Task<ServiceResult<bool>> DeleteSegmentAsync(string id)
 		{
 			var segment = await _context.LyricSegments.FindAsync(id);
 

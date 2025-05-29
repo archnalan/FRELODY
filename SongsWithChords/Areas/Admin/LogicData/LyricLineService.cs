@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+﻿using Mapster;
 using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Dtos;
 using FRELODYAPP.Dtos.CompositeDtos;
@@ -14,35 +14,50 @@ namespace FRELODYAPP.Areas.Admin.LogicData
     public class LyricLineService : ILyricLineService
 	{
 		private readonly SongDbContext _context;
-		private readonly IMapper _mapper;
 
-		public LyricLineService(SongDbContext context, IMapper mapper)
+		public LyricLineService(SongDbContext context)
 		{
 			_context = context;
-			_mapper = mapper;
 		}
 
 		public async Task<ServiceResult<List<LyricLineDto>>> GetAllLyricLinesAsync()
 		{
-			var lyricLines = await _context.LyricLines
-								.OrderBy(ll => ll.LyricLineOrder)
-								.ToListAsync();
+			try
+            {
+                var lyricLines = await _context.LyricLines
+                                .OrderBy(ll => ll.LyricLineOrder)
+                                .ToListAsync();
 
-			var lyricLineDto = _mapper.Map<List<LyricLineDto>>(lyricLines);
+                var lyricLineDto = lyricLines.Adapt<List<LyricLineDto>>();
 
-			return ServiceResult<List<LyricLineDto>>.Success(lyricLineDto);
+                return ServiceResult<List<LyricLineDto>>.Success(lyricLineDto);
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<List<LyricLineDto>>.Failure(new
+                    Exception($"Error retrieving lyric lines. Details: {ex.Message}"));
+            }           
 		}
 
-		public async Task<ServiceResult<LyricLineDto>> GetLyricLineByIdAsync(Guid id)
+		public async Task<ServiceResult<LyricLineDto>> GetLyricLineByIdAsync(string id)
 		{
-			var lyricLine = await _context.LyricLines.FindAsync(id);
+			try
+            {
+                var lyricLine = await _context.LyricLines.FindAsync(id);
 
-			if (lyricLine == null) return ServiceResult<LyricLineDto>.Failure(new
-				NotFoundException($"Lyric Line with ID:{id} does not exist."));
+                if (lyricLine == null) return ServiceResult<LyricLineDto>.Failure(new
+                    NotFoundException($"Lyric Line with ID:{id} does not exist."));
 
-			var lyricLineDto = _mapper.Map<LyricLineDto>(lyricLine);
+                var lyricLineDto = lyricLine.Adapt<LyricLineDto>();
 
-			return ServiceResult<LyricLineDto>.Success(lyricLineDto);
+                return ServiceResult<LyricLineDto>.Success(lyricLineDto);
+
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<LyricLineDto>.Failure(new
+                    Exception($"Error retrieving lyric line with ID:{id}. Details: {ex.Message}"));
+            }           
 		}
 
         public async Task<ServiceResult<LyricLineDto>> CreateVerseLineAsync(LineVerseCreateDto verselineDto)
@@ -51,7 +66,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				return ServiceResult<LyricLineDto>.Failure( new 
 					BadRequestException("Verse data is required."));
 
-			if(verselineDto.VerseId == null || verselineDto.VerseId != Guid.Empty) 
+			if(verselineDto.VerseId == null || string.IsNullOrEmpty(verselineDto.VerseId)) 
 				return ServiceResult<LyricLineDto>.Failure(new
 					BadRequestException("Verse Id is required."));
 
@@ -72,7 +87,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				return ServiceResult<LyricLineDto>.Failure(new
 					ConflictException($"Lyric line Order value:{verselineDto.LyricLineOrder} already taken."));
 
-			var lineToAdd = _mapper.Map<LyricLine>(verselineDto);
+			var lineToAdd = verselineDto.Adapt<LyricLine>();
 
 			try
 			{
@@ -87,13 +102,13 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 					Exception($"Error creating lyric line number: {verselineDto.LyricLineOrder}. Details: {ex.Message}"));
 			}
 
-			var created = _mapper.Map < LyricLineDto > (lineToAdd);
+			var created = lineToAdd.Adapt<LyricLineDto>();
 
 
 			return ServiceResult<LyricLineDto>.Success(created);
 		}
 
-		public async Task<ServiceResult<LyricLineDto>> EditVerseLineAsync(Guid id, LyricLineDto verseLineDto)
+		public async Task<ServiceResult<LyricLineDto>> EditVerseLineAsync(string id, LyricLineDto verseLineDto)
 		{
 			if (verseLineDto == null)
 				return ServiceResult<LyricLineDto>.Failure(new
@@ -119,9 +134,8 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				return ServiceResult<LyricLineDto>.Failure(new
 				NotFoundException($"Lyric Line of ID:{id} does not exist."));
 
-			var verseLine = _mapper.Map(verseLineDto, verseLineInDb);
-
-			if (verseLineDto.VerseId != null || verseLineDto.VerseId != Guid.Empty)
+           
+			if (verseLineDto.VerseId != null || string.IsNullOrEmpty(verseLineDto.VerseId))
 			{
 				var verseExists = await _context.Verses
 									.Where(vl => vl.Id != verseLineDto.Id)
@@ -137,9 +151,11 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 					BadRequestException("Verse Id is required."));
 			}
 
-			try
-			{
-				_context.LyricLines.Update(verseLine);
+            verseLineDto.Adapt(verseLineInDb);
+
+            try
+            {
+				_context.LyricLines.Update(verseLineInDb);
 				await _context.SaveChangesAsync();
 			}
 			catch (Exception ex)
@@ -148,12 +164,12 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 					Exception($"Error updating lyric line number: {verseLineDto.LyricLineOrder}. Details: {ex.Message}"));
 			}
 
-			var editedVerseLine = _mapper.Map<LyricLineDto>(verseLine);
+			var editedVerseLine = verseLineInDb.Adapt<LyricLineDto>();
 
 			return ServiceResult<LyricLineDto>.Success(editedVerseLine);
 		}
 
-		public async Task<ServiceResult<bool>> DeleteLyricLineAsync(Guid id)
+		public async Task<ServiceResult<bool>> DeleteLyricLineAsync(string id)
 		{
 			var lyricLine = await _context.LyricLines.FindAsync(id);
 

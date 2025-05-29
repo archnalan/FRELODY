@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+﻿using Mapster;
 using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Models;
 using FRELODYAPP.ServiceHandler;
@@ -10,145 +10,180 @@ using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
 using FRELODYSHRD.Dtos.HybridDtos;
 using FRELODYSHRD.Dtos;
-using Mapster;
 
 namespace FRELODYAPP.Areas.Admin.LogicData
 {
     public class ChordService : IChordService
 	{
 		private readonly SongDbContext _context;
-		private readonly IMapper _mapper;
-
-		public ChordService(SongDbContext context, IMapper mapper)
+		public ChordService(SongDbContext context)
 		{
 			_context = context;
-			_mapper = mapper;
 		}
 	
 		public async Task<ServiceResult<List<ChordSimpleDto>>> GetChordsAsync()
 		{
-			var chords = await _context.Chords
-								.OrderBy(c => c.ChordName)
-								.ToListAsync();
+			try
+            {
+                var chords = await _context.Chords
+                                .OrderBy(c => c.ChordName)
+                                .ToListAsync();
 
-			var chordsDto =chords.Adapt<List<ChordSimpleDto>>();
+                var chordsDto = chords.Adapt<List<ChordSimpleDto>>();
 
-			return ServiceResult<List<ChordSimpleDto>>.Success(chordsDto);
+                return ServiceResult<List<ChordSimpleDto>>.Success(chordsDto);
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<List<ChordSimpleDto>>.Failure(new
+                    Exception($"Error retrieving chords. Details: {ex.Message}"));
+            }
+           
 		}
-		public async Task<ServiceResult<List<ChordEditDto>>> GetAllChordsAsync()
-		{
-			var chords = await _context.Chords
-								.OrderBy(c => c.ChordName)
-								.ToListAsync();
-
-			//var chordsDto = chords.Select(_mapper.Map<Chord, ChordEditDto>).ToList();
-
-			var chordsDto = _mapper.Map<List<ChordEditDto>>(chords);
-
-			return ServiceResult<List<ChordEditDto>>.Success(chordsDto);
-		}
-
+		
 		public async Task<ServiceResult<List<ChordWithChartsDto>>> GetChordsWithChartsAsync()
 		{
-			var chords = await _context.Chords
-								.OrderBy(c => c.ChordName)
-								.Include(ch => ch.ChordCharts.OrderBy(cc => cc.FretPosition))
-								.ToListAsync();
-
-			var chordsDto = _mapper.Map<List<ChordWithChartsDto>>(chords);
-
-			return ServiceResult<List<ChordWithChartsDto>>.Success(chordsDto);
-		}
-
-		public async Task<ServiceResult<ChordEditDto>> GetChordByIdAsync(long id)
-		{
-			var chord = await _context.Chords.FindAsync(id);
-
-			if (chord == null) return ServiceResult<ChordEditDto>.Failure(new
-				NotFoundException($"Chord with ID: {id} does not exist."));
-
-			var chordDto = _mapper.Map<Chord, ChordEditDto>(chord);
-
-			return ServiceResult<ChordEditDto>.Success(chordDto);
-		}
-
-		public async Task<ServiceResult<ChordWithChartsDto>> GetChordWithChartsByIdAsync(long id)
-		{
-			var chord = await _context.Chords
-						.Include(ch => ch.ChordCharts)
-						.FirstOrDefaultAsync(ch => ch.Id == id);
-
-			if (chord == null) return ServiceResult<ChordWithChartsDto>.Failure(new
-				NotFoundException($"Chord with ID: {id} does not exist."));
-
-			if (chord.ChordCharts != null)
+			try
 			{
-				chord.ChordCharts = chord.ChordCharts.OrderBy(cc => cc.FretPosition).ToList();
-			}
+                var chords = await _context.Chords
+                               .OrderBy(c => c.ChordName)
+                               .Include(ch => ch.ChordCharts)
+                               .ToListAsync();
 
-			var chordDto = _mapper.Map<Chord, ChordWithChartsDto>(chord);
+                var chordsDto = chords.Adapt<List<ChordWithChartsDto>>();
 
-			return ServiceResult<ChordWithChartsDto>.Success(chordDto);
+                return ServiceResult<List<ChordWithChartsDto>>.Success(chordsDto);
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<List<ChordWithChartsDto>>.Failure(new
+                    Exception($"Error retrieving chords with charts. Details: {ex.Message}"));
+            }   
 		}
+
+		public async Task<ServiceResult<ChordEditDto>> GetChordByIdAsync(string id)
+		{
+			try
+			{
+                var chord = await _context.Chords.FindAsync(id);
+
+                if (chord == null) return ServiceResult<ChordEditDto>.Failure(new
+                    NotFoundException($"Chord with ID: {id} does not exist."));
+
+                var chordDto = chord.Adapt<Chord, ChordEditDto>();
+
+                return ServiceResult<ChordEditDto>.Success(chordDto);
+
+            }
+			catch(Exception ex)
+			{
+                return ServiceResult<ChordEditDto>.Failure(new
+                    Exception($"Error retrieving chord with ID: {id}. Details: {ex.Message}"));
+            }
+			
+		}
+
+        public async Task<ServiceResult<ChordWithChartsDto>> GetChordWithChartsByIdAsync(string id)
+        {
+            try
+            {
+                var chord = await _context.Chords
+                        .Include(ch => ch.ChordCharts)
+                        .FirstOrDefaultAsync(ch => ch.Id == id);
+
+                if (chord == null) return ServiceResult<ChordWithChartsDto>.Failure(new
+                    NotFoundException($"Chord with ID: {id} does not exist."));
+
+                if (chord.ChordCharts != null)
+                {
+                    chord.ChordCharts = chord.ChordCharts.OrderBy(cc => cc.FretPosition).ToList();
+                }
+
+                var chordDto = chord.Adapt<Chord, ChordWithChartsDto>();
+
+                return ServiceResult<ChordWithChartsDto>.Success(chordDto);
+
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<ChordWithChartsDto>.Failure(new
+                    Exception($"Error retrieving chord with charts by ID: {id}. Details: {ex.Message}"));
+            }
+
+        }
 
 		public async Task<ServiceResult<ChordEditDto>> CreateChordAsync(ChordCreateDto chordDto)
 		{
-			if (chordDto == null) return ServiceResult<ChordEditDto>.Failure(new
-				BadRequestException("Chord data is Required"));
-
-			var chordExists = await _context.Chords
-							.AnyAsync(ch => ch.ChordName == chordDto.ChordName);
-
-			if (chordExists) return ServiceResult<ChordEditDto>.Failure(new
-				ConflictException($"Chord: {chordDto.ChordName} already exists."));
-
-			var chord = _mapper.Map<ChordCreateDto, Chord>(chordDto);
-
 			try
 			{
-				await _context.Chords.AddAsync(chord);
-				await _context.SaveChangesAsync();
-			}
-			catch (Exception ex)
-			{
-				return ServiceResult<ChordEditDto>.Failure(new Exception(ex.Message));
-			}
+                if (chordDto == null) return ServiceResult<ChordEditDto>.Failure(new
+                BadRequestException("Chord data is Required"));
 
-			var newChord = _mapper.Map<Chord, ChordEditDto>(chord);
+                var chordExists = await _context.Chords
+                                .AnyAsync(ch => ch.ChordName == chordDto.ChordName);
 
-			return ServiceResult<ChordEditDto>.Success(newChord);
+                if (chordExists) return ServiceResult<ChordEditDto>.Failure(new
+                    ConflictException($"Chord: {chordDto.ChordName} already exists."));
+
+                var chord = chordDto.Adapt<ChordCreateDto, Chord>();
+
+                try
+                {
+                    await _context.Chords.AddAsync(chord);
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    return ServiceResult<ChordEditDto>.Failure(new Exception(ex.Message));
+                }
+
+                var newChord = chord.Adapt<Chord, ChordEditDto>();
+
+                return ServiceResult<ChordEditDto>.Success(newChord);
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<ChordEditDto>.Failure(new
+                    Exception($"Error creating chord. Details: {ex.Message}"));
+            }
+            
 		}
 
-		public async Task<ServiceResult<ChordSimpleDto>> CreateSimpleChordAsync(ChordSimpleDto chordDto)
+        public async Task<ServiceResult<ChordSimpleDto>> CreateSimpleChordAsync(ChordSimpleDto chordDto)
+        {
+            try
+            {
+                if (chordDto == null) return ServiceResult<ChordSimpleDto>.Failure(new
+                BadRequestException("Chord data is Required"));
+
+                var chordExists = await _context.Chords
+                                .AnyAsync(ch => ch.ChordName == chordDto.ChordName);
+
+                if (chordExists) return ServiceResult<ChordSimpleDto>.Failure(new
+                    ConflictException($"Chord: {chordDto.ChordName} already exists."));
+
+                var chord = chordDto.Adapt<Chord>();
+
+
+                await _context.Chords.AddAsync(chord);
+                await _context.SaveChangesAsync();
+
+
+                var newChord = chord.Adapt<ChordSimpleDto>();
+
+                return ServiceResult<ChordSimpleDto>.Success(newChord);
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<ChordSimpleDto>.Failure(new
+                    Exception($"Error creating simple chord. Details: {ex.Message}"));
+            }
+
+        }
+
+        public async Task<ServiceResult<ChordEditDto>> UpdateChordAsync(ChordEditDto chordDto)
 		{
-			if (chordDto == null) return ServiceResult<ChordSimpleDto>.Failure(new
-				BadRequestException("Chord data is Required"));
-
-			var chordExists = await _context.Chords
-							.AnyAsync(ch => ch.ChordName == chordDto.ChordName);
-
-			if (chordExists) return ServiceResult<ChordSimpleDto>.Failure(new
-				ConflictException($"Chord: {chordDto.ChordName} already exists."));
-
-			var chord = chordDto.Adapt<Chord>();
-
-			try
-			{
-				await _context.Chords.AddAsync(chord);
-				await _context.SaveChangesAsync();
-			}
-			catch (Exception ex)
-			{
-				return ServiceResult<ChordSimpleDto>.Failure(new Exception(ex.Message));
-			}
-
-			var newChord = chord.Adapt<ChordSimpleDto>();
-
-			return ServiceResult<ChordSimpleDto>.Success(newChord);
-		}
-
-		public async Task<ServiceResult<ChordEditDto>> UpdateChordAsync(ChordEditDto chordDto)
-		{
+           
 			if (chordDto == null) return ServiceResult<ChordEditDto>.Failure(new
 				BadRequestException("Chord data is Required"));
 
@@ -161,16 +196,15 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 			if (chordExists) return ServiceResult<ChordEditDto>.Failure(new
 				ConflictException($"Chord: {chordDto.ChordName} already exists."));
 
-			_mapper.Map(chordDto, chord);
 			try
 			{
 				chord.ChordName = chordDto.ChordName;
 				chord.Difficulty = chordDto.Difficulty;
 				chord.ChordType = chordDto.ChordType;
 
-				await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
 
-                var updatedChord = _mapper.Map<Chord, ChordEditDto>(chord);
+                var updatedChord = chord.Adapt<Chord, ChordEditDto>();
                 return ServiceResult<ChordEditDto>.Success(updatedChord);
             }
 			catch (Exception ex)
@@ -179,7 +213,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 			}			
 		}
 
-		public async Task<ServiceResult<bool>> DeleteChordAsync(long id)
+		public async Task<ServiceResult<bool>> DeleteChordAsync(string id)
 		{
 			var chord = await _context.Chords.FindAsync(id);
 			if (chord == null) return ServiceResult<bool>.Failure(new

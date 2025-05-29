@@ -8,12 +8,12 @@ namespace FRELODYAPP.Areas.Admin.Interfaces
 	{
 		Task<ServiceResult<List<LyricLineDto>>> GetAllLyricLinesAsync();
 
-		Task<ServiceResult<LyricLineDto>> GetLyricLineByIdAsync(Guid id);
+		Task<ServiceResult<LyricLineDto>> GetLyricLineByIdAsync(string id);
 
 		Task<ServiceResult<LyricLineDto>> CreateVerseLineAsync(LineVerseCreateDto verselineDto);
 
-		Task<ServiceResult<LyricLineDto>> EditVerseLineAsync(Guid id, LyricLineDto verseLineDto);
+		Task<ServiceResult<LyricLineDto>> EditVerseLineAsync(string id, LyricLineDto verseLineDto);
 
-		Task<ServiceResult<bool>> DeleteLyricLineAsync(Guid id);
+		Task<ServiceResult<bool>> DeleteLyricLineAsync(string id);
 	}
 }

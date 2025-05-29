@@ -7,8 +7,6 @@ namespace FRELODYAPP.Models
 {
 	public class Chord:BaseEntity
 	{
-		[Key]
-		public long Id { get; set; }
 
 		[StringLength(15)]
 		[RegularExpression(@"^([A-G])(#|b|bb|##)?(m|maj|min|sus|aug|dim|add)?(\d+)?(/([A-G])(#|b|bb|##)?)?$",

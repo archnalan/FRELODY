@@ -12,9 +12,7 @@ namespace FRELODYSHRD.Dtos
 {
     public class ChorusDto : BaseEntityDto
     {
-        public Guid Id { get; set; }
-
-        public Guid SongId { get; set; }
+        public string SongId { get; set; }
 
         [Range(0, 12)]
         public int? ChorusNumber { get; set; }

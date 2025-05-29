@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+﻿using Mapster;
 using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Dtos;
 using FRELODYAPP.Dtos.WithUploads;
@@ -15,16 +15,14 @@ namespace FRELODYAPP.Areas.Admin.LogicData
     public class ChordChartService : IChordChartService
 	{
 		private readonly SongDbContext _context;
-		private readonly IMapper _mapper;
 		private readonly IWebHostEnvironment _webHost;
 		private readonly IHttpContextAccessor _contextAccessor;
 
-		public ChordChartService(SongDbContext context, 
-			IMapper mapper, IWebHostEnvironment webHost, 
+		public ChordChartService(SongDbContext context ,
+			IWebHostEnvironment webHost, 
 			IHttpContextAccessor contextAccessor)
 		{
 			_context = context;
-			_mapper = mapper;
 			_webHost = webHost;
 			_contextAccessor = contextAccessor;
 		}
@@ -40,7 +38,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				return ServiceResult<List<ChartEditDto>>.Failure(new NotFoundException("No Charts available"));
 			}
 
-			var chordChartsDto = _mapper.Map<List<ChartEditDto>>(chordCharts);
+			var chordChartsDto = chordCharts.Adapt<List<ChartEditDto>>();
 
 			string baseUrl = $"{_contextAccessor.HttpContext.Request.Scheme}://{_contextAccessor.HttpContext.Request.Host}/lib/media/charts/";
 
@@ -62,7 +60,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 
 		}
 
-		public async Task<ServiceResult<ChartWithUploadsDto>> GetChordChartByIdAsync(Guid id)
+		public async Task<ServiceResult<ChartWithUploadsDto>> GetChordChartByIdAsync(string id)
 		{
 			var chordChart = await _context.ChordCharts.FindAsync(id);
 
@@ -70,7 +68,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				return ServiceResult<ChartWithUploadsDto>.Failure(
 					new NotFoundException($"Chord with ID: {id} does not exist"));
 
-			var chordChartDto = _mapper.Map<ChartWithUploadsDto>(chordChart);
+			var chordChartDto = chordChart.Adapt<ChartWithUploadsDto>();
 
 			string baseUrl = $"{_contextAccessor.HttpContext.Request.Scheme}://{_contextAccessor.HttpContext.Request.Host}/lib/media/charts/";
 
@@ -87,9 +85,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 			return ServiceResult<ChartWithUploadsDto>.Success(chordChartDto);
 		}
 
-
-
-		public async Task<ServiceResult<ChordChart>> GetChordChartWithChordByIdAsync(Guid id)
+		public async Task<ServiceResult<ChordChart>> GetChordChartWithChordByIdAsync(string id)
 		{
 			var chordChart = await _context.ChordCharts
 				.FirstOrDefaultAsync(ct => ct.Id == id);
@@ -117,7 +113,44 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				: ServiceResult<ChordChart>.Success(chordChart);
 		}
 
-		public async Task<ServiceResult<ChartEditDto>> CreateChordChartAsync(ChartCreateDto chartDto)
+        public async Task<ServiceResult<List<ChartWithUploadsDto>>> GetChordChartsByParentChordIdAsync(string chordId)
+        {
+			try
+			{
+
+                var chordCharts = await _context.ChordCharts
+                .Where(ch => ch.ChordId == chordId)
+                .OrderBy(ch => ch.FretPosition)
+                .ToListAsync();
+                if (!chordCharts.Any())
+                {
+                    return ServiceResult<List<ChartWithUploadsDto>>.Failure(
+                        new NotFoundException($"No charts found for chord with ID: {chordId}"));
+                }
+                var chordChartsDto = chordCharts.Adapt<List<ChartWithUploadsDto>>();
+                string baseUrl = $"{_contextAccessor.HttpContext.Request.Scheme}://{_contextAccessor.HttpContext.Request.Host}/lib/media/charts/";
+                foreach (var chartDto in chordChartsDto)
+                {
+                    if (!chartDto.FilePath.StartsWith(baseUrl))
+                    {
+                        chartDto.FilePath = $"{baseUrl}{chartDto.FilePath}";
+                    }
+                    if (!string.IsNullOrEmpty(chartDto.ChartAudioFilePath) &&
+                        !chartDto.ChartAudioFilePath.StartsWith(baseUrl))
+                    {
+                        chartDto.ChartAudioFilePath = $"{baseUrl}audio/{chartDto.ChartAudioFilePath}";
+                    }
+                }
+                return ServiceResult<List<ChartWithUploadsDto>>.Success(chordChartsDto);
+            }
+			catch(Exception ex)
+			{
+                return ServiceResult<List<ChartWithUploadsDto>>.Failure(
+                    new Exception($"Error retrieving charts for chord with ID: {chordId}. Details: {ex.Message}"));
+            }            
+        }
+
+        public async Task<ServiceResult<ChartEditDto>> CreateChordChartAsync(ChartCreateDto chartDto)
 		{
 			if (chartDto == null) return ServiceResult<ChartEditDto>.Failure(new 
 										BadHttpRequestException("Chord Chart data is required."));			
@@ -203,7 +236,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 			}
 
 
-			var chordChart = _mapper.Map<ChartCreateDto, ChordChart>(chartDto);
+			var chordChart = chartDto.Adapt<ChartCreateDto, ChordChart>();
 
 			try
 			{
@@ -216,7 +249,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 					Exception($"Error on saving chart: { ex.Message}"));
 			}
 
-			var newChartDto = _mapper.Map<ChordChart, ChartEditDto>(chordChart);
+			var newChartDto = chordChart.Adapt<ChordChart, ChartEditDto>();
 			return ServiceResult<ChartEditDto>.Success(newChartDto);
 		}
 
@@ -327,13 +360,14 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 					chartEditDto.ChartAudioFilePath = audioUploadResult.Data;
 				}
 				
-			}			
+			}
 
-			_mapper.Map(chartEditDto, chartInDb);
+            chartEditDto.Adapt(chartInDb);
 			try
-			{				
-				await _context.SaveChangesAsync();
-				var updatedChartDto = _mapper.Map<ChordChart, ChartEditDto>(chartInDb);
+			{
+				_context.Update(chartInDb);
+                await _context.SaveChangesAsync();
+				var updatedChartDto = chartInDb.Adapt<ChordChart, ChartEditDto>();
 
 				return ServiceResult<ChartEditDto>.Success(updatedChartDto);
 			}
@@ -344,7 +378,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 
 		}
 
-		public async Task<ServiceResult<bool>> DeleteChordChartByIdAsync(Guid id)
+		public async Task<ServiceResult<bool>> DeleteChordChartByIdAsync(string id)
 		{
 			var chordChart = await _context.ChordCharts.FindAsync(id);
 			if (chordChart == null) return ServiceResult<bool>.Failure( 
@@ -397,7 +431,6 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				return ServiceResult<bool>.Failure(new Exception($"error on deleting chart: {ex.Message}"));
 			}
 		}
-
-		
+				
 	}
 }

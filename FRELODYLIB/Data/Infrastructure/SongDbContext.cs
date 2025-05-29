@@ -12,7 +12,7 @@ namespace FRELODYAPP.Data.Infrastructure
     public partial class SongDbContext : IdentityDbContext<User>
     {
         private readonly ITenantProvider _tenantProvider;
-        private readonly Guid _tenantId;
+        private readonly string _tenantId;
         private readonly string _userId;
 
         public SongDbContext(DbContextOptions<SongDbContext> options, ITenantProvider tenantProvider)
@@ -110,7 +110,7 @@ namespace FRELODYAPP.Data.Infrastructure
 
             // Configure SongBook and Category
             builder.Entity<Category>()
-                .HasOne(category => category.SongBook)
+                .HasOne<SongBook>()
                 .WithMany(songBook => songBook.Categories)
                 .HasForeignKey(category => category.SongBookId);
 

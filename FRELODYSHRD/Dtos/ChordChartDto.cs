@@ -13,10 +13,9 @@ namespace FRELODYSHRD.Dtos
 {
     public class ChordChartDto : BaseEntityDto
     {
-        public Guid Id { get; set; }
         [Required]
         public string FilePath { get; set; }
-        public long? ChordId { get; set; }
+        public string? ChordId { get; set; }
 
         [Range(1, 24)]
         public int? FretPosition { get; set; }

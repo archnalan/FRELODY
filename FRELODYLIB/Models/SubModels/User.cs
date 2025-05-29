@@ -32,6 +32,6 @@ namespace FRELODYAPP.Models.SubModels
 
         public string? ModifiedBy { get; set; }
 
-        public Guid? TenantId { get; set; }
+        public string? TenantId { get; set; }
     }
 }

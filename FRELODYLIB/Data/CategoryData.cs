@@ -18,14 +18,14 @@ namespace FRELODYAPP.Models
                     return; // DB already been seeded
                 }
                 Console.WriteLine("Seeding categories...");
-                var worshipId = Guid.NewGuid();
-                var godTheFatherId = Guid.NewGuid();
-                var jesusChristId = Guid.NewGuid();
-                var gospelId = Guid.NewGuid();
-                var christianChurchId = Guid.NewGuid();
-                var doctrinesId = Guid.NewGuid();
-                var christianLifeId = Guid.NewGuid();
-                var christianHomeId = Guid.NewGuid();
+                var worshipId = Guid.NewGuid().ToString();
+                var godTheFatherId = Guid.NewGuid().ToString();
+                var jesusChristId = Guid.NewGuid().ToString();
+                var gospelId = Guid.NewGuid().ToString();
+                var christianChurchId = Guid.NewGuid().ToString();
+                var doctrinesId = Guid.NewGuid().ToString();
+                var christianLifeId = Guid.NewGuid().ToString();
+                var christianHomeId = Guid.NewGuid().ToString();
 
                 context.Categories.AddRange(
                     new Category { Name = "WORSHIP", ParentCategoryId = null },

@@ -4,9 +4,9 @@ namespace FRELODYSHRD.Dtos.EditDtos
 {
     public class ChordChartEditDto
     {
-        public Guid Id { get; set; }
+        public string Id { get; set; }
         public string FilePath { get; set; }
-        public long? ChordId { get; set; }
+        public string? ChordId { get; set; }
 
         [Range(1, 24)]
         public int? FretPosition { get; set; }

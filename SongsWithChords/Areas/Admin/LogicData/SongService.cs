@@ -49,7 +49,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #endregion
 
         #region Get Song by Category
-        public async Task<ServiceResult<List<SongDto>>> GetSongsByCategory(Guid categoryId)
+        public async Task<ServiceResult<List<SongDto>>> GetSongsByCategory(string categoryId)
         {
             try
             {
@@ -73,161 +73,9 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
         #endregion
-
+               
         #region Create Song
-        public async Task<ServiceResult<SongDto>> CreateFullSong(FullSongCreateDto s)
-        {
-            using (var transaction = await _context.Database.BeginTransactionAsync())
-            {
-                try
-                {
-                    // Create and save the Song first
-                    var song = s.Adapt<Song>();
-                    song.Slug = s.Title.ToLower().Replace(" ", "-");
-                    await _context.Songs.AddAsync(song);
-                    await _context.SaveChangesAsync();
-
-                    // Process verses and their nested entities
-                    if (s.Verses != null && s.Verses.Any())
-                    {
-                        var verses = await CreateSongParts<Verse, VerseCreateDto>(
-                            s.Verses,
-                            song.Id,
-                            (verse, songId) => verse.SongId = songId);
-
-                        await ProcessLyricLinesForParts(s.Verses, verses,
-                            (line, partId) => line.VerseId = partId,
-                            (lineDto, part) => part.VerseNumber == lineDto.VerseNumber,
-                            SongSection.Verse);
-                    }
-
-                    if (s.Bridges != null && s.Bridges.Any())
-                    {
-                        var bridges = await CreateSongParts<Bridge, BridgeCreateDto>(
-                            s.Bridges,
-                            song.Id,
-                            (bridge, songId) => bridge.SongId = songId);
-
-                        await ProcessLyricLinesForParts(s.Bridges, bridges,
-                            (line, partId) => line.BridgeId = partId,
-                            (lineDto, part) => part.BridgeNumber == lineDto.BridgeNumber,
-                            SongSection.Bridge);
-                    }
-
-                    if (s.Choruses != null && s.Choruses.Any())
-                    {
-                        var choruses = await CreateSongParts<Chorus, ChorusCreateDto>(
-                            s.Choruses,
-                            song.Id,
-                            (chorus, songId) => chorus.SongId = songId);
-
-                        await ProcessLyricLinesForParts(s.Choruses, choruses,
-                            (line, partId) => line.ChorusId = partId,
-                            (lineDto, part) => part.ChorusNumber == lineDto.ChorusNumber,
-                            SongSection.Chorus);
-                    }
-
-                    await transaction.CommitAsync();
-                    var createdSong = await GetSongById(song.Id);
-                    if (createdSong.IsSuccess)
-                    {
-                        return ServiceResult<SongDto>.Success(createdSong.Data);
-                    }
-                    else
-                    {
-                        var songDto = song.Adapt<SongDto>();
-                        return ServiceResult<SongDto>.Success(songDto);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    _logger.LogError(ex, "Error in CreateFullSong");
-                    return ServiceResult<SongDto>.Failure(ex);
-                }
-            }
-        }
-
-        private async Task<List<TPart>> CreateSongParts<TPart, TDto>(
-            IEnumerable<TDto> partDtos,
-            Guid songId,
-            Action<TPart, Guid> setSongId)
-            where TPart : class
-        {
-            var parts = new List<TPart>();
-            foreach (var dto in partDtos)
-            {
-                var part = dto.Adapt<TPart>();
-                setSongId(part, songId);
-                parts.Add(part);
-            }
-
-            await _context.Set<TPart>().AddRangeAsync(parts);
-            await _context.SaveChangesAsync();
-            return parts;
-        }
-
-        private async Task ProcessLyricLinesForParts<TPart, TDto>(
-            IEnumerable<TDto> partDtos,
-            List<TPart> savedParts,
-            Action<LyricLine, Guid> setPartId,
-            Func<TDto, TPart, bool> matchPartFunc,
-            SongSection sectionType)
-            where TDto : ISongPartDto
-        {
-            foreach (var partDto in partDtos)
-            {
-                if (partDto.LyricLines != null && partDto.LyricLines.Count > 0)
-                {
-                    var savedPart = savedParts.FirstOrDefault(p => matchPartFunc(partDto, p));
-                    if (savedPart != null)
-                    {
-                        var partId = (Guid)savedPart.GetType().GetProperty("Id").GetValue(savedPart);
-                        var partNumber = (int)partDto.GetPartNumber();
-
-                        var lyricLines = new List<LyricLine>();
-                        foreach (var lineDto in partDto.LyricLines)
-                        {
-                            var line = lineDto.Adapt<LyricLine>();
-                            line.PartNumber = partNumber;
-                            line.PartName = sectionType;
-                            setPartId(line, partId);
-                            lyricLines.Add(line);
-                        }
-
-                        await _context.LyricLines.AddRangeAsync(lyricLines);
-                        await _context.SaveChangesAsync();
-
-                        foreach (var lineDto in partDto.LyricLines)
-                        {
-                            if (lineDto.LyricSegments != null && lineDto.LyricSegments.Any())
-                            {
-                                var line = lyricLines.FirstOrDefault(l => l.LyricLineOrder == lineDto.LyricLineOrder);
-                                if (line != null)
-                                {
-                                    var segments = new List<LyricSegment>();
-                                    foreach (var segmentDto in lineDto.LyricSegments)
-                                    {
-                                        var segment = segmentDto.Adapt<LyricSegment>();
-                                        segment.LineNumber = (int)lineDto.LyricLineOrder;
-                                        segment.LyricLineId = line.Id;
-                                        // Use the segment's order value if available, otherwise use position
-                                        segment.LyricOrder = segmentDto.LyricOrder;
-                                        segments.Add(segment);
-                                    }
-                                    await _context.LyricSegments.AddRangeAsync(segments);
-                                }
-                            }
-                        }
-                        await _context.SaveChangesAsync();
-                    }
-                }
-            }
-        }
-        #endregion
-
-        #region Create Simple Song
-        public async Task<ServiceResult<SongDto>> CreateSimpleSong(SimpleSongCreateDto songDto)
+        public async Task<ServiceResult<SongDto>> CreateSong(SimpleSongCreateDto songDto)
         {
             using (var transaction = await _context.Database.BeginTransactionAsync())
             {
@@ -262,9 +110,9 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         var partNumber = partGroup.Key.PartNumber;
 
                         // Create the appropriate song part based on the type
-                        Guid partId = await CreateSongPart(song.Id, partName, partNumber);
+                        string partId = await CreateSongPart(song.Id, partName, partNumber);
 
-                        if (partId != Guid.Empty)
+                        if (string.IsNullOrEmpty(partId))
                         {
                             // Group segments by lyric line number
                             var lyricLineGroups = partGroup
@@ -332,7 +180,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
-        private async Task<Guid> CreateSongPart(Guid songId, SongSection partType, int partNumber)
+        private async Task<string> CreateSongPart(string songId, SongSection partType, int partNumber)
         {
             switch (partType)
             {
@@ -368,11 +216,11 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 default:
                     _logger.LogWarning("Unsupported song part type: {PartType}", partType);
-                    return Guid.Empty;
+                    return string.Empty;
             }
         }
 
-        private void SetPartIdForLyricLine(LyricLine lyricLine, Guid partId, SongSection partType)
+        private void SetPartIdForLyricLine(LyricLine lyricLine, string partId, SongSection partType)
         {
             switch (partType)
             {
@@ -427,11 +275,11 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #endregion
 
         #region Get Song by Id
-        public async Task<ServiceResult<SongDto>> GetSongById(Guid id)
+        public async Task<ServiceResult<SongDto>> GetSongById(string id)
         {
             try
             {
-                if (id == Guid.Empty)
+                if (string.IsNullOrEmpty(id))
                     return ServiceResult<SongDto>.Failure(
                         new BadRequestException("Invalid song ID."));
 
@@ -462,11 +310,11 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #endregion
 
         #region Get Song details by Id
-        public async Task<ServiceResult<SongDto>> GetSongDetailsById(Guid id)
+        public async Task<ServiceResult<SongDto>> GetSongDetailsById(string id)
         {
             try
             {
-                if (id == Guid.Empty)
+                if (string.IsNullOrEmpty(id))
                     return ServiceResult<SongDto>.Failure(
                         new BadRequestException("Invalid song ID."));
 

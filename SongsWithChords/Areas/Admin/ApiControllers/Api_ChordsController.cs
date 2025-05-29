@@ -76,7 +76,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		//GET admin/api_chrds/chords/5
 		[HttpGet]
 		[Route("chords/{id}")]
-		public async Task<IActionResult> GetChordWithChartsById(int id)
+		public async Task<IActionResult> GetChordWithChartsById(string id)
 		{
 			var chord = await _context.Chords
 						.Include(ch=>ch.ChordCharts.OrderBy(cc=>cc.FretPosition))
@@ -92,7 +92,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		
 		//GET admin/api_chords/by_ids
 		[HttpGet("by_ids")]
-		public async Task<IActionResult> GetChordsById(long[] Ids)
+		public async Task<IActionResult> GetChordsById(string[] Ids)
 		{
 			if (Ids == null || Ids.Any() == false)
 				return BadRequest("Chord Ids are required.");
@@ -119,7 +119,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 		//GET admin/api_chords/chords/by_ids
 		[HttpGet("chords/by_ids")]
-		public async Task<IActionResult> GetChordsWithChartsById(long[] Ids)
+		public async Task<IActionResult> GetChordsWithChartsById(string[] Ids)
 		{
 			if (Ids == null || Ids.Any() == false)
 				return BadRequest("Chord Ids are required.");
@@ -138,9 +138,9 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
             }
 
             var chordsDto = _mapper.Map<List<ChordWithChartsDto>>(chords);
-
-			var foundIds = chordsDto.Select(ch => ch.Id).ToList();
-			var notFoundIds = Ids.Except(foundIds.Where(f => f.HasValue).Select(f=>f.Value)).ToList();			
+						
+            var foundIds = chordsDto.Select(ch => ch.Id).Where(id => !string.IsNullOrEmpty(id)).ToList();
+            var notFoundIds = Ids.Except(foundIds).ToList();
 			
 			if(notFoundIds.Count == Ids.Length) return NotFound( new { NotFound = notFoundIds });			
 
@@ -281,7 +281,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 			var chartsToAdd = new List<ChordChart>();
 			var createdChartDto = new List<ChordChartEditDto>();
 			var errors = new List<string>();
-			var noRepeatCharts = new HashSet<(string FilePath, long? ChordID)>();
+			var noRepeatCharts = new HashSet<(string FilePath, string? ChordID)>();
 
 			if (chordWithChartsDto.Charts != null && chordWithChartsDto.Charts.Any())
 			{
@@ -458,7 +458,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 			
 			var errors = new List<string>();
 			var noRepeatChords = new HashSet<(string Name, ChordDifficulty? difficulty)>();
-			var noRepeatCharts = new HashSet<(string FilePath, long? ChordId)>();
+			var noRepeatCharts = new HashSet<(string FilePath, string? ChordId)>();
 
 			using (var transaction = _context.Database.BeginTransaction())
 			{
@@ -574,7 +574,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		//PUT admin/api_chords/edit/5
 		[HttpPut]
 		[Route("edit/{id}")]
-		public async Task<IActionResult> Edit(int id, ChordEditDto chordDto)
+		public async Task<IActionResult> Edit(string id, ChordEditDto chordDto)
 		{
 			if (chordDto == null) return BadRequest("Chord Data is required.");
 
@@ -614,7 +614,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		//PUT admin/api_chords/edit_chord_with_charts/5
 		[HttpPut]
 		[Route("edit_chord_with_charts/{id}")]
-		public async Task<IActionResult> EditChordWithCharts(int id, ChordWithChartsDto chordDto)
+		public async Task<IActionResult> EditChordWithCharts(string id, ChordWithChartsDto chordDto)
 		{
 			if (chordDto == null) return BadRequest("Chord Data is required.");
 
@@ -639,7 +639,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 			if (chartsOfChordDto.Count > 0)
 			{
 				var errors = new List<string>();
-				var noRepeats = new HashSet<(string FilePath, long? ChordId)>();
+				var noRepeats = new HashSet<(string FilePath, string? ChordId)>();
 
 				foreach(var chart in chartsOfChordDto)
 				{
@@ -823,7 +823,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 			var errors = new List<string>();
 			var noRepeatChords = new HashSet<(string Name, ChordDifficulty? Difficulty)>();
-			var noRepeatCharts = new HashSet<(string FilePath, long? ChordId)>();
+			var noRepeatCharts = new HashSet<(string FilePath, string? ChordId)>();
 
 			foreach(var chordDto in chordDtos)
 			{

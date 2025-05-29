@@ -5,11 +5,8 @@ using FRELODYAPP.Models.SubModels;
 namespace FRELODYAPP.Models
 {
 	public class Bridge:BaseEntity
-	{
-		[Key]
-		public Guid Id { get; set; }
-		
-		public Guid SongId { get; set; }
+	{		
+		public string SongId { get; set; }
 
         [Range(0, 24)]
         public int? BridgeNumber { get; set; }

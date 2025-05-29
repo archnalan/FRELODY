@@ -50,7 +50,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("{id}")]
-		public async Task<IActionResult> GetSongById(Guid id)
+		public async Task<IActionResult> GetSongById(string id)
 		{
 			var Song = await _context.Songs.FindAsync(id);
 
@@ -61,7 +61,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 			return Ok(SongDto);
 		}
 		[HttpGet("category/{id}")]
-		public async Task<IActionResult> GetSongWithCategoryById(Guid id)
+		public async Task<IActionResult> GetSongWithCategoryById(string id)
 		{
 			var Song = await _context.Songs
 							.FirstOrDefaultAsync(h=>h.Id == id);
@@ -74,7 +74,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("by_ids")]
-		public async Task<IActionResult> GetSongsByIds(List<Guid> ids)
+		public async Task<IActionResult> GetSongsByIds(List<string> ids)
 		{
 			if (ids == null || ids.Count == 0) return BadRequest("Song Ids are required.");
 			
@@ -131,7 +131,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpPut("edit/{id}")]
-		public async Task<IActionResult> Edit(Guid id, SongDto SongDto)
+		public async Task<IActionResult> Edit(string id, SongDto SongDto)
 		{
 			if (SongDto == null) return BadRequest("Song Data is required");
 
@@ -183,7 +183,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpDelete("{id}")]
-		public async Task<IActionResult> Delete(int id)
+		public async Task<IActionResult> Delete(string id)
 		{
 			var Song = await _context.Songs.FindAsync(id);
 
@@ -204,14 +204,14 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 		//DELETE admin/api_Songs/by_ids
 		[HttpDelete("by_ids")]
-		public async Task<IActionResult> DeleteSongs(List<int> ids)
+		public async Task<IActionResult> DeleteSongs(List<string> ids)
 		{
 			if (ids == null || ids.Count == 0) return BadRequest("Song Ids are required.");
 
-			var deletedIds = new List<int>();
+			var deletedIds = new List<string>();
 			var errors = new List<string>();
 
-			foreach (int id in ids)
+			foreach (var id in ids)
 			{
 				var Song = await _context.Songs.FindAsync(id);
 

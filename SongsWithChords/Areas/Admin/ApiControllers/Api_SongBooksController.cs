@@ -36,7 +36,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("{id}")]
-		public async Task<IActionResult> GetSongBookById(int id)
+		public async Task<IActionResult> GetSongBookById(string id)
 		{
 			var SongBook = await _context.SongBooks.FindAsync(id);
 
@@ -48,7 +48,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 		
 		[HttpGet("book_categories/{id}")]
-		public async Task<IActionResult> GetSongBookWithCategories(Guid id)
+		public async Task<IActionResult> GetSongBookWithCategories(string id)
 		{
 			var SongBook = await _context.SongBooks
 							.Include(hb=>hb.Categories)
@@ -62,7 +62,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("by_ids")]
-		public async Task<IActionResult> GetSongBooksByIds(List<Guid> ids)
+		public async Task<IActionResult> GetSongBooksByIds(List<string> ids)
 		{
 			if (ids == null || ids.Count == 0) 
 				return BadRequest("A List of Song Book Ids is required");
@@ -121,7 +121,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpPut("edit/{id}")]
-		public async Task<IActionResult> Edit(Guid id, SongBookDto bookDto)
+		public async Task<IActionResult> Edit(string id, SongBookDto bookDto)
 		{
 
 			if (bookDto == null) return BadRequest("Song Book data is required");
@@ -183,14 +183,14 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 		//DELETE admin/api_Songbooks/by_ids
 		[HttpDelete("by_ids")]
-		public async Task<IActionResult> DeleteSongBooks(List<Guid> ids)
+		public async Task<IActionResult> DeleteSongBooks(List<string> ids)
 		{
 			if (ids == null || ids.Count == 0) return BadRequest("Song Book Ids are required.");
 
-			var deletedIds = new List<Guid>();
+			var deletedIds = new List<string>();
 			var errors = new List<string>();
 
-			foreach (Guid id in ids)
+			foreach (string id in ids)
 			{
 				var SongBook = await _context.SongBooks.FindAsync(id);
 

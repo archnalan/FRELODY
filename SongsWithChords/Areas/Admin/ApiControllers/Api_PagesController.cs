@@ -75,7 +75,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 		//PUT admin/apipages/edit/"{id}"
 		[HttpPut("edit/{id}")]
-		public async Task<IActionResult> Edit([FromRoute] int id, [FromBody] PageDto pageDto)
+		public async Task<IActionResult> Edit([FromRoute] string id, [FromBody] PageDto pageDto)
 		{
 			if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -85,7 +85,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 				return NotFound($"The Page with ID: {id} was not found");
 
 
-			if (pageDto.Id == 1)
+			if (pageDto.Id == "1")
 			{
 				pageDto.Slug = "home";
 			}
@@ -115,9 +115,8 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 			return Ok(updatedPageDto);
 		}
 
-		//DELETE admin/apipages/"{id}"
 		[HttpDelete("{id}")]		
-		public async Task<IActionResult> Delete(int id)
+		public async Task<IActionResult> Delete(string id)
 		{
 			var pageInDb = await _context.Pages.FindAsync(id);
 
@@ -130,15 +129,14 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 			return NoContent();
 		}
 
-		//POST admin/apipages/reorder/
 		[HttpPost]
-		public async Task<IActionResult> Reorder(int[] id)
+		public async Task<IActionResult> Reorder(string[] id)
 		{
 			int count = 1;
 
 			foreach (var pageId in id)
 			{
-				Page page = await _context.Pages.FindAsync(pageId);
+				var page = await _context.Pages.FindAsync(pageId);
 
 				if (page == null)
 					return NotFound($"The Page with ID: {id} was not found.");

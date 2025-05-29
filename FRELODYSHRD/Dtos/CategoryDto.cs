@@ -4,12 +4,12 @@ namespace FRELODYAPP.Dtos
 {
 	public class CategoryDto
 	{		
-		public Guid Id { get; set; }
+		public string Id { get; set; }
 		[Required]
 		[StringLength(100)]
 		public string Name { get; set; }
 
-		public Guid? ParentCategoryId { get; set; }//Nullable Main Category
+		public string? ParentCategoryId { get; set; }//Nullable Main Category
 
 		public int? Sorting { get; set; } //CategoryOrder
 

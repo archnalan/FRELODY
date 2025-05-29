@@ -33,7 +33,7 @@ namespace FRELODYAPP.Controllers
 
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(IEnumerable<SongDto>), 200)]
-        public async Task<ActionResult<IEnumerable<SongDto>>> GetSongWithChordsById(Guid id)
+        public async Task<ActionResult<IEnumerable<SongDto>>> GetSongWithChordsById(string id)
         {
             var songResult = await _songService.GetSongById(id);
 
@@ -46,7 +46,7 @@ namespace FRELODYAPP.Controllers
 
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(IEnumerable<SongDto>), 200)]
-        public async Task<ActionResult<IEnumerable<SongDto>>> GetSongDetailsById(Guid id)
+        public async Task<ActionResult<IEnumerable<SongDto>>> GetSongDetailsById(string id)
         {
             var songResult = await _songService.GetSongDetailsById(id);
 

@@ -11,7 +11,7 @@ namespace FRELODYSHRD.Dtos.CreateDtos
         [MaxLength(100)]
         public string? VerseTitle { get; set; }
 
-        public Guid? SongId { get; set; }
+        public string? SongId { get; set; }
 
         public int? RepeatCount { get; set; }
 

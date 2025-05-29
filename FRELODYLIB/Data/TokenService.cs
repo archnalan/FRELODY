@@ -39,7 +39,7 @@ namespace FRELODYAPP.Data
             _logger = logger;
         }
 
-        public async Task<LoginResponseDto> GenerateTokens(User user, Guid? tenantId)
+        public async Task<LoginResponseDto> GenerateTokens(User user, string? tenantId)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -170,12 +170,12 @@ namespace FRELODYAPP.Data
                     return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Invalid tenant claim"));
                 }
 
-                Guid tenantId;
-                if (!Guid.TryParse(tenantClaim.Value, out tenantId))
+                string tenantId;
+                if (!string.IsNullOrEmpty(tenantClaim.Value))
                 {
-                    return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Invalid tenant ID format"));
+                    return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Tenant Id must be provided"));
                 }
-
+                tenantId = tenantClaim.Value;
                 // Find user
                 var user = await _userManager.FindByIdAsync(userClaimsDto.Id);
                 if (user == null)

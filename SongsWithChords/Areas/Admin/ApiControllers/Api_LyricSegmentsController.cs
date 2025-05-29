@@ -58,7 +58,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		//GET admin/api_lyricsegments/5
 
 		[HttpGet("{id}")]
-		public async Task<IActionResult> GetSegmentById(int id)
+		public async Task<IActionResult> GetSegmentById(string id)
 		{
 			var lyricSegment = await _context.LyricSegments.FindAsync(id);
 
@@ -71,7 +71,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 		//GET admin/api_lyricsegments/by_ids
 		[HttpGet("by_ids")]
-		public async Task<IActionResult> GetSegmentsByIds(List<Guid> ids)
+		public async Task<IActionResult> GetSegmentsByIds(List<string> ids)
 		{
 			if (ids == null || ids.Count == 0)
 				return BadRequest("Lyric Segment IDs required.");
@@ -200,7 +200,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 		//PUT admin/api_lyricsegments/edit/5
 		[HttpPut("edit/{id}")]
-		public async Task<IActionResult> Edit(Guid id, LyricSegmentDto segmentDto)
+		public async Task<IActionResult> Edit(string id, LyricSegmentDto segmentDto)
 		{
 			if (segmentDto == null) return BadRequest("Lyric Segment data is required.");
 
@@ -331,7 +331,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 		//DELETE admin/api_lyricsegments/5
 		[HttpDelete("{id}")]
-		public async Task<IActionResult> Delete(int id)
+		public async Task<IActionResult> Delete(string id)
 		{
 			var segment = await _context.LyricSegments.FindAsync(id);
 
@@ -363,7 +363,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
 		//DELETE admin/api_chords/by_ids
 		[HttpDelete("by_ids")]		
-		public async Task<IActionResult> DeleteChords(List<Guid> ids)
+		public async Task<IActionResult> DeleteChords(List<string> ids)
 		{
 			if (ids == null || ids.Count == 0) return BadRequest("Segments Ids required.");
 			

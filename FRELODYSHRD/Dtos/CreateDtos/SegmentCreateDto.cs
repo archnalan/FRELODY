@@ -12,7 +12,7 @@ namespace FRELODYSHRD.Dtos.CreateDtos
         public int? Id { get; set; } // key value for UI
         public string Lyric { get; set; }
         public int LineNumber { get; set; }
-        public long? ChordId { get; set; }
+        public string? ChordId { get; set; }
         public int PartNumber { get; set; } // SongSection value number
         public SongSection PartName { get; set; }
         public int LyricOrder { get; set; } 

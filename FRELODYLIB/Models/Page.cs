@@ -5,8 +5,6 @@ namespace FRELODYAPP.Models
 {
 	public class Page:BaseEntity
 	{
-		public int Id { get; set; }
-
 		[Required]
 		[StringLength(15)]
 		public string Title { get; set; }

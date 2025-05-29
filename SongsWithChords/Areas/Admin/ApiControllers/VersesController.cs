@@ -48,7 +48,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("{id}")]
-		public async Task<IActionResult> GetVerseById(Guid id)
+		public async Task<IActionResult> GetVerseById(string id)
 		{
 			var verseResult = await _verseService.GetVerseByIdAsync(id);
 
@@ -59,7 +59,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("by_ids")]
-		public async Task<IActionResult> GetVersesByIds(List<Guid> ids)
+		public async Task<IActionResult> GetVersesByIds(List<string> ids)
 		{
 			if(ids.Count == 0 || !ids.Any())
 			{
@@ -67,9 +67,9 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 			}
 
 			var foundVerses = new List<VerseDto>();
-			var responseErrors = new List<(Guid id, string errorMessage)>();
+			var responseErrors = new List<(string id, string errorMessage)>();
 			
-			foreach(Guid id in ids)
+			foreach(var id in ids)
 			{
 				var verseResult = await _verseService.GetVerseByIdAsync(id);
 

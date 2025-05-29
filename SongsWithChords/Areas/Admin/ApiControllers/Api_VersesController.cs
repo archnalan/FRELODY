@@ -40,7 +40,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("{id}")]
-		public async Task<IActionResult> GetVerseById(Guid id)
+		public async Task<IActionResult> GetVerseById(string id)
 		{
 			var verse = await _context.Verses.FindAsync(id);
 
@@ -52,7 +52,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpGet("by_ids")]
-		public async Task<IActionResult> GetVersesByIds(List<Guid> Ids)
+		public async Task<IActionResult> GetVersesByIds(List<string> Ids)
 		{
 			if (Ids == null || Ids.Count == 0) return BadRequest("Verse Ids are required.");
 
@@ -63,7 +63,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 			var foundVersesDto = _mapper.Map<List<VerseDto>>(verses);
 
 			var notFoundVersesDto = Ids.Except(foundVersesDto
-									   .Select(v=>v.Id ?? Guid.Empty)).ToList();
+									   .Select(v=>v.Id ?? string.Empty)).ToList();
 
 			if (notFoundVersesDto.Count == Ids.Count) 
 								return NotFound(notFoundVersesDto);
@@ -186,7 +186,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpPut("edit/{id}")]
-		public async Task<IActionResult> Edit(Guid id, VerseDto verseEdit)
+		public async Task<IActionResult> Edit(string id, VerseDto verseEdit)
 		{
 			if (verseEdit == null) return BadRequest("Verse data is required.");
 
@@ -242,7 +242,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 			var editedVerseDtos = new List<VerseDto>();
 
 			var errors = new List<string>();
-			var processedVerses = new HashSet<(Guid SongId, int  Number)>();
+			var processedVerses = new HashSet<(string SongId, int  Number)>();
 
 			foreach(var verseDto in verseDtos)
 			{
@@ -305,7 +305,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpDelete("{id}")]
-		public async Task<IActionResult> Delete(int id)
+		public async Task<IActionResult> Delete(string id)
 		{
 			var verse = await _context.Verses.FindAsync(id);
 
@@ -325,14 +325,14 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpDelete("by_ids")]
-		public async Task<IActionResult> DeleteVerses(List<Guid> Ids)
+		public async Task<IActionResult> DeleteVerses(List<string> Ids)
 		{
 			if (Ids.Count == 0) return BadRequest("Verse Ids are required.");
 
-			var deletedIds = new List<Guid>();
+			var deletedIds = new List<string>();
 			var errors = new List<string>();
 
-			foreach (Guid Id in Ids)
+			foreach (string Id in Ids)
 			{
 				var verse = await _context.Songs.FindAsync(Id);
 

@@ -8,12 +8,12 @@ namespace FRELODYAPP.Areas.Admin.Interfaces
 	{
 		Task<ServiceResult<List<LyricSegmentDto>>> GetAllSegmentsAsync();
 
-		Task<ServiceResult<LyricSegmentDto>> GetSegmentByIdAsync(Guid id);
+		Task<ServiceResult<LyricSegmentDto>> GetSegmentByIdAsync(string id);
 
 		Task<ServiceResult<LyricSegmentDto>> CreateSegmentAsync(LyricSegmentCreateDto segmentDto);
 
-		Task<ServiceResult<LyricSegmentDto>> EditSegmentAsyc(Guid id, LyricSegmentDto segmentDto);
+		Task<ServiceResult<LyricSegmentDto>> EditSegmentAsyc(string id, LyricSegmentDto segmentDto);
 
-		Task<ServiceResult<bool>> DeleteSegmentAsync(Guid id);
+		Task<ServiceResult<bool>> DeleteSegmentAsync(string id);
 	}
 }

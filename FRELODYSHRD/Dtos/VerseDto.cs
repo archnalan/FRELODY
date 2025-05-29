@@ -6,9 +6,9 @@ namespace FRELODYAPP.Dtos
 {
     public class VerseDto: BaseEntityDto
     {
-        public Guid? Id { get; set; }
+        public string? Id { get; set; }
 
-        public Guid SongId { get; set; }
+        public string SongId { get; set; }
 
         [Range(0, 24)]
         public int VerseNumber { get; set; }

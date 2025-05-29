@@ -10,16 +10,13 @@ namespace FRELODYAPP.Dtos
 {
     public class SongDto : BaseEntityDto
     {
-        [Key]
-        public Guid Id { get; set; }
-
         [Required]
         [StringLength(100)]
         public string Title { get; set; }
 
         [Required]
         [Display(Name = "SDAH-")]
-        public long? SongNumber { get; set; }
+        public int? SongNumber { get; set; }
 
         [Required]
         [StringLength(200)]
@@ -46,7 +43,7 @@ namespace FRELODYAPP.Dtos
         [StringLength(200)]
         public string? AddedBy { get; set; }
 
-        public Guid? CategoryId { get; set; }
+        public string? CategoryId { get; set; }
 
         public virtual ICollection<VerseDto>? Verses { get; set; }
         public virtual ICollection<BridgeDto>? Bridges { get; set; }

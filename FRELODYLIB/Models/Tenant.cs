@@ -5,8 +5,6 @@ namespace FRELODYAPP.Models
 {
     public class Tenant : BaseEntity
     {
-        [Key]
-        public Guid TenantId { get; set; }
         public string TenantName { get; set; }
         public string? BusinessRegNumber { get; set; }
         public string? TaxIdentificationNumber { get; set; }

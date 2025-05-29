@@ -60,7 +60,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
         //GET admin/api_chordcharts/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetChordChartById(int id)
+        public async Task<IActionResult> GetChordChartById(string id)
         {
             var chordChart = await _context.ChordCharts.FindAsync(id);
 
@@ -73,7 +73,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 
         //GET admin/api_chordcharts/charts/5
         [HttpGet("charts/{id}")]
-        public async Task<IActionResult> GetChartWithChordById(Guid id)
+        public async Task<IActionResult> GetChartWithChordById(string id)
         {
             var chordChart = await _context.ChordCharts
                                 .FirstOrDefaultAsync(ct => ct.Id == id);
@@ -88,7 +88,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
         //GET admin/api_chordcharts/by_ids
         [HttpGet]
         [Route("by_ids")]
-        public async Task<IActionResult> GetChordChartsById(List<Guid> Ids)
+        public async Task<IActionResult> GetChordChartsById(List<string> Ids)
         {
             if (Ids == null || Ids.Any() == false)
                 return BadRequest("Chord Chart Ids are required.");
@@ -120,7 +120,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
         //GET admin/api_chordcharts/charts/by_ids
         [HttpGet]
         [Route("charts/by_ids")]
-        public async Task<IActionResult> GetChartsWithParentChordsById(List<Guid> ids)
+        public async Task<IActionResult> GetChartsWithParentChordsById(List<string> ids)
         {
             if (ids == null || ids.Any() == false)
                 return BadRequest("Chord Chart Ids are required.");
@@ -202,7 +202,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
             var createdCharts = new List<ChordChartEditDto>();
 
             var errors = new List<string>();
-            var noRepeatCharts = new HashSet<(string FilePath, long? ChordId)>();
+            var noRepeatCharts = new HashSet<(string FilePath, string? ChordId)>();
 
             using (var transaction = await _context.Database.BeginTransactionAsync())
             {
@@ -279,7 +279,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
         //PUT admin/api_chordcharts/edit/5
         [HttpPut]
         [Route("edit/{id}")]
-        public async Task<IActionResult> Edit(Guid id, ChordChartEditDto chartDto)
+        public async Task<IActionResult> Edit(string id, ChordChartEditDto chartDto)
         {
             if (chartDto == null) return BadRequest("Chord chart Data is required.");
 
@@ -336,7 +336,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
             var editedChartDtos = new List<ChordChartEditDto>();
 
             var errors = new List<string>();
-            var noRepeatCharts = new HashSet<(string FilePath, long? ChordId)>();
+            var noRepeatCharts = new HashSet<(string FilePath, string? ChordId)>();
 
             using (var transaction = _context.Database.BeginTransaction())
             {
