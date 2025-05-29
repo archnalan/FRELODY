@@ -9,7 +9,7 @@ namespace FRELODYSHRD.Dtos.CreateDtos
 {
     public class SegmentCreateDto
     {
-        public int? Id { get; set; } // key value for UI
+        public string? Id { get; set; } // key value for UI
         public string Lyric { get; set; }
         public int LineNumber { get; set; }
         public string? ChordId { get; set; }

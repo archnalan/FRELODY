@@ -1,0 +1,76 @@
+﻿
+@if (FormOpen)
+{
+    <div class="d-flex align-items-center p-2 bg-secondary rounded">
+        <form class="d-flex position-relative" @onsubmit="HandleSubmit">
+            <div class="d-flex flex-column gap-2 me-1">
+                <select class="form-select form-select-sm" @bind="addFormChordId">
+                    <option value="">No Chord</option>
+                    @foreach (var chord in Chords)
+                    {
+                        <option value="@chord.Id">@chord.ChordName</option>
+                    }
+                </select>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       @bind="addFormSegment"
+                       placeholder="Enter lyrics..." />
+            </div>
+            <button type="button" class="btn btn-link btn-sm position-absolute top-0 end-0" @onclick="CloseForm">
+                <span class="text-danger">&times;</span>
+            </button>
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-pencil"></i>
+            </button>
+        </form>
+    </div>
+}
+else
+{
+    <button class="@($"btn btn-sm {(Focused ? "btn-outline-dark" : "btn-outline-secondary")}")"
+            @onclick="OpenForm">
+        <i class="bi bi-plus"></i>
+        Add a segment
+    </button>
+}
+
+@code {
+    [Parameter] public int LineNumber { get; set; }
+    [Parameter] public List<ChordDto> Chords { get; set; }
+    [Parameter] public bool FormOpen { get; set; }
+    [Parameter] public EventCallback<bool> OnFormOpenChanged { get; set; }
+    [Parameter] public EventCallback<SegmentCreateDto> OnSegmentAdded { get; set; }
+    [Parameter] public bool Focused { get; set; }
+
+    private string addFormSegment;
+    private string? addFormChordId;
+
+    private void OpenForm()
+    {
+        OnFormOpenChanged.InvokeAsync(true);
+    }
+
+    private void CloseForm()
+    {
+        OnFormOpenChanged.InvokeAsync(false);
+    }
+
+    private void HandleSubmit()
+    {
+        var newSegment = new SegmentCreateDto
+            {
+                Id = Guid.NewGuid().ToString(),
+                Lyric = addFormSegment,
+                LineNumber = LineNumber,
+                PartNumber = 1,
+                PartName = SongSection.Verse,
+                LyricOrder = 1,
+                ChordId = addFormChordId
+            };
+
+        OnSegmentAdded.InvokeAsync(newSegment);
+        addFormSegment = "";
+        addFormChordId = null;
+        CloseForm();
+    }
+}

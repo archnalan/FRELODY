@@ -1,0 +1,234 @@
+﻿
+<div class="d-flex flex-column h-100 w-100 gap-3 p-4 overflow-auto">
+    @if (lines.Count > 0)
+    {
+        <p class="text-muted small">Each segment can be assigned a chord.</p>
+    }
+    else
+    {
+        <p class="text-muted small">Click the button below to add a new line.</p>
+    }
+    
+    <div class="d-flex align-items-center w-100">
+        <div class="@($"flex-grow-1 h-0 border border-dashed {(lines.Count > 0 ? "border-secondary" : "border-primary")}")"></div>
+        <button class="@($"btn btn-sm {(lines.Count > 0 ? "btn-outline-secondary" : "btn-outline-primary")}")" 
+                disabled="@(lines.Count > 0)"
+                @onclick="() => AddLine(0)">
+            <i class="bi bi-plus"></i>
+            <span class="small">New Line</span>
+        </button>
+        <div class="@($"flex-grow-1 h-0 border border-dashed {(lines.Count > 0 ? "border-secondary" : "border-primary")}")"></div>
+    </div>
+    
+    @foreach (var line in lines)
+    {
+        <div class="position-relative mb-4" id="@($"line-{line}")">
+            <Row Line="@line"
+                 Focused="@(focusedRow == line)"
+                 Segments="@segments"
+                 Chords="@chords"
+                 EditModeSegmentId="@editModeSegmentId"
+                 OnFocusRow="() => SetFocusedRow(line)"
+                 OnSegmentsUpdate="HandleSegmentsUpdate"
+                 OnChordsUpdate="HandleChordsUpdate"
+                 OnEditModeSegmentIdChanged="HandleEditModeSegmentIdChanged" />
+                 
+            @if (focusedRow == line)
+            {
+                <div class="position-absolute bottom-0 end-0">
+                    <button class="btn btn-sm btn-outline-primary rounded-top-0 rounded-end-0"
+                            @onclick="() => AddLine(line)">
+                        <i class="bi bi-plus"></i>
+                        <span class="small text-primary">New Line</span>
+                    </button>
+                    <button class="@($"btn btn-sm btn-outline-danger rounded-top-0 rounded-start-0 {(isOver ? "bg-danger text-white" : "")}")"
+                            @onclick="() => ShowDeleteDialog(line)"
+                            @ondragover="HandleDragOver"
+                            @ondragleave="HandleDragLeave"
+                            @ondrop="e => HandleDrop(e, line)">
+                        <i class="bi bi-fire"></i>
+                        <span class="small">Remove</span>
+                    </button>
+                </div>
+            }
+        </div>
+    }
+    
+    @if (lines.Count > 0)
+    {
+        <div class="text-muted small text-end">
+            Verse @VerseId • Lines: @lines.Count • Segments: @segments.Count
+        </div>
+    }
+</div>
+
+@if (showDeleteDialog)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Line</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDeleteDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this line?</p>
+                    <p>Segments in this line will be deleted.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteDialog">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="() => DeleteLine(lineToDelete)">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int VerseId { get; set; }
+    [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
+
+    private List<SegmentCreateDto> segments = new();
+    private List<ChordDto> chords = new();
+    private int? focusedRow = null;
+    private List<int> trackLines = new();
+    private List<int> lines = new();
+    private string editModeSegmentId = null;
+    private bool isOver = false;
+    private bool showDeleteDialog = false;
+    private int lineToDelete;
+
+    protected override void OnInitialized()
+    {
+        UpdateLines();
+        if (lines.Count > 0) focusedRow = lines[0];
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRt.InvokeVoidAsync("initDragAndDrop");
+        }
+    }
+
+    private void UpdateLines()
+    {
+        var segmentLines = segments.Select(s => s.LineNumber).Distinct().ToList();
+        lines = segmentLines.Union(trackLines).Distinct().OrderBy(l => l).ToList();
+    }
+
+    private void HandleSegmentsUpdate(List<SegmentCreateDto> updatedSegments)
+    {
+        segments = updatedSegments;
+        UpdateLines();
+        OnSegmentsUpdate.InvokeAsync(segments.Select(s => {
+            s.PartNumber = VerseId;
+            return s;
+        }).ToList());
+    }
+
+    private void HandleChordsUpdate(List<ChordDto> updatedChords)
+    {
+        chords = updatedChords;
+    }
+
+    private void HandleEditModeSegmentIdChanged(string id)
+    {
+        editModeSegmentId = id;
+    }
+
+    private void SetFocusedRow(int line)
+    {
+        focusedRow = line;
+    }
+
+    private void AddLine(int afterLine)
+    {
+        var lineIndex = lines.IndexOf(afterLine);
+        var tempLineId = (int)DateTime.Now.Ticks;
+        var newSegmentId = Guid.NewGuid().ToString();
+
+        segments.Add(new SegmentCreateDto
+            {
+            Id = newSegmentId,
+            Lyric = "",
+            LineNumber = tempLineId,
+            PartNumber = 1,
+            PartName = SongSection.Verse,
+            LyricOrder = 1
+        });
+
+        trackLines.Add(tempLineId);
+        trackLines.Sort();
+
+        RenumberLines();
+        editModeSegmentId = newSegmentId;
+        focusedRow = lines[lineIndex + 1];
+    }
+
+    private void RenumberLines()
+    {
+        var newLineMap = new Dictionary<long, int>();
+        for (int i = 0; i < trackLines.Count; i++)
+        {
+            newLineMap[trackLines[i]] = i + 1;
+        }
+
+        segments = segments.Select(s => {
+            if (newLineMap.ContainsKey(s.LineNumber))
+                s.LineNumber = newLineMap[s.LineNumber];
+            return s;
+        }).ToList();
+
+        trackLines = trackLines.Select(l => newLineMap.ContainsKey(l) ? newLineMap[l] : l).ToList();
+        UpdateLines();
+    }
+
+    private void ShowDeleteDialog(int line)
+    {
+        showDeleteDialog = true;
+        lineToDelete = line;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        showDeleteDialog = false;
+    }
+
+    private void DeleteLine(int line)
+    {
+        segments.RemoveAll(s => s.LineNumber == line);
+        trackLines.Remove(line);
+        RenumberLines();
+        
+        if (trackLines.Count > 0)
+        {
+            focusedRow = trackLines[0];
+        }
+        else
+        {
+            focusedRow = null;
+        }
+        
+        editModeSegmentId = null;
+        showDeleteDialog = false;
+    }
+
+    private void HandleDragOver()
+    {
+        isOver = true;
+    }
+
+    private void HandleDragLeave()
+    {
+        isOver = false;
+    }
+
+    private async Task HandleDrop(DragEventArgs e, int line)
+    {
+        isOver = false;
+        var segmentId = await JSRt.InvokeAsync<string>("getDragData", "segmentId");
+        segments.RemoveAll(s => s.Id == segmentId);
+    }
+}

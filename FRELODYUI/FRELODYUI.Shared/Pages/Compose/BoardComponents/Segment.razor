@@ -1,0 +1,77 @@
+﻿
+<div draggable="true"
+     @ondragstart="HandleDragStart"
+     class="@($"d-flex align-items-center p-2 rounded cursor-pointer {(Focused ? "bg-dark" : "bg-secondary")}")">
+    @if (Editing)
+    {
+        <form class="d-flex position-relative" @onsubmit="HandleSubmit">
+            <div class="d-flex flex-column gap-2 me-1">
+                <select class="form-select form-select-sm"
+                        @bind="editedChordId">
+                    <option value="">No Chord</option>
+                    @foreach (var chord in Chords)
+                    {
+                        <option value="@chord.Id">@chord.ChordName</option>
+                    }
+                </select>
+                <input type="text"
+                       class="form-control form-control-sm"
+                       @bind="editedLyric"
+                       placeholder="Enter lyrics..." />
+            </div>
+            <button type="button" class="btn btn-link btn-sm position-absolute top-0 end-0" @onclick="OnCancel">
+                <span class="text-danger">&times;</span>
+            </button>
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-pencil"></i>
+            </button>
+        </form>
+    }
+    else
+    {
+        <div class="d-flex flex-column justify-content-between">
+            <div>
+                <p class="small text-white m-0">@ChordName</p>
+            </div>
+            <div>
+                <p class="small text-white m-0">@Content.Lyric</p>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public SegmentCreateDto Content { get; set; }
+    [Parameter] public List<ChordDto> Chords { get; set; }
+    [Parameter] public bool Editing { get; set; }
+    [Parameter] public bool Focused { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<SegmentCreateDto> OnDragStart { get; set; }
+
+    private string editedLyric;
+    private string? editedChordId;
+    private string ChordName =>
+        Chords?.FirstOrDefault(c => c.Id == Content.ChordId)?.ChordName ?? "";
+
+    protected override void OnParametersSet()
+    {
+        if (Editing)
+        {
+            editedLyric = Content.Lyric;
+            editedChordId = Content.ChordId;
+        }
+    }
+
+    private void HandleSubmit()
+    {
+        Content.Lyric = editedLyric;
+        Content.ChordId = editedChordId;
+        OnSave.InvokeAsync();
+    }
+
+    private async Task HandleDragStart()
+    {
+        await OnDragStart.InvokeAsync(Content);
+    }
+}

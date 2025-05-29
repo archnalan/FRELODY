@@ -112,7 +112,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         // Create the appropriate song part based on the type
                         string partId = await CreateSongPart(song.Id, partName, partNumber);
 
-                        if (string.IsNullOrEmpty(partId))
+                        if (!string.IsNullOrEmpty(partId))
                         {
                             // Group segments by lyric line number
                             var lyricLineGroups = partGroup

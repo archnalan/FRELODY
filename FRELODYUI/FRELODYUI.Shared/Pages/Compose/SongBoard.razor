@@ -1,0 +1,87 @@
+﻿@page "/compose"
+
+<div class="w-100 d-flex flex-column justify-content-center bg-light p-4">
+    <h1 class="h2 font-weight-bold mb-4 text-center">Song Editor</h1>
+
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="flex-grow-1">
+            <input type="number" 
+                   @bind="SongNumber" 
+                   class="form-control w-auto mr-2" 
+                   placeholder="Song Number" />
+                   
+            <input type="text" 
+                   @bind="SongTitle" 
+                   class="form-control w-auto" 
+                   placeholder="Song Title" />
+        </div>
+        <button @onclick="HandleSongSave" class="btn btn-primary">
+            Save Song
+        </button>
+    </div>
+
+    <TabsComponent InitialItems="initialVerseItems"
+                   ItemsCountLimit="MAX_VERSES"
+                   OnTabAdd="HandleTabAdd"
+                   RenderTab="RenderVerseTab" />
+</div>
+
+@code {
+    const int MAX_VERSES = 24;
+    private string SongTitle = "My New Song";
+    private int SongNumber = 1;
+    private Dictionary<int, List<SegmentCreateDto>> AllVerseSegments =
+    new() { [1] = new List<SegmentCreateDto>() };
+    private List<TabsComponent.TabsComponentItem> initialVerseItems = new();
+    
+    protected override void OnInitialized()
+    {
+        // Initialize the tabs
+        initialVerseItems = new List<TabsComponent.TabsComponentItem>
+            {
+            new TabsComponent.TabsComponentItem
+            {
+                Id = 1,
+                Title = builder => builder.AddContent(0, SongSection.Verse),
+               Content = builder =>
+                {
+                    builder.OpenComponent<VerseBoard>(0);
+                    builder.AddAttribute(1, "VerseId", 1);
+                    builder.AddAttribute(2, "OnSegmentsUpdate",
+                        EventCallback.Factory.Create<List<SegmentCreateDto>>(
+                            this, segments => HandleVerseUpdate(1, segments)));
+                    builder.CloseComponent();
+                }
+            }
+            };
+    }
+    private void HandleSongSave()
+    {
+        var allSegments = AllVerseSegments.Values.SelectMany(v => v).ToList();
+        var songData = new SimpleSongCreateDto
+        {
+            Title = SongTitle,
+            SongNumber = SongNumber,
+            SongLyrics = allSegments
+        };
+
+        // Validation and API call would go here
+    }
+
+    private void HandleVerseUpdate(int verseId, List<SegmentCreateDto> segments)
+    {
+        AllVerseSegments[verseId] = segments;
+    }
+
+    private void HandleTabAdd(int newTabId)
+    {
+        if (!AllVerseSegments.ContainsKey(newTabId))
+        {
+            AllVerseSegments[newTabId] = new List<SegmentCreateDto>();
+        }
+    }
+       
+    private RenderFragment RenderVerseTab(int id) => @<VerseBoard 
+        VerseId="@id" 
+        OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />;
+}

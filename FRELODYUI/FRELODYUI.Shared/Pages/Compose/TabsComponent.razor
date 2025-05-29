@@ -1,0 +1,94 @@
+﻿
+<div class="bg-light d-flex justify-content-center align-items-center py-4">
+    <div class="d-flex flex-column w-100">
+        <div class="p-2 border border-secondary rounded flex-wrap d-flex justify-content-start align-items-center gap-2 font-weight-bold text-primary bg-light">
+            @foreach (var item in Items)
+            {
+                <div class="@GetTabClass(item.Id)" @onclick="() => SetSelectedTab(item.Id)">
+                    <div class="mr-3">
+                        @item.Title @(Items.IndexOf(item) + 1)
+                    </div>
+                    <button class="btn btn-sm btn-link text-primary"
+                            @onclick="() => HandleTabRemove(item.Id)">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            }
+            <button class="btn btn-sm btn-link text-primary"
+                    @onclick="HandleAddTab"
+                    disabled="@(Items.Count >= ItemsCountLimit)">
+                <span aria-hidden="true">+</span>
+            </button>
+        </div>
+
+        <div class="bg-light p-2 border border-secondary rounded mt-4">
+            @foreach (var item in Items)
+            {
+                <div class="@(SelectedTab == item.Id ? "" : "d-none")">
+                    @item.Content
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<TabsComponentItem> InitialItems { get; set; }
+    [Parameter] public int ItemsCountLimit { get; set; }
+    [Parameter] public EventCallback<int> OnTabAdd { get; set; }
+    [Parameter] public Func<int, RenderFragment> RenderTab { get; set; }
+
+    private List<TabsComponentItem> Items { get; set; } = new();
+    private int SelectedTab { get; set; } = 1;
+    private const int INITIAL_ID = 1;
+
+    protected override void OnInitialized()
+    {
+        Items = InitialItems.Select((item, i) => new TabsComponentItem
+            {
+                Id = INITIAL_ID + i,
+                Title = item.Title,
+                Content = item.Content
+            }).ToList();
+    }
+
+    private string GetTabClass(int id) =>
+        SelectedTab == id
+            ? "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded border border-primary bg-white text-primary shadow cursor-pointer"
+            : "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded cursor-pointer hover-bg-light";
+
+    private void SetSelectedTab(int id) => SelectedTab = id;
+
+    private void HandleTabRemove(int id)
+    {
+        Items.RemoveAll(item => item.Id == id);
+        if (SelectedTab == id && Items.Count > 0)
+        {
+            SelectedTab = Items[0].Id;
+        }
+    }
+
+    private void HandleAddTab()
+    {
+        if (Items.Count >= ItemsCountLimit) return;
+
+        var newId = Items.Count > 0 ? Items.Max(i => i.Id) + 1 : INITIAL_ID;
+        var newTab = new TabsComponentItem
+            {
+                Id = newId,
+                Title = InitialItems[0].Title,
+                Content = RenderTab?.Invoke(newId)
+            };
+
+        Items.Add(newTab);
+        SelectedTab = newId;
+        OnTabAdd.InvokeAsync(newId);
+    }
+    public class TabsComponentItem
+    {
+        public int Id { get; set; }
+        public RenderFragment Title { get; set; }
+        public RenderFragment Content { get; set; }
+    }
+}
+

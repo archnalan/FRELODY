@@ -1,0 +1,9 @@
+﻿
+<div class="h-100 w-100 bg-light text-dark overflow-auto">
+    <Board VerseId="@VerseId" OnSegmentsUpdate="@OnSegmentsUpdate" />
+</div>
+
+@code {
+    [Parameter] public int VerseId { get; set; }
+    [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
+}

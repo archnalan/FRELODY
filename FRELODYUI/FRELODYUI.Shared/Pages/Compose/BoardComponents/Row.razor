@@ -1,0 +1,137 @@
+﻿
+<div tabindex="0" 
+     class="@($"w-100 position-relative p-4 d-flex flex-wrap gap-3 bg-white rounded {(Focused ? "border border-primary" : "border border-secondary")}")"
+     @onfocus="OnFocusRow">
+    <span class="@($"position-absolute top-0 start-0 badge {(Focused ? "bg-primary" : "")}")">
+        Lyric Line @Line.ToString("00")
+    </span>
+
+    <div class="d-flex flex-wrap w-100 gap-1"
+         @ondrop="HandleDrop"
+         @ondragover="HandleDragOver"
+         @ondragleave="HandleDragLeave">
+        @foreach (var segment in filteredSegments)
+        {
+            <div class="h-100 d-flex align-items-center gap-2" @ondblclick="() => HandleDoubleClick(segment)">
+                <Segment Content="segment"
+                         Chords="Chords"
+                         Editing="@(EditModeSegmentId == segment.Id)"
+                         Focused="Focused"
+                         OnSave="HandleSave"
+                         OnCancel="HandleCancel"
+                         OnDragStart="HandleDragStart" />
+            </div>
+        }
+        
+        <DropIndicator LineNumber="Line" />
+        
+        <AddSegment LineNumber="Line"
+                    Chords="Chords"
+                    FormOpen="addFormOpen"
+                    OnFormOpenChanged="SetAddFormOpen"
+                    OnSegmentAdded="HandleSegmentAdded"
+                    Focused="Focused" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Line { get; set; }
+    [Parameter] public bool Focused { get; set; }
+    [Parameter] public List<SegmentCreateDto> Segments { get; set; }
+    [Parameter] public List<ChordDto> Chords { get; set; }
+    [Parameter] public string EditModeSegmentId { get; set; }
+    [Parameter] public EventCallback OnFocusRow { get; set; }
+    [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
+    [Parameter] public EventCallback<List<ChordDto>> OnChordsUpdate { get; set; }
+    [Parameter] public EventCallback<string> OnEditModeSegmentIdChanged { get; set; }
+
+    private bool addFormOpen = false;
+    private SegmentCreateDto editSegment;
+    private SegmentCreateDto editedSegment;
+    private ChordDto editedChord;
+    private List<SegmentCreateDto> filteredSegments =>
+        Segments?.Where(s => s.LineNumber == Line).ToList() ?? new();
+
+    protected override void OnParametersSet()
+    {
+        if (!Focused && editSegment != null)
+        {
+            HandleSave();
+        }
+
+        if (EditModeSegmentId != null)
+        {
+            editSegment = Segments?.FirstOrDefault(s => s.Id == EditModeSegmentId);
+            editedSegment = editSegment;
+            editedChord = Chords?.FirstOrDefault(c => c.Id == editSegment?.ChordId);
+        }
+    }
+
+    private async Task HandleDragStart(SegmentCreateDto segment)
+    {
+        await JSRt.InvokeVoidAsync("setDragData", "segmentId", segment.Id);
+    }
+
+    private void HandleDragOver()
+    {
+        // Highlight logic would go here
+    }
+
+    private void HandleDragLeave()
+    {
+        // Unhighlight logic
+    }
+
+    private async Task HandleDrop()
+    {
+        var segmentId = await JSRt.InvokeAsync<string>("getDragData", "segmentId");
+        var segment = Segments.First(s => s.Id == segmentId);
+        segment.LineNumber = Line;
+        OnSegmentsUpdate.InvokeAsync(Segments);
+    }
+
+    private void HandleDoubleClick(SegmentCreateDto segment)
+    {
+        if (editSegment != null)
+        {
+            HandleSave();
+        }
+        OnEditModeSegmentIdChanged.InvokeAsync(segment.Id);
+    }
+
+    private void HandleSave()
+    {
+        if (editedSegment != null)
+        {
+            if (string.IsNullOrWhiteSpace(editedSegment.Lyric) && editedChord == null)
+            {
+                Segments.RemoveAll(s => s.Id == editedSegment.Id);
+            }
+            else
+            {
+                var index = Segments.FindIndex(s => s.Id == editedSegment.Id);
+                Segments[index] = editedSegment;
+            }
+            OnSegmentsUpdate.InvokeAsync(Segments);
+        }
+        editSegment = null;
+        OnEditModeSegmentIdChanged.InvokeAsync(null);
+    }
+
+    private void HandleCancel()
+    {
+        editSegment = null;
+        OnEditModeSegmentIdChanged.InvokeAsync(null);
+    }
+
+    private void SetAddFormOpen(bool open)
+    {
+        addFormOpen = open;
+    }
+
+    private void HandleSegmentAdded(SegmentCreateDto newSegment)
+    {
+        Segments.Add(newSegment);
+        OnSegmentsUpdate.InvokeAsync(Segments);
+    }
+}

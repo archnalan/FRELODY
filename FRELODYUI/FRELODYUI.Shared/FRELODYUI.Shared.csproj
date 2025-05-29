@@ -16,7 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Pages\Compose\" />
     <Folder Include="Pages\Archive\" />
   </ItemGroup>
 
