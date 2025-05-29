@@ -4,11 +4,12 @@
     <h1 class="h2 font-weight-bold mb-4 text-center">Song Editor</h1>
 
     <div class="d-flex align-items-center justify-content-between mb-4">
-        <div class="flex-grow-1">
+        <div class="d-flex flex-grow-1">
             <input type="number" 
                    @bind="SongNumber" 
-                   class="form-control w-auto mr-2" 
-                   placeholder="Song Number" />
+                   class="form-control me-2" 
+                   placeholder="Song Number" 
+                   style="width:5rem"/>
                    
             <input type="text" 
                    @bind="SongTitle" 
@@ -27,7 +28,7 @@
 </div>
 
 @code {
-    const int MAX_VERSES = 24;
+    const int MAX_VERSES = 25;
     private string SongTitle = "My New Song";
     private int SongNumber = 1;
     private Dictionary<int, List<SegmentCreateDto>> AllVerseSegments =
