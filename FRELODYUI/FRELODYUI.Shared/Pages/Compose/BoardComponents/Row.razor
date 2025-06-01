@@ -1,8 +1,10 @@
 ﻿
 <div tabindex="0" 
-     class="@($"w-100 position-relative p-4 d-flex flex-wrap gap-3 bg-white rounded {(Focused ? "border border-primary" : "border border-secondary")}")"
+     class="@($"w-100 position-relative p-5 d-flex flex-wrap gap-3 bg-white" + 
+            $" {(Focused ? "border border-primary" : "border border-secondary")}")"
+     style="border-radius:1rem; border-bottom-right-radius:0.5rem"
      @onfocus="OnFocusRow">
-    <span class="@($"position-absolute top-0 start-0 badge {(Focused ? "bg-primary" : "")}")">
+    <span class="@($"position-absolute top-0 start-0 badge mt-2 ms-2 {(Focused ? "bg-primary" : "")}")">
         Lyric Line @Line.ToString("00")
     </span>
 

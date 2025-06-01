@@ -2,11 +2,11 @@
 <div class="d-flex flex-column h-100 w-100 gap-3 p-4 overflow-auto">
     @if (lines.Count > 0)
     {
-        <p class="text-muted small">Each segment can be assigned a chord.</p>
+		<p class="m-0  small">Each segment can be assigned a chord.</p>
     }
     else
     {
-        <p class="text-muted small">Click the button below to add a new line.</p>
+        <p class="m-0 text-muted small">Click the button below to add a new line.</p>
     }
     
     <div class="d-flex align-items-center w-100">
@@ -22,7 +22,7 @@
     
     @foreach (var line in lines)
     {
-        <div class="position-relative mb-4" id="@($"line-{line}")">
+        <div class="position-relative mb-2" id="@($"line-{line}")">
             <Row Line="@line"
                  Focused="@(focusedRow == line)"
                  Segments="@segments"
@@ -32,25 +32,26 @@
                  OnSegmentsUpdate="HandleSegmentsUpdate"
                  OnChordsUpdate="HandleChordsUpdate"
                  OnEditModeSegmentIdChanged="HandleEditModeSegmentIdChanged" />
-                 
-            @if (focusedRow == line)
-            {
-                <div class="position-absolute bottom-0 end-0">
-                    <button class="btn btn-sm btn-outline-primary rounded-top-0 rounded-end-0"
-                            @onclick="() => AddLine(line)">
-                        <i class="bi bi-plus"></i>
-                        <span class="small text-primary">New Line</span>
-                    </button>
-                    <button class="@($"btn btn-sm btn-outline-danger rounded-top-0 rounded-start-0 {(isOver ? "bg-danger text-white" : "")}")"
-                            @onclick="() => ShowDeleteDialog(line)"
-                            @ondragover="HandleDragOver"
-                            @ondragleave="HandleDragLeave"
-                            @ondrop="e => HandleDrop(e, line)">
-                        <i class="bi bi-fire"></i>
-                        <span class="small">Remove</span>
-                    </button>
-                </div>
-            }
+
+			@if (focusedRow == line)
+			{
+				<div class="position-absolute bottom-0 end-0 mb-2 me-2">
+					<button class="btn btn-sm btn-outline-primary rounded-top-0 rounded-end-0"
+							@onclick="() => AddLine(line)">
+						<i class="bi bi-plus"></i>
+						<span class="small text-primary">New Line</span>
+					</button>
+					<button class="@($"btn btn-sm btn-outline-danger rounded-top-0 rounded-start-0 {(isOver ? "bg-danger text-white" : "")}")"
+							@onclick="() => ShowDeleteDialog(line)"
+							@ondragover="HandleDragOver"
+							@ondragleave="HandleDragLeave"
+							@ondrop="e => HandleDrop(e, line)">
+						<i class="bi bi-fire"></i>
+						<span class="small">Remove</span>
+					</button>
+				</div>
+			}
+        
         </div>
     }
     
