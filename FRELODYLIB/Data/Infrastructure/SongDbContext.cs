@@ -1,11 +1,12 @@
-﻿using FRELODYAPP.Models;
+﻿using FRELODYAPP.Interfaces;
+using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
+using FRELODYSHRD.ModelTypes;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using FRELODYAPP.Interfaces;
 using System.Reflection.Emit;
-using Microsoft.AspNetCore.Identity;
 
 namespace FRELODYAPP.Data.Infrastructure
 {
@@ -42,19 +43,45 @@ namespace FRELODYAPP.Data.Infrastructure
             base.OnModelCreating(builder);
 
             // Configure global query filters for entities implementing IBaseEntity
-            builder.Entity<Tenant>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<SongBook>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Category>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Song>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Verse>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Bridge>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Chorus>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<LyricLine>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<LyricSegment>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Chord>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<ChordChart>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<UserFeedback>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Page>().HasQueryFilter(x => (x.TenantId == _tenantId || x.TenantId == null) && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Tenant>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<SongBook>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Category>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Song>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Verse>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Bridge>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Chorus>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<LyricLine>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<LyricSegment>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Chord>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<ChordChart>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<UserFeedback>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Page>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
 
             // Configure Song and its children
             builder.Entity<Song>()
@@ -129,18 +156,22 @@ namespace FRELODYAPP.Data.Infrastructure
             // Configure Chord properties to be stored as strings
             builder.Entity<Chord>()
                 .Property(c => c.Difficulty)
-                .HasConversion(new EnumToStringConverter<ChordDifficulty>());
+                .HasConversion<string>();
 
             builder.Entity<Chord>()
                 .Property(c => c.ChordType)
-                .HasConversion(new EnumToStringConverter<ChordType>());
+                .HasConversion<string>();
 
             builder.Entity<Song>()
                 .Property(c => c.SongPlayLevel)
-                .HasConversion(new EnumToStringConverter<PlayLevel>());
+                .HasConversion<string>();
 
             builder.Entity<LyricLine>()
                 .Property(e => e.PartName)
+                .HasConversion<string>();
+            
+            builder.Entity<UserFeedback>()
+                .Property(e => e.Status)
                 .HasConversion<string>();
 
             builder.Entity<User>(b =>

@@ -14,6 +14,7 @@ builder.Services.AddRazorComponents()
 
 // Add device-specific services used by the FRELODYUI.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
+builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
 
 var baseAddressApi = new Uri("https://localhost:7018");
 

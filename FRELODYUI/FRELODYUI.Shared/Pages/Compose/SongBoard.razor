@@ -1,4 +1,5 @@
 ﻿@page "/compose"
+@inject ILogger<SongBoard> _logger
 
 <div class="w-100 d-flex flex-column justify-content-center px-4">
 	<h3 class="fw-bold text-center mb-3">Song Editor</h3>
@@ -26,6 +27,14 @@
                    OnTabAdd="HandleTabAdd"
                    RenderTab="RenderVerseTab" />
 </div>
+@if (modalDisplay == "block;")
+{
+    <DialogModal 
+        ModalClass="@modalClass"
+        ModalDisplay="@modalDisplay"
+        Modal="@modalOption"
+        OnCloseModal="CloseModal" />
+}
 
 @code {
     const int MAX_VERSES = 25;
@@ -34,7 +43,11 @@
     private Dictionary<int, List<SegmentCreateDto>> AllVerseSegments =
     new() { [1] = new List<SegmentCreateDto>() };
     private List<TabsComponent.TabsComponentItem> initialVerseItems = new();
-    
+    public string modalDisplay = "none;";
+    public string modalClass = "";
+    private string message = "";
+    private ModalOptionDto modalOption = default!;
+
     protected override void OnInitialized()
     {
         // Initialize the tabs
@@ -66,16 +79,43 @@
             SongLyrics = allSegments
         };
 
-		var songResult = await _songsApi.CreateSong(songData);
-		if (songResult.IsSuccessStatusCode)
-		{
-			// Handle success, e.g., show a message or redirect
-			Console.WriteLine("Song saved successfully!");
-		}
-		else
-		{
+        if(allSegments.Count == 0)
+        {
+            await OpenModal(new ModalOptionDto
+            {
+                Title = "No Segments",
+                Message = "Please add at least one segment to save the song.",
+                ButtonText = "OK",
+                OptionType = OptionType.Warning
+            });
+
+            _logger.LogWarning("No segments found to save.");
+            return;
+        }
+
+        var songResult = await _songsApi.CreateSong(songData);
+        if (songResult.IsSuccessStatusCode)
+        {
+            message = $"Song {songData.Title} saved successfully!";
+            await OpenModal(new ModalOptionDto
+            {
+                Title = "Song Saved",
+                Message = message,
+                ButtonText = "OK",
+            });
+            _logger.LogInformation("Song {songData} saved successfully!",songData);
+        }
+        else
+        {
+            var errorMessage =_apiResponseHandler.GetApiErrorMessage(songResult);
+            await OpenModal(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = errorMessage,
+                ButtonText = "OK",
+            });
 			// Handle error, e.g., show an error message
-			Console.WriteLine("Failed to save song: " + songResult.Error.Message);
+			_logger.LogError("Failed to save song:{Error} ",songResult);
 		}
     }
 
@@ -94,5 +134,24 @@
        
     private RenderFragment RenderVerseTab(int id) => @<VerseBoard 
         VerseId="@id" 
-        OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />;
+        OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />
+    ;
+
+    private async Task OpenModal(ModalOptionDto option)
+    {
+        modalClass = "show";
+        modalDisplay = "block;";
+        modalOption = option;
+        await Task.CompletedTask;
+        StateHasChanged();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100); 
+        modalDisplay = "none;";
+        message = string.Empty;
+        modalClass = string.Empty;
+        StateHasChanged();
+    }
 }

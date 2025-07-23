@@ -19,12 +19,12 @@ namespace FRELODYUI
                 });
 
             builder.Services.AddSingleton<IFormFactor, FormFactor>();
+            builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
 
             var baseAddressApi = new Uri("https://localhost:7018");
 
             builder.Services.AddRefitClient<ISongsApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
-
 
             builder.Services.AddMauiBlazorWebView();
 

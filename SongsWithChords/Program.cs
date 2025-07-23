@@ -16,6 +16,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPIs.Areas.Admin.LogicData;
 using System.Text.Json;
+using FRELODYAPP.Data.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,7 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddScoped<ITenantProvider, TenantProvider>();
 
+builder.Services.AddDatabaseSeeder();
 builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = true)
 	.AddEntityFrameworkStores<SongDbContext>();
 builder.Services.AddControllersWithViews();
@@ -201,6 +203,21 @@ app.MapControllerRoute(
 	name: "default",
 	pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapRazorPages();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var seeder = services.GetRequiredService<DatabaseSeeder>();
+        await seeder.SeedDataAsync();
+    }
+    catch (Exception ex)
+    {
+        var dbLogger = services.GetRequiredService<ILogger<Program>>();
+        dbLogger.LogError(ex, "An error occurred while seeding the database.");
+    }
+}
 
 app.Run();
 

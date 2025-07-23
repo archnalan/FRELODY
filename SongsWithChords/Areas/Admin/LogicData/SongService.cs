@@ -98,6 +98,37 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         return ServiceResult<SongDto>.Success(songDtoResult);
                     }
 
+                    //check and create chords if they are not already in the database
+                    var chordsWithIds = new Dictionary<string, string>();
+
+                    foreach(var segment in songDto.SongLyrics.Where(s=> !string.IsNullOrEmpty(s.ChordId)))
+                    {
+                        string chordName = segment.ChordName ?? string.Empty;
+                        if (!string.IsNullOrEmpty(chordName)
+                            && !chordsWithIds.ContainsKey(chordName))
+                        {
+                            var exisitingChord = await _context.Chords
+                                .FirstOrDefaultAsync(c => c.ChordName.Trim().ToLower() == chordName.Trim().ToLower());
+
+                            if(exisitingChord == null)
+                            {
+                                var newChord = new Chord
+                                {
+                                    ChordName = chordName.Trim()
+                                };
+                                await _context.Chords.AddAsync(newChord);
+                                await _context.SaveChangesAsync();
+
+                                chordsWithIds[chordName] = newChord.Id;
+                            }
+                            else
+                            {
+                                chordsWithIds[chordName] = exisitingChord.Id;
+                            }
+                        }
+                        segment.ChordId = chordsWithIds[chordName];
+                    }
+
                     // Group segments by song part and part number
                     var songPartGroups = songDto.SongLyrics
                         .GroupBy(s => new { s.PartName, s.PartNumber })
@@ -327,6 +358,218 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError(ex, "Error in GetSongById");
                 return ServiceResult<SongDto>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Update Song
+        public async Task<ServiceResult<SongDto>> UpdateSong(string id, SimpleSongCreateDto songDto)
+        {
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {                    // Find the song to update
+                    var song = await _context.Songs
+                        .Include(s => s.Verses!)
+                            .ThenInclude(v => v.LyricLines!)
+                                .ThenInclude(ll => ll.LyricSegments!)
+                        .Include(s => s.Choruses!)
+                            .ThenInclude(c => c.LyricLines!)
+                                .ThenInclude(ll => ll.LyricSegments!)
+                        .Include(s => s.Bridges!)
+                            .ThenInclude(b => b.LyricLines!)
+                                .ThenInclude(ll => ll.LyricSegments!)
+                        .FirstOrDefaultAsync(s => s.Id == id);
+
+                    if (song == null)
+                    {
+                        return ServiceResult<SongDto>.Failure(
+                            new BadRequestException("Song not found."));
+                    }
+
+                    // Update basic song properties
+                    song.Title = songDto.Title;
+                    song.SongNumber = songDto.SongNumber;
+                    song.Slug = songDto.Title.ToLower().Replace(" ", "-");
+
+                    // If no lyrics to update, just save the song changes
+                    if (songDto.SongLyrics == null || !songDto.SongLyrics.Any())
+                    {
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+                        var songDtoResult = song.Adapt<SongDto>();
+                        return ServiceResult<SongDto>.Success(songDtoResult);
+                    }
+
+                    // Clear existing song parts and their lyrics
+                    if (song.Verses != null && song.Verses.Any())
+                    {
+                        foreach (var verse in song.Verses)
+                        {
+                            if (verse.LyricLines != null && verse.LyricLines.Any())
+                            {
+                                foreach (var line in verse.LyricLines)
+                                {
+                                    if (line.LyricSegments != null)
+                                    {
+                                        _context.LyricSegments.RemoveRange(line.LyricSegments);
+                                    }
+                                    _context.LyricLines.Remove(line);
+                                }
+                            }
+                            _context.Verses.Remove(verse);
+                        }
+                    }
+
+                    if (song.Choruses != null && song.Choruses.Any())
+                    {
+                        foreach (var chorus in song.Choruses)
+                        {
+                            if (chorus.LyricLines != null && chorus.LyricLines.Any())
+                            {
+                                foreach (var line in chorus.LyricLines)
+                                {
+                                    if (line.LyricSegments != null)
+                                    {
+                                        _context.LyricSegments.RemoveRange(line.LyricSegments);
+                                    }
+                                    _context.LyricLines.Remove(line);
+                                }
+                            }
+                            _context.Choruses.Remove(chorus);
+                        }
+                    }
+
+                    if (song.Bridges != null && song.Bridges.Any())
+                    {
+                        foreach (var bridge in song.Bridges)
+                        {
+                            if (bridge.LyricLines != null && bridge.LyricLines.Any())
+                            {
+                                foreach (var line in bridge.LyricLines)
+                                {
+                                    if (line.LyricSegments != null)
+                                    {
+                                        _context.LyricSegments.RemoveRange(line.LyricSegments);
+                                    }
+                                    _context.LyricLines.Remove(line);
+                                }
+                            }
+                            _context.Bridges.Remove(bridge);
+                        }
+                    }
+
+                    await _context.SaveChangesAsync();                    
+                    
+                    // Process chords - identify and create new ones
+                    var chordsWithIds = new Dictionary<string, string>();
+
+                    foreach (var segment in songDto.SongLyrics.Where(s => !string.IsNullOrEmpty(s.ChordName)))
+                    {
+                        string chordName = segment.ChordName?.Trim() ?? string.Empty;
+                        if (!string.IsNullOrEmpty(chordName) && !chordsWithIds.ContainsKey(chordName))
+                        {
+                            var existingChord = await _context.Chords
+                                .FirstOrDefaultAsync(c => c.ChordName.Trim().ToLower() == chordName.ToLower());
+
+                            if (existingChord == null)
+                            {
+                                var newChord = new Chord
+                                {
+                                    ChordName = chordName
+                                };
+                                await _context.Chords.AddAsync(newChord);
+                                await _context.SaveChangesAsync();
+
+                                chordsWithIds[chordName] = newChord.Id;
+                            }
+                            else
+                            {
+                                chordsWithIds[chordName] = existingChord.Id;
+                            }
+                        }
+                        segment.ChordId = chordsWithIds[chordName];
+                    }
+
+                    // Group segments by song part and part number
+                    var songPartGroups = songDto.SongLyrics
+                        .GroupBy(s => new { s.PartName, s.PartNumber })
+                        .OrderBy(g => g.Key.PartName)
+                        .ThenBy(g => g.Key.PartNumber);
+
+                    foreach (var partGroup in songPartGroups)
+                    {
+                        var partName = partGroup.Key.PartName;
+                        var partNumber = partGroup.Key.PartNumber;
+
+                        // Create the appropriate song part based on the type
+                        string partId = await CreateSongPart(song.Id, partName, partNumber);
+
+                        if (!string.IsNullOrEmpty(partId))
+                        {
+                            // Group segments by lyric line number
+                            var lyricLineGroups = partGroup
+                                .GroupBy(s => s.LineNumber)
+                                .OrderBy(g => g.Key);
+
+                            foreach (var lineGroup in lyricLineGroups)
+                            {
+                                var lineNumber = lineGroup.Key;
+
+                                // Create the lyric line
+                                var lyricLine = new LyricLine
+                                {
+                                    PartName = partName,
+                                    PartNumber = partNumber,
+                                    LyricLineOrder = lineNumber
+                                };
+
+                                // Set the appropriate foreign key based on the part type
+                                SetPartIdForLyricLine(lyricLine, partId, partName);
+
+                                await _context.LyricLines.AddAsync(lyricLine);
+                                await _context.SaveChangesAsync();
+
+                                // Create lyric segments for this line
+                                var segments = new List<LyricSegment>();
+
+                                foreach (var segmentDto in lineGroup)
+                                {
+                                    segments.Add(new LyricSegment
+                                    {
+                                        Lyric = segmentDto.Lyric,
+                                        LineNumber = lineNumber,
+                                        LyricLineId = lyricLine.Id,
+                                        ChordId = segmentDto.ChordId,
+                                        LyricOrder = segmentDto.LyricOrder
+                                    });
+                                }
+
+                                await _context.LyricSegments.AddRangeAsync(segments);
+                            }
+                        }
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    var updatedSong = await GetSongById(song.Id);
+                    if (updatedSong.IsSuccess)
+                    {
+                        return ServiceResult<SongDto>.Success(updatedSong.Data);
+                    }
+                    else
+                    {
+                        var songDtoResult = song.Adapt<SongDto>();
+                        return ServiceResult<SongDto>.Success(songDtoResult);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error in UpdateSong: {Message}", ex.Message);
+                    return ServiceResult<SongDto>.Failure(ex);
+                }
             }
         }
         #endregion
