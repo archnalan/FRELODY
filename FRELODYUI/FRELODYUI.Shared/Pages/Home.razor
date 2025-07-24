@@ -4,82 +4,12 @@
 
 <PageTitle>Song Books</PageTitle>
 
-<h3 class="mb-4">Song Books</h3>
-@if (songBooks != null)
-{
-    @foreach (var songbook in songBooks)
-    {
-        <div class="card mb-3 p-2 shadow" style="width: 20rem;">
-            <img height="100" src="..." class="card-img-top bg-light border p-2" alt="...">
-            <div class="card-body">
-                <h5 class="card-title">@songbook.Title</h5>
-                <p class="card-text">@songbook.Description</p>
-                <a href="@($"books/{songbook.Id}")" class="btn btn-primary">Categories</a>
-            </div>
-        </div>
-    }
+<h3 class="mb-4">Song With Chords App</h3>
 
-}
-
-<!--Welcome to your new app running on <em>@factor</em> using <em>@platform</em>-->
-
-@if (modalDisplay == "block;")
-{
-    <DialogModal ModalClass="@modalClass"
-                 ModalDisplay="@modalDisplay"
-                 Modal="@modalOption"
-                 OnCloseModal="CloseModal" />
-}
+Welcome to your new app running on <em>@factor</em> using <em>@platform</em>
 
 @code {
     private string factor => FormFactor.GetFormFactor();
     private string platform => FormFactor.GetPlatform();
-    private List<SongBookDto> songBooks = new();
-    public string modalDisplay = "none;";
-    public string modalClass = "";
-    private string message = "";
-    private ModalOptionDto modalOption = default!;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadSongs();
-    }
-
-    private async Task LoadSongs()
-    {
-        var songBookResult = await _songsBooksApi.GetAllSongBooks();
-        if(songBookResult.IsSuccessStatusCode)
-        {
-            songBooks = songBookResult.Content!;
-            StateHasChanged();
-        }
-        else
-        {
-            var errorMessage =  _apiResponseHandler.GetApiErrorMessage(songBookResult);
-            await OpenModal(new ModalOptionDto
-            {
-                Title = "Error",
-                Message = errorMessage,
-                ButtonText = "OK",
-            });
-        }
-    }
-
-    private async Task OpenModal(ModalOptionDto option)
-    {
-        modalClass = "show";
-        modalDisplay = "block;";
-        modalOption = option;
-        await Task.CompletedTask;
-        StateHasChanged();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        modalDisplay = "none;";
-        message = string.Empty;
-        modalClass = string.Empty;
-        StateHasChanged();
-    }
+    
 }
