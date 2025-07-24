@@ -30,7 +30,17 @@ namespace FRELODYAPP.Data.Infrastructure
                 using var scope = _serviceProvider.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<SongDbContext>();
 
-                await SeedAmazingGraceAsync(dbContext);
+                await SeedSDAHymnalSongBookAsync(dbContext);
+                var sdaHymnal = await dbContext.SongBooks.FirstAsync(sb => sb.Slug == "sda-hymnal");
+                bool seeded = await CategoryData.Initialize(_serviceProvider, sdaHymnal.Id);
+                if (seeded)
+                {
+                    var mercyAndGraceCategory = await dbContext.Categories
+                  .FirstAsync(c => c.Name == "Grace and Mercy of God" && c.SongBookId == sdaHymnal.Id);
+                    await SeedAmazingGraceAsync(dbContext);
+                    await AttachAmazingGraceToSDAHymnalAsync(dbContext, mercyAndGraceCategory.Id);
+
+                }
 
                 // More seeding methods here as needed
                 // await SeedCategoriesAsync(dbContext);
@@ -145,6 +155,65 @@ namespace FRELODYAPP.Data.Infrastructure
             }
 
             return chord;
+        }
+
+        private async Task SeedSDAHymnalSongBookAsync(SongDbContext dbContext)
+        {
+            const string sdaHymnalSlug = "sda-hymnal";
+            if (await dbContext.SongBooks.AnyAsync(sb => sb.Slug == sdaHymnalSlug))
+            {
+                _logger.LogInformation("SDAHymnal songbook already exists in the database.");
+                return;
+            }
+
+            var sdaHymnal = new SongBook
+            {
+                Title = "SDA Hymnal",
+                Slug = sdaHymnalSlug,
+                SubTitle = "Seventh-day Adventist Hymnal",
+                Description = "Official hymnal of the Seventh-day Adventist Church.",
+                Publisher = "Review and Herald Publishing Association",
+                PublicationDate = new DateTime(1985, 1, 1),
+                ISBN = "9780828010612",
+                Author = "Various",
+                Edition = "1985",
+                Language = "English"
+            };
+
+            await dbContext.SongBooks.AddAsync(sdaHymnal);
+            await dbContext.SaveChangesAsync();
+
+            _logger.LogInformation("SDAHymnal songbook seeded successfully.");
+        }
+        
+        private async Task AttachAmazingGraceToSDAHymnalAsync(SongDbContext dbContext, string categoryId)
+        {
+            // Get the SDA Hymnal songbook
+            var sdaHymnal = await dbContext.SongBooks
+                .FirstOrDefaultAsync(sb => sb.Slug == "sda-hymnal");
+            if (sdaHymnal == null)
+            {
+                _logger.LogWarning("SDA Hymnal songbook not found. Cannot attach Amazing Grace.");
+                return;
+            }
+
+            // Get the Amazing Grace song
+            var amazingGrace = await dbContext.Songs
+                .FirstOrDefaultAsync(s => s.Title == "Amazing Grace");
+            if (amazingGrace == null)
+            {
+                _logger.LogWarning("Amazing Grace song not found. Cannot attach to SDA Hymnal.");
+                return;
+            }
+
+            // Attach Amazing Grace to SDA Hymnal as hymn 108
+            amazingGrace.CategoryId = categoryId; 
+            amazingGrace.SongNumber = 108;
+
+            dbContext.Songs.Update(amazingGrace);
+            await dbContext.SaveChangesAsync();
+
+            _logger.LogInformation("Attached Amazing Grace as hymn 108 to SDA Hymnal.");
         }
     }
 }

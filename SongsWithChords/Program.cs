@@ -38,6 +38,8 @@ builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddHttpContextAccessor();
 
 // Register chart service
+builder.Services.AddScoped<ISongBookService,SongBookService>();
+builder.Services.AddScoped<ICategoryService,CategoryService>();
 builder.Services.AddScoped<ISongService,SongService>();
 builder.Services.AddScoped<IChordChartService, ChordChartService>();
 builder.Services.AddScoped<IChordService, ChordService>();
@@ -54,7 +56,7 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddControllers()
 	.AddJsonOptions(options =>
 	{
-		options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+		//options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
@@ -160,7 +162,6 @@ using (var scope = app.Services.CreateScope())
 	{
 		var context = services.GetRequiredService<SongDbContext>();
 		context.Database.Migrate(); //Ensures migrations are applied
-		CategoryData.Initialize(services);
 	}
 	catch(Exception ex)
 	{		

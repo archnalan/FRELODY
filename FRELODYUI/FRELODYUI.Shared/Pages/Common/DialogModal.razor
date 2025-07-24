@@ -8,13 +8,13 @@
                         @switch (Modal.OptionType)
                         {
                             case OptionType.Success:
-                                <i width="57" height="57" class="bi bi-patch-check-fill text-success"></i>
+                                <i class="bi bi-patch-check-fill text-success" style="font-size: 3.5rem;"></i>
                                 break;
                             case OptionType.Warning:
-                                <i width="57" height="57" class="bi bi-exclamation-triangle-fill text-warning"></i>
+                                <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3.5rem;"></i>
                                 break;
                             default:
-                                <i width="57" height="57" class="bi bi-info-circle-fill text-info"></i>
+                                <i class="bi bi-info-circle-fill text-info" style="font-size: 3.5rem;"></i>
                                 break;
                         }
                     </div>
@@ -31,22 +31,22 @@
                  || Modal.OptionType == OptionType.Error
                  || Modal.OptionType == OptionType.Warning)
                 {
-                    <button class="btn btn-primary-teal" @onclick="CloseModal">@Modal.ButtonText</button>
+                    <button class="btn btn-primary" style="width:7rem" @onclick="CloseModal">@Modal.ButtonText</button>
                 }                
                 else
                 {
 
-                    <button class="btn btn-outline-primary-teal" @onclick="CloseModal">Cancel</button>
-                    <button class="btn btn-primary-teal" @onclick="CloseModal">@(Modal.ButtonText ?? "OK")</button>
+                    <button class="btn btn-outline-primary" style="width:7rem" @onclick="CloseModal">Cancel</button>
+                    <button class="btn btn-primary" style="width:7rem" @onclick="CloseModal">@(Modal.ButtonText ?? "OK")</button>
                 }
             </div>
         </div>
-    </div>
-    @if (ShowBackdrop)
-    {
-        <div class="modal-backdrop fade show" data-dismiss="modal" @onclick="CloseModal"></div>
-    }
+    </div>   
 </div>
+@if (ShowBackdrop)
+{
+    <div class="w-100 h-100 border modal-backdrop fade show" style="z-index:1000" data-dismiss="modal" @onclick="CloseModal"></div>
+}
 
 @code {
     [Parameter]

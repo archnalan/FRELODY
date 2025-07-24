@@ -1,28 +1,24 @@
-﻿@page "/"
+﻿@page "/books/{SongBookId}"
 @using FRELODYUI.Shared.Services
 @inject IFormFactor FormFactor
 
 <PageTitle>Song Books</PageTitle>
 
 <h3 class="mb-4">Song Books</h3>
-@if (songBooks != null)
+@if (categories != null)
 {
-    @foreach (var songbook in songBooks)
+    @foreach (var category in categories)
     {
-        <div class="card mb-3 p-2 shadow" style="width: 20rem;">
-            <img height="100" src="..." class="card-img-top bg-light border p-2" alt="...">
+        <div class="card mb-3 p-2 shadow-sm">
             <div class="card-body">
-                <h5 class="card-title">@songbook.Title</h5>
-                <p class="card-text">@songbook.Description</p>
-                <a href="@($"books/{songbook.Id}")" class="btn btn-primary">Categories</a>
+                <h5 class="card-title">@category.Name</h5>
+                <a href="@($"books/categories/{category.Id}")" class="btn btn-primary">Categories</a>
             </div>
         </div>
     }
-
 }
 
 <!--Welcome to your new app running on <em>@factor</em> using <em>@platform</em>-->
-
 @if (modalDisplay == "block;")
 {
     <DialogModal ModalClass="@modalClass"
@@ -32,9 +28,11 @@
 }
 
 @code {
+    [Parameter]
+    public string? SongBookId { get; set; }
     private string factor => FormFactor.GetFormFactor();
     private string platform => FormFactor.GetPlatform();
-    private List<SongBookDto> songBooks = new();
+    private List<CategoryDto> categories = new();
     public string modalDisplay = "none;";
     public string modalClass = "";
     private string message = "";
@@ -42,26 +40,38 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadSongs();
+        await LoadCategories();
     }
 
-    private async Task LoadSongs()
+    private async Task LoadCategories()
     {
-        var songBookResult = await _songsBooksApi.GetAllSongBooks();
-        if(songBookResult.IsSuccessStatusCode)
+        if (!string.IsNullOrEmpty(SongBookId))
         {
-            songBooks = songBookResult.Content!;
-            StateHasChanged();
-        }
-        else
-        {
-            var errorMessage =  _apiResponseHandler.GetApiErrorMessage(songBookResult);
-            await OpenModal(new ModalOptionDto
+            var songBookResult = await _categoriesApi.GetAllCategories();
+            if (songBookResult.IsSuccessStatusCode)
+            {
+                categories = songBookResult.Content!;
+                StateHasChanged();
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(songBookResult);
+                await OpenModal(new ModalOptionDto
             {
                 Title = "Error",
                 Message = errorMessage,
                 ButtonText = "OK",
             });
+            }            
+        }
+        else
+        {
+            await OpenModal(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "Song Book ID is not provided.",
+                ButtonText = "OK",
+            });        
         }
     }
 
