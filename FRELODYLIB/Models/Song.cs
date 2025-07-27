@@ -42,6 +42,8 @@ namespace FRELODYAPP.Models
 
         public string? CategoryId { get; set; }
 
+		public bool? IsFavorite { get; set; }
+
         public virtual ICollection<Verse>? Verses { get; set; }
 
         public virtual ICollection<Bridge>? Bridges { get; set; }

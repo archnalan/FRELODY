@@ -54,5 +54,15 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
             return Ok(songResult.Data);
         }
 
+        [HttpPut]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> MarkSongFavoriteStatus(string songId, bool favorite)
+        {
+            var result = await _songService.MarkSongFavoriteStatus(songId, favorite);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            return Ok(result.Data);
+        }
+
     }
 }

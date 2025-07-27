@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using Microsoft.AspNetCore.Components.Web
+@using FRELODYAPIs.Areas.Admin.ViewModels
 @using static Microsoft.AspNetCore.Components.Web.RenderMode
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @using FRELODYUI.Shared.Pages.Compose.BoardComponents
@@ -23,5 +24,6 @@
 @inject ISongsApi _songsApi
 @inject IJSRuntime JSRt
 @inject IApiResponseHandler _apiResponseHandler
+@inject ISongCollectionsApi _songCollectionsApi
 @inject ISongBooksApi _songsBooksApi
 @inject ICategoriesApi _categoriesApi

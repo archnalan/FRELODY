@@ -1,8 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using FRELODYAPP.Dtos.SubDtos;
+using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYAPP.Dtos
 {
-	public class SongBookDto
+	public class SongBookDto:BaseEntityDto
 	{
 		public string Id { get; set; }
 

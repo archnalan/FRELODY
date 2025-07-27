@@ -1,0 +1,90 @@
+.songbook-container {
+}
+
+.songbook-header {
+    cursor: pointer;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s ease;
+}
+
+.category-header {
+    cursor: pointer;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s ease;
+}
+
+.category-header:hover {
+    background-color: #f0f0f0;
+}
+
+.songs-list {
+    overflow: hidden;
+    overflow-y: auto;
+    max-height: 0;
+    transition: max-height 0.5s cubic-bezier(0, 1, 0, 1), opacity 0.4s ease, padding 0.3s ease;
+    padding: 0;
+    opacity: 0;
+    border-top: none;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.songs-list.show {
+    max-height: calc(100vh - 150px);
+    opacity: 1;
+    padding: 5px 0;
+    transition: max-height 0.5s ease-in-out, opacity 0.6s ease, padding 0.3s ease;
+    -webkit-overflow-scrolling: touch;
+}
+
+.song-item {
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 40px;
+    transform: translateY(5px);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.songs-list.show .song-item {
+    transform: translateY(0);
+    opacity: 1;
+    transition-delay: 0.1s;
+}
+
+.songs-list.show .song-item:nth-child(2) {
+    transition-delay: 0.15s;
+}
+.songs-list.show .song-item:nth-child(3) {
+    transition-delay: 0.2s;
+}
+.songs-list.show .song-item:nth-child(4) {
+    transition-delay: 0.25s;
+}
+.songs-list.show .song-item:nth-child(5) {
+    transition-delay: 0.3s;
+}
+.songs-list.show .song-item:nth-child(n+6) {
+    transition-delay: 0.35s;
+}
+
+.toggle-icon svg {
+    transition: transform 0.3s ease;
+}
+
+.category-header:hover .toggle-icon svg,
+.songbook-header:hover .toggle-icon svg {
+    transform: scale(1.1);
+}

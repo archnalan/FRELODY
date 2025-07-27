@@ -33,11 +33,10 @@ builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfi
 	.AddEntityFrameworkStores<SongDbContext>();
 builder.Services.AddControllersWithViews();
 
-//Register Automapper
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddHttpContextAccessor();
 
-// Register chart service
+builder.Services.AddScoped<ISongCollectionService,SongCollectionService>();
 builder.Services.AddScoped<ISongBookService,SongBookService>();
 builder.Services.AddScoped<ICategoryService,CategoryService>();
 builder.Services.AddScoped<ISongService,SongService>();

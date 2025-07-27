@@ -1,5 +1,7 @@
 ﻿using FRELODYAPP.Models.SubModels;
+using FRELODYLIB.Models;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FRELODYAPP.Models
 {
@@ -35,6 +37,13 @@ namespace FRELODYAPP.Models
 
 		[StringLength(50)]
 		public string? Language { get; set; }
-		public ICollection<Category>? Categories { get; set; }
+
+		public string? CollectionId { get; set; }
+		
+		[ForeignKey(nameof(CollectionId))]
+        public virtual SongCollection? Collection { get; set; }
+
+        public ICollection<Category>? Categories { get; set; }
+
     }
 }

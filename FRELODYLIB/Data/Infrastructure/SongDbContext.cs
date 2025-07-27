@@ -1,6 +1,7 @@
 ﻿using FRELODYAPP.Interfaces;
 using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
+using FRELODYLIB.Models;
 using FRELODYSHRD.ModelTypes;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -24,6 +25,7 @@ namespace FRELODYAPP.Data.Infrastructure
             _tenantId = _tenantProvider.GetTenantId();
         }
         public DbSet<Tenant> Tenants { get; set; }
+        public DbSet<SongCollection> SongCollections { get; set; }
         public DbSet<SongBook> SongBooks { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Song> Songs { get; set; }
@@ -44,6 +46,9 @@ namespace FRELODYAPP.Data.Infrastructure
 
             // Configure global query filters for entities implementing IBaseEntity
             builder.Entity<Tenant>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<SongCollection>().HasQueryFilter(x =>
                     (x.TenantId == _tenantId || x.TenantId == null) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongBook>().HasQueryFilter(x => 
@@ -136,6 +141,11 @@ namespace FRELODYAPP.Data.Infrastructure
                 .HasForeignKey(segment => segment.ChordId);
 
             // Configure SongBook and Category
+            builder.Entity<SongBook>()
+              .HasOne(sb => sb.Collection)
+              .WithMany(c => c.SongBooks)
+              .HasForeignKey(sb => sb.CollectionId);
+
             builder.Entity<Category>()
                 .HasOne<SongBook>()
                 .WithMany(songBook => songBook.Categories)

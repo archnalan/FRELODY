@@ -18,11 +18,15 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
     public class SongService : ISongService
     {
         private readonly SongDbContext _context;
+        private readonly ITenantProvider _tenantProvider;
+        private readonly string _userId;
         private readonly ILogger<SongService> _logger;
-        public SongService(SongDbContext context, ILogger<SongService> logger)
+        public SongService(SongDbContext context, ILogger<SongService> logger, ITenantProvider tenantProvider)
         {
             _context = context;
             _logger = logger;
+            _tenantProvider = tenantProvider;
+            _userId = _tenantProvider.GetUserId();
         }
 
         #region Get Songs
@@ -570,6 +574,35 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     _logger.LogError(ex, "Error in UpdateSong: {Message}", ex.Message);
                     return ServiceResult<SongDto>.Failure(ex);
                 }
+            }
+        }
+        #endregion
+
+        #region Mark song as favorite
+        public async Task<ServiceResult<bool>> MarkSongFavoriteStatus(string songId, bool favorite)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(songId))
+                {
+                    return ServiceResult<bool>.Failure(
+                        new BadRequestException("Song ID is required."));
+                }
+                var song = await _context.Songs
+                    .FirstOrDefaultAsync(s => s.Id == songId);
+
+                if (song == null) return ServiceResult<bool>.Failure(
+                    new NotFoundException("Song not found."));
+
+                song.IsFavorite = favorite;
+                song.ModifiedBy = _userId;
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in MarkSongAsFavorite");
+                return ServiceResult<bool>.Failure(ex);
             }
         }
         #endregion
