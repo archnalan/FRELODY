@@ -1,162 +1,164 @@
 ﻿@page "/songs" 
 @inject ILogger<SongListView> _logger
 
-<div class="search-container">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" class="bi bi-search search-icon">
-        <!-- Search icon SVG -->
-    </svg>
-    <input type="text" class="form-control" placeholder="Search songs..." 
-           @bind="SearchQuery" @bind:event="oninput" />
-</div>
+<div class="w-100 d-flex flex-column align-items-center" style="max-width:55rem;justify-self:center">
+    <div class="w-100 d-flex flex-column mt-4" style="max-width:35rem; justify-self:center">
+        <div class="position-relative mb-3">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+            <input type="text" class="form-control ps-5" placeholder="Search songs..."
+                   @bind="SearchQuery" @oninput="OnSearchInput" />
+        </div>
 
-<div class="d-flex justify-content-between mb-3">
-    <div class="d-flex align-items-center">
-        <button class="btn p-2 border border-end-0 rounded-3 rounded-end-0 @(viewMode == ViewMode.All ? "btn-primary" : "")" 
-                @onclick="() => SetViewMode(ViewMode.All)" style="width:3.5rem">
-            All
-        </button>
-        <button class="btn p-2 border rounded-3 rounded-start-0 @(viewMode == ViewMode.Favorites ? "btn-primary" : "")" 
-                @onclick="() => SetViewMode(ViewMode.Favorites)" style="width:3.5rem">
-            Favorites
-        </button>
-    </div>
-</div>
-
-@if (IsLoading)
-{
-    <FRELODYUI.Shared.Pages.PlaceHolders.SongListViewPlaceholder />
-}
-else if (SongBooks.Any())
-{
-    <div class="songbook-container">
-        @foreach (var songBook in SongBooks)
-        {
-            <div class="songbook-header bg-Indigo-30 mb-2" 
-                 @onclick="() => ToggleSongBookExpansion(songBook)">
-                <div class="d-flex flex-column gap-1">
-                    <span class="fs-5 fw-semibold">@songBook.Title</span>
-                    <div class="d-flex gap-3">
-                        <span class="m-0">Categories: <b>@songBook.Categories.Count</b></span>
-                        <span class="m-0">Songs: <b>@songBook.SongCount</b></span>
-                    </div>
-                </div>
-                <span class="toggle-icon me-2">
-                    @if (songBook.IsExpanded)
-                    {
-                        <svg width="14" height="2" viewBox="0 0 14 2" fill="none">
-                            <!-- Minus icon -->
-                        </svg>
-                    }
-                    else
-                    {
-                        <svg width="14" height="15" viewBox="0 0 14 15" fill="none">
-                            <!-- Plus icon -->
-                        </svg>
-                    }
-                </span>
+        <div class="d-flex justify-content-between mb-3">
+            <div class="d-flex align-items-center">
+                <button class="btn @(viewMode == ViewMode.All ? "btn-primary" : "") p-2 border border-end-0 rounded-3 rounded-end-0"
+                        @onclick="() => SetViewMode(ViewMode.All)" style="width:3.5rem">
+                    All
+                </button>
+                <button class="btn @(viewMode == ViewMode.Favorites ? "btn-primary" : "") p-2 border rounded-3 rounded-start-0"
+                        @onclick="() => SetViewMode(ViewMode.Favorites)" style="width:3.5rem">
+                    Fav
+                </button>
             </div>
-            
-            @if (songBook.IsExpanded)
+            <div class="d-flex align-items-center">
+                <button class="btn p-2 border rounded-3 rounded-end-0 @(activeView == ActiveView.Expanded ? "btn-primary" : "")" @onclick="() => SetActiveView(ActiveView.Expanded)" style="width:3.5rem">
+                    <i class="bi bi-list"></i>
+                </button>
+                <button class="btn p-2 border border-start-0 rounded-3 rounded-start-0 @(activeView == ActiveView.Collapsed ? "btn-primary" : "")" @onclick="() => SetActiveView(ActiveView.Collapsed)" style="width:3.5rem">
+                    <i class="bi bi-grid-fill"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+   
+    @if (IsLoading)
+    {
+        <FRELODYUI.Shared.Pages.PlaceHolders.SongListViewPlaceholder />
+    }
+    else if (SongBooks.Any())
+    {
+        <div class="w-100 songbook-container">
+            @foreach (var songBook in SongBooks)
             {
-                @foreach (var category in songBook.Categories
-                   .Where(c => c.Songs.Any())
-                   .OrderBy(c => c.Name))
-                {
-                    <div class="category-header mx-2" 
-                         @onclick="() => ToggleCategoryExpansion(category)">
-                        <span class="fs-6 fw-semibold">@category.Name</span>
-                        <span class="m-0">Songs: <b>@category.Songs.Count</b></span>
-                        <span class="toggle-icon me-2">
-                            @if (category.IsExpanded)
-                            {
-                                <svg width="14" height="2" viewBox="0 0 14 2" fill="none">
-                                    <!-- Minus icon -->
-                                </svg>
-                            }
-                            else
-                            {
-                                <svg width="14" height="15" viewBox="0 0 14 15" fill="none">
-                                    <!-- Plus icon -->
-                                </svg>
-                            }
-                        </span>
-                    </div>
-                    
-                    @if (category.IsExpanded)
-                    {
-                        <div class="border border-top-0 rounded-bottom-3 mx-2 mb-3">
-                            <div class="songs-list">
-                                @foreach (var song in category.Songs
-                                   .OrderBy(s => s.SongNumber))
-                                {
-                                    <div class="song-item d-flex justify-content-between align-items-center p-2 m-2">
-                                        <div>
-                                            <span class="fw-bold me-2">@song.SongNumber.</span>
-                                            <span>@song.Title</span>
-                                        </div>
-                                        <span @onclick="() => ToggleFavorite(song)" 
-                                              class="favorite-icon">
-                                            @if (song.IsFavorite.HasValue && song.IsFavorite.Value)
-                                            {
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="gold">
-                                                    <!-- Filled star icon -->
-                                                </svg>
-                                            }
-                                            else
-                                            {
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="gray">
-                                                    <!-- Outline star icon -->
-                                                </svg>
-                                            }
-                                        </span>
-                                    </div>
-                                }
-                            </div>
+                <div class="songbook-header bg-Indigo-30 mb-2"
+                     @onclick="() => ToggleSongBookExpansion(songBook)">
+                    <div class="d-flex flex-column gap-1">
+                        <span class="fs-5 fw-semibold">@songBook.Title</span>
+                        <div class="d-flex gap-3">
+                            <span class="m-0">Categories: <b>@songBook.Categories.Count</b></span>
+                            <span class="m-0">Songs: <b>@songBook.SongCount</b></span>
                         </div>
+                    </div>
+                    <span class="toggle-icon me-2">
+                        @if (songBook.IsExpanded)
+                        {
+                            <i class="bi bi-dash-lg text-primary"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-plus-lg text-primary"></i>
+                        }
+                    </span>
+                </div>
+
+                @if (songBook.IsExpanded)
+                {
+                    @foreach (var category in songBook.Categories
+                            .Where(c => c.Songs.Any())
+                            .OrderBy(c => c.Name))
+                    {
+                        <div class="category-header mx-2"
+                             @onclick="() => ToggleCategoryExpansion(category)">
+                            <span class="fs-6 fw-semibold">@category.Name</span>
+                            <span class="m-0">Songs: <b>@category.Songs.Count</b></span>
+                            <span class="toggle-icon me-2">
+                                @if (category.IsExpanded)
+                                {
+                                    <i class="bi bi-dash-lg text-primary"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-plus-lg text-primary"></i>
+                                }
+                            </span>
+                        </div>
+
+                        @if (category.IsExpanded)
+                        {
+                            <div class="border border-top-0 rounded-bottom-3 mx-2 mb-3">
+                                <div class="songs-list @(category.IsExpanded ? "show" : "")">
+                                    @foreach (var song in category.Songs
+                                                    .OrderBy(s => s.SongNumber))
+                                    {
+                                        <div class="song-item d-flex justify-content-between align-items-center p-2 m-2" @onclick="@(()=>OnSongDisplay(song.Id))">
+                                            <div>
+                                                <span class="fw-bold me-2">@song.SongNumber.</span>
+                                                <span>@song.Title</span>
+                                            </div>
+                                            <span @onclick="() => ToggleFavorite(song)"
+                                                  class="favorite-icon"
+                                                  @onclick:stopPropagation>
+                                                @if (song.IsFavorite.HasValue && song.IsFavorite.Value)
+                                                {
+                                                    <i class="bi bi-heart-fill text-primary"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-heart text-primary"></i>
+                                                }
+                                            </span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
                     }
                 }
             }
-        }
-    </div>
-}
-else
-{
-    <div class="text-center my-5">
-        @if (!string.IsNullOrWhiteSpace(SearchQuery))
-        {
-            <h6>No songs match "@SearchQuery"</h6>
-        }
-        else
-        {
-            <h6>No songs found</h6>
-        }
-    </div>
-}
-
-@if (IsNavigating)
-{
-    <div class="loading-overlay">
-        <div class="spinner-container">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <span class="mt-2">Loading song...</span>
         </div>
-    </div>
-}
+    }
+    else
+    {
+        <div class="text-center my-5">
+            @if (!string.IsNullOrWhiteSpace(SearchQuery))
+            {
+                <h6>No songs match "@SearchQuery"</h6>
+            }
+            else
+            {
+                <h6>No songs found</h6>
+            }
+        </div>
+    }
 
-@if (modalDisplay == "block;")
-{
-    <DialogModal ModalClass="@modalClass"
-                 ModalDisplay="@modalDisplay"
-                 Modal="@modalOption"
-                 OnCloseModal="CloseModal" />
-}
+    @if (IsNavigating)
+    {
+        <div class="loading-overlay">
+            <div class="spinner-container">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="mt-2">Loading song...</span>
+            </div>
+        </div>
+    }
+
+    @if (modalDisplay == "block;")
+    {
+        <DialogModal ModalClass="@modalClass"
+                     ModalDisplay="@modalDisplay"
+                     Modal="@modalOption"
+                     OnCloseModal="CloseModal" />
+    }
+
+</div>
 
 @code {
     private string SearchQuery { get; set; } = string.Empty;
 
     private ViewMode viewMode = ViewMode.All; 
+    private ActiveView activeView = ActiveView.Expanded;
     private bool IsLoading { get; set; } = true;
     private bool IsNavigating { get; set; } = false;
     private List<SongBookView> SongBooks { get; set; } = new List<SongBookView>();
@@ -171,7 +173,26 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        viewMode = ViewMode.All;
+        activeView = ActiveView.Expanded;
+        await SetViewMode(viewMode);
+        await SetActiveView(activeView);
         await LoadData();
+    }
+    //apply debounce and search when SearchQuery changes
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value?.ToString() ?? string.Empty;
+        if (_debounceTimer != null)
+        {
+            _debounceTimer.Stop();
+            _debounceTimer.Dispose();
+        }
+        _debounceTimer = new System.Timers.Timer(DebounceDelay);
+        _debounceTimer.Elapsed += async (sender, args) => await DebounceTimerElapsed();
+        _debounceTimer.AutoReset = false;
+        _debounceTimer.Start();
+
     }
 
     private async Task DebounceTimerElapsed()
@@ -219,7 +240,6 @@ else
     {
         SongBooks.Clear();
 
-        // Group by SongBook
         var songBookGroups = songs
             .GroupBy(s => s.SongBookId)
             .Where(g => g.Key != null);
@@ -227,17 +247,17 @@ else
         foreach (var songBookGroup in songBookGroups)
         {
             var firstSong = songBookGroup.First();
+            var songBookId = songBookGroup.Key ?? "";
             var songBook = new SongBookView
             {
-                Id = songBookGroup.Key,
+                Id = songBookId,
                 Title = firstSong.SongBookTitle,
                 Description = firstSong.SongBookDescription,
-                IsExpanded = _songBookExpansionState.TryGetValue(songBookGroup.Key, out var expanded) 
-                    ? expanded 
-                    : false
+                IsExpanded = _songBookExpansionState.TryGetValue(songBookId, out var expanded)
+                    ? expanded
+                    : (activeView == ActiveView.Expanded) // Default expand if Expanded mode
             };
 
-            // Group by Category within this songbook
             var categoryGroups = songBookGroup
                 .GroupBy(s => s.CategoryId)
                 .Where(g => g.Key != null);
@@ -245,13 +265,14 @@ else
             foreach (var categoryGroup in categoryGroups)
             {
                 var firstInCategory = categoryGroup.First();
+                var categoryId = categoryGroup.Key ?? "";
                 var category = new CategoryView
                 {
-                    Id = categoryGroup.Key,
+                    Id = categoryId,
                     Name = firstInCategory.CategoryName,
-                    IsExpanded = _categoryExpansionState.TryGetValue(categoryGroup.Key, out var catExpanded) 
-                        ? catExpanded 
-                        : false,
+                    IsExpanded = _categoryExpansionState.TryGetValue(categoryId, out var catExpanded)
+                        ? catExpanded
+                        : (activeView == ActiveView.Expanded), // Default expand if Expanded mode
                     Songs = categoryGroup.ToList()
                 };
                 songBook.Categories.Add(category);
@@ -260,19 +281,24 @@ else
             SongBooks.Add(songBook);
         }
     }
-
     private void ToggleSongBookExpansion(SongBookView songBook)
     {
-        songBook.IsExpanded = !songBook.IsExpanded;
-        _songBookExpansionState[songBook.Id] = songBook.IsExpanded;
-        StateHasChanged();
+        if (!string.IsNullOrEmpty(songBook.Id))
+        {
+            songBook.IsExpanded = !songBook.IsExpanded;
+            _songBookExpansionState[songBook.Id] = songBook.IsExpanded;
+            StateHasChanged();
+        }      
     }
 
     private void ToggleCategoryExpansion(CategoryView category)
     {
-        category.IsExpanded = !category.IsExpanded;
-        _categoryExpansionState[category.Id] = category.IsExpanded;
-        StateHasChanged();
+        if (!string.IsNullOrEmpty(category.Id))
+        {
+            category.IsExpanded = !category.IsExpanded;
+            _categoryExpansionState[category.Id] = category.IsExpanded;
+            StateHasChanged();
+        }      
     }
 
     private async Task ToggleFavorite(SongResult song)
@@ -306,7 +332,8 @@ else
                 {
                     Title = "Error",
                     Message = errorMessage,
-                    ButtonText = "Close"
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
                 });
                 // Revert UI change
                 song.IsFavorite = !song.IsFavorite;
@@ -327,8 +354,70 @@ else
     {
         if (viewMode != mode)
         {
-            viewMode = mode;
+            viewMode = mode;            
             await LoadData();
+        }
+    }
+    private async Task SetActiveView(ActiveView view)
+    {
+        if (activeView != view)
+        {
+            activeView = view;
+            switch (activeView)
+            {
+                case ActiveView.Expanded:
+                    // Expand all song books and categories
+                    foreach (var book in SongBooks)
+                    {
+                        _songBookExpansionState[book.Id ?? ""] = true;
+                        foreach (var cat in book.Categories)
+                        {
+                            _categoryExpansionState[cat.Id ?? ""] = true;
+                        }
+                    }
+                    break;
+                case ActiveView.Collapsed:
+                    // Collapse all song books and categories
+                    foreach (var book in SongBooks)
+                    {
+                        _songBookExpansionState[book.Id ?? ""] = false;
+                        foreach (var cat in book.Categories)
+                        {
+                            _categoryExpansionState[cat.Id ?? ""] = false;
+                        }
+                    }
+                    break;
+                default:
+                    // Default: keep current expansion state
+                    break;
+            }
+            await LoadData();
+        }
+    }
+
+    private async Task OnSongDisplay(string songId)
+    {
+        try
+        {
+            IsNavigating = true;
+            StateHasChanged();
+            _navManager.NavigateTo($"/songs/{songId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error navigating to song: {ex.Message}");
+            await OpenModal(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "An unexpected error occurred while trying to display the song.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+        finally
+        {
+            IsNavigating = false;
+            StateHasChanged();
         }
     }
 
@@ -349,6 +438,7 @@ else
         modalClass = string.Empty;
         StateHasChanged();
     }
+
     public void Dispose()
     {
         _debounceTimer?.Dispose();

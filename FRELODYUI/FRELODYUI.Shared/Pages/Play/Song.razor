@@ -1,0 +1,160 @@
+﻿@page "/songs/{SongId}"
+@inject ILogger<Song> _logger
+
+<div class="w-100 d-flex justify-content-center mx-auto p-6 bg-light ">
+    @if (isLoading)
+    {
+        <div class="mt-4 text-center">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p>Loading song...</p>
+        </div>
+    }
+    else if (song != null)
+    {
+        <div class="w-100 h-100 shadow-lg border border-light rounded rounded-3 my-4" style="max-width:55rem;">
+            <div class="d-flex justify-content-center align-items-center mb-4">
+                @if (song.SongNumber.HasValue)
+                {
+                    <h3 class="text-black text-opacity-50 me-3">
+                        @song.SongNumber.Value.ToString("D3")
+                    </h3>
+                }
+                <h3 class="fw-bold text-black text-center">
+                    @song.Title
+                </h3>
+            </div>
+
+            <div class="song-content">
+                @if (song.Verses?.Any() == true)
+                {
+                    foreach (var verse in song.Verses.OrderBy(v => v.VerseNumber))
+                    {
+                        <div class="verse-section mb-6">
+                            <h2 class="font-semibold text-center text-opacity-75 my-2">
+                                Verse @verse.VerseNumber.ToString("D2")
+                            </h2>
+
+                            @if (verse.LyricLines?.Any() == true)
+                            {
+                                foreach (var line in verse.LyricLines.OrderBy(l => l.LyricLineOrder))
+                                {
+                                    <div class="lyric-line d-flex flex-wrap gap-2 mb-2">
+                                        @if (line.LyricSegments?.Any() == true)
+                                        {
+                                            foreach (var segment in line.LyricSegments.OrderBy(s => s.LyricOrder))
+                                            {
+                                                <div class="lyric-segment d-flex flex-column items-start">
+                                                    @if (segment.Chord != null)
+                                                    {
+                                                        <div class="chord text-sm text-primary fw-bold">
+                                                            @segment.Chord.ChordName
+                                                        </div>
+                                                    }
+                                                    <div class="lyric text-opacity-75">
+                                                        @segment.Lyric
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@if (modalDisplay == "block;")
+{
+    <DialogModal ModalClass="@modalClass"
+                 ModalDisplay="@modalDisplay"
+                 Modal="@modalOption"
+                 OnCloseModal="CloseModal" />
+}
+
+@code {
+    [Parameter]
+    public string SongId { get; set; } = string.Empty;
+
+    private SongDto? song;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    public string modalDisplay = "none;";
+    public string modalClass = "";
+    private string message = "";
+    private ModalOptionDto modalOption = default!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(SongId))
+        {
+            await LoadSong();
+        }
+    }
+
+    private async Task LoadSong()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var response = await _songsApi.GetSongWithChordsById(SongId);
+            if (response.IsSuccessStatusCode)
+            {
+                song = response.Content;
+            }
+            else
+            {
+                errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                await OpenModal(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred";
+            _logger.LogError(ex, "Error loading song with ID: {SongId}", SongId);
+            await OpenModal(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = errorMessage,
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenModal(ModalOptionDto option)
+    {
+        modalClass = "show";
+        modalDisplay = "block;";
+        modalOption = option;
+        await Task.CompletedTask;
+        StateHasChanged();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        modalDisplay = "none;";
+        message = string.Empty;
+        modalClass = string.Empty;
+        StateHasChanged();
+    }
+
+}

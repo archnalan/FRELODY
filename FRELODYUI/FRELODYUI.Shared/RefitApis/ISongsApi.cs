@@ -12,19 +12,19 @@ namespace FRELODYUI.Shared.RefitApis
 {
     public interface ISongsApi
     {
-        [Get("/api/Songs/GetSongs")]
+        [Get("/api/songs/get-songs")]
         Task<IApiResponse<IEnumerable<ComboBoxDto>>> GetSongs();
 
-        [Get("/api/Songs/GetSongWithChordsById/{id}")]
+        [Get("/api/songs/get-song-with-chords-by-id/{id}")]
         Task<IApiResponse<SongDto>> GetSongWithChordsById(string id);
 
-        [Get("/api/Songs/GetSongDetailsById/{id}")]
+        [Get("/api/songs/get-song-details-by-id/{id}")]
         Task<IApiResponse<SongDto>> GetSongDetailsById(string id);
 
-        [Post("/api/Songs/CreateSong")]
+        [Post("/api/songs/create-song")]
         Task<IApiResponse<SongDto>> CreateSong([Body] SimpleSongCreateDto song);
 
-        [Put("/api/Songs/MarkSongFavoriteStatus")]
+        [Put("/api/songs/mark-song-favorite-status")]
         Task<IApiResponse<bool>> MarkSongFavoriteStatus([Query] string songId, [Query] bool favorite);
     }
 }

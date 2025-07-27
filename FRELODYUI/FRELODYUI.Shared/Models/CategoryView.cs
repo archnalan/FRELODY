@@ -9,8 +9,8 @@ namespace FRELODYUI.Shared.Models
 {
     public class CategoryView
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
+        public string? Id { get; set; }
+        public string? Name { get; set; }
         public bool IsExpanded { get; set; }
         public List<SongResult> Songs { get; set; } = new();
     }
