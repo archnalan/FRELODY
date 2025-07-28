@@ -161,7 +161,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                 // Create the lyric line
                                 var lyricLine = new LyricLine
                                 {
-                                    PartName = partName,
                                     PartNumber = partNumber,
                                     LyricLineOrder = lineNumber
                                 };
@@ -220,34 +219,15 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             switch (partType)
             {
                 case SongSection.Verse:
-                    var verse = new Verse
+                    var verse = new SongPart
                     {
                         SongId = songId,
-                        VerseNumber = partNumber
+                        PartNumber = partNumber,
+                        PartName = partType,
                     };
-                    await _context.Verses.AddAsync(verse);
+                    await _context.SongParts.AddAsync(verse);
                     await _context.SaveChangesAsync();
                     return verse.Id;
-
-                case SongSection.Chorus:
-                    var chorus = new Chorus
-                    {
-                        SongId = songId,
-                        ChorusNumber = partNumber
-                    };
-                    await _context.Choruses.AddAsync(chorus);
-                    await _context.SaveChangesAsync();
-                    return chorus.Id;
-
-                case SongSection.Bridge:
-                    var bridge = new Bridge
-                    {
-                        SongId = songId,
-                        BridgeNumber = partNumber
-                    };
-                    await _context.Bridges.AddAsync(bridge);
-                    await _context.SaveChangesAsync();
-                    return bridge.Id;
 
                 default:
                     _logger.LogWarning("Unsupported song part type: {PartType}", partType);
@@ -260,13 +240,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             switch (partType)
             {
                 case SongSection.Verse:
-                    lyricLine.VerseId = partId;
-                    break;
-                case SongSection.Chorus:
-                    lyricLine.ChorusId = partId;
-                    break;
-                case SongSection.Bridge:
-                    lyricLine.BridgeId = partId;
+                    lyricLine.PartId = partId;
                     break;
             }
         }
@@ -319,18 +293,10 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         new BadRequestException("Invalid song ID."));
 
                 var song = await _context.Songs
-                    .Include(s => s.Verses.OrderBy(v => v.VerseNumber))
+                    .Include(s => s.SongParts.OrderBy(v => v.PartNumber))
                         .ThenInclude(v => v.LyricLines.OrderBy(ll => ll.LyricLineOrder))
                             .ThenInclude(ll => ll.LyricSegments.OrderBy(ls => ls.LyricOrder))
-                                .ThenInclude(ls => ls.Chord)
-                    .Include(s => s.Bridges.OrderBy(b => b.BridgeNumber))
-                        .ThenInclude(b => b.LyricLines.OrderBy(ll => ll.LyricLineOrder))
-                            .ThenInclude(ll => ll.LyricSegments.OrderBy(ls => ls.LyricOrder))
-                                .ThenInclude(ls => ls.Chord)
-                    .Include(s => s.Choruses.OrderBy(c => c.ChorusNumber))
-                        .ThenInclude(c => c.LyricLines.OrderBy(ll => ll.LyricLineOrder))
-                            .ThenInclude(ll => ll.LyricSegments.OrderBy(ls => ls.LyricOrder))
-                                .ThenInclude(ls => ls.Chord)
+                                .ThenInclude(ls => ls.Chord)                    
                     .FirstOrDefaultAsync(s => s.Id == id);
 
                 var songDto = song.Adapt<SongDto>();
@@ -372,16 +338,16 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             using (var transaction = await _context.Database.BeginTransactionAsync())
             {
                 try
-                {                    // Find the song to update
+                {
+                    if (string.IsNullOrEmpty(id))
+                    {
+                        return ServiceResult<SongDto>.Failure(
+                            new BadRequestException("Song ID is required."));
+                    }
+                    // Find the song to update
                     var song = await _context.Songs
-                        .Include(s => s.Verses!)
+                        .Include(s => s.SongParts!)
                             .ThenInclude(v => v.LyricLines!)
-                                .ThenInclude(ll => ll.LyricSegments!)
-                        .Include(s => s.Choruses!)
-                            .ThenInclude(c => c.LyricLines!)
-                                .ThenInclude(ll => ll.LyricSegments!)
-                        .Include(s => s.Bridges!)
-                            .ThenInclude(b => b.LyricLines!)
                                 .ThenInclude(ll => ll.LyricSegments!)
                         .FirstOrDefaultAsync(s => s.Id == id);
 
@@ -406,9 +372,9 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     }
 
                     // Clear existing song parts and their lyrics
-                    if (song.Verses != null && song.Verses.Any())
+                    if (song.SongParts != null && song.SongParts.Any())
                     {
-                        foreach (var verse in song.Verses)
+                        foreach (var verse in song.SongParts)
                         {
                             if (verse.LyricLines != null && verse.LyricLines.Any())
                             {
@@ -421,45 +387,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                     _context.LyricLines.Remove(line);
                                 }
                             }
-                            _context.Verses.Remove(verse);
-                        }
-                    }
-
-                    if (song.Choruses != null && song.Choruses.Any())
-                    {
-                        foreach (var chorus in song.Choruses)
-                        {
-                            if (chorus.LyricLines != null && chorus.LyricLines.Any())
-                            {
-                                foreach (var line in chorus.LyricLines)
-                                {
-                                    if (line.LyricSegments != null)
-                                    {
-                                        _context.LyricSegments.RemoveRange(line.LyricSegments);
-                                    }
-                                    _context.LyricLines.Remove(line);
-                                }
-                            }
-                            _context.Choruses.Remove(chorus);
-                        }
-                    }
-
-                    if (song.Bridges != null && song.Bridges.Any())
-                    {
-                        foreach (var bridge in song.Bridges)
-                        {
-                            if (bridge.LyricLines != null && bridge.LyricLines.Any())
-                            {
-                                foreach (var line in bridge.LyricLines)
-                                {
-                                    if (line.LyricSegments != null)
-                                    {
-                                        _context.LyricSegments.RemoveRange(line.LyricSegments);
-                                    }
-                                    _context.LyricLines.Remove(line);
-                                }
-                            }
-                            _context.Bridges.Remove(bridge);
+                            _context.SongParts.Remove(verse);
                         }
                     }
 
@@ -523,7 +451,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                 // Create the lyric line
                                 var lyricLine = new LyricLine
                                 {
-                                    PartName = partName,
                                     PartNumber = partNumber,
                                     LyricLineOrder = lineNumber
                                 };

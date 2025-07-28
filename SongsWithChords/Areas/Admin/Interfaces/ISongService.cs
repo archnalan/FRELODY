@@ -12,5 +12,6 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<SongDto>> GetSongById(string id);
         Task<ServiceResult<SongDto>> GetSongDetailsById(string id);
         Task<ServiceResult<bool>> MarkSongFavoriteStatus(string songId, bool favorite);
+        Task<ServiceResult<SongDto>> UpdateSong(string id, SimpleSongCreateDto songDto);
     }
 }

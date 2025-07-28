@@ -25,11 +25,11 @@ namespace FRELODYAPP.Profiles
  
             CreateMap<Song, SongCreateDto>().ReverseMap();
 
-            CreateMap<Verse, VerseDto>()
+            CreateMap<SongPart, SongPartDto>()
                 .ForMember(dest => dest.SongId, opt => opt.MapFrom(v => v.SongId))
                 .ReverseMap()
                 .ForMember(dest => dest.LyricLines, opt => opt.Ignore());
-            CreateMap<Verse, VerseCreateDto>().ReverseMap();
+            CreateMap<SongPart, VerseCreateDto>().ReverseMap();
 
             CreateMap<LyricLine, LyricLineDto>().ReverseMap();
             CreateMap<LyricLine, LyricLineCreateDto>().ReverseMap();

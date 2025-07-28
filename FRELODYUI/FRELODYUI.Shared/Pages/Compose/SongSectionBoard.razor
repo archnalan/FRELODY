@@ -1,17 +1,18 @@
-﻿
-<div class="d-flex flex-column h-100 w-100 gap-3 p-4 overflow-auto">
+﻿@inject ILogger<SongSectionBoard> _logger
+
+<div class="h-100 w-100 bg-light text-dark overflow-auto">
     @if (lines.Count > 0)
     {
-		<p class="m-0  small">Each segment can be assigned a chord.</p>
+        <p class="m-0  small">Each segment can be assigned a chord.</p>
     }
     else
     {
         <p class="m-0 text-muted small">Click the button below to add a new line.</p>
     }
-    
+
     <div class="d-flex align-items-center w-100">
         <div class="@($"flex-grow-1 h-0 border border-dashed {(lines.Count > 0 ? "border-secondary" : "border-primary")}")"></div>
-        <button class="@($"btn btn-sm {(lines.Count > 0 ? "btn-outline-secondary" : "btn-outline-primary")}")" 
+        <button class="@($"btn btn-sm {(lines.Count > 0 ? "btn-outline-secondary" : "btn-outline-primary")}")"
                 disabled="@(lines.Count > 0)"
                 @onclick="() => AddLine(0)">
             <i class="bi bi-plus"></i>
@@ -19,7 +20,7 @@
         </button>
         <div class="@($"flex-grow-1 h-0 border border-dashed {(lines.Count > 0 ? "border-secondary" : "border-primary")}")"></div>
     </div>
-    
+
     @foreach (var line in lines)
     {
         <div class="position-relative mb-2" id="@($"line-{line}")">
@@ -33,32 +34,32 @@
                  OnChordsUpdate="HandleChordsUpdate"
                  OnEditModeSegmentIdChanged="HandleEditModeSegmentIdChanged" />
 
-			@if (focusedRow == line)
-			{
-				<div class="position-absolute bottom-0 end-0 mb-2 me-2">
-					<button class="btn btn-sm btn-outline-primary rounded-top-0 rounded-end-0"
-							@onclick="() => AddLine(line)">
-						<i class="bi bi-plus"></i>
-						<span class="small text-primary">New Line</span>
-					</button>
-					<button class="@($"btn btn-sm btn-outline-danger rounded-top-0 rounded-start-0 {(isOver ? "bg-danger text-white" : "")}")"
-							@onclick="() => ShowDeleteDialog(line)"
-							@ondragover="HandleDragOver"
-							@ondragleave="HandleDragLeave"
-							@ondrop="e => HandleDrop(e, line)">
-						<i class="bi bi-fire"></i>
-						<span class="small">Remove</span>
-					</button>
-				</div>
-			}
-        
+            @if (focusedRow == line)
+            {
+                <div class="position-absolute bottom-0 end-0 mb-2 me-2">
+                    <button class="btn btn-sm btn-outline-primary rounded-top-0 rounded-end-0"
+                            @onclick="() => AddLine(line)">
+                        <i class="bi bi-plus"></i>
+                        <span class="small text-primary">New Line</span>
+                    </button>
+                    <button class="@($"btn btn-sm btn-outline-danger rounded-top-0 rounded-start-0 {(isOver ? "bg-danger text-white" : "")}")"
+                            @onclick="() => ShowDeleteDialog(line)"
+                            @ondragover="HandleDragOver"
+                            @ondragleave="HandleDragLeave"
+                            @ondrop="e => HandleDrop(e, line)">
+                        <i class="bi bi-fire"></i>
+                        <span class="small">Remove</span>
+                    </button>
+                </div>
+            }
+
         </div>
     }
-    
+
     @if (lines.Count > 0)
     {
         <div class="text-muted small text-end">
-            Verse @VerseId • Lines: @lines.Count • Segments: @segments.Count
+            Verse @SectionId • Lines: @lines.Count • Segments: @segments.Count
         </div>
     }
 </div>
@@ -86,7 +87,8 @@
 }
 
 @code {
-    [Parameter] public int VerseId { get; set; }
+    [Parameter] public int SectionId { get; set; }
+    [Parameter] public List<SegmentCreateDto>? InitialSegments { get; set; } = new();
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
 
     private List<SegmentCreateDto> segments = new();
@@ -101,8 +103,32 @@
 
     protected override void OnInitialized()
     {
-        UpdateLines();
-        if (lines.Count > 0) focusedRow = lines[0];
+        try
+        {
+            trackLines = segments
+            .Where(s => s.PartName == SongSection.Verse && s.PartNumber == SectionId)
+            .Select(s => s.LineNumber)
+            .Distinct()
+            .ToList();
+
+            UpdateLines();
+            if (lines.Count > 0) focusedRow = lines[0];
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error initializing SongSectionBoard: {Error}",ex);
+        }
+   
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (InitialSegments != null)
+        {
+            segments = InitialSegments;
+            UpdateLines();
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -123,8 +149,9 @@
     {
         segments = updatedSegments;
         UpdateLines();
-        OnSegmentsUpdate.InvokeAsync(segments.Select(s => {
-            s.PartNumber = VerseId;
+        OnSegmentsUpdate.InvokeAsync(segments.Select(s =>
+        {
+            s.PartNumber = SectionId;
             return s;
         }).ToList());
     }
@@ -151,7 +178,7 @@
         var newSegmentId = Guid.NewGuid().ToString();
 
         segments.Add(new SegmentCreateDto
-            {
+        {
             Id = newSegmentId,
             Lyric = "",
             LineNumber = tempLineId,
@@ -176,7 +203,8 @@
             newLineMap[trackLines[i]] = i + 1;
         }
 
-        segments = segments.Select(s => {
+        segments = segments.Select(s =>
+        {
             if (newLineMap.ContainsKey(s.LineNumber))
                 s.LineNumber = newLineMap[s.LineNumber];
             return s;
@@ -202,7 +230,7 @@
         segments.RemoveAll(s => s.LineNumber == line);
         trackLines.Remove(line);
         RenumberLines();
-        
+
         if (trackLines.Count > 0)
         {
             focusedRow = trackLines[0];
@@ -211,7 +239,7 @@
         {
             focusedRow = null;
         }
-        
+
         editModeSegmentId = null;
         showDeleteDialog = false;
     }

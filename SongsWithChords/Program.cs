@@ -44,7 +44,7 @@ builder.Services.AddScoped<IChordChartService, ChordChartService>();
 builder.Services.AddScoped<IChordService, ChordService>();
 builder.Services.AddScoped<ILyricSegment, LyricSegmentService>();
 builder.Services.AddScoped<ILyricLineService, LyricLineService>();
-builder.Services.AddScoped<IVerseService, VerseService>();
+builder.Services.AddScoped<ISongPartService, SongPartService>();
 builder.Services.AddScoped<ITenantProvider, TenantProvider>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<SmtpSenderService>();

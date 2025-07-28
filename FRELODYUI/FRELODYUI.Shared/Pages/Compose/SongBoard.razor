@@ -1,31 +1,51 @@
 ﻿@page "/compose"
+@using Microsoft.AspNetCore.WebUtilities
 @inject ILogger<SongBoard> _logger
 
 <div class="w-100 d-flex flex-column justify-content-center px-4">
 	<h3 class="fw-bold text-center mb-3">Song Editor</h3>
-
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <div class="d-flex flex-grow-1">
-            <input type="number" 
-                   @bind="SongNumber" 
-                   class="form-control me-2" 
-                   placeholder="Song Number" 
-                   style="width:5rem"/>
-                   
-            <input type="text" 
-                   @bind="SongTitle" 
-                   class="form-control w-50" 
-                   placeholder="Song Title" />
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
         </div>
-        <button @onclick="HandleSongSave" class="btn btn-primary">
-            Save Song
-        </button>
-    </div>
+    }
+    else
+    {
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex flex-grow-1">
+                <input type="number"
+                       @bind="SongNumber"
+                       class="form-control me-2"
+                       placeholder="Song Number"
+                       style="width:5rem" />
 
-    <TabsComponent InitialItems="initialVerseItems"
-                   ItemsCountLimit="MAX_VERSES"
-                   OnTabAdd="HandleTabAdd"
-                   RenderTab="RenderVerseTab" />
+                <input type="text"
+                       @bind="SongTitle"
+                       class="form-control w-50"
+                       placeholder="Song Title" />
+            </div>
+            <button @onclick="HandleSongSave" class="btn btn-primary">
+                Save Song
+            </button>
+        </div>
+        @if (initialVerseItems.Any())
+        {
+            <TabsComponent InitialItems="initialVerseItems"
+            ItemsCountLimit="MAX_SECTIONS"
+                       OnTabAdd="HandleTabAdd"
+            RenderTab="RenderVerseTab" />
+        }
+        else
+        {
+            <div class="alert alert-warning">
+                No sections found. Click '+' to add a new section.
+            </div>
+        }
+    }
+    
 </div>
 @if (modalDisplay == "block;")
 {
@@ -37,7 +57,9 @@
 }
 
 @code {
-    const int MAX_VERSES = 25;
+    [Parameter]
+    public string? SongId { get; set; }
+    const int MAX_SECTIONS = 25;
     private string SongTitle = "My New Song";
     private int SongNumber = 1;
     private Dictionary<int, List<SegmentCreateDto>> AllVerseSegments =
@@ -47,28 +69,130 @@
     public string modalClass = "";
     private string message = "";
     private ModalOptionDto modalOption = default!;
+    private bool isLoading = true;
 
-    protected override void OnInitialized()
+    private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
+            InitialSegments="@AllVerseSegments.GetValueOrDefault(id)"
+            OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />
+    ;
+
+
+    protected override async Task OnInitializedAsync()
     {
-        // Initialize the tabs
-        initialVerseItems = new List<TabsComponent.TabsComponentItem>
+        try
+        {
+            var uri = _navManager.ToAbsoluteUri(_navManager.Uri);
+            var query = QueryHelpers.ParseQuery(uri.Query);
+            if (query.TryGetValue("songId", out var songIdValues))
             {
-            new TabsComponent.TabsComponentItem
+                SongId = songIdValues.FirstOrDefault();
+            }
+            if (string.IsNullOrEmpty(SongId))
             {
-                Id = 1,
-                Title = builder => builder.AddContent(0, SongSection.Verse),
-               Content = builder =>
+                // Initialize new song
+                initialVerseItems = new List<TabsComponent.TabsComponentItem>
                 {
-                    builder.OpenComponent<VerseBoard>(0);
-                    builder.AddAttribute(1, "VerseId", 1);
-                    builder.AddAttribute(2, "OnSegmentsUpdate",
-                        EventCallback.Factory.Create<List<SegmentCreateDto>>(
-                            this, segments => HandleVerseUpdate(1, segments)));
-                    builder.CloseComponent();
+                    new TabsComponent.TabsComponentItem
+                    {
+                        Id = 1,
+                        Title = builder => builder.AddContent(0, SongSection.Verse),
+                        Content = builder =>
+                        {
+                            builder.OpenComponent<SongSectionBoard>(0);
+                            builder.AddAttribute(1, "SectionId", 1);
+                            builder.AddAttribute(2, "OnSegmentsUpdate",
+                                EventCallback.Factory.Create<List<SegmentCreateDto>>(
+                                    this, segments => HandleVerseUpdate(1, segments)));
+                            builder.CloseComponent();
+                        }
+                    }
+                };
+                AllVerseSegments[1] = new List<SegmentCreateDto>();
+            }
+            else
+            {
+                var response = await _songsApi.GetSongWithChordsById(SongId);
+                if (response.IsSuccessStatusCode)
+                {
+                    var song = response.Content!;
+                    SongTitle = song.Title;
+                    SongNumber = song.SongNumber ?? 0;
+                    initialVerseItems = new List<TabsComponent.TabsComponentItem>();
+                    AllVerseSegments = new Dictionary<int, List<SegmentCreateDto>>();
+
+                    // Process verses
+                    foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
+                    {
+                        var verseSegments = new List<SegmentCreateDto>();
+                        foreach (var line in verse.LyricLines.OrderBy(ll => ll.LyricLineOrder))
+                        {
+                            foreach (var segment in line.LyricSegments.OrderBy(ls => ls.LyricOrder))
+                            {
+                                verseSegments.Add(new SegmentCreateDto
+                                    {
+                                        Id = segment.Id.ToString(),
+                                        Lyric = segment.Lyric,
+                                        ChordId = segment.ChordId?.ToString(),
+                                        ChordName = segment.Chord?.ChordName,
+                                        LineNumber = line.LyricLineOrder,
+                                        PartNumber = verse.PartNumber,
+                                        PartName = SongSection.Verse,
+                                        LyricOrder = segment.LyricOrder
+                                    });
+                            }
+                        }
+
+                        AllVerseSegments[verse.PartNumber] = verseSegments;
+
+                        initialVerseItems.Add(new TabsComponent.TabsComponentItem
+                            {
+                                Id = verse.PartNumber,
+                                Title = builder => builder.AddContent(0, $"{SongSection.Verse} {verse.PartNumber}"),
+                                Content = builder =>
+                                {
+                                    builder.OpenComponent<SongSectionBoard>(0);
+                                    builder.AddAttribute(1, "SectionId", verse.PartNumber);
+                                    builder.AddAttribute(2, "OnSegmentsUpdate",
+                                        EventCallback.Factory.Create<List<SegmentCreateDto>>(
+                                            this, segments => HandleVerseUpdate(verse.PartNumber, segments)));
+                                    builder.AddAttribute(3, "InitialSegments", AllVerseSegments[verse.PartNumber]);
+                                    builder.CloseComponent();
+                                }
+                            });
+                    }
+                }
+                else
+                {
+                    var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                    await OpenModal(new ModalOptionDto
+                        {
+                            Title = "Error",
+                            Message = errorMessage,
+                            ButtonText = "Close",
+                            OptionType = OptionType.Error
+                        });
                 }
             }
-            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing song board");
+            await OpenModal(new ModalOptionDto
+                {
+                    Title = "Initialization Error",
+                    Message = "An error occurred while initializing the song board.",
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+
     }
+
     private async Task HandleSongSave()
     {
         var allSegments = AllVerseSegments.Values.SelectMany(v => v).ToList();
@@ -79,7 +203,7 @@
             SongLyrics = allSegments
         };
 
-        if(allSegments.Count == 0)
+        if (allSegments.Count == 0)
         {
             await OpenModal(new ModalOptionDto
             {
@@ -88,40 +212,50 @@
                 ButtonText = "OK",
                 OptionType = OptionType.Warning
             });
-
             _logger.LogWarning("No segments found to save.");
             return;
         }
 
-        var songResult = await _songsApi.CreateSong(songData);
+        Refit.IApiResponse<SongDto> songResult;
+        if (string.IsNullOrEmpty(SongId) || SongId == "new")
+        {
+            SongId = null;
+            songResult = await _songsApi.CreateSong(songData);
+        }
+        else
+        {
+            songResult = await _songsApi.UpdateSong(SongId, songData);
+        }
+
         if (songResult.IsSuccessStatusCode)
         {
-            message = $"Song {songData.Title} saved successfully!";
+            message = $"Song {SongTitle} saved successfully!";
             await OpenModal(new ModalOptionDto
             {
                 Title = "Song Saved",
                 Message = message,
                 ButtonText = "OK",
+                OptionType = OptionType.Success
             });
-            _logger.LogInformation("Song {songData} saved successfully!",songData);
+            _logger.LogInformation("Song {songData} saved successfully!", songData);
         }
         else
         {
-            var errorMessage =_apiResponseHandler.GetApiErrorMessage(songResult);
+            var errorMessage = _apiResponseHandler.GetApiErrorMessage(songResult);
             await OpenModal(new ModalOptionDto
             {
                 Title = "Error",
                 Message = errorMessage,
                 ButtonText = "OK",
+                OptionType = OptionType.Error
             });
-			// Handle error, e.g., show an error message
-			_logger.LogError("Failed to save song:{Error} ",songResult);
-		}
+            _logger.LogError("Failed to save song: {Error}", errorMessage);
+        }
     }
 
-    private void HandleVerseUpdate(int verseId, List<SegmentCreateDto> segments)
+    private void HandleVerseUpdate(int sectionId, List<SegmentCreateDto> segments)
     {
-        AllVerseSegments[verseId] = segments;
+        AllVerseSegments[sectionId] = segments;
     }
 
     private void HandleTabAdd(int newTabId)
@@ -131,12 +265,7 @@
             AllVerseSegments[newTabId] = new List<SegmentCreateDto>();
         }
     }
-       
-    private RenderFragment RenderVerseTab(int id) => @<VerseBoard 
-        VerseId="@id" 
-        OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />
-    ;
-
+   
     private async Task OpenModal(ModalOptionDto option)
     {
         modalClass = "show";

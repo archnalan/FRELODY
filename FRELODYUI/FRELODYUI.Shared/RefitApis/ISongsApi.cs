@@ -23,6 +23,9 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Post("/api/songs/create-song")]
         Task<IApiResponse<SongDto>> CreateSong([Body] SimpleSongCreateDto song);
+        
+        [Put("/api/songs/update-song")]
+        Task<IApiResponse<SongDto>> UpdateSong([Query]string id, [Body] SimpleSongCreateDto song);
 
         [Put("/api/songs/mark-song-favorite-status")]
         Task<IApiResponse<bool>> MarkSongFavoriteStatus([Query] string songId, [Query] bool favorite);

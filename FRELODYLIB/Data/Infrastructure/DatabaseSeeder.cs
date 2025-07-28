@@ -82,23 +82,24 @@ namespace FRELODYAPP.Data.Infrastructure
             await dbContext.SaveChangesAsync();
 
             // Create the verse
-            var verse = new Verse
+            var verse = new SongPart
             {
                 SongId = song.Id,
-                VerseNumber = 1
+                PartNumber = 1,
+                PartName = SongSection.Verse
             };
 
-            await dbContext.Verses.AddAsync(verse);
+            await dbContext.SongParts.AddAsync(verse);
             await dbContext.SaveChangesAsync();
 
             // Create lyric lines
             var lines = new[]
             {
-                new LyricLine { VerseId = verse.Id, PartName = SongSection.Verse, PartNumber = 1, LyricLineOrder = 1 },
-                new LyricLine { VerseId = verse.Id, PartName = SongSection.Verse, PartNumber = 1, LyricLineOrder = 2 },
-                new LyricLine { VerseId = verse.Id, PartName = SongSection.Verse, PartNumber = 1, LyricLineOrder = 3 },
-                new LyricLine { VerseId = verse.Id, PartName = SongSection.Verse, PartNumber = 1, LyricLineOrder = 4 },
-                new LyricLine { VerseId = verse.Id, PartName = SongSection.Verse, PartNumber = 1, LyricLineOrder = 5 }
+                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 1 },
+                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 2 },
+                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 3 },
+                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 4 },
+                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 5 }
             };
 
             await dbContext.LyricLines.AddRangeAsync(lines);

@@ -17,13 +17,13 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 	[ApiController]
 	public class VersesController : ControllerBase
 	{
-		private readonly IVerseService _verseService;
+		private readonly ISongPartService _verseService;
 		private readonly ILyricLineService _lineService;
 		private readonly ILyricSegment _segmentService;
 		private readonly IChordService _chordService;
 		private readonly IMapper _mapper;
 		private readonly SongDbContext _context;
-        public VersesController(IVerseService verseService, ILyricLineService lineService, IMapper mapper,
+        public VersesController(ISongPartService verseService, ILyricLineService lineService, IMapper mapper,
 						ILyricSegment segmentService, IChordService chordService, SongDbContext context)
         {
 			_verseService = verseService;
@@ -66,7 +66,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 				return BadRequest("Verse Ids are required");
 			}
 
-			var foundVerses = new List<VerseDto>();
+			var foundVerses = new List<SongPartDto>();
 			var responseErrors = new List<(string id, string errorMessage)>();
 			
 			foreach(var id in ids)

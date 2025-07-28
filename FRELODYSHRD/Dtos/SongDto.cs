@@ -45,9 +45,7 @@ namespace FRELODYAPP.Dtos
 
         public string? CategoryId { get; set; }
 
-        public virtual ICollection<VerseDto>? Verses { get; set; }
-        public virtual ICollection<BridgeDto>? Bridges { get; set; }
-        public virtual ICollection<ChorusDto>? Choruses { get; set; }
+        public virtual ICollection<SongPartDto>? SongParts { get; set; }
         public virtual ICollection<UserFeedbackDto>? Feedback { get; set; }        
     }
 }

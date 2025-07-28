@@ -1,20 +1,21 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using FRELODYAPP.Dtos.SubDtos;
+using FRELODYSHRD.ModelTypes;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using FRELODYAPP.Dtos.SubDtos;
 
 namespace FRELODYAPP.Dtos
 {
-    public class VerseDto: BaseEntityDto
+    public class SongPartDto: BaseEntityDto
     {
-        public string? Id { get; set; }
-
         public string SongId { get; set; }
 
+        public SongSection? PartName { get; set; }
+
         [Range(0, 24)]
-        public int VerseNumber { get; set; }
+        public int PartNumber { get; set; }
 
         [MaxLength(100)]
-        public string? VerseTitle { get; set; }
+        public string? PartTitle { get; set; }
 
         public int? RepeatCount { get; set; }
 

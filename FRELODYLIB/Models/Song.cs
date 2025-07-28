@@ -44,11 +44,7 @@ namespace FRELODYAPP.Models
 
 		public bool? IsFavorite { get; set; }
 
-        public virtual ICollection<Verse>? Verses { get; set; }
-
-        public virtual ICollection<Bridge>? Bridges { get; set; }
-
-        public virtual ICollection<Chorus>? Choruses { get; set; }
+        public virtual ICollection<SongPart>? SongParts { get; set; }
 
 		public virtual ICollection<UserFeedback>? Feedback { get; set; }
     }

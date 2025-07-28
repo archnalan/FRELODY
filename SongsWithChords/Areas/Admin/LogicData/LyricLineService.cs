@@ -70,7 +70,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				return ServiceResult<LyricLineDto>.Failure(new
 					BadRequestException("Verse Id is required."));
 
-			var verseExists = await _context.Verses
+			var verseExists = await _context.SongParts
 								.AnyAsync(ll => ll.Id == verselineDto.VerseId);
 
 			if (verseExists == false)
@@ -80,7 +80,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 
 			//No LyricOrderNumber is duplicated within the same verse
 			var verseLineExists = await _context.LyricLines
-										.Where(vl => vl.VerseId == verselineDto.VerseId)// Filter by the same verse
+										.Where(vl => vl.PartId == verselineDto.VerseId)// Filter by the same verse
 										.AnyAsync(vl => vl.LyricLineOrder == verselineDto.LyricLineOrder);
 
 			if (verseLineExists)			
@@ -120,7 +120,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 
 			//No LyricOrderNumber is duplicated within the same verse
 			var verseLineExists = await _context.LyricLines
-									.Where(vl => vl.VerseId == verseLineDto.VerseId)// Filter by the same verse
+									.Where(vl => vl.PartId == verseLineDto.PartId)// Filter by the same verse
 									.AnyAsync(vl => vl.Id != verseLineDto.Id && // Exclude the current LyricLine being edited
 											  vl.LyricLineOrder == verseLineDto.LyricLineOrder);
 
@@ -135,15 +135,15 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 				NotFoundException($"Lyric Line of ID:{id} does not exist."));
 
            
-			if (verseLineDto.VerseId != null || string.IsNullOrEmpty(verseLineDto.VerseId))
+			if (verseLineDto.PartId != null || string.IsNullOrEmpty(verseLineDto.PartId))
 			{
-				var verseExists = await _context.Verses
+				var verseExists = await _context.SongParts
 									.Where(vl => vl.Id != verseLineDto.Id)
-									.AnyAsync(vl => vl.Id == verseLineDto.VerseId);
+									.AnyAsync(vl => vl.Id == verseLineDto.PartId);
 
 				if (verseExists == false)
 					return ServiceResult<LyricLineDto>.Failure(new
-					BadRequestException($"Parent Verse Id:{verseLineDto.VerseId} does not exist"));
+					BadRequestException($"Parent Verse Id:{verseLineDto.PartId} does not exist"));
 			}
 			else
 			{

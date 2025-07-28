@@ -64,5 +64,14 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
             return Ok(result.Data);
         }
 
+        [HttpPut]
+        [ProducesResponseType(typeof(SongDto), 200)]
+        public async Task<IActionResult> UpdateSong(string id, [FromBody] SimpleSongCreateDto songDto)
+        {
+            var songResult = await _songService.UpdateSong(id, songDto);
+            if (!songResult.IsSuccess)
+                return StatusCode(songResult.StatusCode, new { message = songResult.Error.Message });
+            return Ok(songResult.Data);
+        }
     }
 }

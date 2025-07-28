@@ -29,9 +29,7 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<SongBook> SongBooks { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Song> Songs { get; set; }
-        public DbSet<Verse> Verses { get; set; }
-        public DbSet<Bridge> Bridges { get; set; }
-        public DbSet<Chorus> Choruses { get; set; }
+        public DbSet<SongPart> SongParts { get; set; }
         public DbSet<LyricLine> LyricLines { get; set; }
         public DbSet<LyricSegment> LyricSegments { get; set; }
         public DbSet<Chord> Chords { get; set; }
@@ -60,13 +58,7 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<Song>().HasQueryFilter(x => 
                     (x.TenantId == _tenantId || x.TenantId == null) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Verse>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
-                    && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Bridge>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
-                    && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Chorus>().HasQueryFilter(x => 
+            builder.Entity<SongPart>().HasQueryFilter(x => 
                     (x.TenantId == _tenantId || x.TenantId == null) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<LyricLine>().HasQueryFilter(x => 
@@ -90,34 +82,14 @@ namespace FRELODYAPP.Data.Infrastructure
 
             // Configure Song and its children
             builder.Entity<Song>()
-                .HasMany(song => song.Verses)
+                .HasMany(song => song.SongParts)
                 .WithOne()
                 .HasForeignKey(verse => verse.SongId);
 
-            builder.Entity<Song>()
-                .HasMany(song => song.Choruses)
-                .WithOne()
-                .HasForeignKey(chorus => chorus.SongId);
-
-            builder.Entity<Song>()
-                .HasMany(song => song.Bridges)
-                .WithOne()
-                .HasForeignKey(bridge => bridge.SongId);
-
-            builder.Entity<Verse>()
+            builder.Entity<SongPart>()
                 .HasMany(verse => verse.LyricLines)
                 .WithOne()
-                .HasForeignKey(line => line.VerseId);
-
-            builder.Entity<Chorus>()
-                .HasMany(chorus => chorus.LyricLines)
-                .WithOne()
-                .HasForeignKey(line => line.ChorusId);
-
-            builder.Entity<Bridge>()
-                .HasMany(bridge => bridge.LyricLines)
-                .WithOne()
-                .HasForeignKey(line => line.BridgeId);
+                .HasForeignKey(line => line.PartId);
 
             builder.Entity<LyricLine>()
                 .HasMany(line => line.LyricSegments)
@@ -176,7 +148,7 @@ namespace FRELODYAPP.Data.Infrastructure
                 .Property(c => c.SongPlayLevel)
                 .HasConversion<string>();
 
-            builder.Entity<LyricLine>()
+            builder.Entity<SongPart>()
                 .Property(e => e.PartName)
                 .HasConversion<string>();
             
