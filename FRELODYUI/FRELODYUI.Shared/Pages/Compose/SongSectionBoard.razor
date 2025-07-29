@@ -26,7 +26,7 @@
         <div class="position-relative mb-2" id="@($"line-{line}")">
             <Row Line="@line"
                  Focused="@(focusedRow == line)"
-                 Segments="@segments"
+                 Segments="@Segments"
                  Chords="@chords"
                  EditModeSegmentId="@editModeSegmentId"
                  OnFocusRow="() => SetFocusedRow(line)"
@@ -59,7 +59,7 @@
     @if (lines.Count > 0)
     {
         <div class="text-muted small text-end">
-            Verse @SectionId • Lines: @lines.Count • Segments: @segments.Count
+            Verse @SectionId • Lines: @lines.Count • Segments: @Segments.Count
         </div>
     }
 </div>
@@ -88,10 +88,10 @@
 
 @code {
     [Parameter] public int SectionId { get; set; }
-    [Parameter] public List<SegmentCreateDto>? InitialSegments { get; set; } = new();
+    [Parameter] public List<SegmentCreateDto>? Segments { get; set; } = new();
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
 
-    private List<SegmentCreateDto> segments = new();
+    // private List<SegmentCreateDto> segments = new();
     private List<ChordDto> chords = new();
     private int? focusedRow = null;
     private List<int> trackLines = new();
@@ -105,7 +105,7 @@
     {
         try
         {
-            trackLines = segments
+            trackLines = Segments
             .Where(s => s.PartName == SongSection.Verse && s.PartNumber == SectionId)
             .Select(s => s.LineNumber)
             .Distinct()
@@ -122,14 +122,14 @@
    
     }
 
-    protected override void OnParametersSet()
-    {
-        if (InitialSegments != null)
-        {
-            segments = InitialSegments;
-            UpdateLines();
-        }
-    }
+    // protected override void OnParametersSet()
+    // {
+    //     if (InitialSegments != null)
+    //     {
+    //         Segments = InitialSegments;
+    //         UpdateLines();
+    //     }
+    // }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -141,15 +141,15 @@
 
     private void UpdateLines()
     {
-        var segmentLines = segments.Select(s => s.LineNumber).Distinct().ToList();
+        var segmentLines = Segments.Select(s => s.LineNumber).Distinct().ToList();
         lines = segmentLines.Union(trackLines).Distinct().OrderBy(l => l).ToList();
     }
 
     private void HandleSegmentsUpdate(List<SegmentCreateDto> updatedSegments)
     {
-        segments = updatedSegments;
+        Segments = updatedSegments;
         UpdateLines();
-        OnSegmentsUpdate.InvokeAsync(segments.Select(s =>
+        OnSegmentsUpdate.InvokeAsync(Segments.Select(s =>
         {
             s.PartNumber = SectionId;
             return s;
@@ -177,7 +177,7 @@
         var tempLineId = (int)DateTime.Now.Ticks;
         var newSegmentId = Guid.NewGuid().ToString();
 
-        segments.Add(new SegmentCreateDto
+        Segments.Add(new SegmentCreateDto
         {
             Id = newSegmentId,
             Lyric = "",
@@ -203,7 +203,7 @@
             newLineMap[trackLines[i]] = i + 1;
         }
 
-        segments = segments.Select(s =>
+        Segments = Segments.Select(s =>
         {
             if (newLineMap.ContainsKey(s.LineNumber))
                 s.LineNumber = newLineMap[s.LineNumber];
@@ -227,7 +227,7 @@
 
     private void DeleteLine(int line)
     {
-        segments.RemoveAll(s => s.LineNumber == line);
+        Segments.RemoveAll(s => s.LineNumber == line);
         trackLines.Remove(line);
         RenumberLines();
 
@@ -258,6 +258,6 @@
     {
         isOver = false;
         var segmentId = await JSRt.InvokeAsync<string>("getDragData", "segmentId");
-        segments.RemoveAll(s => s.Id == segmentId);
+        Segments.RemoveAll(s => s.Id == segmentId);
     }
 }

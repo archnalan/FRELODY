@@ -31,9 +31,9 @@
                 Save Song
             </button>
         </div>
-        @if (initialVerseItems.Any())
+        @if (initialPartsItems.Any())
         {
-            <TabsComponent InitialItems="initialVerseItems"
+            <TabsComponent InitialItems="initialPartsItems"
             ItemsCountLimit="MAX_SECTIONS"
                        OnTabAdd="HandleTabAdd"
             RenderTab="RenderVerseTab" />
@@ -62,9 +62,9 @@
     const int MAX_SECTIONS = 25;
     private string SongTitle = "My New Song";
     private int SongNumber = 1;
-    private Dictionary<int, List<SegmentCreateDto>> AllVerseSegments =
+    private Dictionary<int, List<SegmentCreateDto>> AllPartsSegments =
     new() { [1] = new List<SegmentCreateDto>() };
-    private List<TabsComponent.TabsComponentItem> initialVerseItems = new();
+    private List<TabsComponent.TabsComponentItem> initialPartsItems = new();
     public string modalDisplay = "none;";
     public string modalClass = "";
     private string message = "";
@@ -72,7 +72,7 @@
     private bool isLoading = true;
 
     private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
-            InitialSegments="@AllVerseSegments.GetValueOrDefault(id)"
+            Segments="@AllPartsSegments.GetValueOrDefault(id)"
             OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />
     ;
 
@@ -90,7 +90,7 @@
             if (string.IsNullOrEmpty(SongId))
             {
                 // Initialize new song
-                initialVerseItems = new List<TabsComponent.TabsComponentItem>
+                initialPartsItems = new List<TabsComponent.TabsComponentItem>
                 {
                     new TabsComponent.TabsComponentItem
                     {
@@ -107,7 +107,7 @@
                         }
                     }
                 };
-                AllVerseSegments[1] = new List<SegmentCreateDto>();
+                AllPartsSegments[1] = new List<SegmentCreateDto>();
             }
             else
             {
@@ -117,8 +117,8 @@
                     var song = response.Content!;
                     SongTitle = song.Title;
                     SongNumber = song.SongNumber ?? 0;
-                    initialVerseItems = new List<TabsComponent.TabsComponentItem>();
-                    AllVerseSegments = new Dictionary<int, List<SegmentCreateDto>>();
+                    initialPartsItems = new List<TabsComponent.TabsComponentItem>();
+                    AllPartsSegments = new Dictionary<int, List<SegmentCreateDto>>();
 
                     // Process verses
                     foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
@@ -142,9 +142,9 @@
                             }
                         }
 
-                        AllVerseSegments[verse.PartNumber] = verseSegments;
+                        AllPartsSegments[verse.PartNumber] = verseSegments;
 
-                        initialVerseItems.Add(new TabsComponent.TabsComponentItem
+                        initialPartsItems.Add(new TabsComponent.TabsComponentItem
                             {
                                 Id = verse.PartNumber,
                                 Title = builder => builder.AddContent(0, $"{SongSection.Verse} {verse.PartNumber}"),
@@ -155,7 +155,7 @@
                                     builder.AddAttribute(2, "OnSegmentsUpdate",
                                         EventCallback.Factory.Create<List<SegmentCreateDto>>(
                                             this, segments => HandleVerseUpdate(verse.PartNumber, segments)));
-                                    builder.AddAttribute(3, "InitialSegments", AllVerseSegments[verse.PartNumber]);
+                                    builder.AddAttribute(3, "Segments", AllPartsSegments[verse.PartNumber]);
                                     builder.CloseComponent();
                                 }
                             });
@@ -195,7 +195,7 @@
 
     private async Task HandleSongSave()
     {
-        var allSegments = AllVerseSegments.Values.SelectMany(v => v).ToList();
+        var allSegments = AllPartsSegments.Values.SelectMany(v => v).ToList();
         var songData = new SimpleSongCreateDto
         {
             Title = SongTitle,
@@ -255,14 +255,14 @@
 
     private void HandleVerseUpdate(int sectionId, List<SegmentCreateDto> segments)
     {
-        AllVerseSegments[sectionId] = segments;
+        AllPartsSegments[sectionId] = segments;
     }
 
     private void HandleTabAdd(int newTabId)
     {
-        if (!AllVerseSegments.ContainsKey(newTabId))
+        if (!AllPartsSegments.ContainsKey(newTabId))
         {
-            AllVerseSegments[newTabId] = new List<SegmentCreateDto>();
+            AllPartsSegments[newTabId] = new List<SegmentCreateDto>();
         }
     }
    

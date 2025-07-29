@@ -111,10 +111,10 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         if (!string.IsNullOrEmpty(chordName)
                             && !chordsWithIds.ContainsKey(chordName))
                         {
-                            var exisitingChord = await _context.Chords
+                            var existingChord = await _context.Chords
                                 .FirstOrDefaultAsync(c => c.ChordName.Trim().ToLower() == chordName.Trim().ToLower());
 
-                            if(exisitingChord == null)
+                            if(existingChord == null)
                             {
                                 var newChord = new Chord
                                 {
@@ -127,7 +127,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             }
                             else
                             {
-                                chordsWithIds[chordName] = exisitingChord.Id;
+                                chordsWithIds[chordName] = existingChord.Id;
                             }
                         }
                         segment.ChordId = chordsWithIds[chordName];
@@ -135,7 +135,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                     // Group segments by song part and part number
                     var songPartGroups = songDto.SongLyrics
-                        .GroupBy(s => new { s.PartName, s.PartNumber })
+                        .GroupBy(s => new { s.PartName, s.PartNumber})
                         .OrderBy(g => g.Key.PartName)
                         .ThenBy(g => g.Key.PartNumber);
 
@@ -143,11 +143,18 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     {
                         var partName = partGroup.Key.PartName;
                         var partNumber = partGroup.Key.PartNumber;
+                        var partRepeatCount = songDto.PartRepeatCounts?.GetValueOrDefault(partName) ?? 0;
 
-                        // Create the appropriate song part based on the type
-                        string partId = await CreateSongPart(song.Id, partName, partNumber);
+                        var part = new SongPart
+                        {
+                            SongId = song.Id,
+                            PartNumber = partNumber,
+                            PartName = partName,
+                        };
+                        await _context.SongParts.AddAsync(part);
+                        await _context.SaveChangesAsync();
 
-                        if (!string.IsNullOrEmpty(partId))
+                        if (!string.IsNullOrEmpty(part.Id))
                         {
                             // Group segments by lyric line number
                             var lyricLineGroups = partGroup
@@ -157,16 +164,16 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             foreach (var lineGroup in lyricLineGroups)
                             {
                                 var lineNumber = lineGroup.Key;
+                                var lineRepeatCount = songDto.LineRepeatCounts?.GetValueOrDefault(lineNumber) ?? 0;
 
                                 // Create the lyric line
                                 var lyricLine = new LyricLine
                                 {
                                     PartNumber = partNumber,
-                                    LyricLineOrder = lineNumber
+                                    LyricLineOrder = lineNumber,
+                                    PartId = part.Id,
+                                    RepeatCount = lineRepeatCount,
                                 };
-
-                                // Set the appropriate foreign key based on the part type
-                                SetPartIdForLyricLine(lyricLine, partId, partName);
 
                                 await _context.LyricLines.AddAsync(lyricLine);
                                 await _context.SaveChangesAsync();
@@ -214,36 +221,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
-        private async Task<string> CreateSongPart(string songId, SongSection partType, int partNumber)
-        {
-            switch (partType)
-            {
-                case SongSection.Verse:
-                    var verse = new SongPart
-                    {
-                        SongId = songId,
-                        PartNumber = partNumber,
-                        PartName = partType,
-                    };
-                    await _context.SongParts.AddAsync(verse);
-                    await _context.SaveChangesAsync();
-                    return verse.Id;
-
-                default:
-                    _logger.LogWarning("Unsupported song part type: {PartType}", partType);
-                    return string.Empty;
-            }
-        }
-
-        private void SetPartIdForLyricLine(LyricLine lyricLine, string partId, SongSection partType)
-        {
-            switch (partType)
-            {
-                case SongSection.Verse:
-                    lyricLine.PartId = partId;
-                    break;
-            }
-        }
         #endregion
 
         #region Create Lines
@@ -434,10 +411,16 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         var partName = partGroup.Key.PartName;
                         var partNumber = partGroup.Key.PartNumber;
 
-                        // Create the appropriate song part based on the type
-                        string partId = await CreateSongPart(song.Id, partName, partNumber);
+                        var part = new SongPart
+                        {
+                            SongId = song.Id,
+                            PartNumber = partNumber,
+                            PartName = partName,
+                        };
+                        await _context.SongParts.AddAsync(part);
+                        await _context.SaveChangesAsync();
 
-                        if (!string.IsNullOrEmpty(partId))
+                        if (!string.IsNullOrEmpty(part.Id))
                         {
                             // Group segments by lyric line number
                             var lyricLineGroups = partGroup
@@ -452,11 +435,9 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                 var lyricLine = new LyricLine
                                 {
                                     PartNumber = partNumber,
-                                    LyricLineOrder = lineNumber
+                                    LyricLineOrder = lineNumber,
+                                    PartId = part.Id,
                                 };
-
-                                // Set the appropriate foreign key based on the part type
-                                SetPartIdForLyricLine(lyricLine, partId, partName);
 
                                 await _context.LyricLines.AddAsync(lyricLine);
                                 await _context.SaveChangesAsync();

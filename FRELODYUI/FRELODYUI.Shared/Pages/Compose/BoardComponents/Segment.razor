@@ -41,18 +41,42 @@
 </div>
 
 @code {
-    [Parameter] public SegmentCreateDto Content { get; set; }
-    [Parameter] public List<ChordDto> Chords { get; set; }
+    [Parameter] public SegmentCreateDto Content { get; set; } = default!;
+    [Parameter] public List<ChordDto> Chords { get; set; } = default!;
     [Parameter] public bool Editing { get; set; }
     [Parameter] public bool Focused { get; set; }
     [Parameter] public EventCallback OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto> OnDragStart { get; set; }
 
-    private string editedLyric;
+    private string editedLyric = string.Empty;
+    private string ChordName = string.Empty;
     private string? editedChordId;
-    private string ChordName =>
-        Chords?.FirstOrDefault(c => c.Id == Content.ChordId)?.ChordName ?? "";
+    private bool isInitialized = false;
+
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if(!isInitialized)
+            {
+                if (!string.IsNullOrEmpty(Content.Id))
+                {
+                    editedChordId = Content.ChordId;
+                    ChordName = Content.ChordName ?? string.Empty;
+                    editedLyric = Content.Lyric ?? string.Empty;
+                }
+                else
+                {
+                    ChordName = Chords?.FirstOrDefault(c =>
+                        c.Id == Content.ChordId)?.ChordName ?? "";
+                }
+                isInitialized = true;
+                StateHasChanged();
+            }
+        }
+    }
 
     protected override void OnParametersSet()
     {
