@@ -19,7 +19,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
 
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<ChordSimpleDto>), 200)]
-        public async Task<IActionResult> GetChords()
+        public async Task<IActionResult> GetAllChords()
         {
             var chordResult = await _chordService.GetChordsAsync();
             if (!chordResult.IsSuccess)

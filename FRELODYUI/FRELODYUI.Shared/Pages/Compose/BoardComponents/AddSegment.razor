@@ -31,6 +31,14 @@ else
     </button>
 }
 
+@if (modalDisplay == "block;")
+{
+    <DialogModal ModalClass="@modalClass"
+                 ModalDisplay="@modalDisplay"
+                 Modal="@modalOption"
+                 OnCloseModal="CloseModal" />
+}
+
 @code {
     [Parameter] public int LineNumber { get; set; }
     [Parameter] public List<ChordSimpleDto> Chords { get; set; }
@@ -43,6 +51,10 @@ else
 
     private string addFormSegment;
     private string? addFormChordId;
+    public string modalDisplay = "none;";
+    public string modalClass = "";
+    private string message = "";
+    private ModalOptionDto modalOption = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -53,7 +65,18 @@ else
         var response = await _chordsApi.GetAllChords();
         if (response.IsSuccessStatusCode)
         {
-            availableChords = response.Content;
+            availableChords = response.Content!;
+        }
+        else
+        {
+            var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+            await OpenModal(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = errorMessage,
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
         }
 
     }
@@ -97,5 +120,23 @@ else
     private async Task SaveChordToHistory(ChordSimpleDto chord)
     {
         // Your logic to save the chord to visit history
+    }
+
+    private async Task OpenModal(ModalOptionDto option)
+    {
+        modalClass = "show";
+        modalDisplay = "block;";
+        modalOption = option;
+        await Task.CompletedTask;
+        StateHasChanged();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        modalDisplay = "none;";
+        message = string.Empty;
+        modalClass = string.Empty;
+        StateHasChanged();
     }
 }

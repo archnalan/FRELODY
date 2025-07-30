@@ -21,8 +21,8 @@
                 <div class="dropdown-item text-muted">No chords found</div>
             }
             <div class="dropdown-divider"></div>
-            <button class="dropdown-item text-primary" @onclick="OpenCustomizeModal">
-                <i class="fas fa-plus"></i> Customize Chord
+            <button class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
+                <i class="fas fa-plus"></i> Customize
             </button>
         </div>
     }
@@ -30,7 +30,8 @@
 
 @if (showCustomizeModal)
 {
-    <ChordCustomize Chord="SelectedChord"
+    <ChordCustomize Show="showCustomizeModal" 
+                    Chord="SelectedChord"
                     OnSave="HandleChordSaved" 
                     OnCancel="CloseCustomizeModal" />
 }
@@ -87,6 +88,7 @@
     {
         showCustomizeModal = true;
         showDropdown = false;
+        StateHasChanged();
     }
 
     private void CloseCustomizeModal()
