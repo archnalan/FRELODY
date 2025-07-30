@@ -1,16 +1,13 @@
-﻿
+﻿@using FRELODYUI.Shared.Pages.Compose.ChordComponents
+
 @if (FormOpen)
 {
     <div class="d-flex align-items-center p-2 bg-secondary rounded">
         <form class="d-flex position-relative" @onsubmit="HandleSubmit">
-            <div class="d-flex flex-column gap-2 me-1">
-                <select class="form-select form-select-sm" @bind="addFormChordId">
-                    <option value="">No Chord</option>
-                    @foreach (var chord in Chords)
-                    {
-                        <option value="@chord.Id">@chord.ChordName</option>
-                    }
-                </select>
+            <div class="d-flex flex-column gap-2 me-1">                
+               <ChordsDropdown AvailableChords="availableChords" 
+                            SelectedChord="selectedChord" 
+                            SelectedChordChanged="HandleChordSelected" />
                 <input type="text"
                        class="form-control form-control-sm"
                        @bind="addFormSegment"
@@ -36,14 +33,30 @@ else
 
 @code {
     [Parameter] public int LineNumber { get; set; }
-    [Parameter] public List<ChordDto> Chords { get; set; }
+    [Parameter] public List<ChordSimpleDto> Chords { get; set; }
     [Parameter] public bool FormOpen { get; set; }
     [Parameter] public EventCallback<bool> OnFormOpenChanged { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto> OnSegmentAdded { get; set; }
     [Parameter] public bool Focused { get; set; }
+    private List<ChordSimpleDto> availableChords = new();
+    private ChordSimpleDto selectedChord = new();
 
     private string addFormSegment;
     private string? addFormChordId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadChords();
+    }
+    private async Task LoadChords()
+    {
+        var response = await _chordsApi.GetAllChords();
+        if (response.IsSuccessStatusCode)
+        {
+            availableChords = response.Content;
+        }
+
+    }
 
     private void OpenForm()
     {
@@ -72,5 +85,17 @@ else
         addFormSegment = "";
         addFormChordId = null;
         CloseForm();
+    } 
+
+    private async Task HandleChordSelected(ChordSimpleDto chord)
+    {
+        selectedChord = chord;
+        // Save the chord selection to your visit history
+        await SaveChordToHistory(selectedChord);
+    }
+
+    private async Task SaveChordToHistory(ChordSimpleDto chord)
+    {
+        // Your logic to save the chord to visit history
     }
 }

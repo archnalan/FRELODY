@@ -14,6 +14,12 @@ builder.Services.AddRefitClient<ISongsApi>()
 builder.Services.AddRefitClient<ISongBooksApi>()
     .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
+builder.Services.AddRefitClient<IChordsApi>()
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+
+builder.Services.AddRefitClient<IChordChartsApi>()
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+
 builder.Services.AddRefitClient<ISongCollectionsApi>()
     .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 

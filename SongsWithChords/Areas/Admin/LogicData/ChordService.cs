@@ -16,12 +16,14 @@ namespace FRELODYAPP.Areas.Admin.LogicData
     public class ChordService : IChordService
 	{
 		private readonly SongDbContext _context;
-		public ChordService(SongDbContext context)
-		{
-			_context = context;
-		}
-	
-		public async Task<ServiceResult<List<ChordSimpleDto>>> GetChordsAsync()
+        private readonly ILogger<ChordService> _logger;
+        public ChordService(SongDbContext context, ILogger<ChordService> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        public async Task<ServiceResult<List<ChordSimpleDto>>> GetChordsAsync()
 		{
 			try
             {
@@ -35,6 +37,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving chords:{Error}", ex);
                 return ServiceResult<List<ChordSimpleDto>>.Failure(new
                     Exception($"Error retrieving chords. Details: {ex.Message}"));
             }
@@ -56,6 +59,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving chords with charts: {Error}", ex);
                 return ServiceResult<List<ChordWithChartsDto>>.Failure(new
                     Exception($"Error retrieving chords with charts. Details: {ex.Message}"));
             }   
@@ -77,6 +81,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
 			catch(Exception ex)
 			{
+                _logger.LogError(ex, "Error retrieving chord by ID: {Id}. Error: {Error}", id, ex);
                 return ServiceResult<ChordEditDto>.Failure(new
                     Exception($"Error retrieving chord with ID: {id}. Details: {ex.Message}"));
             }
@@ -106,6 +111,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving chord with charts by ID: {Id}. Error: {Error}", id, ex);
                 return ServiceResult<ChordWithChartsDto>.Failure(new
                     Exception($"Error retrieving chord with charts by ID: {id}. Details: {ex.Message}"));
             }
@@ -143,6 +149,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating chord: {ChordName}. Error: {Error}", chordDto.ChordName, ex);
                 return ServiceResult<ChordEditDto>.Failure(new
                     Exception($"Error creating chord. Details: {ex.Message}"));
             }
@@ -175,6 +182,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating simple chord: {ChordName}. Error: {Error}", chordDto.ChordName, ex);
                 return ServiceResult<ChordSimpleDto>.Failure(new
                     Exception($"Error creating simple chord. Details: {ex.Message}"));
             }
@@ -209,7 +217,8 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
 			catch (Exception ex)
 			{
-				return ServiceResult<ChordEditDto>.Failure(new Exception(ex.Message));
+                _logger.LogError(ex, "Error updating chord: {ChordName}. Error: {Error}", chordDto.ChordName, ex);
+                return ServiceResult<ChordEditDto>.Failure(new Exception(ex.Message));
 			}			
 		}
 
@@ -227,7 +236,8 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
 			catch (Exception ex)
 			{
-				return ServiceResult<bool>.Failure(new Exception(ex.Message));
+                _logger.LogError(ex, "Error deleting chord with ID: {Id}. Error: {Error}", id, ex);
+                return ServiceResult<bool>.Failure(new Exception(ex.Message));
 			}
 		}
 	}

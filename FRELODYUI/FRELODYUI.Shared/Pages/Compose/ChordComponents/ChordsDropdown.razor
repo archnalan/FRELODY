@@ -1,0 +1,109 @@
+﻿
+<div class="dropdown" style="width: 100%;">
+    <input class="form-control" 
+           type="text" 
+           placeholder="Search chords..." 
+           @bind="searchTerm" 
+           @oninput="HandleSearch"
+           @onfocus="@(()=>ToggleDropdown(true))" />
+    
+    @if (showDropdown)
+    {
+        <div class="dropdown-menu show" style="width: 100%; max-height: 300px; overflow-y: auto;">
+            @foreach (var chord in filteredChords)
+            {
+                <button class="dropdown-item" type="button" @onclick="() => SelectChord(chord)">
+                    @chord.ChordName
+                </button>
+            }
+            @if (!filteredChords.Any())
+            {
+                <div class="dropdown-item text-muted">No chords found</div>
+            }
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item text-primary" @onclick="OpenCustomizeModal">
+                <i class="fas fa-plus"></i> Customize Chord
+            </button>
+        </div>
+    }
+</div>
+
+@if (showCustomizeModal)
+{
+    <ChordCustomize Chord="SelectedChord"
+                    OnSave="HandleChordSaved" 
+                    OnCancel="CloseCustomizeModal" />
+}
+
+@code {
+    [Parameter] public List<ChordSimpleDto> AvailableChords { get; set; } = new();
+    [Parameter] public ChordSimpleDto SelectedChord { get; set; } = new();
+    [Parameter] public EventCallback<ChordSimpleDto> SelectedChordChanged { get; set; }
+
+    private string searchTerm = "";
+    private bool showDropdown = false;
+    private bool showCustomizeModal = false;
+    private List<ChordSimpleDto> filteredChords = new();
+
+    protected override void OnInitialized()
+    {
+        filteredChords = AvailableChords;
+    }
+
+    private void HandleSearch(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        FilterChords();
+    }
+
+    private void FilterChords()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredChords = AvailableChords;
+            return;
+        }
+
+        filteredChords = AvailableChords
+            .Where(c => c.ChordName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private async Task SelectChord(ChordSimpleDto chord)
+    {
+        SelectedChord = chord;
+        searchTerm = chord.ChordName;
+        showDropdown = false;
+        await SelectedChordChanged.InvokeAsync(chord);
+    }
+
+    private void ToggleDropdown(bool show)
+    {
+        showDropdown = show;
+        if (show) FilterChords();
+    }
+
+    private void OpenCustomizeModal()
+    {
+        showCustomizeModal = true;
+        showDropdown = false;
+    }
+
+    private void CloseCustomizeModal()
+    {
+        showCustomizeModal = false;
+    }
+
+    private async Task HandleChordSaved(ChordSimpleDto newChord)
+    {
+        // Add new chord to available chords
+        if (!AvailableChords.Any(c => c.Id == newChord.Id))
+        {
+            AvailableChords.Add(newChord);
+        }
+
+        // Select the new chord
+        await SelectChord(newChord);
+        CloseCustomizeModal();
+    }
+}

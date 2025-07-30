@@ -4,7 +4,7 @@ using FRELODYSHRD.ModelTypes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FRELODYAPIs.Areas.Admin.ApiControllers
+namespace FRELODYAPIs.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]

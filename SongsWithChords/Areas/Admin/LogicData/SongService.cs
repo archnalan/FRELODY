@@ -260,8 +260,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         }
         #endregion
 
-        #region Get Song by Id
-        public async Task<ServiceResult<SongDto>> GetSongById(string id)
+        #region Get full Song with chords by Id
+        public async Task<ServiceResult<SongDto>> GetSongDetailsById(string id)
         {
             try
             {
@@ -287,8 +287,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         }
         #endregion
 
-        #region Get Song details by Id
-        public async Task<ServiceResult<SongDto>> GetSongDetailsById(string id)
+        #region Get Song by Id
+        public async Task<ServiceResult<SongDto>> GetSongById(string id)
         {
             try
             {

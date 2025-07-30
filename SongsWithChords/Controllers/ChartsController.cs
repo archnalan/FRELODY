@@ -1,10 +1,13 @@
 ﻿using FRELODYAPP.Areas.Admin.Interfaces;
+using FRELODYAPP.Areas.Admin.LogicData;
 using FRELODYAPP.Dtos;
 using FRELODYAPP.Dtos.WithUploads;
+using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.EditDtos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FRELODYAPP.Areas.Admin.ApiControllers
+namespace FRELODYAPIs.Controllers
 {
 	[Route("api/[controller]")]
 	[ApiController]
@@ -20,7 +23,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		[HttpGet]
 		public async Task<IActionResult> Index()
 		{
-			var chartsResult = await _chartService.GetAllChordChartsAsync();
+			var chartsResult = await _chartService.GetChordChartsAsync();
 
 			if (!chartsResult.IsSuccess)
 				return StatusCode(chartsResult.StatusCode,
@@ -42,7 +45,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpPost("create")]
-		public async Task<IActionResult> CreateChordChart([FromForm] ChartCreateDto chartCreateDto)
+		public async Task<IActionResult> CreateChordChart([FromForm] ChordChartCreateDto chartCreateDto)
 		{
 			if (chartCreateDto == null) return BadRequest("Chord Chart data is required.");			
 
@@ -59,7 +62,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		}
 
 		[HttpPut("edit/{id}")]
-		public async Task<IActionResult> EditChordChart(string id, [FromForm]ChartEditDto chartEditDto)
+		public async Task<IActionResult> EditChordChart(string id, [FromForm]ChordChartEditDto chartEditDto)
 		{
 			if (chartEditDto == null) return BadRequest("Chord Chart data is required.");
 
@@ -68,7 +71,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 			if (id != chartEditDto.Id)
 				return BadRequest($"Chord charts of IDs: {id} and {chartEditDto.Id} are not the same");
 
-			var editedChartResult = await _chartService.EditChordChartAsync(chartEditDto);
+			var editedChartResult = await _chartService.UpdateChordChartAsync(chartEditDto);
 
 			if (!editedChartResult.IsSuccess) return StatusCode(editedChartResult.StatusCode, new
 			{message = editedChartResult.Error.Message});
@@ -79,7 +82,7 @@ namespace FRELODYAPP.Areas.Admin.ApiControllers
 		[HttpDelete("{id}")]
 		public async Task<IActionResult> DeleteChordChart(string id)
 		{
-			var removalResult = await _chartService.DeleteChordChartByIdAsync(id);
+			var removalResult = await _chartService.DeleteChordChartAsync(id);
 
 			if (!removalResult.IsSuccess)
 			{

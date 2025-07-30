@@ -27,6 +27,7 @@ namespace FRELODYSHRD.Dtos
         [StringLength(255)]
         public string? ChordAudioFilePath { get; set; }
 
+        public string? ChordBase64Image { get; set; }
 
         public virtual ICollection<ChordChartDto>? ChordCharts { get; set; }
 

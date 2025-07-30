@@ -42,7 +42,7 @@
 
 @code {
     [Parameter] public SegmentCreateDto Content { get; set; } = default!;
-    [Parameter] public List<ChordDto> Chords { get; set; } = default!;
+    [Parameter] public List<ChordSimpleDto> Chords { get; set; } = default!;
     [Parameter] public bool Editing { get; set; }
     [Parameter] public bool Focused { get; set; }
     [Parameter] public EventCallback OnSave { get; set; }

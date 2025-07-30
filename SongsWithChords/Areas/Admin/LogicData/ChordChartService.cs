@@ -1,436 +1,183 @@
 ﻿using Mapster;
-using FRELODYAPP.Areas.Admin.Interfaces;
-using FRELODYAPP.Dtos;
-using FRELODYAPP.Dtos.WithUploads;
 using FRELODYAPP.Models;
 using FRELODYAPP.ServiceHandler;
-using LanguageExt.Common;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
+using Microsoft.Extensions.Logging;
 using FRELODYAPP.Data.Infrastructure;
+using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.EditDtos;
+using FRELODYSHRD.Dtos.HybridDtos;
 
 namespace FRELODYAPP.Areas.Admin.LogicData
 {
     public class ChordChartService : IChordChartService
-	{
-		private readonly SongDbContext _context;
-		private readonly IWebHostEnvironment _webHost;
-		private readonly IHttpContextAccessor _contextAccessor;
+    {
+        private readonly SongDbContext _context;
+        private readonly ILogger<ChordChartService> _logger;
 
-		public ChordChartService(SongDbContext context ,
-			IWebHostEnvironment webHost, 
-			IHttpContextAccessor contextAccessor)
-		{
-			_context = context;
-			_webHost = webHost;
-			_contextAccessor = contextAccessor;
-		}
-	
-		public async Task<ServiceResult<List<ChartEditDto>>> GetAllChordChartsAsync()
-		{
-
-			var chordCharts = await _context.ChordCharts
-							.OrderBy(ch => ch.ChordId)
-							.ToListAsync();
-			if (!chordCharts.Any())
-			{
-				return ServiceResult<List<ChartEditDto>>.Failure(new NotFoundException("No Charts available"));
-			}
-
-			var chordChartsDto = chordCharts.Adapt<List<ChartEditDto>>();
-
-			string baseUrl = $"{_contextAccessor.HttpContext.Request.Scheme}://{_contextAccessor.HttpContext.Request.Host}/lib/media/charts/";
-
-			foreach(var chartDto in chordChartsDto)
-			{
-				if (!chartDto.FilePath.StartsWith(baseUrl))
-				{
-					chartDto.FilePath = $"{baseUrl}{chartDto.FilePath}";
-				}
-
-				if (!string.IsNullOrEmpty(chartDto.ChartAudioFilePath) && 
-					!chartDto.ChartAudioFilePath.StartsWith(baseUrl))
-				{
-					chartDto.ChartAudioFilePath = $"{baseUrl}audio/{chartDto.ChartAudioFilePath}";
-				}
-			}
-
-			return ServiceResult<List<ChartEditDto>>.Success(chordChartsDto);
-
-		}
-
-		public async Task<ServiceResult<ChartWithUploadsDto>> GetChordChartByIdAsync(string id)
-		{
-			var chordChart = await _context.ChordCharts.FindAsync(id);
-
-			if (chordChart == null)
-				return ServiceResult<ChartWithUploadsDto>.Failure(
-					new NotFoundException($"Chord with ID: {id} does not exist"));
-
-			var chordChartDto = chordChart.Adapt<ChartWithUploadsDto>();
-
-			string baseUrl = $"{_contextAccessor.HttpContext.Request.Scheme}://{_contextAccessor.HttpContext.Request.Host}/lib/media/charts/";
-
-			if (!chordChartDto.FilePath.StartsWith(baseUrl))
-			{
-				chordChartDto.FilePath = $"{baseUrl}{chordChartDto.FilePath}";
-			}
-
-			if (!string.IsNullOrEmpty(chordChartDto.ChartAudioFilePath) && !chordChartDto.ChartAudioFilePath.StartsWith(baseUrl))
-			{
-				chordChartDto.ChartAudioFilePath = $"{baseUrl}audio/{chordChartDto.ChartAudioFilePath}";
-			}
-
-			return ServiceResult<ChartWithUploadsDto>.Success(chordChartDto);
-		}
-
-		public async Task<ServiceResult<ChordChart>> GetChordChartWithChordByIdAsync(string id)
-		{
-			var chordChart = await _context.ChordCharts
-				.FirstOrDefaultAsync(ct => ct.Id == id);
-
-			if(chordChart != null)
-			{
-				string baseUrl = $"{_contextAccessor.HttpContext.Request.Scheme}://{_contextAccessor.HttpContext.Request.Host}/lib/media/charts/";
-
-				if (!chordChart.FilePath.StartsWith(baseUrl))
-				{
-					chordChart.FilePath = $"{baseUrl}{chordChart.FilePath}";
-				}
-
-				if (!string.IsNullOrEmpty(chordChart.ChartAudioFilePath) 
-					&& !chordChart.ChartAudioFilePath.StartsWith(baseUrl))
-				{
-					chordChart.ChartAudioFilePath = $"{baseUrl}audio/{chordChart.ChartAudioFilePath}";
-				}				
-			}
-
-			return chordChart == null
-				? ServiceResult<ChordChart>.Failure(
-					new NotFoundException($"Chord with ID: {id} does not exist."))
-
-				: ServiceResult<ChordChart>.Success(chordChart);
-		}
-
-        public async Task<ServiceResult<List<ChartWithUploadsDto>>> GetChordChartsByParentChordIdAsync(string chordId)
+        public ChordChartService(SongDbContext context, ILogger<ChordChartService> logger)
         {
-			try
-			{
-
-                var chordCharts = await _context.ChordCharts
-                .Where(ch => ch.ChordId == chordId)
-                .OrderBy(ch => ch.FretPosition)
-                .ToListAsync();
-                if (!chordCharts.Any())
-                {
-                    return ServiceResult<List<ChartWithUploadsDto>>.Failure(
-                        new NotFoundException($"No charts found for chord with ID: {chordId}"));
-                }
-                var chordChartsDto = chordCharts.Adapt<List<ChartWithUploadsDto>>();
-                string baseUrl = $"{_contextAccessor.HttpContext.Request.Scheme}://{_contextAccessor.HttpContext.Request.Host}/lib/media/charts/";
-                foreach (var chartDto in chordChartsDto)
-                {
-                    if (!chartDto.FilePath.StartsWith(baseUrl))
-                    {
-                        chartDto.FilePath = $"{baseUrl}{chartDto.FilePath}";
-                    }
-                    if (!string.IsNullOrEmpty(chartDto.ChartAudioFilePath) &&
-                        !chartDto.ChartAudioFilePath.StartsWith(baseUrl))
-                    {
-                        chartDto.ChartAudioFilePath = $"{baseUrl}audio/{chartDto.ChartAudioFilePath}";
-                    }
-                }
-                return ServiceResult<List<ChartWithUploadsDto>>.Success(chordChartsDto);
-            }
-			catch(Exception ex)
-			{
-                return ServiceResult<List<ChartWithUploadsDto>>.Failure(
-                    new Exception($"Error retrieving charts for chord with ID: {chordId}. Details: {ex.Message}"));
-            }            
+            _context = context;
+            _logger = logger;
         }
 
-        public async Task<ServiceResult<ChartEditDto>> CreateChordChartAsync(ChartCreateDto chartDto)
-		{
-			if (chartDto == null) return ServiceResult<ChartEditDto>.Failure(new 
-										BadHttpRequestException("Chord Chart data is required."));			
+        public async Task<ServiceResult<List<ChordChartEditDto>>> GetChordChartsAsync()
+        {
+            try
+            {
+                var charts = await _context.ChordCharts
+                    .OrderBy(c => c.ChordId)
+                    .ToListAsync();
 
-			var chartExists = await _context.ChordCharts.Where(ch=>ch.FretPosition == chartDto.FretPosition)
-							.AnyAsync(ch => ch.FilePath.EndsWith(chartDto.FilePath));
+                var chartsDto = charts.Adapt<List<ChordChartEditDto>>();
+                return ServiceResult<List<ChordChartEditDto>>.Success(chartsDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving chord charts: {Error}", ex);
+                return ServiceResult<List<ChordChartEditDto>>.Failure(
+                    new Exception($"Error retrieving chord charts. Details: {ex.Message}"));
+            }
+        }
 
-			if (chartExists) return ServiceResult < ChartEditDto >.Failure( new 
-							ConflictException($"Chart with file path: {chartDto.FilePath} already exists at fret {chartDto.FretPosition}."));
+        public async Task<ServiceResult<ChordChartEditDto>> GetChordChartByIdAsync(string id)
+        {
+            try
+            {
+                var chart = await _context.ChordCharts.FindAsync(id);
 
-			if (chartDto.ChordId != null)
-			{
-				var chordExists = await _context.Chords
-					.AnyAsync(ch => ch.Id == chartDto.ChordId);
-				if (!chordExists) return ServiceResult < ChartEditDto >.Failure( new 
-								NotFoundException( $"Chord with ID:{chartDto.ChordId} does not exist."));
-			}
+                if (chart == null)
+                    return ServiceResult<ChordChartEditDto>.Failure(
+                        new NotFoundException($"Chord chart with ID: {id} does not exist."));
 
-			//Chart File Upload
-			var upload = chartDto.ChartUpload;
-			string defaultFileName = "No-Image-Placeholder.svg.png";
-			if (!string.IsNullOrEmpty(chartDto.FilePath)) // empty string "" not considered 
-			{
-				var isFileRepeat = await _context.ChordCharts
-											.Where(ch => ch.FretPosition == chartDto.FretPosition)
-											.AnyAsync(ch => ch.FilePath != null
-											&& ch.FilePath.EndsWith(chartDto.FilePath));
+                var chartDto = chart.Adapt<ChordChartEditDto>();
+                return ServiceResult<ChordChartEditDto>.Success(chartDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving chord chart by ID: {Id}. Error: {Error}", id, ex);
+                return ServiceResult<ChordChartEditDto>.Failure(
+                    new Exception($"Error retrieving chord chart with ID: {id}. Details: {ex.Message}"));
+            }
+        }
 
-				if (isFileRepeat) return ServiceResult<ChartEditDto>.Failure(new
-					ConflictException($"Chart file path: {chartDto.FilePath} already in use at fret {chartDto.FretPosition}"));
-			}
+        public async Task<ServiceResult<ChartWithParentChordDto>> GetChartWithParentChordByIdAsync(string id)
+        {
+            try
+            {
+                var chart = await _context.ChordCharts
+                    .FirstOrDefaultAsync(c => c.Id == id);
 
-			string fileDirpath = "lib/media/charts";			
+                if (chart == null)
+                    return ServiceResult<ChartWithParentChordDto>.Failure(
+                        new NotFoundException($"Chord chart with ID: {id} does not exist."));
 
-			if (upload != null)
-			{
-				var newFileResult = await HandleFileUpload(upload, fileDirpath);
+                var chartDto = chart.Adapt<ChartWithParentChordDto>();
+                return ServiceResult<ChartWithParentChordDto>.Success(chartDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving chart with parent chord by ID: {Id}. Error: {Error}", id, ex);
+                return ServiceResult<ChartWithParentChordDto>.Failure(
+                    new Exception($"Error retrieving chart with parent chord by ID: {id}. Details: {ex.Message}"));
+            }
+        }
 
-				if (!newFileResult.IsSuccess)
-					return ServiceResult<ChartEditDto>.Failure(newFileResult.Error);
+        public async Task<ServiceResult<ChordChartEditDto>> CreateChordChartAsync(ChordChartCreateDto chartDto)
+        {
+            try
+            {
+                if (chartDto == null)
+                    return ServiceResult<ChordChartEditDto>.Failure(
+                        new BadRequestException("Chord chart data is required."));
 
-				var newFile = newFileResult.Data;
+                var chartExists = await _context.ChordCharts
+                    .AnyAsync(ch => ch.FilePath == chartDto.FilePath);
 
-				chartDto.FilePath = newFile;				
-			}
-			else
-			{
-				chartDto.FilePath = defaultFileName;
-			}
-			
+                if (chartExists)
+                    return ServiceResult<ChordChartEditDto>.Failure(
+                        new ConflictException($"Chart with file path: {chartDto.FilePath} already exists."));
 
-			//Chart Audio File Upload
-			var audioUpload = chartDto.ChartAudioUpload;			
+                if (!string.IsNullOrEmpty(chartDto.ChordId))
+                {
+                    var chordExists = await _context.Chords.AnyAsync(ch => ch.Id == chartDto.ChordId);
+                    if (!chordExists)
+                        return ServiceResult<ChordChartEditDto>.Failure(
+                            new BadRequestException($"Chord with ID: {chartDto.ChordId} does not exist."));
+                }
 
-			if(!string.IsNullOrEmpty(chartDto.ChartAudioFilePath)) // empty string "" not considered 
-			{
-				var isAudioRepeat = await _context.ChordCharts
-											.Where(ch => ch.FretPosition == chartDto.FretPosition)
-											.AnyAsync(ch => ch.ChartAudioFilePath != null
-											&& ch.ChartAudioFilePath.EndsWith(chartDto.ChartAudioFilePath));
+                var chart = chartDto.Adapt<ChordChart>();
 
-				if (isAudioRepeat) return ServiceResult < ChartEditDto >.Failure( new 
-					ConflictException ($"Audio file path: {chartDto.ChartAudioFilePath} already in use at fret {chartDto.FretPosition}"));
-			}
-
-			string audioFile = "Mute-Audio.wav";
-			string audioDirPath = "lib/media/charts/audio";
-
-			if (audioUpload != null)
-			{
-				var newAudioFileResult = await HandleFileUpload(audioUpload, audioDirPath);
-
-				if(!newAudioFileResult.IsSuccess) return ServiceResult<ChartEditDto>
-						.Failure (newAudioFileResult.Error);
-
-				var newFile = newAudioFileResult.Data;
-
-				chartDto.ChartAudioFilePath = newFile;
-			}
-			else
-			{
-				chartDto.ChartAudioFilePath = audioFile;
-			}
-
-
-			var chordChart = chartDto.Adapt<ChartCreateDto, ChordChart>();
-
-			try
-			{
-				_context.ChordCharts.Add(chordChart);
-				await _context.SaveChangesAsync();
-			}
-			catch (Exception ex)
-			{
-				return ServiceResult < ChartEditDto >.Failure( new 
-					Exception($"Error on saving chart: { ex.Message}"));
-			}
-
-			var newChartDto = chordChart.Adapt<ChordChart, ChartEditDto>();
-			return ServiceResult<ChartEditDto>.Success(newChartDto);
-		}
-
-		private async Task<ServiceResult<string>> HandleFileUpload(IFormFile file, string directoryPath)
-		{
-
-			if (file == null) return  ServiceResult<string>.Failure(new
-				BadRequestException("No file was uploaded."));
-
-			try
-			{
-				string UploadDir = Path.Combine(_webHost.WebRootPath, directoryPath);
-				if(!Directory.Exists(UploadDir))
-				{
-					Directory.CreateDirectory(UploadDir);
-				}
-
-				string fileName = Guid.NewGuid().ToString() + "_" + file.FileName;
-				string filePath = Path.Combine(UploadDir, fileName);
-
-				using (FileStream fs = new FileStream(filePath, FileMode.Create))
-				{
-					await file.CopyToAsync(fs);
-				}
-
-				return ServiceResult<string>.Success(fileName);					 
-			}
-			catch(Exception ex)
-			{
-				return ServiceResult<string>.Failure(new Exception(ex.Message));
-			}
-		}
-
-		public async Task<ServiceResult<ChartEditDto>> EditChordChartAsync(ChartEditDto chartEditDto)
-		{
-			if (chartEditDto == null) return ServiceResult<ChartEditDto>.Failure( 
-						new BadRequestException("Chord Chart data is required."));
-
-			var chartInDb = await _context.ChordCharts.FindAsync(chartEditDto.Id);
-			if (chartInDb == null) return ServiceResult<ChartEditDto>.Failure(
-				new NotFoundException($"Chart with ID: {chartEditDto.Id} does not exist."));
-
-			if (chartEditDto.ChordId != null)
-			{
-				var chordInDb = await _context.Chords.AnyAsync(ch => ch.Id == chartEditDto.ChordId);
-				if (!chordInDb) return ServiceResult<ChartEditDto>.Failure( 
-					new NotFoundException($"Chord with ID: {chartEditDto.ChordId} does not exist."));
-			}
-
-			var chartExists = await _context.ChordCharts
-				.Where(ch => ch.Id != chartEditDto.Id)
-				.AnyAsync(ch => ch.FilePath.EndsWith(chartEditDto.FilePath) 
-				&& ch.FretPosition == chartEditDto.FretPosition);
-
-			var upload = chartEditDto.ChartUpload;
-			string defaultFile = "No-Image-Placeholder.svg.png";
-			string uploadDirPath = "lib/media/charts";
-
-			if (chartExists && !chartEditDto.FilePath.EndsWith(defaultFile)) return ServiceResult<ChartEditDto>.Failure(
-				new ConflictException($"Chart with file path: {chartEditDto.FilePath} already exists at fret {chartEditDto.FretPosition}."));
-
-			string incomingFile = chartEditDto.FilePath;
-
-			var chartNotChanged = await _context.ChordCharts
-									.Where(ch => ch.Id == chartEditDto.Id)
-									.AnyAsync(ch=>incomingFile.Contains (ch.FilePath));
-
-			if (upload != null && chartNotChanged == false)
-			{
-				var uploadResult = await HandleFileUpload(upload, uploadDirPath);
-
-				if (!uploadResult.IsSuccess)
-					return ServiceResult<ChartEditDto>.Failure(uploadResult.Error);
-
-				chartEditDto.FilePath = uploadResult.Data;
-			}
-
-			var audioUpload = chartEditDto.ChartAudioUpload;
-			string defaultAudio = "Mute-Audio.wav";
-			string audioDirUpload = "lib/media/charts/audio";
-
-			var incomingAudio = chartEditDto.ChartAudioFilePath;
-
-			if(incomingAudio != null)
-			{
-				if (!string.IsNullOrEmpty(incomingAudio) && !incomingAudio.EndsWith(defaultAudio))
-				{
-					//unique audio file paths per fret position
-					var isRepeatAudio = await _context.ChordCharts
-										.Where(ch => ch.Id != chartEditDto.Id)
-										.AnyAsync(ch => !string.IsNullOrEmpty(ch.ChartAudioFilePath) && ch.ChartAudioFilePath.EndsWith(chartEditDto.ChartAudioFilePath)
-										&& ch.FretPosition == chartEditDto.FretPosition);
-
-					if (isRepeatAudio) return ServiceResult<ChartEditDto>.Failure(
-						new ConflictException($"Chart with audio path: {chartEditDto.FilePath} already in use at fret {chartEditDto.FretPosition}"));
-
-				}
-				var audioNotChanged = await _context.ChordCharts
-										.Where(ch => ch.Id == chartEditDto.Id && chartEditDto.ChartAudioFilePath != null)
-										.AnyAsync(ch => ch.ChartAudioFilePath != null && incomingAudio.Contains(ch.ChartAudioFilePath));
-				
-				if (audioUpload != null)
-				{
-					var audioUploadResult = await HandleFileUpload(audioUpload, audioDirUpload);
-					if (!audioUploadResult.IsSuccess)
-						return ServiceResult<ChartEditDto>.Failure(audioUploadResult.Error);
-
-					chartEditDto.ChartAudioFilePath = audioUploadResult.Data;
-				}
-				
-			}
-
-            chartEditDto.Adapt(chartInDb);
-			try
-			{
-				_context.Update(chartInDb);
+                await _context.ChordCharts.AddAsync(chart);
                 await _context.SaveChangesAsync();
-				var updatedChartDto = chartInDb.Adapt<ChordChart, ChartEditDto>();
 
-				return ServiceResult<ChartEditDto>.Success(updatedChartDto);
-			}
-			catch (Exception ex)
-			{
-				return ServiceResult<ChartEditDto>.Failure (new Exception (ex.Message));
-			}		
+                var newChartDto = chart.Adapt<ChordChartEditDto>();
+                return ServiceResult<ChordChartEditDto>.Success(newChartDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating chord chart: {FilePath}. Error: {Error}", chartDto?.FilePath, ex);
+                return ServiceResult<ChordChartEditDto>.Failure(
+                    new Exception($"Error creating chord chart. Details: {ex.Message}"));
+            }
+        }
 
-		}
+        public async Task<ServiceResult<ChordChartEditDto>> UpdateChordChartAsync(ChordChartEditDto chartDto)
+        {
+            if (chartDto == null)
+                return ServiceResult<ChordChartEditDto>.Failure(
+                    new BadRequestException("Chord chart data is required."));
 
-		public async Task<ServiceResult<bool>> DeleteChordChartByIdAsync(string id)
-		{
-			var chordChart = await _context.ChordCharts.FindAsync(id);
-			if (chordChart == null) return ServiceResult<bool>.Failure( 
-				new NotFoundException($"Chart with ID: {id} does not exist."));
+            var chart = await _context.ChordCharts.FindAsync(chartDto.Id);
+            if (chart == null)
+                return ServiceResult<ChordChartEditDto>.Failure(
+                    new NotFoundException($"Chord chart with ID: {chartDto.Id} does not exist."));
 
-			string defaultFileName = "No-Image-Placeholder.svg.png";			
-			string fileToDelete = chordChart.FilePath;			
+            var chartExists = await _context.ChordCharts
+                .AnyAsync(ch => ch.FilePath == chartDto.FilePath && ch.Id != chartDto.Id);
 
-			string defaultAudio = "Mute-Audio.wav";
-			string audioToDelete = chordChart.ChartAudioFilePath;			
+            if (chartExists)
+                return ServiceResult<ChordChartEditDto>.Failure(
+                    new ConflictException($"Chart: {chartDto.FilePath} already exists."));
 
-			try
-			{
-				//deleting the chart
-				if(fileToDelete != defaultFileName)
-				{
-					string chartFile = Path.Combine(_webHost.WebRootPath, 
-										"lib/media/charts", fileToDelete);
+            try
+            {
+                chart.FilePath = chartDto.FilePath;
+                chart.ChordId = chartDto.ChordId;
+                chart.FretPosition = chartDto.FretPosition;
+                chart.ChartAudioFilePath = chartDto.ChartAudioFilePath;
+                chart.PositionDescription = chartDto.PositionDescription;
 
-					if(File.Exists(chartFile) )
-					{
-						File.Delete(chartFile);
-					}
-				}
+                await _context.SaveChangesAsync();
 
-				if(!string.IsNullOrEmpty(audioToDelete) && audioToDelete != defaultAudio)
-				{
-					string audioFile = Path.Combine(_webHost.WebRootPath, 
-										"lib/media/charts/audio", audioToDelete);
+                var updatedChart = chart.Adapt<ChordChartEditDto>();
+                return ServiceResult<ChordChartEditDto>.Success(updatedChart);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating chord chart: {FilePath}. Error: {Error}", chartDto.FilePath, ex);
+                return ServiceResult<ChordChartEditDto>.Failure(new Exception(ex.Message));
+            }
+        }
 
-					if (File.Exists(audioFile))
-					{
-						File.Delete(audioFile);
-					}
-				}
-				
-				_context.ChordCharts.Remove(chordChart);
-				await _context.SaveChangesAsync();
-				return ServiceResult<bool>.Success(true);
-			}
-			catch (DbUpdateException ex)
-			{
-				if (ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx && sqlEx.Number == 547)
-					return ServiceResult<bool>.Failure(new Exception(sqlEx.Message));
+        public async Task<ServiceResult<bool>> DeleteChordChartAsync(string id)
+        {
+            var chart = await _context.ChordCharts.FindAsync(id);
+            if (chart == null)
+                return ServiceResult<bool>.Failure(
+                    new NotFoundException($"Chord chart with ID: {id} does not exist."));
 
-				return ServiceResult<bool>.Failure(new Exception($"error on deleting chart: {ex.Message}"));
-			}
-			catch (Exception ex)
-			{
-				return ServiceResult<bool>.Failure(new Exception($"error on deleting chart: {ex.Message}"));
-			}
-		}
-				
-	}
+            try
+            {
+                _context.ChordCharts.Remove(chart);
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting chord chart with ID: {Id}. Error: {Error}", id, ex);
+                return ServiceResult<bool>.Failure(new Exception(ex.Message));
+            }
+        }
+    }
 }

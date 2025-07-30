@@ -1,10 +1,10 @@
 ﻿
 <div tabindex="0" 
-     class="@($"w-100 position-relative p-5 d-flex flex-wrap gap-3 bg-white" + 
+     class="@($"w-100 position-relative d-flex flex-wrap gap-3 bg-white" + 
             $" {(Focused ? "border border-primary" : "border border-secondary")}")"
-     style="border-radius:1rem; border-bottom-right-radius:0.5rem"
+     style="@(Focused ? "padding:3rem" : "padding:1.75rem");border-radius:1rem; border-bottom-right-radius:0.5rem"
      @onfocus="OnFocusRow">
-    <span class="@($"position-absolute top-0 start-0 badge mt-2 ms-2 {(Focused ? "bg-primary" : "")}")">
+    <span class="@($"position-absolute top-0 start-0 badge {(Focused ? "bg-primary mt-2 ms-2" : "mt-1 ms-3")}")">
         Lyric Line @Line.ToString("00")
     </span>
 
@@ -40,17 +40,17 @@
     [Parameter] public int Line { get; set; }
     [Parameter] public bool Focused { get; set; }
     [Parameter] public List<SegmentCreateDto> Segments { get; set; }
-    [Parameter] public List<ChordDto> Chords { get; set; }
+    [Parameter] public List<ChordSimpleDto> Chords { get; set; }
     [Parameter] public string EditModeSegmentId { get; set; }
     [Parameter] public EventCallback OnFocusRow { get; set; }
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
-    [Parameter] public EventCallback<List<ChordDto>> OnChordsUpdate { get; set; }
+    [Parameter] public EventCallback<List<ChordSimpleDto>> OnChordsUpdate { get; set; }
     [Parameter] public EventCallback<string> OnEditModeSegmentIdChanged { get; set; }
 
     private bool addFormOpen = false;
     private SegmentCreateDto editSegment;
     private SegmentCreateDto editedSegment;
-    private ChordDto editedChord;
+    private ChordSimpleDto editedChord;
     private List<SegmentCreateDto> filteredSegments =>
         Segments?.Where(s => s.LineNumber == Line).ToList() ?? new();
 

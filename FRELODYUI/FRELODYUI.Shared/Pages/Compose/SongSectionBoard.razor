@@ -92,7 +92,7 @@
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
 
     // private List<SegmentCreateDto> segments = new();
-    private List<ChordDto> chords = new();
+    private List<ChordSimpleDto> chords = new();
     private int? focusedRow = null;
     private List<int> trackLines = new();
     private List<int> lines = new();
@@ -156,7 +156,7 @@
         }).ToList());
     }
 
-    private void HandleChordsUpdate(List<ChordDto> updatedChords)
+    private void HandleChordsUpdate(List<ChordSimpleDto> updatedChords)
     {
         chords = updatedChords;
     }

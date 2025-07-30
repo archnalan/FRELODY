@@ -2,7 +2,8 @@
 @using Microsoft.AspNetCore.WebUtilities
 @inject ILogger<SongBoard> _logger
 
-<div class="w-100 d-flex flex-column justify-content-center px-4">
+<div class="w-100 d-flex flex-column justify-content-center"
+     style="max-width: 65rem;justify-self: center;">
 	<h3 class="fw-bold text-center mb-3">Song Editor</h3>
     @if (isLoading)
     {

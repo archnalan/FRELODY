@@ -15,11 +15,11 @@ namespace FRELODYUI.Shared.RefitApis
         [Get("/api/songs/get-songs")]
         Task<IApiResponse<IEnumerable<ComboBoxDto>>> GetSongs();
 
-        [Get("/api/songs/get-song-with-chords-by-id/{id}")]
-        Task<IApiResponse<SongDto>> GetSongWithChordsById(string id);
+        [Get("/api/songs/get-song-with-chords-by-id")]
+        Task<ApiResponse<SongDto>> GetSongWithChordsById([Query] string Id);
 
         [Get("/api/songs/get-song-details-by-id/{id}")]
-        Task<IApiResponse<SongDto>> GetSongDetailsById(string id);
+        Task<IApiResponse<SongDto>> GetSongDetailsById([Query]string id);
 
         [Post("/api/songs/create-song")]
         Task<IApiResponse<SongDto>> CreateSong([Body] SimpleSongCreateDto song);
