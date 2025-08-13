@@ -1,8 +1,10 @@
-﻿using Refit;
+﻿using FRELODYLIB.Interfaces;
+using FRELODYSHRD.Interfaces;
 using FRELODYUI.Services;
 using FRELODYUI.Shared.RefitApis;
 using FRELODYUI.Shared.Services;
 using Microsoft.Extensions.Logging;
+using Refit;
 
 namespace FRELODYUI
 {
@@ -20,6 +22,9 @@ namespace FRELODYUI
 
             builder.Services.AddSingleton<IFormFactor, FormFactor>();
             builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
+            builder.Services.AddSingleton<IPrintService, MauiPrintService>();
+            builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
+            builder.Services.AddScoped<IShareService, ShareService>();
 
             var baseAddressApi = new Uri("https://localhost:7077");
 
@@ -35,7 +40,8 @@ namespace FRELODYUI
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
             builder.Services.AddRefitClient<IChordChartsApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
-
+            builder.Services.AddRefitClient<IShareApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
             builder.Services.AddMauiBlazorWebView();
 

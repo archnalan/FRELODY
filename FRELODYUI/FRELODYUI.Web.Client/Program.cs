@@ -1,8 +1,11 @@
-using Refit;
+using FRELODYSHRD.Interfaces;
+using FRELODYUI.Services;
 using FRELODYUI.Shared.RefitApis;
 using FRELODYUI.Shared.Services;
 using FRELODYUI.Web.Client.Services;
+using FRELODYUI.Web.Services;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Refit;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -25,10 +28,14 @@ builder.Services.AddRefitClient<ISongCollectionsApi>()
 
 builder.Services.AddRefitClient<ICategoriesApi>()
     .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+builder.Services.AddRefitClient<IShareApi>()
+               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
 
 // Add device-specific services used by the FRELODYUI.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
-
+builder.Services.AddScoped<IPrintService, WebPrintService>();
+builder.Services.AddScoped<IClipboardService, WebClipboardService>();
+builder.Services.AddScoped<IShareService, ShareService>();
 await builder.Build().RunAsync();

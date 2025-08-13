@@ -1,3 +1,5 @@
+using FRELODYSHRD.Interfaces;
+using FRELODYUI.Services;
 using FRELODYUI.Shared.RefitApis;
 using FRELODYUI.Shared.Services;
 using FRELODYUI.Web.Components;
@@ -15,6 +17,9 @@ builder.Services.AddRazorComponents()
 // Add device-specific services used by the FRELODYUI.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
+builder.Services.AddScoped<IPrintService, WebPrintService>();
+builder.Services.AddScoped<IClipboardService, WebClipboardService>();
+builder.Services.AddScoped<IShareService, ShareService>();
 
 var baseAddressApi = new Uri("https://localhost:7018");
 
@@ -30,6 +35,8 @@ builder.Services.AddRefitClient<IChordsApi>()
     .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 builder.Services.AddRefitClient<IChordChartsApi>()
     .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+builder.Services.AddRefitClient<IShareApi>()
+               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
 
 var app = builder.Build();

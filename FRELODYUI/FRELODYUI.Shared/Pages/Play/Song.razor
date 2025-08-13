@@ -13,14 +13,11 @@
     {
         <div class="w-100 h-100 shadow-lg border border-light rounded rounded-3 my-4" style="max-width:55rem;">
             <div class="d-flex gap-2 my-3 me-2" style="justify-content:end">
-                <button class="btn btn-outline-primary" @onclick="@(()=>CustomizeSong(song.Id))">
+                <button class="btn btn-outline-primary" @onclick="@(() => CustomizeSong(song.Id))">
                     <i class="bi bi-pencil-square"></i>
                     Customize
                 </button>
-                <button class="btn btn-primary">
-                    <i class="bi bi-printer-fill me-1"></i>
-                    Download
-                </button>
+                <ShareDropdown Song="song" OnActionCompleted="() => StateHasChanged()" />
             </div>
             <div class="d-flex justify-content-center align-items-center mb-4">
                 @if (song.SongNumber.HasValue)
@@ -181,6 +178,115 @@
         message = string.Empty;
         modalClass = string.Empty;
         StateHasChanged();
+    }
+
+    private string RenderSongHtml()
+    {
+        if (song is null) return string.Empty;
+
+        // simple standalone HTML for printing/sharing
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("<style>body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding:24px;} .title{font-weight:700; font-size:1.4rem; text-align:center; margin-bottom:8px;} .num{opacity:.6; margin-right:8px;} .section{margin-top:20px;} .line{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:6px;} .seg{display:flex; flex-direction:column; min-width:40px;} .ch{color:#0d6efd; font-weight:600; font-size:.9rem;} .ly{opacity:.9;}</style>");
+        sb.Append("<div class='header' style='display:flex; justify-content:center; align-items:center; margin-bottom:8px;'>");
+        if (song.SongNumber.HasValue)
+        {
+            sb.Append($"<span class='num'>{song.SongNumber.Value:D3}</span>");
+        }
+        sb.Append($"<div class='title'>{System.Net.WebUtility.HtmlEncode(song.Title)}</div></div>");
+
+        if (song.SongParts?.Any() == true)
+        {
+            foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
+            {
+                sb.Append($"<div class='section'><h3 style='text-align:center; opacity:.8;'>Verse {verse.PartNumber:D2}</h3>");
+                if (verse.LyricLines?.Any() == true)
+                {
+                    foreach (var line in verse.LyricLines.OrderBy(l => l.LyricLineOrder))
+                    {
+                        sb.Append("<div class='line'>");
+                        if (line.LyricSegments?.Any() == true)
+                        {
+                            foreach (var seg in line.LyricSegments.OrderBy(s => s.LyricOrder))
+                            {
+                                sb.Append("<div class='seg'>");
+                                if (seg.Chord != null)
+                                {
+                                    sb.Append($"<div class='ch'>{System.Net.WebUtility.HtmlEncode(seg.Chord.ChordName)}</div>");
+                                }
+                                sb.Append($"<div class='ly'>{System.Net.WebUtility.HtmlEncode(seg.Lyric ?? string.Empty)}</div>");
+                                sb.Append("</div>");
+                            }
+                        }
+                        sb.Append("</div>");
+                    }
+                }
+                sb.Append("</div>");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private async Task PrintAsync()
+    {
+        try
+        {
+            var html = RenderSongHtml();
+            //await _printService.PrintAsync(html, song?.Title ?? "Song");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Print failed for song {SongId}", SongId);
+            await OpenModal(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "Failed to print song.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+    }
+
+    private async Task ShareLinkAsync()
+    {
+        try
+        {
+            // var response = await _shareLinksApi.CreateShareLink(new FRELODYUI.Shared.Dtos.ShareLinkCreateRequest(SongId));
+            // if (response.IsSuccessStatusCode && response.Content is not null)
+            // {
+            //     var link = response.Content.Url;
+            //     await _clipboard.CopyTextAsync(link);
+            //     await OpenModal(new ModalOptionDto
+            //     {
+            //         Title = "Share link copied",
+            //         Message = link,
+            //         ButtonText = "Done",
+            //         OptionType = OptionType.Success
+            //     });
+            // }
+            // else
+            // {
+            //     var err = _apiResponseHandler.GetApiErrorMessage(response);
+            //     await OpenModal(new ModalOptionDto
+            //     {
+            //         Title = "Error",
+            //         Message = err,
+            //         ButtonText = "Close",
+            //         OptionType = OptionType.Error
+            //     });
+            // }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Share link creation failed for song {SongId}", SongId);
+            await OpenModal(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "Failed to create share link.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
     }
 
 }

@@ -1,0 +1,226 @@
+﻿@using FRELODYUI.Shared.Models
+@using FRELODYSHRD.Dtos
+@inject ILogger<ShareDropdown> _logger
+
+<div class="dropdown position-relative">
+    <button class="btn btn-primary dropdown-toggle"
+            type="button"
+            @onclick="ToggleDropdown"
+            disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+        }
+        else
+        {
+            <i class="bi bi-share-fill me-1"></i>
+        }
+        Share
+    </button>
+
+    @if (showDropdown)
+    {
+        <div class="dropdown-menu show position-absolute" style="top: 100%; left: 0; z-index: 1050;">
+            <button class="dropdown-item d-flex align-items-center"
+                    type="button"
+                    @onclick="HandleShareLink"
+                    disabled="@isLoading">
+                <i class="bi bi-link-45deg me-2"></i>
+                <span>Share Link</span>
+                @if (isGeneratingLink)
+                {
+                    <span class="spinner-border spinner-border-sm ms-auto" role="status"></span>
+                }
+            </button>
+
+            <div class="dropdown-divider"></div>
+
+            <button class="dropdown-item d-flex align-items-center"
+                    type="button"
+                    @onclick="HandlePrint"
+                    disabled="@isLoading">
+                <i class="bi bi-printer-fill me-2"></i>
+                <span>Print</span>
+                @if (isPrinting)
+                {
+                    <span class="spinner-border spinner-border-sm ms-auto" role="status"></span>
+                }
+            </button>
+        </div>
+    }
+</div>
+
+@if (showSuccessMessage)
+{
+    <div class="position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index: 2000;">
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => showSuccessMessage = false"></button>
+        </div>
+    </div>
+}
+
+@if (modalDisplay == "block;")
+{
+    <DialogModal ModalClass="@modalClass"
+                 ModalDisplay="@modalDisplay"
+                 Modal="@modalOption"
+                 OnCloseModal="CloseModal" />
+}
+
+@code {
+    [Parameter] public SongDto Song { get; set; } = default!;
+    [Parameter] public EventCallback OnActionCompleted { get; set; }
+
+    private bool showDropdown = false;
+    private bool isLoading = false;
+    private bool isGeneratingLink = false;
+    private bool isPrinting = false;
+    private bool showSuccessMessage = false;
+    private string successMessage = string.Empty;
+
+    public string modalDisplay = "none;";
+    public string modalClass = "";
+    private ModalOptionDto modalOption = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Click outside handler would be nice, but we'll keep it simple for now
+        await base.OnInitializedAsync();
+    }
+
+    private void ToggleDropdown()
+    {
+        showDropdown = !showDropdown;
+        StateHasChanged();
+    }
+
+    private async Task HandleShareLink()
+    {
+        if (Song == null) return;
+
+        isGeneratingLink = true;
+        showDropdown = false;
+        StateHasChanged();
+
+        try
+        {
+            var shareLink = await _shareService.GenerateShareLinkAsync(Song.Id);
+            if (shareLink != null)
+            {
+                await _clipboardService.CopyToClipboardAsync(shareLink.ShareUrl);
+                await ShowSuccessMessage("Share link copied to clipboard!");
+                await OnActionCompleted.InvokeAsync();
+            }
+            else
+            {
+                await OpenModal(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = "Failed to generate share link. Please try again.",
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating share link for song {SongId}", Song.Id);
+            await OpenModal(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "An error occurred while generating the share link.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+        finally
+        {
+            isGeneratingLink = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandlePrint()
+    {
+        if (Song == null) return;
+
+        isPrinting = true;
+        showDropdown = false;
+        StateHasChanged();
+
+        try
+        {
+            var printAvailable = await _printService.IsPrintAvailableAsync();
+            if (printAvailable)
+            {
+                await _printService.PrintSongAsync(Song);
+                await ShowSuccessMessage("Print dialog opened!");
+                await OnActionCompleted.InvokeAsync();
+            }
+            else
+            {
+                await OpenModal(new ModalOptionDto
+                {
+                    Title = "Print Unavailable",
+                    Message = "Printing is not available on this device.",
+                    ButtonText = "Close",
+                    OptionType = OptionType.Warning
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error printing song {SongId}", Song.Id);
+            await OpenModal(new ModalOptionDto
+            {
+                Title = "Print Error",
+                Message = "An error occurred while trying to print the song.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+        finally
+        {
+            isPrinting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowSuccessMessage(string message)
+    {
+        successMessage = message;
+        showSuccessMessage = true;
+        StateHasChanged();
+
+        // Auto-hide after 3 seconds
+        await Task.Delay(3000);
+        showSuccessMessage = false;
+        StateHasChanged();
+    }
+
+    private async Task OpenModal(ModalOptionDto option)
+    {
+        modalClass = "show";
+        modalDisplay = "block;";
+        modalOption = option;
+        await Task.CompletedTask;
+        StateHasChanged();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        modalDisplay = "none;";
+        modalClass = string.Empty;
+        StateHasChanged();
+    }
+
+    // Handle click outside dropdown to close it
+    private void HandleClickOutside()
+    {
+        showDropdown = false;
+        StateHasChanged();
+    }
+}

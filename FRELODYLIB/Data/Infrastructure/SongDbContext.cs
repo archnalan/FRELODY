@@ -37,7 +37,7 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<UserFeedback> UserFeedback { get; set; }
         public DbSet<Page> Pages { get; set; }
         public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
-
+        public DbSet<ShareLink> ShareLinks { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -129,8 +129,8 @@ namespace FRELODYAPP.Data.Infrastructure
                 .HasForeignKey(song => song.CategoryId);
 
             builder.Entity<Category>()
-                .HasOne<Category>()
-                .WithMany()
+                .HasOne(c => c.ParentCategory)
+                .WithMany(c => c.SubCategories)
                 .HasForeignKey(c => c.ParentCategoryId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -156,6 +156,23 @@ namespace FRELODYAPP.Data.Infrastructure
                 .Property(e => e.Status)
                 .HasConversion<string>();
 
+            // Configure ShareLink relationships
+            builder.Entity<ShareLink>()
+                .HasOne(sl => sl.Song)
+                .WithMany()
+                .HasForeignKey(sl => sl.SongId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ShareLink>()
+                .HasIndex(sl => sl.ShareToken)
+                .IsUnique();
+
+            builder.Entity<ShareLink>()
+                .HasIndex(sl => sl.CreatedAt);
+
+            builder.Entity<ShareLink>()
+                .HasIndex(sl => sl.ExpiresAt);
+            
             builder.Entity<User>(b =>
             {
                 b.HasIndex(u => u.TenantId);
