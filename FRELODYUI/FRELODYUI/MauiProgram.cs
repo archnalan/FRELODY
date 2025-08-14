@@ -42,6 +42,8 @@ namespace FRELODYUI
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
             builder.Services.AddRefitClient<IShareApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+            builder.Services.AddRefitClient<ISongSectionsApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
             builder.Services.AddMauiBlazorWebView();
 

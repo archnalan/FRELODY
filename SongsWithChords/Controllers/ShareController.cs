@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace FRELODYAPIs.Controllers
 {
@@ -38,21 +37,40 @@ namespace FRELODYAPIs.Controllers
                     return NotFound("Song not found");
                 }
 
-                // Generate a unique share token
+                // 1. Try to find an existing active, non-expired share link for this song
+                var now = DateTime.UtcNow;
+                var existing = await _context
+                    .ShareLinks
+                    .Where(sl =>
+                        sl.SongId == request.SongId &&
+                        sl.IsActive &&
+                        (!sl.ExpiresAt.HasValue || sl.ExpiresAt > now))
+                    .OrderByDescending(sl => sl.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                var baseUrl = GetBaseUrl();
+
+                if (existing is not null)
+                {
+                    var existingDto = existing.Adapt<ShareLinkDto>();
+                    existingDto.ShareUrl = $"{baseUrl}/shared/{existing.ShareToken}";
+                    _logger.LogInformation("Returned existing share link (Id: {Id}) for song {SongId}", existing.Id, request.SongId);
+                    return Ok(existingDto);
+                }
+
+                // 2. No reusable link found; generate a new one
                 var shareToken = GenerateUniqueToken();
 
-                // Calculate expiration date
                 var expiresAt = request.ExpirationDays.HasValue
-                    ? DateTime.UtcNow.AddDays(request.ExpirationDays.Value)
-                    : DateTime.UtcNow.AddDays(30); // Default 30 days
+                    ? now.AddDays(request.ExpirationDays.Value)
+                    : now.AddDays(30); // Default 30 days
 
-                // Create share link entity
                 var shareLink = new ShareLink
                 {
                     Id = Guid.NewGuid().ToString(),
                     SongId = request.SongId,
                     ShareToken = shareToken,
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = now,
                     ExpiresAt = expiresAt,
                     IsActive = true
                 };
@@ -60,21 +78,16 @@ namespace FRELODYAPIs.Controllers
                 _context.ShareLinks.Add(shareLink);
                 await _context.SaveChangesAsync();
 
-                // Map to DTO
                 var shareLinkDto = shareLink.Adapt<ShareLinkDto>();
-
-                // Set the share URL (this should be configurable based on environment)
-                var baseUrl = GetBaseUrl();
                 shareLinkDto.ShareUrl = $"{baseUrl}/shared/{shareToken}";
 
-                _logger.LogInformation("Share link generated for song {SongId} with token {ShareToken}",
-                    request.SongId, shareToken);
+                _logger.LogInformation("New share link generated for song {SongId} with token {ShareToken}", request.SongId, shareToken);
 
                 return Ok(shareLinkDto);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error generating share link for song {SongId}", request.SongId);
+                _logger.LogError(ex, "Error generating (or retrieving) share link for song {SongId}", request.SongId);
                 return StatusCode(500, "An error occurred while generating the share link");
             }
         }
@@ -84,7 +97,6 @@ namespace FRELODYAPIs.Controllers
         {
             try
             {
-                // Find the share link
                 var shareLink = await _context.ShareLinks
                     .FirstOrDefaultAsync(sl => sl.ShareToken == shareToken && sl.IsActive);
 
@@ -93,13 +105,11 @@ namespace FRELODYAPIs.Controllers
                     return NotFound("Share link not found");
                 }
 
-                // Check if expired
                 if (shareLink.ExpiresAt.HasValue && shareLink.ExpiresAt.Value < DateTime.UtcNow)
                 {
                     return StatusCode(403, "Share link has expired");
                 }
 
-                // Get the song with all its data
                 var song = await _context.Songs
                     .Include(s => s.SongParts)
                         .ThenInclude(sp => sp.LyricLines)
@@ -157,11 +167,9 @@ namespace FRELODYAPIs.Controllers
 
         private string GenerateUniqueToken()
         {
-            const int tokenLengthBytes = 32; // 256-bit
+            const int tokenLengthBytes = 32;
             Span<byte> tokenBytes = stackalloc byte[tokenLengthBytes];
             RandomNumberGenerator.Fill(tokenBytes);
-
-            // Base64Url (RFC 4648 §5) – URL safe, no padding, no manual Replace required
             return WebEncoders.Base64UrlEncode(tokenBytes);
         }
 
