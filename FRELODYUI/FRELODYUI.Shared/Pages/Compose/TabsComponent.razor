@@ -4,13 +4,27 @@
         <div class="p-2 border rounded rounded-3 flex-wrap d-flex justify-content-start align-items-center gap-2 fw-bold text-primary bg-light">
             @foreach (var item in Items)
             {
-                <div class="@GetTabClass(item.Id)" @onclick="() => SetSelectedTab(item.Id)">
-                    <div class="me-3">
-						<span class="fw-normal">@item.Title @(Items.IndexOf(item) + 1)</span>
+                <div class="@GetTabClass(item.Id)" @onclick="() => SetSelectedTab(item.Id)" @onclick:stopPropagation>
+                     
+                    <div class="d-inline-flex align-items-center">
+                        <select class="form-select form-select-sm border-secondary bg-light fw-normal p-1"
+                                style="min-width:5.5rem;"
+                                value="@item.SectionName"
+                                @onchange="@((ChangeEventArgs e) => HandleSectionChanged(item.Id, e.Value?.ToString()))">
+                            @foreach (var sectionName in SongSectionNames)
+                            {
+                                <option value="@sectionName">
+                                    @((sectionName.Length > NAME_MAX_LEN ? sectionName.Substring(0, NAME_MAX_LEN) + "..." : sectionName))
+                                </option>
+                            }
+                        </select>
+                        <span class="ms-1">@item.SectionNumber</span>
                     </div>
-                    <button class="btn btn-sm btn-link text-primary text-decoration-none"
-                            @onclick="() => HandleTabRemove(item.Id)">
-                        <span aria-hidden="true" class="m-0 fs-4 rounded-circle">&times;</span>
+                    <button class="btn btn-sm btn-outline-light text-primary text-decoration-none"
+                            @onclick="() => HandleTabRemove(item.Id)"
+                            @onclick:stopPropagation="true"
+                            title="Remove section">
+                        <i class="bi bi-x text-danger"></i>
                     </button>
                 </div>
             }
@@ -33,31 +47,81 @@
 </div>
 
 @code {
-    [Parameter] public List<TabsComponentItem> InitialItems { get; set; }
+    [Parameter] public List<TabsComponentItem>? InitialItems { get; set; }
     [Parameter] public int ItemsCountLimit { get; set; }
     [Parameter] public EventCallback<int> OnTabAdd { get; set; }
-    [Parameter] public Func<int, RenderFragment> RenderTab { get; set; }
+    [Parameter] public Func<int, RenderFragment>? RenderTab { get; set; }
+    [Parameter] public EventCallback<TabsComponentItem> SectionTitleChanged { get; set; }
 
     private List<TabsComponentItem> Items { get; set; } = new();
+    private List<ComboBoxDto> SongSections { get; set; } = new();
+    private string[] SongSectionNames { get; set; } = [];
     private int SelectedTab { get; set; } = 1;
     private const int INITIAL_ID = 1;
-
-    protected override void OnInitialized()
-    {
-        Items = InitialItems.Select((item, i) => new TabsComponentItem
-            {
-                Id = INITIAL_ID + i,
-                Title = item.Title,
-                Content = item.Content
-            }).ToList();
-    }
+    private const int NAME_MAX_LEN = 7;
+    
+    private void SetSelectedTab(int id) => SelectedTab = id;
 
     private string GetTabClass(int id) =>
         SelectedTab == id
             ? "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded rounded-3 border border-primary bg-white text-primary shadow cursor-pointer"
             : "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded rounded-3 cursor-pointer hover-light";
 
-    private void SetSelectedTab(int id) => SelectedTab = id;
+    protected override async Task OnInitializedAsync()
+    {
+        // Extract enum values once during initialization
+        SongSectionNames = Enum.GetNames(typeof(SongSection));
+        
+        if (InitialItems != null)
+        {
+            Items = InitialItems.Select((item, i) => new TabsComponentItem
+            {
+                Id = INITIAL_ID + i,
+                SectionName = item.SectionName.ToString(),
+                SectionNumber = item.SectionNumber,
+                Content = item.Content
+            }).ToList();
+        }       
+        await LoadSongSections();
+    }
+
+    private async Task LoadSongSections()
+    {
+        try
+        {
+            var sectionResponse = await _songSectionsApi.GetComboBoxSongSections();
+            if (sectionResponse.IsSuccessStatusCode && sectionResponse.Content is { Count: > 0 })
+            {
+                SongSections = sectionResponse.Content!;
+            }
+            else
+            {
+                // Fallback to local enum if API fails
+                SongSections = Enum.GetValues<SongSection>()
+                    .Select((s, idx) => new ComboBoxDto { Id = idx, ValueText = s.ToString(), IdString = s.ToString() })
+                    .ToList();
+            }
+        }
+        catch
+        {
+            SongSections = Enum.GetValues<SongSection>()
+                .Select((s, idx) => new ComboBoxDto { Id = idx, ValueText = s.ToString(), IdString = s.ToString() })
+                .ToList();
+        }
+    }
+
+    private void HandleSectionChanged(int tabId, string? newSectionName)
+    {
+        var tab = Items.FirstOrDefault(item => item.Id == tabId);
+
+        if (tab == null || string.IsNullOrEmpty(newSectionName)) return;
+
+        tab.SectionName = newSectionName;
+        if (SectionTitleChanged.HasDelegate)
+        {
+            SectionTitleChanged.InvokeAsync(tab);
+        }
+    }
 
     private void HandleTabRemove(int id)
     {
@@ -74,21 +138,30 @@
 
         var newId = Items.Count > 0 ? Items.Max(i => i.Id) + 1 : INITIAL_ID;
         var newTab = new TabsComponentItem
-            {
-                Id = newId,
-                Title = InitialItems[0].Title,
-                Content = RenderTab?.Invoke(newId)
-            };
+        {
+            Id = newId,
+            SectionName = nameof(SongSection.Verse), // Default to Verse
+            SectionNumber = newId,     // Set section number = tab ID
+            Content = RenderTab!.Invoke(newId)
+        };
 
         Items.Add(newTab);
         SelectedTab = newId;
         OnTabAdd.InvokeAsync(newId);
     }
+
     public class TabsComponentItem
     {
         public int Id { get; set; }
-        public RenderFragment Title { get; set; }
-        public RenderFragment Content { get; set; }
+        public string SectionName { get; set; } = nameof(SongSection.Verse); // Default to Verse
+        public int SectionNumber { get; set; }
+        public RenderFragment Content { get; set; } = default!;
+
+        public SongSection SectionEnum
+        {
+            get => Enum.Parse<SongSection>(SectionName);
+            set => SectionName = value.ToString();
+        }
     }
 }
 

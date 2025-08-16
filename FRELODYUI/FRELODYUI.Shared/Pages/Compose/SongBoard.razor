@@ -35,9 +35,10 @@
         @if (initialPartsItems.Any())
         {
             <TabsComponent InitialItems="initialPartsItems"
-            ItemsCountLimit="MAX_SECTIONS"
-                       OnTabAdd="HandleTabAdd"
-            RenderTab="RenderVerseTab" />
+                           ItemsCountLimit="MAX_SECTIONS"
+                           OnTabAdd="HandleTabAdd"
+                           RenderTab="RenderVerseTab"
+                           SectionTitleChanged="HandleSectionTitleChanged" />
         }
         else
         {
@@ -96,7 +97,8 @@
                     new TabsComponent.TabsComponentItem
                     {
                         Id = 1,
-                        Title = builder => builder.AddContent(0, SongSection.Verse),
+                        SectionName = nameof(SongSection.Verse),
+                        SectionNumber = 1,
                         Content = builder =>
                         {
                             builder.OpenComponent<SongSectionBoard>(0);
@@ -121,13 +123,13 @@
                     initialPartsItems = new List<TabsComponent.TabsComponentItem>();
                     AllPartsSegments = new Dictionary<int, List<SegmentCreateDto>>();
 
-                    // Process verses
-                    foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
+                    // Process parts
+                    foreach (var part in song.SongParts!.OrderBy(v => v.PartNumber))
                     {
                         var verseSegments = new List<SegmentCreateDto>();
-                        foreach (var line in verse.LyricLines.OrderBy(ll => ll.LyricLineOrder))
+                        foreach (var line in part.LyricLines!.OrderBy(ll => ll.LyricLineOrder))
                         {
-                            foreach (var segment in line.LyricSegments.OrderBy(ls => ls.LyricOrder))
+                            foreach (var segment in line.LyricSegments!.OrderBy(ls => ls.LyricOrder))
                             {
                                 verseSegments.Add(new SegmentCreateDto
                                     {
@@ -136,27 +138,28 @@
                                         ChordId = segment.ChordId?.ToString(),
                                         ChordName = segment.Chord?.ChordName,
                                         LineNumber = line.LyricLineOrder,
-                                        PartNumber = verse.PartNumber,
+                                        PartNumber = part.PartNumber,
                                         PartName = SongSection.Verse,
                                         LyricOrder = segment.LyricOrder
                                     });
                             }
                         }
 
-                        AllPartsSegments[verse.PartNumber] = verseSegments;
+                        AllPartsSegments[part.PartNumber] = verseSegments;
 
                         initialPartsItems.Add(new TabsComponent.TabsComponentItem
                             {
-                                Id = verse.PartNumber,
-                                Title = builder => builder.AddContent(0, $"{SongSection.Verse} {verse.PartNumber}"),
+                                Id = part.PartNumber,
+                                SectionName = part.PartName.ToString() ?? nameof(SongSection.Verse),
+                                SectionNumber = part.PartNumber,
                                 Content = builder =>
                                 {
                                     builder.OpenComponent<SongSectionBoard>(0);
-                                    builder.AddAttribute(1, "SectionId", verse.PartNumber);
+                                    builder.AddAttribute(1, "SectionId", part.PartNumber);
                                     builder.AddAttribute(2, "OnSegmentsUpdate",
                                         EventCallback.Factory.Create<List<SegmentCreateDto>>(
-                                            this, segments => HandleVerseUpdate(verse.PartNumber, segments)));
-                                    builder.AddAttribute(3, "Segments", AllPartsSegments[verse.PartNumber]);
+                                            this, segments => HandleVerseUpdate(part.PartNumber, segments)));
+                                    builder.AddAttribute(3, "Segments", AllPartsSegments[part.PartNumber]);
                                     builder.CloseComponent();
                                 }
                             });
@@ -266,7 +269,22 @@
             AllPartsSegments[newTabId] = new List<SegmentCreateDto>();
         }
     }
-   
+
+    private void HandleSectionTitleChanged(TabsComponent.TabsComponentItem tabItem)
+    {
+        if (AllPartsSegments.TryGetValue(tabItem.Id, out var segments))
+        {
+            foreach (var segment in segments)
+            {
+                // string back to enum
+                if (Enum.TryParse<SongSection>(tabItem.SectionName, out var section))
+                {
+                    segment.PartName = section;
+                }
+            }
+        }
+    }
+
     private async Task OpenModal(ModalOptionDto option)
     {
         modalClass = "show";
