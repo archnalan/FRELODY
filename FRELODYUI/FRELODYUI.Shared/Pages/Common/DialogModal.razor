@@ -1,5 +1,10 @@
-﻿
-<div class="modal fade @ModalClass" tabindex="-1" role="dialog" style="display:@ModalDisplay" aria-hidden="true">
+﻿@*@typeparam T*@
+
+<div class="modal fade @(IsVisible ? "show" : "")"
+     style="display: @(IsVisible ? "block" : "none");"
+     tabindex="-1"
+     role="dialog"
+     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="z-index:1055">
         <div class="modal-content px-5">
             <div class="modal-body border-0 p-0 mt-4">
@@ -30,70 +35,55 @@
                 </div>
             </div>
             <div class="modal-footer @(HasSingleButton ? "justify-content-center" : "justify-content-between") border-0 p-0 mb-3">
-                @if (Modal.OptionType == OptionType.Success 
-                 || Modal.OptionType == OptionType.Error
-                 || Modal.OptionType == OptionType.Warning)
+                @if (Modal.OptionType == OptionType.Confirmation)
                 {
-                    <button class="btn btn-primary" style="width:7rem" @onclick="CloseModal">@Modal.ButtonText</button>
-                }                
+                    <button class="btn btn-outline-primary"
+                            style="width:7rem"
+                            @onclick="CloseModal">
+                        Cancel
+                    </button>
+                    <button class="btn btn-primary"
+                            style="width:7rem"
+                            @onclick="ConfirmOption">
+                        @(Modal.ButtonText ?? "Confirm")
+                    </button>
+                }
                 else
                 {
-
-                    <button class="btn btn-outline-primary" style="width:7rem" @onclick="CloseModal">Cancel</button>
-                    <button class="btn btn-primary" style="width:7rem" @onclick="CloseModal">@(Modal.ButtonText ?? "OK")</button>
+                    <button class="btn btn-primary"
+                            style="width:7rem"
+                            @onclick="CloseModal">
+                        @(Modal.ButtonText ?? "OK")
+                    </button>
                 }
             </div>
         </div>
     </div>   
 </div>
-@if (ShowBackdrop)
+@if (IsVisible)
 {
-    <div class="w-100 h-100 border modal-backdrop fade show" style="z-index:1000" data-dismiss="modal" @onclick="CloseModal"></div>
+    <div class="modal-backdrop fade show" style="z-index:1000"></div>
 }
 
 @code {
-    [Parameter]
-    public ModalOptionDto Modal { get; set; } = default!;
-
-    [Parameter]
-    public string ModalDisplay { get; set; } = "none;";
-
-    [Parameter]
-    public string ModalClass { get; set; } = "";
-
-    [Parameter]
-    public bool ShowBackdrop { get; set; } = false;
-
-    [Parameter]
-    public EventCallback OnCloseModal { get; set; }
-
-    [Parameter]
-    public EventCallback OnConfirmModal { get; set; }
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public ModalOptionDto Modal { get; set; } = default!;
+    [Parameter] public EventCallback OnCloseModal { get; set; }
+    [Parameter] public EventCallback OnConfirmModal { get; set; }
+    //[Parameter] public T? Data { get; set; }
 
     private bool HasSingleButton =>
-        Modal.OptionType == OptionType.Success 
-        || Modal.OptionType == OptionType.Error
-        || Modal.OptionType == OptionType.Warning;
-
-    protected override Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-        }
-        return base.OnAfterRenderAsync(firstRender);
-    }
+        Modal.OptionType != OptionType.Confirmation;
 
     private async Task CloseModal()
     {
-        ShowBackdrop = false;
-        if(OnCloseModal.HasDelegate)
+        if (OnCloseModal.HasDelegate)
             await OnCloseModal.InvokeAsync();
     }
 
     private async Task ConfirmOption()
     {
-        if(OnConfirmModal.HasDelegate)
+        if (OnConfirmModal.HasDelegate)
             await OnConfirmModal.InvokeAsync();
     }
-
 }

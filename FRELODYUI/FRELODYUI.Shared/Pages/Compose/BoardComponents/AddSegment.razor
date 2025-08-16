@@ -31,12 +31,12 @@ else
     </button>
 }
 
-@if (modalDisplay == "block;")
+@if (_modalService.IsModalVisible)
 {
-    <DialogModal ModalClass="@modalClass"
-                 ModalDisplay="@modalDisplay"
-                 Modal="@modalOption"
-                 OnCloseModal="CloseModal" />
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
 }
 
 @code {
@@ -51,10 +51,6 @@ else
 
     private string addFormSegment;
     private string? addFormChordId;
-    public string modalDisplay = "none;";
-    public string modalClass = "";
-    private string message = "";
-    private ModalOptionDto modalOption = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -70,12 +66,17 @@ else
         else
         {
             var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "Error",
                 Message = errorMessage,
                 ButtonText = "Close",
-                OptionType = OptionType.Error
+                OptionType = OptionType.Error,
+                Context= new ModalContext
+                {
+                    ActionType = "LoadChords",
+                    Data = errorMessage
+                }
             });
         }
 
@@ -122,21 +123,16 @@ else
         // Your logic to save the chord to visit history
     }
 
-    private async Task OpenModal(ModalOptionDto option)
+    private async Task ConfirmModal()
     {
-        modalClass = "show";
-        modalDisplay = "block;";
-        modalOption = option;
-        await Task.CompletedTask;
-        StateHasChanged();
+        //Handle specific contexts
+        await CloseModal();
     }
 
     private async Task CloseModal()
     {
         await Task.Delay(100);
-        modalDisplay = "none;";
-        message = string.Empty;
-        modalClass = string.Empty;
+        _modalService.Close();
         StateHasChanged();
     }
 }

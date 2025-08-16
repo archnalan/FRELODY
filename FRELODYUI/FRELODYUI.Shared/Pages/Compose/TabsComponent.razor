@@ -1,16 +1,17 @@
-﻿
-<div class="bg-light d-flex justify-content-center align-items-center py-4">
+﻿<div class="bg-light d-flex justify-content-center align-items-center py-4">
     <div class="d-flex flex-column w-100">
-        <div class="p-2 border rounded rounded-3 flex-wrap d-flex justify-content-start align-items-center gap-2 fw-bold text-primary bg-light">
+        <div class="p-2 border rounded rounded-3 flex-wrap d-flex justify-content-start align-items-center gap-2 fw-bold text-primary bg-light" style="cursor:pointer">
             @foreach (var item in Items)
             {
-                <div class="@GetTabClass(item.Id)" @onclick="() => SetSelectedTab(item.Id)" @onclick:stopPropagation>
+                var currentItem = item; // Capture the item in the loop
+                <div class="@GetTabClass(item.Id)" @onclick="() => SetSelectedTab(item.Id)">
                      
                     <div class="d-inline-flex align-items-center">
                         <select class="form-select form-select-sm border-secondary bg-light fw-normal p-1"
                                 style="min-width:5.5rem;"
-                                value="@item.SectionName"
-                                @onchange="@((ChangeEventArgs e) => HandleSectionChanged(item.Id, e.Value?.ToString()))">
+                                value="@currentItem.SectionName"
+                                @onchange="@((ChangeEventArgs e) => HandleSectionChanged(currentItem.Id, e.Value?.ToString()))"
+                                @onclick:stopPropagation>
                             @foreach (var sectionName in SongSectionNames)
                             {
                                 <option value="@sectionName">
@@ -18,10 +19,18 @@
                                 </option>
                             }
                         </select>
-                        <span class="ms-1">@item.SectionNumber</span>
+                        @if (SectionAllowsNumbering(currentItem.SectionName))
+                        {
+                            <input type="number"
+                                   class="form-control form-control-sm ms-1"
+                                   style="width:3rem;"
+                                   min="1"
+                                   value="@currentItem.SectionNumber"
+                                   @onchange="@(e => HandleSectionNumberChanged(currentItem.Id, e))" />
+                        }                       
                     </div>
                     <button class="btn btn-sm btn-outline-light text-primary text-decoration-none"
-                            @onclick="() => HandleTabRemove(item.Id)"
+                            @onclick="() => HandleTabRemove(currentItem.Id)"
                             @onclick:stopPropagation="true"
                             title="Remove section">
                         <i class="bi bi-x text-danger"></i>
@@ -46,32 +55,54 @@
     </div>
 </div>
 
+@if (_modalService.IsModalVisible)
+{
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
+}
+
 @code {
     [Parameter] public List<TabsComponentItem>? InitialItems { get; set; }
     [Parameter] public int ItemsCountLimit { get; set; }
     [Parameter] public EventCallback<int> OnTabAdd { get; set; }
     [Parameter] public Func<int, RenderFragment>? RenderTab { get; set; }
     [Parameter] public EventCallback<TabsComponentItem> SectionTitleChanged { get; set; }
+    [Parameter] public EventCallback<TabsComponentItem> SectionNumberChanged { get; set; }
 
     private List<TabsComponentItem> Items { get; set; } = new();
-    private List<ComboBoxDto> SongSections { get; set; } = new();
     private string[] SongSectionNames { get; set; } = [];
     private int SelectedTab { get; set; } = 1;
+    private int? tabIdToRemove = null;
     private const int INITIAL_ID = 1;
     private const int NAME_MAX_LEN = 7;
-    
+
+    private readonly HashSet<string> SingleInstanceSections = new()
+    {
+        nameof(SongSection.Intro),
+        nameof(SongSection.Outro),
+        nameof(SongSection.Coda)
+    };
+    private bool SectionAllowsNumbering(string sectionName) => !SingleInstanceSections.Contains(sectionName);
+
     private void SetSelectedTab(int id) => SelectedTab = id;
 
     private string GetTabClass(int id) =>
         SelectedTab == id
             ? "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded rounded-3 border border-primary bg-white text-primary shadow cursor-pointer"
-            : "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded rounded-3 cursor-pointer hover-light";
+            : "d-inline-flex py-2 ps-2 pe-1 align-items-center cursor-pointer hover-light border-end";
+
+    private List<TabsComponentItem> GetOrderedItems() =>
+        Items.OrderBy(item => Array.IndexOf(SongSectionNames, item.SectionName))
+             .ThenBy(item => item.SectionNumber)
+             .ToList();
 
     protected override async Task OnInitializedAsync()
     {
         // Extract enum values once during initialization
         SongSectionNames = Enum.GetNames(typeof(SongSection));
-        
+
         if (InitialItems != null)
         {
             Items = InitialItems.Select((item, i) => new TabsComponentItem
@@ -79,70 +110,240 @@
                 Id = INITIAL_ID + i,
                 SectionName = item.SectionName.ToString(),
                 SectionNumber = item.SectionNumber,
-                Content = item.Content
+                Content = item.Content,
+                DisplayOrder = INITIAL_ID + i // Add display order to maintain user's intended sequence
             }).ToList();
-        }       
-        await LoadSongSections();
+        }
+        await base.OnInitializedAsync();
     }
 
-    private async Task LoadSongSections()
+    private bool IsSectionCombinationTaken(string sectionName, int sectionNumber, int excludeId = 0)
     {
-        try
+        // For single-instance sections, only check if the section name is taken
+        if (!SectionAllowsNumbering(sectionName))
         {
-            var sectionResponse = await _songSectionsApi.GetComboBoxSongSections();
-            if (sectionResponse.IsSuccessStatusCode && sectionResponse.Content is { Count: > 0 })
-            {
-                SongSections = sectionResponse.Content!;
-            }
-            else
-            {
-                // Fallback to local enum if API fails
-                SongSections = Enum.GetValues<SongSection>()
-                    .Select((s, idx) => new ComboBoxDto { Id = idx, ValueText = s.ToString(), IdString = s.ToString() })
-                    .ToList();
-            }
+            return Items.Any(item => item.SectionName == sectionName && item.Id != excludeId);
         }
-        catch
-        {
-            SongSections = Enum.GetValues<SongSection>()
-                .Select((s, idx) => new ComboBoxDto { Id = idx, ValueText = s.ToString(), IdString = s.ToString() })
-                .ToList();
-        }
+
+        return Items.Any(item => item.SectionName == sectionName &&
+                         item.SectionNumber == sectionNumber &&
+                         item.Id != excludeId);
     }
 
-    private void HandleSectionChanged(int tabId, string? newSectionName)
+    private int GetOptimalSectionNumber(string sectionName, int preferredNumber, int excludeId = 0)
+    {
+        if (!SectionAllowsNumbering(sectionName))
+        {
+            return 1;
+        }
+
+        // If the preferred number is available, use it
+        if (!IsSectionCombinationTaken(sectionName, preferredNumber, excludeId))
+        {
+            return preferredNumber;
+        }
+
+        // Find all taken numbers for this section (excluding current item)
+        var takenNumbers = Items.Where(item => item.SectionName == sectionName && item.Id != excludeId)
+                               .Select(item => item.SectionNumber)
+                               .OrderBy(n => n)
+                               .ToList();
+
+        // Try to find a gap in the sequence starting from 1
+        for (int i = 1; i <= takenNumbers.Count + 1; i++)
+        {
+            if (!takenNumbers.Contains(i))
+            {
+                return i;
+            }
+        }
+
+        // Fallback (should never reach here with the logic above)
+        return takenNumbers.Count + 1;
+    }
+
+    private void SwapTabPositions(TabsComponentItem sourceTab, TabsComponentItem targetTab)
+    {
+        // Swap only the display order to maintain user's visual arrangement
+        (sourceTab.DisplayOrder, targetTab.DisplayOrder) = (targetTab.DisplayOrder, sourceTab.DisplayOrder);
+
+        // Re-sort the Items list by display order to maintain the visual sequence
+        Items = Items.OrderBy(item => item.DisplayOrder).ToList();
+    }
+
+    private void ReorderAndInsertTab(TabsComponentItem tab, int newSectionNumber)
+    {
+        var oldNumber = tab.SectionNumber;
+        var sameSection = Items
+            .Where(item => item.SectionName == tab.SectionName && item.Id != tab.Id)
+            .OrderBy(item => item.SectionNumber)
+            .ToList();
+
+        var conflictingItem = sameSection.FirstOrDefault(item => item.SectionNumber == newSectionNumber);
+        if (conflictingItem != null)
+        {
+            // Instead of shifting all items, just swap positions with the conflicting item
+            SwapTabPositions(tab, conflictingItem);
+
+            // Update section numbers
+            tab.SectionNumber = newSectionNumber;
+            conflictingItem.SectionNumber = oldNumber;
+
+            // Notify parent of both changed tabs
+            if (SectionNumberChanged.HasDelegate)
+            {
+                SectionNumberChanged.InvokeAsync(tab);
+                SectionNumberChanged.InvokeAsync(conflictingItem);
+            }
+        }
+        else
+        {
+            // No conflict, just update the number
+            tab.SectionNumber = newSectionNumber;
+
+            if (SectionNumberChanged.HasDelegate)
+            {
+                SectionNumberChanged.InvokeAsync(tab);
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async Task HandleSectionChanged(int tabId, string? newSectionName)
     {
         var tab = Items.FirstOrDefault(item => item.Id == tabId);
 
         if (tab == null || string.IsNullOrEmpty(newSectionName)) return;
 
+        var oldSectionName = tab.SectionName;
         tab.SectionName = newSectionName;
+
+        // If the section name changed, find the optimal number for the new section
+        if (oldSectionName != newSectionName)
+        {
+            var optimalNumber = GetOptimalSectionNumber(newSectionName, tab.SectionNumber, tabId);
+            
+            // Check if there's a conflict with the optimal number
+            if (IsSectionCombinationTaken(newSectionName, optimalNumber, tabId))
+            {
+                // Find the item that conflicts and swap positions
+                var conflictingItem = Items.FirstOrDefault(item => 
+                    item.SectionName == newSectionName && 
+                    item.SectionNumber == optimalNumber && 
+                    item.Id != tabId);
+                
+                if (conflictingItem != null)
+                {
+                    // Swap display positions and section numbers
+                    SwapTabPositions(tab, conflictingItem);
+                    var tempNumber = tab.SectionNumber;
+                    tab.SectionNumber = optimalNumber;
+                    conflictingItem.SectionNumber = tempNumber;
+                    conflictingItem.SectionName = oldSectionName;
+
+                    // Notify parent of both changes
+                    if (SectionNumberChanged.HasDelegate)
+                    {
+                        await SectionNumberChanged.InvokeAsync(conflictingItem);
+                    }
+                }
+            }
+            else
+            {
+                tab.SectionNumber = optimalNumber;
+            }
+        }
+
+        // Ensure the edited tab remains selected
+        SelectedTab = tabId;
+
         if (SectionTitleChanged.HasDelegate)
         {
-            SectionTitleChanged.InvokeAsync(tab);
+            await SectionTitleChanged.InvokeAsync(tab);
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task HandleSectionNumberChanged(int tabId, ChangeEventArgs e)
+    {
+        var tab = Items.FirstOrDefault(item => item.Id == tabId);
+        if (tab == null) return;
+
+        if (int.TryParse(e.Value?.ToString(), out int newNumber) && newNumber >= 1)
+        {
+            // Check if this is just staying at the same number (no change needed)
+            if (tab.SectionNumber == newNumber)
+            {
+                return;
+            }
+
+            // If the target number is available, just set it
+            if (!IsSectionCombinationTaken(tab.SectionName, newNumber, tabId))
+            {
+                tab.SectionNumber = newNumber;
+            }
+            else
+            {
+                // There's a conflict - use swap logic instead of shifting all items
+                ReorderAndInsertTab(tab, newNumber);
+            }
+
+            // Ensure the edited tab remains selected
+            SelectedTab = tabId;
+
+            if (SectionNumberChanged.HasDelegate)
+            {
+                await SectionNumberChanged.InvokeAsync(tab);
+            }
+
+            StateHasChanged();
         }
     }
 
     private void HandleTabRemove(int id)
     {
-        Items.RemoveAll(item => item.Id == id);
-        if (SelectedTab == id && Items.Count > 0)
+        tabIdToRemove = id;
+        _modalService.Show(new ModalOptionDto
         {
-            SelectedTab = Items[0].Id;
-        }
+            Title = "Remove Section",
+            Message = "Are you sure you want to remove this section? All section data will be lost!",
+            ButtonText = "Remove",
+            OptionType = OptionType.Confirmation,
+            Context = new ModalContext
+            {
+               ActionType = "RemoveTab",
+                Data = id
+            }
+        });       
     }
 
     private void HandleAddTab()
     {
         if (Items.Count >= ItemsCountLimit) return;
 
-        var newId = Items.Count > 0 ? Items.Max(i => i.Id) + 1 : INITIAL_ID;
+        var newId = Items.Any() ? Items.Max(i => i.Id) + 1 : INITIAL_ID;
+        var defaultSectionName = nameof(SongSection.Verse);
+
+        // Get next available number at the end
+        var maxNumber = Items
+            .Where(item => item.SectionName == defaultSectionName)
+            .Select(item => item.SectionNumber)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        var sectionNumber = maxNumber + 1;
+
+        // Get the next display order to maintain sequence
+        var maxDisplayOrder = Items.Any() ? Items.Max(i => i.DisplayOrder) : 0;
+
         var newTab = new TabsComponentItem
         {
             Id = newId,
-            SectionName = nameof(SongSection.Verse), // Default to Verse
-            SectionNumber = newId,     // Set section number = tab ID
-            Content = RenderTab!.Invoke(newId)
+            SectionName = defaultSectionName,
+            SectionNumber = sectionNumber,
+            Content = RenderTab!.Invoke(newId),
+            DisplayOrder = maxDisplayOrder + 1
         };
 
         Items.Add(newTab);
@@ -150,18 +351,49 @@
         OnTabAdd.InvokeAsync(newId);
     }
 
+    private void CloseModal()
+    {
+        _modalService.Close();
+        if(_modalService.CurrentModal.Context?.ActionType == "RemoveTab")
+        {
+            tabIdToRemove = null;
+        }
+        else
+        {
+            _modalService.CurrentModal.Context = null; 
+        }
+        tabIdToRemove = null;
+        StateHasChanged();
+    }
+
+    private void ConfirmModal()
+    {
+        if(_modalService.CurrentModal.Context?.ActionType != "RemoveTab")
+        {
+            return;
+        }
+        if (tabIdToRemove.HasValue)
+        {
+            Items.RemoveAll(item => item.Id == tabIdToRemove.Value);
+            if (SelectedTab == tabIdToRemove.Value && Items.Count > 0)
+            {
+                SelectedTab = Items[0].Id;
+            }
+        }
+        _modalService.Close();
+        tabIdToRemove = null;
+    }
+
+
     public class TabsComponentItem
     {
         public int Id { get; set; }
         public string SectionName { get; set; } = nameof(SongSection.Verse); // Default to Verse
         public int SectionNumber { get; set; }
+        public int DisplayOrder { get; set; } 
         public RenderFragment Content { get; set; } = default!;
 
-        public SongSection SectionEnum
-        {
-            get => Enum.Parse<SongSection>(SectionName);
-            set => SectionName = value.ToString();
-        }
+        public SongSection SectionEnum => Enum.Parse<SongSection>(SectionName);
     }
 }
 

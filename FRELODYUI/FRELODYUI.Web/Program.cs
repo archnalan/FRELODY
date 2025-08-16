@@ -20,6 +20,7 @@ builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
 builder.Services.AddScoped<IPrintService, WebPrintService>();
 builder.Services.AddScoped<IClipboardService, WebClipboardService>();
 builder.Services.AddScoped<IShareService, ShareService>();
+builder.Services.AddScoped<IModalService, ModalService>();
 
 var baseAddressApi = new Uri("https://localhost:7018");
 

@@ -61,12 +61,12 @@
     </div>
 }
 
-@if (modalDisplay == "block;")
+@if (_modalService.IsModalVisible)
 {
-    <DialogModal ModalClass="@modalClass"
-                 ModalDisplay="@modalDisplay"
-                 Modal="@modalOption"
-                 OnCloseModal="CloseModal" />
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
 }
 
 @code {
@@ -79,10 +79,6 @@
     private bool isPrinting = false;
     private bool showSuccessMessage = false;
     private string successMessage = string.Empty;
-
-    public string modalDisplay = "none;";
-    public string modalClass = "";
-    private ModalOptionDto modalOption = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -115,24 +111,34 @@
             }
             else
             {
-                await OpenModal(new ModalOptionDto
-                {
-                    Title = "Error",
-                    Message = "Failed to generate share link. Please try again.",
-                    ButtonText = "Close",
-                    OptionType = OptionType.Error
-                });
+                _modalService.Show(new ModalOptionDto
+                    {
+                        Title = "Share Link Error",
+                        Message = "Failed to generate share link. Please try again later.",
+                        ButtonText = "Close",
+                        OptionType = OptionType.Error,
+                        Context = new ModalContext
+                        {
+                            ActionType = "GenerateShareLink",
+                            Data = "Share link generation failed for song ID: " + Song.Id
+                        }
+                    });
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error generating share link for song {SongId}", Song.Id);
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "Error",
                 Message = "An error occurred while generating the share link.",
                 ButtonText = "Close",
-                OptionType = OptionType.Error
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "GenerateShareLink",
+                    Data = ex.Message
+                }
             });
         }
         finally
@@ -161,24 +167,34 @@
             }
             else
             {
-                await OpenModal(new ModalOptionDto
+                _modalService.Show(new ModalOptionDto
                 {
                     Title = "Print Unavailable",
                     Message = "Printing is not available on this device.",
                     ButtonText = "Close",
-                    OptionType = OptionType.Warning
+                    OptionType = OptionType.Warning,
+                    Context = new ModalContext
+                    {
+                        ActionType = "PrintSong",
+                        Data = "Print service is unavailable for song ID: " + Song.Id
+                    }
                 });
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error printing song {SongId}", Song.Id);
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "Print Error",
                 Message = "An error occurred while trying to print the song.",
                 ButtonText = "Close",
-                OptionType = OptionType.Error
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "PrintSong",
+                    Data = ex.Message
+                }
             });
         }
         finally
@@ -200,20 +216,19 @@
         StateHasChanged();
     }
 
-    private async Task OpenModal(ModalOptionDto option)
+    private async Task ConfirmModal()
     {
-        modalClass = "show";
-        modalDisplay = "block;";
-        modalOption = option;
-        await Task.CompletedTask;
-        StateHasChanged();
+        if (_modalService.CurrentModal.Context?.ActionType == "GenerateShareLink")
+        {
+            // Handle specific action if needed
+        }
+        await CloseModal();
     }
 
     private async Task CloseModal()
     {
         await Task.Delay(100);
-        modalDisplay = "none;";
-        modalClass = string.Empty;
+        _modalService.Close();
         StateHasChanged();
     }
 

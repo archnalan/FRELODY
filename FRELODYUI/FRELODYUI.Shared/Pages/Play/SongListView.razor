@@ -144,14 +144,13 @@
         </div>
     }
 
-    @if (modalDisplay == "block;")
+    @if (_modalService.IsModalVisible)
     {
-        <DialogModal ModalClass="@modalClass"
-                     ModalDisplay="@modalDisplay"
-                     Modal="@modalOption"
-                     OnCloseModal="CloseModal" />
+        <DialogModal IsVisible="true"
+                     Modal="@_modalService.CurrentModal"
+                     OnCloseModal="CloseModal"
+                     OnConfirmModal="ConfirmModal" />
     }
-
 </div>
 
 @code {
@@ -166,10 +165,6 @@
     private Dictionary<string, bool> _categoryExpansionState = new Dictionary<string, bool>();
     private System.Timers.Timer? _debounceTimer;
     private const int DebounceDelay = 300;
-    public string modalDisplay = "none;";
-    public string modalClass = "";
-    private string message = "";
-    private ModalOptionDto modalOption = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -328,7 +323,7 @@
             else
             {
                 var errorMessage = _apiResponseHandler.GetApiErrorMessage(markedResponse);
-                await OpenModal(new ModalOptionDto
+                _modalService.Show(new ModalOptionDto
                 {
                     Title = "Error",
                     Message = errorMessage,
@@ -406,10 +401,10 @@
         catch (Exception ex)
         {
             _logger.LogError($"Error navigating to song: {ex.Message}");
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "Error",
-                Message = "An unexpected error occurred while trying to display the song.",
+                Message = "An error occurred while trying to display the song.",
                 ButtonText = "Close",
                 OptionType = OptionType.Error
             });
@@ -421,21 +416,16 @@
         }
     }
 
-    private async Task OpenModal(ModalOptionDto option)
+    private async Task ConfirmModal()
     {
-        modalClass = "show";
-        modalDisplay = "block;";
-        modalOption = option;
-        await Task.CompletedTask;
-        StateHasChanged();
+        // Handle confirmation logic here
+        await CloseModal();
     }
 
     private async Task CloseModal()
     {
         await Task.Delay(100);
-        modalDisplay = "none;";
-        message = string.Empty;
-        modalClass = string.Empty;
+        _modalService.Close();
         StateHasChanged();
     }
 

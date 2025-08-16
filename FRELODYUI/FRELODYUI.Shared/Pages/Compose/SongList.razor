@@ -18,13 +18,14 @@
     }
 }
 
-@if (modalDisplay == "block;")
+@if (_modalService.IsModalVisible)
 {
-    <DialogModal ModalClass="@modalClass"
-                 ModalDisplay="@modalDisplay"
-                 Modal="@modalOption"
-                 OnCloseModal="CloseModal" />
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
 }
+
 
 @code {
     [Parameter]
@@ -32,10 +33,6 @@
     private string factor => FormFactor.GetFormFactor();
     private string platform => FormFactor.GetPlatform();
     private List<SongDto> songs = new();
-    public string modalDisplay = "none;";
-    public string modalClass = "";
-    private string message = "";
-    private ModalOptionDto modalOption = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -55,40 +52,36 @@
             else
             {
                 var errorMessage = _apiResponseHandler.GetApiErrorMessage(songResult);
-                await OpenModal(new ModalOptionDto
+                _modalService.Show(new ModalOptionDto
                 {
                     Title = "Error",
                     Message = errorMessage,
-                    ButtonText = "OK",
+                    OptionType = OptionType.Error,
+                    ButtonText = "OK"
                 });
             }
         }
         else
         {
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "Error",
-                Message = "Song Book ID is not provided.",
-                ButtonText = "OK",
+                Message = "Category ID is not provided.",
+                OptionType = OptionType.Error,
+                ButtonText = "OK"
             });
         }
     }
 
-    private async Task OpenModal(ModalOptionDto option)
+    private async Task ConfirmModal()
     {
-        modalClass = "show";
-        modalDisplay = "block;";
-        modalOption = option;
-        await Task.CompletedTask;
-        StateHasChanged();
+        //Handle confirmation logic here
+        await CloseModal();
     }
-
     private async Task CloseModal()
     {
         await Task.Delay(100);
-        modalDisplay = "none;";
-        message = string.Empty;
-        modalClass = string.Empty;
+        _modalService.Close();
         StateHasChanged();
     }
 }

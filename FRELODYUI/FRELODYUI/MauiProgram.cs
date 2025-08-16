@@ -25,6 +25,7 @@ namespace FRELODYUI
             builder.Services.AddSingleton<IPrintService, MauiPrintService>();
             builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
             builder.Services.AddScoped<IShareService, ShareService>();
+            builder.Services.AddScoped<IModalService, ModalService>();
 
             var baseAddressApi = new Uri("https://localhost:7077");
 

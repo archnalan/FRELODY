@@ -42,4 +42,5 @@ builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
 builder.Services.AddScoped<IPrintService, WebPrintService>();
 builder.Services.AddScoped<IClipboardService, WebClipboardService>();
 builder.Services.AddScoped<IShareService, ShareService>();
+builder.Services.AddScoped<IModalService, ModalService>();
 await builder.Build().RunAsync();

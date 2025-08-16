@@ -38,7 +38,8 @@
                            ItemsCountLimit="MAX_SECTIONS"
                            OnTabAdd="HandleTabAdd"
                            RenderTab="RenderVerseTab"
-                           SectionTitleChanged="HandleSectionTitleChanged" />
+                           SectionTitleChanged="HandleSectionTitleChanged" 
+                           SectionNumberChanged="HandleSectionNumberChanged"/>
         }
         else
         {
@@ -49,13 +50,12 @@
     }
     
 </div>
-@if (modalDisplay == "block;")
+@if (_modalService.IsModalVisible)
 {
-    <DialogModal 
-        ModalClass="@modalClass"
-        ModalDisplay="@modalDisplay"
-        Modal="@modalOption"
-        OnCloseModal="CloseModal" />
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
 }
 
 @code {
@@ -67,10 +67,6 @@
     private Dictionary<int, List<SegmentCreateDto>> AllPartsSegments =
     new() { [1] = new List<SegmentCreateDto>() };
     private List<TabsComponent.TabsComponentItem> initialPartsItems = new();
-    public string modalDisplay = "none;";
-    public string modalClass = "";
-    private string message = "";
-    private ModalOptionDto modalOption = default!;
     private bool isLoading = true;
 
     private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
@@ -168,26 +164,36 @@
                 else
                 {
                     var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
-                    await OpenModal(new ModalOptionDto
+                    _modalService.Show(new ModalOptionDto
+                    {
+                        Title = "Error",
+                        Message = errorMessage,
+                        ButtonText = "Close",
+                        OptionType = OptionType.Error,
+                        Context = new ModalContext
                         {
-                            Title = "Error",
-                            Message = errorMessage,
-                            ButtonText = "Close",
-                            OptionType = OptionType.Error
-                        });
+                            ActionType = "SongLoadError",
+                            Data = response.Content?.ToString() ?? "No content"
+                        }
+                    });
                 }
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error initializing song board");
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Initialization Error",
+                Message = "An error occurred while initializing the song board. Please try again later.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext
                 {
-                    Title = "Initialization Error",
-                    Message = "An error occurred while initializing the song board.",
-                    ButtonText = "Close",
-                    OptionType = OptionType.Error
-                });
+                    ActionType = "InitializationError",
+                    Data = ex.Message
+                }
+            });            
         }
         finally
         {
@@ -209,13 +215,19 @@
 
         if (allSegments.Count == 0)
         {
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "No Segments",
                 Message = "Please add at least one segment to save the song.",
                 ButtonText = "OK",
-                OptionType = OptionType.Warning
+                OptionType = OptionType.Warning,
+                Context = new ModalContext
+                {
+                    ActionType = "NoSegments",
+                    Data = "Attempted to save song with no segments"
+                }
             });
+           
             _logger.LogWarning("No segments found to save.");
             return;
         }
@@ -233,26 +245,37 @@
 
         if (songResult.IsSuccessStatusCode)
         {
-            message = $"Song {SongTitle} saved successfully!";
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "Song Saved",
-                Message = message,
+                Message = $"Song '{SongTitle}' saved successfully!",
                 ButtonText = "OK",
-                OptionType = OptionType.Success
+                OptionType = OptionType.Success,
+                Context = new ModalContext
+                {
+                    ActionType = "SongSaved",
+                    Data = songResult.Content?.ToString() ?? "No content"
+                }
             });
+            
             _logger.LogInformation("Song {songData} saved successfully!", songData);
         }
         else
         {
             var errorMessage = _apiResponseHandler.GetApiErrorMessage(songResult);
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
-                Title = "Error",
+                Title = "Save Error",
                 Message = errorMessage,
-                ButtonText = "OK",
-                OptionType = OptionType.Error
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "SongSaveError",
+                    Data = songResult.Content?.ToString() ?? "No content"
+                }
             });
+            
             _logger.LogError("Failed to save song: {Error}", errorMessage);
         }
     }
@@ -285,21 +308,32 @@
         }
     }
 
-    private async Task OpenModal(ModalOptionDto option)
+    private void HandleSectionNumberChanged(TabsComponent.TabsComponentItem tabItem)
     {
-        modalClass = "show";
-        modalDisplay = "block;";
-        modalOption = option;
-        await Task.CompletedTask;
-        StateHasChanged();
+        if (AllPartsSegments.TryGetValue(tabItem.Id, out var segments))
+        {
+            foreach (var segment in segments)
+            {
+                segment.PartNumber = tabItem.SectionNumber;
+            }
+        }
+    }
+
+    private async Task ConfirmModal()
+    {
+        // handle specific contexts awaiting confirmation
+        if (_modalService.CurrentModal.Context?.ActionType == "")
+        {
+           
+        }
+        await CloseModal();
     }
 
     private async Task CloseModal()
     {
-        await Task.Delay(100); 
-        modalDisplay = "none;";
-        message = string.Empty;
-        modalClass = string.Empty;
+        await Task.Delay(100);
+        _modalService.Close();
+
         StateHasChanged();
     }
 }

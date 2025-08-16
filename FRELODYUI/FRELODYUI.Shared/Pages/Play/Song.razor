@@ -74,12 +74,12 @@
     }
 </div>
 
-@if (modalDisplay == "block;")
+@if (_modalService.IsModalVisible)
 {
-    <DialogModal ModalClass="@modalClass"
-                 ModalDisplay="@modalDisplay"
-                 Modal="@modalOption"
-                 OnCloseModal="CloseModal" />
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
 }
 
 @code {
@@ -88,10 +88,6 @@
 
     private SongDto? song;
     private bool isLoading = true;
-    private string errorMessage = string.Empty;
-    public string modalDisplay = "none;";
-    public string modalClass = "";
-    private string message = "";
     private ModalOptionDto modalOption = default!;
 
     protected override async Task OnParametersSetAsync()
@@ -105,7 +101,6 @@
     private async Task LoadSong()
     {
         isLoading = true;
-        errorMessage = string.Empty;
         StateHasChanged();
 
         try
@@ -117,26 +112,36 @@
             }
             else
             {
-                errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
-                await OpenModal(new ModalOptionDto
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
                 {
                     Title = "Error",
                     Message = errorMessage,
                     ButtonText = "Close",
-                    OptionType = OptionType.Error
+                    OptionType = OptionType.Error,
+                    Context= new ModalContext
+                    {
+                        ActionType = "LoadSong",
+                        Data = "Failed to load song with ID: " + SongId
+                    }
                 });
             }
         }
         catch (Exception ex)
         {
-            errorMessage = "An unexpected error occurred";
+            var errorMessage = "An unexpected error occurred";
             _logger.LogError(ex, "Error loading song with ID: {SongId}", SongId);
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "Error",
                 Message = errorMessage,
                 ButtonText = "Close",
-                OptionType = OptionType.Error
+                OptionType = OptionType.Error,
+                Context= new ModalContext
+                {
+                    ActionType = "LoadSong",
+                    Data = "Unexpected error while loading song with ID: " + SongId
+                }
             });
         }
         finally
@@ -146,37 +151,48 @@
         }
     }
 
-    private async Task CustomizeSong(string songId)
+    private void CustomizeSong(string songId)
     {
         if(string.IsNullOrEmpty(songId))
         {
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "Error",
                 Message = "Song ID is required to customize the song.",
                 ButtonText = "Close",
-                OptionType = OptionType.Error
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "CustomizeSong",
+                    Data = "Song ID is null or empty"
+                }
             });
             return;
         }
         _navManager.NavigateTo("/compose?songId=" + songId);
     }
 
-    private async Task OpenModal(ModalOptionDto option)
+    private async Task ConfirmModal()
     {
-        modalClass = "show";
-        modalDisplay = "block;";
-        modalOption = option;
-        await Task.CompletedTask;
-        StateHasChanged();
+        if (_modalService.CurrentModal?.Context?.ActionType == "PrintSong")
+        {
+            await PrintAsync();
+        }
+        else if (_modalService.CurrentModal?.Context?.ActionType == "CreateShareLink")
+        {
+            await ShareLinkAsync();
+        }
+        else
+        {
+            _modalService.Close();
+        }
+        await CloseModal();
     }
 
     private async Task CloseModal()
     {
         await Task.Delay(100);
-        modalDisplay = "none;";
-        message = string.Empty;
-        modalClass = string.Empty;
+        _modalService.Close();
         StateHasChanged();
     }
 
@@ -237,12 +253,17 @@
         catch (Exception ex)
         {
             _logger.LogError(ex, "Print failed for song {SongId}", SongId);
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "Error",
                 Message = "Failed to print song.",
                 ButtonText = "Close",
-                OptionType = OptionType.Error
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "PrintSong",
+                    Data = "Failed to print song with ID: " + SongId
+                }
             });
         }
     }
@@ -279,12 +300,17 @@
         catch (Exception ex)
         {
             _logger.LogError(ex, "Share link creation failed for song {SongId}", SongId);
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "Error",
-                Message = "Failed to create share link.",
+                Message = "An error occurred while creating the share link.",
                 ButtonText = "Close",
-                OptionType = OptionType.Error
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "CreateShareLink",
+                    Data = ex.Message
+                }
             });
         }
     }

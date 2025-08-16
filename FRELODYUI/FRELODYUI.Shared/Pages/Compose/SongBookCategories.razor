@@ -19,13 +19,14 @@
 }
 
 <!--Welcome to your new app running on <em>@factor</em> using <em>@platform</em>-->
-@if (modalDisplay == "block;")
+@if (_modalService.IsModalVisible)
 {
-    <DialogModal ModalClass="@modalClass"
-                 ModalDisplay="@modalDisplay"
-                 Modal="@modalOption"
-                 OnCloseModal="CloseModal" />
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
 }
+
 
 @code {
     [Parameter]
@@ -33,9 +34,6 @@
     private string factor => FormFactor.GetFormFactor();
     private string platform => FormFactor.GetPlatform();
     private List<CategoryDto> categories = new();
-    public string modalDisplay = "none;";
-    public string modalClass = "";
-    private string message = "";
     private ModalOptionDto modalOption = default!;
 
     protected override async Task OnInitializedAsync()
@@ -56,41 +54,37 @@
             else
             {
                 var errorMessage = _apiResponseHandler.GetApiErrorMessage(songBookResult);
-                await OpenModal(new ModalOptionDto
-            {
-                Title = "Error",
-                Message = errorMessage,
-                ButtonText = "OK",
-                OptionType = OptionType.Error
-            });
+              _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    OptionType = OptionType.Error,
+                    ButtonText = "OK"
+                });
             }            
         }
         else
         {
-            await OpenModal(new ModalOptionDto
+            _modalService.Show(new ModalOptionDto
             {
                 Title = "Error",
                 Message = "Song Book ID is not provided.",
                 ButtonText = "OK",
-            });        
+                OptionType = OptionType.Error
+            });     
         }
     }
 
-    private async Task OpenModal(ModalOptionDto option)
+    private async Task ConfirmModal()
     {
-        modalClass = "show";
-        modalDisplay = "block;";
-        modalOption = option;
-        await Task.CompletedTask;
+        // Handle confirmation logic here
         StateHasChanged();
     }
 
     private async Task CloseModal()
     {
         await Task.Delay(100);
-        modalDisplay = "none;";
-        message = string.Empty;
-        modalClass = string.Empty;
+        _modalService.Close();
         StateHasChanged();
     }
 }
