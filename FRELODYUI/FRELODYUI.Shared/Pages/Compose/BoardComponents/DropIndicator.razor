@@ -1,5 +1,9 @@
 ﻿
-<div data-line="@LineNumber" class="my-1 bg-primary opacity-0" style="width:5px; height:3.5rem"></div>
+<div data-line="@LineNumber" class="drag-handle d-flex align-items-center justify-content-center text-muted my-1"
+     style="cursor: grab; width: 10px; height:3.5rem; min-height: 40px;"
+     title="Drag to reorder">
+    <i class="bi bi-grip-vertical"></i>
+</div>
 
 @code {
     [Parameter] public int LineNumber { get; set; }

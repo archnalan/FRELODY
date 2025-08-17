@@ -135,7 +135,7 @@
     {
         if (firstRender)
         {
-            await JSRt.InvokeVoidAsync("initDragAndDrop");
+            await JsRt.InvokeVoidAsync("initDragAndDrop");
         }
     }
 
@@ -257,7 +257,7 @@
     private async Task HandleDrop(DragEventArgs e, int line)
     {
         isOver = false;
-        var segmentId = await JSRt.InvokeAsync<string>("getDragData", "segmentId");
+        var segmentId = await JsRt.InvokeAsync<string>("getDragData", "segmentId");
         Segments.RemoveAll(s => s.Id == segmentId);
     }
 }

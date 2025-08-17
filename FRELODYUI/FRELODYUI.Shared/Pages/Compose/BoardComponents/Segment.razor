@@ -1,7 +1,5 @@
 ﻿
-<div draggable="true"
-     @ondragstart="HandleDragStart"
-     class="@($"d-flex align-items-center p-2 rounded cursor-pointer {(Focused ? "bg-dark" : "bg-secondary")}")">
+<div class="@($"d-flex align-items-center p-2 rounded cursor-pointer {(Focused ? "bg-dark" : "bg-secondary")}")">
     @if (Editing)
     {
         <form class="d-flex position-relative" @onsubmit="HandleSubmit">
@@ -53,7 +51,6 @@
     private string ChordName = string.Empty;
     private string? editedChordId;
     private bool isInitialized = false;
-
 
     protected override void OnAfterRender(bool firstRender)
     {

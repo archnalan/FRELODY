@@ -8,12 +8,12 @@
         Lyric Line @Line.ToString("00")
     </span>
 
-    <div class="d-flex flex-wrap w-100 gap-1"
-         @ondrop="HandleDrop"
-         @ondragover="HandleDragOver"
-         @ondragleave="HandleDragLeave">
-        @foreach (var segment in filteredSegments)
-        {
+    <SortableList Id="@($"sortable-segments-{Line}")"
+                  Items="filteredSegments"
+                  OnUpdate="@SortSegments"
+                  Context="segment"
+                  Class="d-flex flex-wrap w-100 gap-1">
+        <SortableItemTemplate>
             <div class="h-100 d-flex align-items-center gap-2" @ondblclick="() => HandleDoubleClick(segment)">
                 <Segment Content="segment"
                          Chords="Chords"
@@ -23,17 +23,18 @@
                          OnCancel="HandleCancel"
                          OnDragStart="HandleDragStart" />
             </div>
-        }
-        
-        <DropIndicator LineNumber="Line" />
-        
-        <AddSegment LineNumber="Line"
-                    Chords="Chords"
-                    FormOpen="addFormOpen"
-                    OnFormOpenChanged="SetAddFormOpen"
-                    OnSegmentAdded="HandleSegmentAdded"
-                    Focused="Focused" />
-    </div>
+        </SortableItemTemplate>
+        <ActionItemTemplate>
+            <DropIndicator LineNumber="Line" />
+            
+            <AddSegment LineNumber="Line"
+                        Chords="Chords"
+                        FormOpen="addFormOpen"
+                        OnFormOpenChanged="SetAddFormOpen"
+                        OnSegmentAdded="HandleSegmentAdded"
+                        Focused="Focused" />
+        </ActionItemTemplate>
+    </SortableList>
 </div>
 
 @code {
@@ -52,7 +53,7 @@
     private SegmentCreateDto editedSegment;
     private ChordSimpleDto editedChord;
     private List<SegmentCreateDto> filteredSegments =>
-        Segments?.Where(s => s.LineNumber == Line).ToList() ?? new();
+        Segments?.Where(s => s.LineNumber == Line).OrderBy(s => s.LyricOrder).ToList() ?? new();
 
     protected override void OnParametersSet()
     {
@@ -69,9 +70,42 @@
         }
     }
 
+    private void SortSegments((int oldIndex, int newIndex) indices)
+    {
+        var (oldIndex, newIndex) = indices;
+        
+        if (oldIndex == newIndex) return;
+
+        var lineSegments = filteredSegments.ToList();
+        var itemToMove = lineSegments[oldIndex];
+        lineSegments.RemoveAt(oldIndex);
+
+        if (newIndex < lineSegments.Count)
+        {
+            lineSegments.Insert(newIndex, itemToMove);
+        }
+        else
+        {
+            lineSegments.Add(itemToMove);
+        }
+
+        // Update LyricOrder to match new positions
+        for (int i = 0; i < lineSegments.Count; i++)
+        {
+            lineSegments[i].LyricOrder = i + 1;
+        }
+
+        // Update the main segments list
+        var updatedSegments = Segments.Where(s => s.LineNumber != Line)
+                                    .Concat(lineSegments)
+                                    .ToList();
+
+        OnSegmentsUpdate.InvokeAsync(updatedSegments);
+    }
+
     private async Task HandleDragStart(SegmentCreateDto segment)
     {
-        await JSRt.InvokeVoidAsync("setDragData", "segmentId", segment.Id);
+        await JsRt.InvokeVoidAsync("setDragData", "segmentId", segment.Id);
     }
 
     private void HandleDragOver()
@@ -86,10 +120,15 @@
 
     private async Task HandleDrop()
     {
-        var segmentId = await JSRt.InvokeAsync<string>("getDragData", "segmentId");
+        var segmentId = await JsRt.InvokeAsync<string>("getDragData", "segmentId");
         var segment = Segments.First(s => s.Id == segmentId);
         segment.LineNumber = Line;
-        OnSegmentsUpdate.InvokeAsync(Segments);
+        
+        // Assign new LyricOrder based on current segments in this line
+        var maxOrder = filteredSegments.Any() ? filteredSegments.Max(s => s.LyricOrder) : 0;
+        segment.LyricOrder = maxOrder + 1;
+        
+        await OnSegmentsUpdate.InvokeAsync(Segments);
     }
 
     private void HandleDoubleClick(SegmentCreateDto segment)
@@ -133,6 +172,10 @@
 
     private void HandleSegmentAdded(SegmentCreateDto newSegment)
     {
+        // Set the LyricOrder for the new segment
+        var maxOrder = filteredSegments.Any() ? filteredSegments.Max(s => s.LyricOrder) : 0;
+        newSegment.LyricOrder = maxOrder + 1;
+        
         Segments.Add(newSegment);
         OnSegmentsUpdate.InvokeAsync(Segments);
     }

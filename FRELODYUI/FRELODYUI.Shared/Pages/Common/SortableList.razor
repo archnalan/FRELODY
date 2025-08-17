@@ -68,7 +68,7 @@
         {
             selfReference = DotNetObjectReference.Create(this);
             var module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/FRELODYUI.Shared/Pages/Common/SortableList.razor.js");
-            await module.InvokeAsync<string>("init", Id, Group, Pull, Put, Sort, Handle, Filter, selfReference);
+            await module.InvokeAsync<string>("init", Id, Group, Pull, Put, Sort, Handle, Filter, selfReference, Class, Style);
         }
     }
 
