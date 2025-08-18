@@ -14,7 +14,7 @@
                   Context="segment"
                   Class="d-flex flex-wrap w-100 gap-1">
         <SortableItemTemplate>
-            <div class="h-100 d-flex align-items-center gap-2" @ondblclick="() => HandleDoubleClick(segment)">
+            <div class="d-flex align-items-end gap-2" @ondblclick="() => HandleDoubleClick(segment)">
                 <Segment Content="segment"
                          Chords="Chords"
                          Editing="@(EditModeSegmentId == segment.Id)"

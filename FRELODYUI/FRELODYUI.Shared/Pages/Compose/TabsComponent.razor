@@ -15,7 +15,7 @@
                                  title="Drag to reorder">
                                 <i class="bi bi-grip-vertical"></i>
                             </div>
-                            <div class="@GetTabClass(item.Id)" @onclick="() => SetSelectedTab(item.Id)">
+                            <div class="@GetTabClass(item.Id)" @onclick="() => SetSelectedTab(item)">
                                 <div class="d-inline-flex align-items-center">
                                     <select class="form-select form-select-sm border-secondary bg-light fw-normal p-1"
                                             style="min-width:5.5rem"
@@ -97,8 +97,7 @@
     [Parameter] public int ItemsCountLimit { get; set; }
     [Parameter] public EventCallback<int> OnTabAdd { get; set; }
     [Parameter] public Func<int, RenderFragment>? RenderTab { get; set; }
-    [Parameter] public EventCallback<TabsComponentItem> SectionTitleChanged { get; set; }
-    [Parameter] public EventCallback<TabsComponentItem> SectionNumberChanged { get; set; }
+    [Parameter] public EventCallback<TabsComponentItem> ActiveTabInfoChanged { get; set; }
     private readonly Dictionary<int, ElementReference> _sectionNumberInputs = new();
 
     private List<TabsComponentItem> Items { get; set; } = new();
@@ -117,7 +116,14 @@
     };
     private bool SectionAllowsNumbering(string sectionName) => !SingleInstanceSections.Contains(sectionName);
 
-    private void SetSelectedTab(int id) => SelectedTab = id;
+    private void SetSelectedTab(TabsComponentItem active)
+    {
+        SelectedTab = active.Id;
+        if (ActiveTabInfoChanged.HasDelegate)
+        {
+            ActiveTabInfoChanged.InvokeAsync(active);
+        }
+    }
 
     private string GetTabClass(int id) =>
         SelectedTab == id
@@ -269,10 +275,10 @@
             conflictingItem.SectionNumber = oldNumber;
 
             // Notify parent of both changed tabs
-            if (SectionNumberChanged.HasDelegate)
+            if (ActiveTabInfoChanged.HasDelegate)
             {
-                await SectionNumberChanged.InvokeAsync(tab);
-                await SectionNumberChanged.InvokeAsync(conflictingItem);
+                await ActiveTabInfoChanged.InvokeAsync(tab);
+                await ActiveTabInfoChanged.InvokeAsync(conflictingItem);
             }
 
             await FocusElementAsync(tab.Id);
@@ -282,9 +288,9 @@
             // No conflict, just update the number
             tab.SectionNumber = newSectionNumber;
 
-            if (SectionNumberChanged.HasDelegate)
+            if (ActiveTabInfoChanged.HasDelegate)
             {
-                await SectionNumberChanged.InvokeAsync(tab);
+                await ActiveTabInfoChanged.InvokeAsync(tab);
             }
         }
         await Task.CompletedTask;
@@ -324,9 +330,9 @@
                     conflictingItem.SectionName = oldSectionName;
 
                     // Notify parent of both changes
-                    if (SectionNumberChanged.HasDelegate)
+                    if (ActiveTabInfoChanged.HasDelegate)
                     {
-                        await SectionNumberChanged.InvokeAsync(conflictingItem);
+                        await ActiveTabInfoChanged.InvokeAsync(conflictingItem);
                     }
                 }
             }
@@ -339,9 +345,9 @@
         // Ensure the edited tab remains selected
         SelectedTab = tabId;
 
-        if (SectionTitleChanged.HasDelegate)
+        if (ActiveTabInfoChanged.HasDelegate)
         {
-            await SectionTitleChanged.InvokeAsync(tab);
+            await ActiveTabInfoChanged.InvokeAsync(tab);
         }
 
         StateHasChanged();
@@ -368,9 +374,9 @@
             tab.SectionNumber = 1; //minimum valid section number
             SelectedTab = tabId;
 
-            if (SectionNumberChanged.HasDelegate)
+            if (ActiveTabInfoChanged.HasDelegate)
             {
-                await SectionNumberChanged.InvokeAsync(tab);
+                await ActiveTabInfoChanged.InvokeAsync(tab);
             }
             StateHasChanged();
             return;
@@ -399,9 +405,9 @@
         // Ensure the edited tab remains selected
         SelectedTab = tabId;
 
-        if (SectionNumberChanged.HasDelegate)
+        if (ActiveTabInfoChanged.HasDelegate)
         {
-            await SectionNumberChanged.InvokeAsync(tab);
+            await ActiveTabInfoChanged.InvokeAsync(tab);
         }
 
         StateHasChanged();
@@ -504,9 +510,9 @@
                     ShowInputHide = false;
 
                     // Notify parent of the change
-                    if (SectionNumberChanged.HasDelegate)
+                    if (ActiveTabInfoChanged.HasDelegate)
                     {
-                        await SectionNumberChanged.InvokeAsync(tab);
+                        await ActiveTabInfoChanged.InvokeAsync(tab);
                     }
 
                     StateHasChanged();
@@ -557,7 +563,7 @@
         public int DisplayOrder { get; set; } 
         public RenderFragment Content { get; set; } = default!;
 
-        public SongSection SectionEnum => Enum.Parse<SongSection>(SectionName);
+        public SongSection SectionEnumValue => Enum.Parse<SongSection>(SectionName);
     }
 }
 

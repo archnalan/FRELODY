@@ -28,7 +28,7 @@
                        class="form-control w-50"
                        placeholder="Song Title" />
             </div>
-            <button @onclick="HandleSongSave" class="btn btn-primary">
+            <button @onclick="HandleSongSave" class="btn btn-outline-primary">
                 Save Song
             </button>
         </div>
@@ -38,8 +38,7 @@
                            ItemsCountLimit="MAX_SECTIONS"
                            OnTabAdd="HandleTabAdd"
                            RenderTab="RenderVerseTab"
-                           SectionTitleChanged="HandleSectionTitleChanged" 
-                           SectionNumberChanged="HandleSectionNumberChanged"/>
+                           ActiveTabInfoChanged ="HandleActiveTabInfoChanged"/>
         }
         else
         {
@@ -67,10 +66,12 @@
     private Dictionary<int, List<SegmentCreateDto>> AllPartsSegments =
     new() { [1] = new List<SegmentCreateDto>() };
     private List<TabsComponent.TabsComponentItem> initialPartsItems = new();
+    private TabsComponent.TabsComponentItem? activeTabItem;
     private bool isLoading = true;
 
     private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
             Segments="@AllPartsSegments.GetValueOrDefault(id)"
+            ActiveTab="activeTabItem"
             OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />
     ;
 
@@ -280,6 +281,21 @@
         }
     }
 
+    private void HandleActiveTabInfoChanged(TabsComponent.TabsComponentItem tabItem)
+    {
+        activeTabItem = tabItem;
+
+        if (AllPartsSegments.TryGetValue(tabItem.Id, out var segments))
+        {
+            foreach (var segment in segments)
+            {
+                segment.PartNumber = tabItem.SectionNumber;
+                segment.PartName = tabItem.SectionEnumValue;
+            }
+        }
+        StateHasChanged();
+    }
+
     private void HandleVerseUpdate(int sectionId, List<SegmentCreateDto> segments)
     {
         AllPartsSegments[sectionId] = segments;
@@ -290,32 +306,6 @@
         if (!AllPartsSegments.ContainsKey(newTabId))
         {
             AllPartsSegments[newTabId] = new List<SegmentCreateDto>();
-        }
-    }
-
-    private void HandleSectionTitleChanged(TabsComponent.TabsComponentItem tabItem)
-    {
-        if (AllPartsSegments.TryGetValue(tabItem.Id, out var segments))
-        {
-            foreach (var segment in segments)
-            {
-                // string back to enum
-                if (Enum.TryParse<SongSection>(tabItem.SectionName, out var section))
-                {
-                    segment.PartName = section;
-                }
-            }
-        }
-    }
-
-    private void HandleSectionNumberChanged(TabsComponent.TabsComponentItem tabItem)
-    {
-        if (AllPartsSegments.TryGetValue(tabItem.Id, out var segments))
-        {
-            foreach (var segment in segments)
-            {
-                segment.PartNumber = tabItem.SectionNumber;
-            }
         }
     }
 
