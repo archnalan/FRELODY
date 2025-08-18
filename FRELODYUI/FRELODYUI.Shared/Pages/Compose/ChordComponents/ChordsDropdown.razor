@@ -1,15 +1,21 @@
 ﻿
 <div class="dropdown" style="width: 100%;">
-    <input class="form-control" 
-           type="text" 
-           placeholder="Search chords..." 
-           @bind="searchTerm" 
-           @oninput="HandleSearch"
-           @onfocus="@(()=>ToggleDropdown(true))" />
+    <div class="position-relative">
+        <input class="form-control form-control-sm pe-4"
+               type="text"
+               placeholder="Search chords..."
+               @bind="searchTerm"
+               @oninput="HandleSearch"
+               @onfocus="@(() => ToggleDropdown(true))" />
+
+        <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-2 text-muted"
+           role="button"
+           @onclick="@(() => ToggleDropdown(!showDropdown))"></i>
+    </div>   
     
     @if (showDropdown)
     {
-        <div class="dropdown-menu show" style="width: 100%; max-height: 300px; overflow-y: auto;">
+        <div class="dropdown-menu show" style="width: 100%; max-height: 300px; overflow-y: auto; z-index:5">
             @foreach (var chord in filteredChords)
             {
                 <button class="dropdown-item" type="button" @onclick="() => SelectChord(chord)">
@@ -22,9 +28,10 @@
             }
             <div class="dropdown-divider"></div>
             <button class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
-                <i class="fas fa-plus"></i> Customize
+                <i class="bi bi-plus-circle-dotted"></i> Customize
             </button>
         </div>
+        <div style="z-index:0" class="modal-backdrop bg-transparent" @onclick="() => ToggleDropdown(false)"></div>
     }
 </div>
 

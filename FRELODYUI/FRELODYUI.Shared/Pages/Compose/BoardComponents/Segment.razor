@@ -1,29 +1,14 @@
-﻿
+﻿@using FRELODYUI.Shared.Pages.Compose.ChordComponents
+@inject ILogger<Segment> _logger
+
 <div class="@($"d-flex align-items-center p-2 rounded cursor-pointer {(Focused ? "bg-dark" : "bg-secondary")}")">
     @if (Editing)
     {
-        <form class="d-flex position-relative" @onsubmit="HandleSubmit">
-            <div class="d-flex flex-column gap-2 me-1">
-                <select class="form-select form-select-sm"
-                        @bind="editedChordId">
-                    <option value="">No Chord</option>
-                    @foreach (var chord in Chords)
-                    {
-                        <option value="@chord.Id">@chord.ChordName</option>
-                    }
-                </select>
-                <input type="text"
-                       class="form-control form-control-sm"
-                       @bind="editedLyric"
-                       placeholder="Enter lyrics..." />
-            </div>
-            <button type="button" class="btn btn-link btn-sm position-absolute top-0 end-0" @onclick="OnCancel">
-                <span class="text-danger">&times;</span>
-            </button>
-            <button type="submit" class="btn btn-primary btn-sm">
-                <i class="bi bi-pencil"></i>
-            </button>
-        </form>
+        <AddSegment Chords="Chords"
+                    FormOpen="Editing"
+                    Focused="Focused"
+                    OnFormOpenChanged="SetAddFormOpen"
+                    OnSegmentAdded="HandleSegmentAdded"/>
     }
     else
     {
@@ -47,9 +32,7 @@
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto> OnDragStart { get; set; }
 
-    private string editedLyric = string.Empty;
     private string ChordName = string.Empty;
-    private string? editedChordId;
     private bool isInitialized = false;
 
     protected override void OnAfterRender(bool firstRender)
@@ -60,9 +43,7 @@
             {
                 if (!string.IsNullOrEmpty(Content.Id))
                 {
-                    editedChordId = Content.ChordId;
                     ChordName = Content.ChordName ?? string.Empty;
-                    editedLyric = Content.Lyric ?? string.Empty;
                 }
                 else
                 {
@@ -75,24 +56,30 @@
         }
     }
 
-    protected override void OnParametersSet()
-    {
-        if (Editing)
-        {
-            editedLyric = Content.Lyric;
-            editedChordId = Content.ChordId;
-        }
-    }
-
-    private void HandleSubmit()
-    {
-        Content.Lyric = editedLyric;
-        Content.ChordId = editedChordId;
-        OnSave.InvokeAsync();
-    }
-
     private async Task HandleDragStart()
     {
         await OnDragStart.InvokeAsync(Content);
+    }
+
+    private void SetAddFormOpen(bool open)
+    {
+        if (!open)
+        {
+            OnCancel.InvokeAsync();
+        }
+    }
+
+    private void HandleSegmentAdded(SegmentCreateDto editedSegment)
+    {
+        // Update the current Content with the edited values
+        Content.Lyric = editedSegment.Lyric;
+        Content.ChordId = editedSegment.ChordId;
+        Content.ChordName = editedSegment.ChordName;
+        
+        // Update the local ChordName for display
+        ChordName = editedSegment.ChordName ?? string.Empty;
+        
+        // Notify parent that save is complete
+        OnSave.InvokeAsync();
     }
 }

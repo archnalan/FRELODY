@@ -10,7 +10,7 @@
         <p class="m-0 text-muted small">Click the button below to add a new line.</p>
     }
 
-    <div class="d-flex align-items-center w-100">
+    <div class="d-flex align-items-center w-100 mb-3">
         <div class="@($"flex-grow-1 h-0 border border-dashed {(lines.Count > 0 ? "border-secondary" : "border-primary")}")"></div>
         <button class="@($"btn btn-sm {(lines.Count > 0 ? "btn-outline-secondary" : "btn-outline-primary")}")"
                 disabled="@(lines.Count > 0)"
@@ -23,11 +23,12 @@
 
     @foreach (var line in lines)
     {
-        <div class="position-relative mb-2" id="@($"line-{line}")">
+        <div class="position-relative mb-3" id="@($"line-{line}")">
             <Row Line="@line"
                  Focused="@(focusedRow == line)"
                  Segments="@Segments"
                  Chords="@chords"
+                 ActiveTab="@ActiveTab"
                  EditModeSegmentId="@editModeSegmentId"
                  OnFocusRow="() => SetFocusedRow(line)"
                  OnSegmentsUpdate="HandleSegmentsUpdate"
@@ -85,7 +86,7 @@
     private int? focusedRow = null;
     private List<int> trackLines = new();
     private List<int> lines = new();
-    private string editModeSegmentId = null;
+    private string? editModeSegmentId = null;
     private bool isOver = false;
     private string? modalTitle { get; set; }
     private string? modalSubtitle { get; set; }
@@ -135,8 +136,18 @@
 
     private void UpdateLines()
     {
-        var segmentLines = Segments.Select(s => s.LineNumber).Distinct().ToList();
-        lines = segmentLines.Union(trackLines).Distinct().OrderBy(l => l).ToList();
+        var segmentLines = Segments?
+                        .Select(s => s.LineNumber)
+                        .Distinct()
+                        .ToList();
+        if (segmentLines != null)
+        {
+            lines = segmentLines
+                    .Union(trackLines)
+                    .Distinct()
+                    .OrderBy(l => l)
+                    .ToList();
+        }
     }
 
     private void HandleSegmentsUpdate(List<SegmentCreateDto> updatedSegments)
@@ -248,7 +259,7 @@
 
     private void DeleteLine(int line)
     {
-        Segments.RemoveAll(s => s.LineNumber == line);
+        Segments?.RemoveAll(s => s.LineNumber == line);
         trackLines.Remove(line);
         RenumberLines();
 
@@ -280,6 +291,6 @@
     {
         isOver = false;
         var segmentId = await JsRt.InvokeAsync<string>("getDragData", "segmentId");
-        Segments.RemoveAll(s => s.Id == segmentId);
+        Segments?.RemoveAll(s => s.Id == segmentId);
     }
 }

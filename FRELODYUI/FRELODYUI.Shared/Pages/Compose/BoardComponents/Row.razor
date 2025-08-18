@@ -1,8 +1,9 @@
-﻿
+﻿@inject ILogger<Row> _logger
+
 <div tabindex="0" 
      class="@($"w-100 position-relative d-flex flex-wrap gap-3 bg-white" + 
             $" {(Focused ? "border border-primary" : "border border-secondary")}")"
-     style="@(Focused ? "padding:3rem" : "padding:1.75rem");border-radius:1rem; border-bottom-right-radius:0.5rem"
+     style="@(Focused ? "padding:2.5rem" : "padding:1.75rem");border-radius:1rem; border-bottom-right-radius:0.5rem"
      @onfocus="OnFocusRow">
     <span class="@($"position-absolute top-0 start-0 badge {(Focused ? "bg-primary mt-2 ms-2" : "mt-1 ms-3")}")">
         Lyric Line @Line.ToString("00")
@@ -27,12 +28,11 @@
         <ActionItemTemplate>
             <DropIndicator LineNumber="Line" />
             
-            <AddSegment LineNumber="Line"
-                        Chords="Chords"
+            <AddSegment Chords="Chords"
                         FormOpen="addFormOpen"
                         OnFormOpenChanged="SetAddFormOpen"
                         OnSegmentAdded="HandleSegmentAdded"
-                        Focused="Focused" />
+                        Focused="Focused"/>
         </ActionItemTemplate>
     </SortableList>
 </div>
@@ -47,6 +47,7 @@
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
     [Parameter] public EventCallback<List<ChordSimpleDto>> OnChordsUpdate { get; set; }
     [Parameter] public EventCallback<string> OnEditModeSegmentIdChanged { get; set; }
+    [Parameter] public TabsComponent.TabsComponentItem? ActiveTab { get; set; }
 
     private bool addFormOpen = false;
     private SegmentCreateDto editSegment;
@@ -73,7 +74,7 @@
     private void SortSegments((int oldIndex, int newIndex) indices)
     {
         var (oldIndex, newIndex) = indices;
-        
+
         if (oldIndex == newIndex) return;
 
         var lineSegments = filteredSegments.ToList();
@@ -123,11 +124,11 @@
         var segmentId = await JsRt.InvokeAsync<string>("getDragData", "segmentId");
         var segment = Segments.First(s => s.Id == segmentId);
         segment.LineNumber = Line;
-        
+
         // Assign new LyricOrder based on current segments in this line
         var maxOrder = filteredSegments.Any() ? filteredSegments.Max(s => s.LyricOrder) : 0;
         segment.LyricOrder = maxOrder + 1;
-        
+
         await OnSegmentsUpdate.InvokeAsync(Segments);
     }
 
@@ -172,11 +173,27 @@
 
     private void HandleSegmentAdded(SegmentCreateDto newSegment)
     {
-        // Set the LyricOrder for the new segment
-        var maxOrder = filteredSegments.Any() ? filteredSegments.Max(s => s.LyricOrder) : 0;
-        newSegment.LyricOrder = maxOrder + 1;
-        
-        Segments.Add(newSegment);
-        OnSegmentsUpdate.InvokeAsync(Segments);
+        try
+        {
+            // Set the LyricOrder for the new segment
+            var maxOrder = filteredSegments.Any()
+                            ? filteredSegments.Max(s => s.LyricOrder)
+                            : 0;
+            newSegment.LyricOrder = maxOrder + 1;
+            newSegment.LineNumber = Line;
+            newSegment.PartNumber = ActiveTab != null
+                                    ? ActiveTab.SectionNumber
+                                    : 1;
+            newSegment.PartName = ActiveTab != null
+                                    ? ActiveTab.SectionEnumValue
+                                    : SongSection.Verse;
+
+            Segments.Add(newSegment);
+            OnSegmentsUpdate.InvokeAsync(Segments);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error adding segment: {Error}", ex);
+        }       
     }
 }
