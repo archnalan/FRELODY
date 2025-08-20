@@ -23,7 +23,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             _logger = logger;
         }
 
-        public async Task<ServiceResult<List<ChordSimpleDto>>> GetChordsAsync()
+        public async Task<ServiceResult<List<ChordDto>>> GetChordsAsync()
 		{
 			try
             {
@@ -31,14 +31,14 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                                 .OrderBy(c => c.ChordName)
                                 .ToListAsync();
 
-                var chordsDto = chords.Adapt<List<ChordSimpleDto>>();
+                var chordsDto = chords.Adapt<List<ChordDto>>();
 
-                return ServiceResult<List<ChordSimpleDto>>.Success(chordsDto);
+                return ServiceResult<List<ChordDto>>.Success(chordsDto);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving chords:{Error}", ex);
-                return ServiceResult<List<ChordSimpleDto>>.Failure(new
+                return ServiceResult<List<ChordDto>>.Failure(new
                     Exception($"Error retrieving chords. Details: {ex.Message}"));
             }
            
@@ -65,24 +65,24 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }   
 		}
 
-		public async Task<ServiceResult<ChordEditDto>> GetChordByIdAsync(string id)
+		public async Task<ServiceResult<ChordDto>> GetChordByIdAsync(string id)
 		{
 			try
 			{
                 var chord = await _context.Chords.FindAsync(id);
 
-                if (chord == null) return ServiceResult<ChordEditDto>.Failure(new
+                if (chord == null) return ServiceResult<ChordDto>.Failure(new
                     NotFoundException($"Chord with ID: {id} does not exist."));
 
-                var chordDto = chord.Adapt<Chord, ChordEditDto>();
+                var chordDto = chord.Adapt<ChordDto>();
 
-                return ServiceResult<ChordEditDto>.Success(chordDto);
+                return ServiceResult<ChordDto>.Success(chordDto);
 
             }
 			catch(Exception ex)
 			{
                 _logger.LogError(ex, "Error retrieving chord by ID: {Id}. Error: {Error}", id, ex);
-                return ServiceResult<ChordEditDto>.Failure(new
+                return ServiceResult<ChordDto>.Failure(new
                     Exception($"Error retrieving chord with ID: {id}. Details: {ex.Message}"));
             }
 			
@@ -156,17 +156,17 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             
 		}
 
-        public async Task<ServiceResult<ChordSimpleDto>> CreateSimpleChordAsync(ChordSimpleDto chordDto)
+        public async Task<ServiceResult<ChordDto>> CreateSimpleChordAsync(ChordDto chordDto)
         {
             try
             {
-                if (chordDto == null) return ServiceResult<ChordSimpleDto>.Failure(new
+                if (chordDto == null) return ServiceResult<ChordDto>.Failure(new
                 BadRequestException("Chord data is Required"));
 
                 var chordExists = await _context.Chords
                                 .AnyAsync(ch => ch.ChordName == chordDto.ChordName);
 
-                if (chordExists) return ServiceResult<ChordSimpleDto>.Failure(new
+                if (chordExists) return ServiceResult<ChordDto>.Failure(new
                     ConflictException($"Chord: {chordDto.ChordName} already exists."));
 
                 var chord = chordDto.Adapt<Chord>();
@@ -176,14 +176,14 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                 await _context.SaveChangesAsync();
 
 
-                var newChord = chord.Adapt<ChordSimpleDto>();
+                var newChord = chord.Adapt<ChordDto>();
 
-                return ServiceResult<ChordSimpleDto>.Success(newChord);
+                return ServiceResult<ChordDto>.Success(newChord);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating simple chord: {ChordName}. Error: {Error}", chordDto.ChordName, ex);
-                return ServiceResult<ChordSimpleDto>.Failure(new
+                return ServiceResult<ChordDto>.Failure(new
                     Exception($"Error creating simple chord. Details: {ex.Message}"));
             }
 

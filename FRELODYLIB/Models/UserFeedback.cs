@@ -8,8 +8,15 @@ namespace FRELODYAPP.Models
 	public class UserFeedback:BaseEntity
 	{
         [Required]
+        [StringLength(100)]
+        public string Subject { get; set; }
+
+        [Required]
         [StringLength(255)]
         public string Comment { get; set; }
+
+        [StringLength(100)]
+        public string? Title { get; set; }
         
         [StringLength(100)]
         public string? Email { get; set; }

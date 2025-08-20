@@ -42,8 +42,7 @@ namespace FRELODYAPIs.Controllers
                 var existing = await _context
                     .ShareLinks
                     .Where(sl =>
-                        sl.SongId == request.SongId &&
-                        sl.IsActive &&
+                        sl.SongId!=null && sl.SongId == request.SongId &&
                         (!sl.ExpiresAt.HasValue || sl.ExpiresAt > now))
                     .OrderByDescending(sl => sl.CreatedAt)
                     .FirstOrDefaultAsync();
@@ -98,7 +97,7 @@ namespace FRELODYAPIs.Controllers
             try
             {
                 var shareLink = await _context.ShareLinks
-                    .FirstOrDefaultAsync(sl => sl.ShareToken == shareToken && sl.IsActive);
+                    .FirstOrDefaultAsync(sl => sl.ShareToken == shareToken);
 
                 if (shareLink == null)
                 {

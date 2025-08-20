@@ -1,4 +1,5 @@
-﻿@inject ILogger<Row> _logger
+﻿@using FRELODYSHRD.Dtos.EditDtos
+@inject ILogger<Row> _logger
 
 <div tabindex="0" 
      class="@($"w-100 position-relative d-flex flex-wrap gap-3 bg-white" + 
@@ -13,11 +14,12 @@
                   Items="filteredSegments"
                   OnUpdate="@SortSegments"
                   Context="segment"
-                  Class="d-flex flex-wrap w-100 gap-1">
+                  Class="d-flex flex-wrap w-100 gap-1"
+                  Style="@(Focused ? "min-height:5.5rem" : "min-height:4rem")">
         <SortableItemTemplate>
             <div class="d-flex align-items-end gap-2" @ondblclick="() => HandleDoubleClick(segment)">
-                <Segment Content="segment"
-                         Chords="Chords"
+                <Segment @ref="segmentRef"
+                         Content="segment"
                          Editing="@(EditModeSegmentId == segment.Id)"
                          Focused="Focused"
                          OnSave="HandleSave"
@@ -28,9 +30,8 @@
         <ActionItemTemplate>
             <DropIndicator LineNumber="Line" />
             
-            <AddSegment Chords="Chords"
+            <AddSegment @ref="addSegmentRef" 
                         FormOpen="addFormOpen"
-                        OnFormOpenChanged="SetAddFormOpen"
                         OnSegmentAdded="HandleSegmentAdded"
                         Focused="Focused"/>
         </ActionItemTemplate>
@@ -41,18 +42,19 @@
     [Parameter] public int Line { get; set; }
     [Parameter] public bool Focused { get; set; }
     [Parameter] public List<SegmentCreateDto> Segments { get; set; }
-    [Parameter] public List<ChordSimpleDto> Chords { get; set; }
     [Parameter] public string EditModeSegmentId { get; set; }
     [Parameter] public EventCallback OnFocusRow { get; set; }
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
-    [Parameter] public EventCallback<List<ChordSimpleDto>> OnChordsUpdate { get; set; }
+    [Parameter] public EventCallback<List<ChordDto>> OnChordsUpdate { get; set; }
     [Parameter] public EventCallback<string> OnEditModeSegmentIdChanged { get; set; }
     [Parameter] public TabsComponent.TabsComponentItem? ActiveTab { get; set; }
 
+    private Segment segmentRef = default!;
+    private AddSegment addSegmentRef = default!;
     private bool addFormOpen = false;
     private SegmentCreateDto editSegment;
     private SegmentCreateDto editedSegment;
-    private ChordSimpleDto editedChord;
+    private ChordDto editedChord;
     private List<SegmentCreateDto> filteredSegments =>
         Segments?.Where(s => s.LineNumber == Line).OrderBy(s => s.LyricOrder).ToList() ?? new();
 
@@ -67,7 +69,7 @@
         {
             editSegment = Segments?.FirstOrDefault(s => s.Id == EditModeSegmentId);
             editedSegment = editSegment;
-            editedChord = Chords?.FirstOrDefault(c => c.Id == editSegment?.ChordId);
+            //editedChord = Chords?.FirstOrDefault(c => c.Id == editSegment?.ChordId);
         }
     }
 
@@ -132,13 +134,19 @@
         await OnSegmentsUpdate.InvokeAsync(Segments);
     }
 
-    private void HandleDoubleClick(SegmentCreateDto segment)
+    private async void HandleDoubleClick(SegmentCreateDto segment)
     {
         if (editSegment != null)
         {
             HandleSave();
         }
-        OnEditModeSegmentIdChanged.InvokeAsync(segment.Id);
+        if (segmentRef != null)
+        {
+            var chord = await segmentRef.GetChord(segment.ChordId ?? "");
+            if (chord != null) segmentRef.SetSelectedChord(chord);
+        }
+
+        await OnEditModeSegmentIdChanged.InvokeAsync(segment.Id);
     }
 
     private void HandleSave()
@@ -166,9 +174,21 @@
         OnEditModeSegmentIdChanged.InvokeAsync(null);
     }
 
-    private void SetAddFormOpen(bool open)
+    public void SetAddFormOpen(bool open)
     {
         addFormOpen = open;
+        if (addFormOpen && addSegmentRef != null)
+        {
+            addSegmentRef.shouldFocusInput = true;
+        }
+    }
+
+    public void ClosePrevForm(int line)
+    {
+        if (addSegmentRef != null && addSegmentRef.FormOpen)
+        {
+            addSegmentRef.CloseForm();
+        }
     }
 
     private void HandleSegmentAdded(SegmentCreateDto newSegment)
@@ -190,10 +210,12 @@
 
             Segments.Add(newSegment);
             OnSegmentsUpdate.InvokeAsync(Segments);
+            SetAddFormOpen(true); //for next segment addition;
         }
         catch (Exception ex)
         {
             _logger.LogError("Error adding segment: {Error}", ex);
         }       
     }
+
 }

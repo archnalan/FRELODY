@@ -18,7 +18,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<ChordSimpleDto>), 200)]
+        [ProducesResponseType(typeof(IEnumerable<ChordDto>), 200)]
         public async Task<IActionResult> GetAllChords()
         {
             var chordResult = await _chordService.GetChordsAsync();
@@ -27,6 +27,17 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
 
             return Ok(chordResult.Data);
         }
+
+        [HttpGet]
+        [ProducesResponseType(typeof(ChordDto), 200)]
+        public async Task<IActionResult> GetChordById([FromQuery] string id)
+        {
+            var chordResult = await _chordService.GetChordByIdAsync(id);
+            if (!chordResult.IsSuccess)
+                return StatusCode(chordResult.StatusCode, new { message = chordResult.Error.Message });
+            return Ok(chordResult.Data);
+        }
+
 
         [HttpPost]
         [ProducesResponseType(typeof(ChordEditDto), 200)]
@@ -42,7 +53,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
 
         [HttpPost]
         [ProducesResponseType(typeof(ChordEditDto), 200)]
-        public async Task<ActionResult> CreateSimpleChord([FromBody] ChordSimpleDto chordDto)
+        public async Task<ActionResult> CreateSimpleChord([FromBody] ChordDto chordDto)
         {
             var chordResult = await _chordService.CreateSimpleChordAsync(chordDto);
 

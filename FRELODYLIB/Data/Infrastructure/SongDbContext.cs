@@ -79,6 +79,8 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<Page>().HasQueryFilter(x => 
                     (x.TenantId == _tenantId || x.TenantId == null) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<ShareLink>().HasQueryFilter(x => 
+                    x.IsActive != false);
 
             // Configure Song and its children
             builder.Entity<Song>()

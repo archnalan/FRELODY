@@ -55,3 +55,16 @@ window.closeDropdownsOnClickOutside = function (dotNetReference) {
         });
     });
 };
+
+
+window.getTabIndexOrDefault = (el) => {
+    if (!el) return 0;
+
+    // If element has explicit tabIndex, use that
+    if (el.tabIndex && el.tabIndex > 0) {
+        return el.tabIndex;
+    }
+
+    // Otherwise, return a safe base number
+    return 1000; // big enough so we don't clash with native flow
+};

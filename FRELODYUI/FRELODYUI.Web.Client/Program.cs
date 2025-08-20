@@ -35,6 +35,9 @@ builder.Services.AddRefitClient<IShareApi>()
 builder.Services.AddRefitClient<ISongSectionsApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
+builder.Services.AddRefitClient<IFeedbackApi>()
+               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+
 
 // Add device-specific services used by the FRELODYUI.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();

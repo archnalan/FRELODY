@@ -14,8 +14,15 @@ namespace FRELODYSHRD.Dtos
     public class UserFeedbackDto : BaseEntityDto
     {
         [Required]
+        [StringLength(100)]
+        public string Subject { get; set; }
+
+        [Required]
         [StringLength(255)]
         public string Comment { get; set; }
+        
+        [StringLength(100)]
+        public string? Title { get; set; }        
 
         [StringLength(100)]
         public string? Email { get; set; }
@@ -26,6 +33,12 @@ namespace FRELODYSHRD.Dtos
 
         [StringLength(50)]
         public string? UserId { get; set; }
+        public string? SubmitButtonText { get; set; } = "Submit Feedback";
+        public string? CommentHelperText { get; set; } = "(Optional): Provide additional details about your feedback";
+        public string? CommentPlaceholder { get; set; } = "Enter your feedback...";
+        public string CommentLabel { get; set; } = "Comment";
+        public string SubjectPlaceholder { get; set; } = "Enter title...";
+        public string SubjectLabel { get; set; } = "Subject";
 
         [EnumDataType(typeof(FeedbackStatus))]
         public FeedbackStatus? Status { get; set; }

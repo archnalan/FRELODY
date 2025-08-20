@@ -29,6 +29,6 @@ namespace FRELODYAPP.Dtos
         public string? LyricLineId { get; set; }
 
         [ForeignKey(nameof(ChordId))]
-        public virtual ChordSimpleDto? Chord { get; set; }
+        public virtual ChordDto? Chord { get; set; }
     }
 }

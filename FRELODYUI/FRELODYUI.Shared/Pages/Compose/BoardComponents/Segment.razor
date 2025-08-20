@@ -4,10 +4,11 @@
 <div class="@($"d-flex align-items-center p-2 rounded cursor-pointer {(Focused ? "bg-dark" : "bg-secondary")}")">
     @if (Editing)
     {
-        <AddSegment Chords="Chords"
+        <AddSegment @ref="addSegmentRef"
                     FormOpen="Editing"
                     Focused="Focused"
-                    OnFormOpenChanged="SetAddFormOpen"
+                    SelectedChord="@selectedChord"
+                    SegmentText="@Content.Lyric"
                     OnSegmentAdded="HandleSegmentAdded"/>
     }
     else
@@ -25,17 +26,18 @@
 
 @code {
     [Parameter] public SegmentCreateDto Content { get; set; } = default!;
-    [Parameter] public List<ChordSimpleDto> Chords { get; set; } = default!;
     [Parameter] public bool Editing { get; set; }
     [Parameter] public bool Focused { get; set; }
     [Parameter] public EventCallback OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto> OnDragStart { get; set; }
 
+    private ChordDto selectedChord = new();
     private string ChordName = string.Empty;
     private bool isInitialized = false;
+    private AddSegment addSegmentRef = default!;
 
-    protected override void OnAfterRender(bool firstRender)
+    protected async override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
@@ -44,11 +46,11 @@
                 if (!string.IsNullOrEmpty(Content.Id))
                 {
                     ChordName = Content.ChordName ?? string.Empty;
-                }
-                else
-                {
-                    ChordName = Chords?.FirstOrDefault(c =>
-                        c.Id == Content.ChordId)?.ChordName ?? "";
+                    if (string.IsNullOrEmpty(ChordName)
+                    && !string.IsNullOrEmpty(Content.ChordId))
+                    {
+                        selectedChord = await GetChord(Content.ChordId);
+                    }
                 }
                 isInitialized = true;
                 StateHasChanged();
@@ -61,13 +63,13 @@
         await OnDragStart.InvokeAsync(Content);
     }
 
-    private void SetAddFormOpen(bool open)
-    {
-        if (!open)
-        {
-            OnCancel.InvokeAsync();
-        }
-    }
+    // private void SetAddFormOpen(bool open)
+    // {
+    //     if (!open)
+    //     {
+    //         OnCancel.InvokeAsync();
+    //     }
+    // }
 
     private void HandleSegmentAdded(SegmentCreateDto editedSegment)
     {
@@ -81,5 +83,37 @@
         
         // Notify parent that save is complete
         OnSave.InvokeAsync();
+    }
+
+    public void SetSelectedChord(ChordDto chord)
+    {
+        selectedChord = chord;
+        Content.ChordId = chord.Id;
+        Content.ChordName = chord.ChordName;
+        ChordName = chord.ChordName ?? string.Empty;
+        StateHasChanged();
+    }
+
+    public async Task<ChordDto> GetChord(string chordId)
+    {
+        try
+        {
+            var response = await _chordsApi.GetChordById(chordId);
+            if (response.IsSuccessStatusCode)
+            {
+                return response.Content!;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _logger.LogError("Error getting chord: {Error}", errorMessage);
+                return new ChordDto();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error getting chord: {Error}", ex);
+            return new ChordDto();
+        }
     }
 }

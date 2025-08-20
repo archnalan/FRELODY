@@ -24,10 +24,10 @@
     @foreach (var line in lines)
     {
         <div class="position-relative mb-3" id="@($"line-{line}")">
-            <Row Line="@line"
+            <Row @ref="lineRef"
+                 Line="@line"
                  Focused="@(focusedRow == line)"
                  Segments="@Segments"
-                 Chords="@chords"
                  ActiveTab="@ActiveTab"
                  EditModeSegmentId="@editModeSegmentId"
                  OnFocusRow="() => SetFocusedRow(line)"
@@ -82,7 +82,8 @@
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
     [Parameter] public TabsComponent.TabsComponentItem? ActiveTab { get; set; } 
     // private List<SegmentCreateDto> segments = new();
-    private List<ChordSimpleDto> chords = new();
+    private List<ChordDto> chords = new();
+    private Row? lineRef = null;
     private int? focusedRow = null;
     private List<int> trackLines = new();
     private List<int> lines = new();
@@ -161,7 +162,7 @@
         }).ToList());
     }
 
-    private void HandleChordsUpdate(List<ChordSimpleDto> updatedChords)
+    private void HandleChordsUpdate(List<ChordDto> updatedChords)
     {
         chords = updatedChords;
     }
@@ -180,6 +181,11 @@
     {
         try
         {
+            if (lineRef != null)
+            {
+                lineRef.ClosePrevForm(afterLine);
+                StateHasChanged();
+            }           
             var lineIndex = lines.IndexOf(afterLine);
             int tempLineId = -1 * (trackLines.Count + 1); 
             var newSegmentId = Guid.NewGuid().ToString();

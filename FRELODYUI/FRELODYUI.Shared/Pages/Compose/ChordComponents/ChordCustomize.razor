@@ -1,7 +1,7 @@
 ﻿@inject ILogger<ChordCustomize> _logger
 
 <div class="modal fade @(show ? "show" : "")" 
-     style="display: @(show ? "block" : "none");" 
+     style="display: @(show ? "block" : "none"); z-index:10"
      tabindex="-1" role="dialog">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content p-2">
@@ -10,14 +10,22 @@
                 <button type="button" class="btn btn-close" @onclick="Close"></button>
             </div>
             <div class="modal-body border-0 px-3">
-                <EditForm Model="@Chord" OnValidSubmit="@Save">
+                <EditForm Model="@Content" OnValidSubmit="@Save" Context="formContext">
                     <DataAnnotationsValidator />
 
                     <div class="form-group mb-3">
                         <label>Chord Name</label>
-                        <InputText class="form-control" @bind-Value="@Chord.ChordName" required/>
+                        <InputText class="form-control" @bind-Value="@Content.ChordName" required />
                         <div style="min-height:1.5rem">
-                            <ValidationMessage For="@(() => Chord.ChordName)" />
+                            <ValidationMessage For="@(() => Content.ChordName)" />
+                            @if (formContext.GetValidationMessages(() => Content.ChordName).Any())
+                            {
+                                <span class="text-muted small">
+                                    <a href="#" @onclick="@(() => OpenFeedbackDialog())" @onclick:preventDefault="true">
+                                        Report rejected chord
+                                    </a>
+                                </span>
+                            }
                         </div>
                     </div>
 
@@ -33,16 +41,23 @@
 
 @if (show)
 {
-    <div class="modal-backdrop fade show"></div>
+    <div class="modal-backdrop fade show" style="z-index:0"></div>
 }
 
+<FeedbackDialog IsVisible="@showFeedbackDialog"
+                Content="@feedbackData"
+                OnSubmit="@HandleFeedbackSubmit"
+                OnClose="@CloseFeedbackDialog" />
+
 @code {
-    [Parameter] public ChordSimpleDto Chord { get; set; } = new();
-    [Parameter] public EventCallback<ChordSimpleDto> OnSave { get; set; }
+    [Parameter] public ChordDto Content { get; set; } = new();
+    [Parameter] public EventCallback<ChordDto> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool show { get; set; }
 
     private IBrowserFile uploadedFile;
+    private bool showFeedbackDialog = false;
+    private UserFeedbackDto feedbackData = new();
 
     public void Open()
     {
@@ -58,7 +73,7 @@
 
     private async Task Save()
     {
-        await OnSave.InvokeAsync(Chord);
+        await OnSave.InvokeAsync(Content);
         show = false;
     }
 
@@ -69,6 +84,36 @@
         // For demo purposes, we'll just create a preview
         var buffer = new byte[uploadedFile.Size];
         await uploadedFile.OpenReadStream().ReadAsync(buffer);
-        Chord.ChordAudioFilePath = $"data:{uploadedFile.ContentType};base64,{Convert.ToBase64String(buffer)}";
+        Content.ChordAudioFilePath = $"data:{uploadedFile.ContentType};base64,{Convert.ToBase64String(buffer)}";
+    }
+
+    private void OpenFeedbackDialog()
+    {
+        feedbackData = new UserFeedbackDto 
+        { 
+            Subject = $"Rejected Chord: {Content.ChordName ?? "Unknown"}",
+            Title = "Report Chord Rejection",
+            SubjectLabel = "Chord Name",
+            SubjectPlaceholder = "Enter the rejected chord name...",
+            CommentLabel = "Description",
+            CommentPlaceholder = "Describe why this chord should be accepted...",
+            CommentHelperText = "Help us improve our chord recognition",
+            SubmitButtonText = "Submit"
+        };
+        showFeedbackDialog = true;
+        StateHasChanged();
+    }
+
+    private void CloseFeedbackDialog()
+    {
+        showFeedbackDialog = false;
+        feedbackData = new();
+        StateHasChanged();
+    }
+
+    private async Task HandleFeedbackSubmit(UserFeedbackDto feedback)
+    {
+        CloseFeedbackDialog();
+        await Task.CompletedTask;
     }
 }

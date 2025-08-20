@@ -1,9 +1,11 @@
 ﻿
-<div class="dropdown" style="width: 100%;">
+
+<div class="dropend" style="width: 100%;">
     <div class="position-relative">
         <input class="form-control form-control-sm pe-4"
                type="text"
-               placeholder="Search chords..."
+               tabindex="@TabIndex" 
+               placeholder="add chord..."
                @bind="searchTerm"
                @oninput="HandleSearch"
                @onfocus="@(() => ToggleDropdown(true))" />
@@ -15,10 +17,11 @@
     
     @if (showDropdown)
     {
-        <div class="dropdown-menu show" style="width: 100%; max-height: 300px; overflow-y: auto; z-index:5">
+        <div class="dropdown-menu show"
+             style="position: absolute; top: 0; left: 100%; width: 200px; max-height: 300px; overflow-y: auto; z-index:5">
             @foreach (var chord in filteredChords)
             {
-                <button class="dropdown-item" type="button" @onclick="() => SelectChord(chord)">
+                <button tabindex="@(TabIndex + 1)" class="dropdown-item" type="button" @onclick="() => SelectChord(chord)">
                     @chord.ChordName
                 </button>
             }
@@ -27,7 +30,7 @@
                 <div class="dropdown-item text-muted">No chords found</div>
             }
             <div class="dropdown-divider"></div>
-            <button class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
+            <button tabindex="@(TabIndex + 2)" class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
                 <i class="bi bi-plus-circle-dotted"></i> Customize
             </button>
         </div>
@@ -37,25 +40,63 @@
 
 @if (showCustomizeModal)
 {
-    <ChordCustomize Show="showCustomizeModal" 
-                    Chord="SelectedChord"
+    <ChordCustomize Show="showCustomizeModal"
+                    Content="SelectedChord"
                     OnSave="HandleChordSaved" 
                     OnCancel="CloseCustomizeModal" />
 }
 
+@if (_modalService.IsModalVisible)
+{
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
+}
+
+
 @code {
-    [Parameter] public List<ChordSimpleDto> AvailableChords { get; set; } = new();
-    [Parameter] public ChordSimpleDto SelectedChord { get; set; } = new();
-    [Parameter] public EventCallback<ChordSimpleDto> SelectedChordChanged { get; set; }
+    [Parameter] public ChordDto SelectedChord { get; set; } = new();
+    [Parameter] public EventCallback<ChordDto> SelectedChordChanged { get; set; }
+    [Parameter] public int TabIndex { get; set; } = 0;
 
     private string searchTerm = "";
     private bool showDropdown = false;
     private bool showCustomizeModal = false;
-    private List<ChordSimpleDto> filteredChords = new();
+    private List<ChordDto> AvailableChords { get; set; } = new();
+    private List<ChordDto> filteredChords = new();
 
-    protected override void OnInitialized()
+    protected async override Task OnInitializedAsync()
     {
-        filteredChords = AvailableChords;
+        searchTerm = SelectedChord.ChordName ?? "";
+        await LoadChords();
+    }
+
+    private async Task LoadChords()
+    {
+        var response = await _chordsApi.GetAllChords();
+        if (response.IsSuccessStatusCode)
+        {
+            AvailableChords = response.Content!;
+            filteredChords = response.Content!;
+        }
+        else
+        {
+            var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = errorMessage,
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "LoadChords",
+                    Data = errorMessage
+                }
+            });
+        }
+
     }
 
     private void HandleSearch(ChangeEventArgs e)
@@ -77,7 +118,7 @@
             .ToList();
     }
 
-    private async Task SelectChord(ChordSimpleDto chord)
+    private async Task SelectChord(ChordDto chord)
     {
         SelectedChord = chord;
         searchTerm = chord.ChordName;
@@ -88,13 +129,13 @@
     private void ToggleDropdown(bool show)
     {
         showDropdown = show;
-        if (show) FilterChords();
     }
 
     private void OpenCustomizeModal()
     {
         showCustomizeModal = true;
         showDropdown = false;
+        SelectedChord.ChordName = searchTerm;
         StateHasChanged();
     }
 
@@ -103,16 +144,54 @@
         showCustomizeModal = false;
     }
 
-    private async Task HandleChordSaved(ChordSimpleDto newChord)
+    private async Task HandleChordSaved(ChordDto newChord)
     {
-        // Add new chord to available chords
+        newChord = AvailableChords.FirstOrDefault(c => 
+                   c.ChordName.Trim().ToLower() == newChord.ChordName.Trim().ToLower()) 
+                   ?? newChord;
         if (!AvailableChords.Any(c => c.Id == newChord.Id))
         {
+            var chord = new ChordCreateDto
+            {
+                ChordName = newChord.ChordName,
+                ChordType = ChordTypeService.DetermineChordType(newChord.ChordName),
+            };
+            var response = await _chordsApi.CreateChord(chord);
+            if(!response.IsSuccessStatusCode)
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        ActionType = "CreateChord",
+                        Data = errorMessage
+                    }
+                });
+                return;
+            }
             AvailableChords.Add(newChord);
         }
 
         // Select the new chord
         await SelectChord(newChord);
         CloseCustomizeModal();
+    }
+
+    private async Task ConfirmModal()
+    {
+        //Handle specific contexts
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
     }
 }

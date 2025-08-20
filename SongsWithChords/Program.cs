@@ -47,6 +47,7 @@ builder.Services.AddScoped<ILyricLineService, LyricLineService>();
 builder.Services.AddScoped<ISongPartService, SongPartService>();
 builder.Services.AddScoped<ITenantProvider, TenantProvider>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<SmtpSenderService>();
 builder.Services.AddScoped<FileValidationService>();
 builder.Services.AddScoped<SecurityUtilityService>();

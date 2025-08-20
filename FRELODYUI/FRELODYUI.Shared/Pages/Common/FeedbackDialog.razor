@@ -1,0 +1,163 @@
+@inject ILogger<FeedbackDialog> _logger
+
+<div class="modal fade @(IsVisible ? "show" : "")"
+     style="display: @(IsVisible ? "block" : "none");z-index:150"
+     tabindex="-1"
+     role="dialog"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content px-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title">@Content.Title</h5>
+                <button type="button" class="btn btn-close" @onclick="CloseDialog"></button>
+            </div>
+            <div class="modal-body border-0 px-0 py-2">
+                <EditForm Model="@Content" OnValidSubmit="@SubmitFeedback">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="form-group mb-3">
+                        <label for="feedbackTitle" class="form-label">@Content.SubjectLabel</label>
+                        <InputText id="feedbackTitle" 
+                                   class="form-control" 
+                                   @bind-Value="@Content.Subject" 
+                                   placeholder="@Content.SubjectPlaceholder"
+                                   required />
+                        <ValidationMessage For="@(() => Content.Subject)" />
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label for="feedbackComment" class="form-label">@Content.CommentLabel</label>
+                        <InputTextArea id="feedbackComment" 
+                                       class="form-control" 
+                                       @bind-Value="@Content.Comment" 
+                                       placeholder="@Content.CommentPlaceholder"
+                                       rows="4" />
+                        <ValidationMessage For="@(() => Content.Comment)" />
+                        <div class="form-text text-muted">@Content.CommentHelperText</div>
+                    </div>
+
+                    <div class="modal-footer border-0 px-0 pb-0">
+                        <button type="button" class="btn btn-outline-secondary me-2" @onclick="CloseDialog">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            }
+                            @Content.SubmitButtonText
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>   
+</div>
+
+@if (IsVisible)
+{
+    <div class="modal-backdrop fade show" style="z-index:100"></div>
+}
+
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public UserFeedbackDto Content { get; set; } = new();
+    [Parameter] public EventCallback<UserFeedbackDto> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool isSubmitting = false;
+
+    private async Task CloseDialog()
+    {
+        if (OnClose.HasDelegate)
+            await OnClose.InvokeAsync();
+    }
+
+    private async Task SubmitFeedback()
+    {
+        if (isSubmitting) return;
+
+        try
+        {
+            isSubmitting = true;
+            StateHasChanged();
+
+            var createDto = new UserFeedbackCreateDto
+            {
+                Subject = Content.Subject,
+                Comment = Content.Comment,
+                Title = Content.Title,
+                Email = Content.Email,
+                FullName = Content.FullName,
+                SongId = Content.SongId,
+                UserId = Content.UserId
+            };
+
+            var response = await _feedbackApi.CreateFeedback(createDto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Feedback Submitted",
+                    Message = "Thank you for your feedback. It has been submitted successfully.",
+                    ButtonText = "OK",
+                    OptionType = OptionType.Success
+                });
+
+                if (OnSubmit.HasDelegate)
+                    await OnSubmit.InvokeAsync(response.Content);
+
+                await CloseDialog();
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "OK",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error submitting feedback");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "An unexpected error occurred while submitting feedback. Please try again.",
+                ButtonText = "OK",
+                OptionType = OptionType.Error
+            });
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "CreateFeedback")
+        {
+            
+        }
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+}

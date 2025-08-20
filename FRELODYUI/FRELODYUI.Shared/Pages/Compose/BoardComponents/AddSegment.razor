@@ -5,18 +5,20 @@
     <div class="d-flex align-items-center p-2 rounded">
         <form class="d-flex position-relative" @onsubmit="HandleSubmit">
             <div class="d-flex flex-column gap-2 me-1">                
-               <ChordsDropdown AvailableChords="availableChords" 
-                            SelectedChord="selectedChord" 
-                            SelectedChordChanged="HandleChordSelected" />
-                <input type="text"
+               <ChordsDropdown TabIndex="@(_baseTabIndex + 1)"
+                               SelectedChord="SelectedChord" 
+                               SelectedChordChanged="HandleChordSelected" />
+                <input @ref="lyricInput"
+                       type="text"
+                       tabindex="@_baseTabIndex"
                        class="form-control form-control-sm"
-                       @bind="addFormSegment"
+                       @bind="SegmentText"
                        placeholder="Enter lyrics..." />
             </div>
-            <button type="button" class="btn btn-link btn-sm position-absolute top-0 end-0" @onclick="CloseForm">
+            <button type="button" tabindex="@(_baseTabIndex + 5)" class="btn btn-link btn-sm position-absolute top-0 end-0" @onclick="CloseForm">
                 <span class="text-danger">&times;</span>
             </button>
-            <button type="submit" class="btn btn-primary btn-sm">
+            <button type="submit" tabindex="@(_baseTabIndex + 4)" class="btn btn-primary btn-sm">
                 <i class="bi bi-pencil"></i>
             </button>
         </form>
@@ -31,63 +33,53 @@ else
     </button>
 }
 
-@if (_modalService.IsModalVisible)
-{
-    <DialogModal IsVisible="true"
-                 Modal="@_modalService.CurrentModal"
-                 OnCloseModal="CloseModal"
-                 OnConfirmModal="ConfirmModal" />
-}
-
 @code {
-    [Parameter] public List<ChordSimpleDto>? Chords { get; set; }
-    [Parameter] public bool FormOpen { get; set; }
-    [Parameter] public EventCallback<bool> OnFormOpenChanged { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto> OnSegmentAdded { get; set; }
+    [Parameter] public ChordDto SelectedChord { get; set; } = new();
+    [Parameter] public string SegmentText { get; set; } = string.Empty;
     [Parameter] public bool Focused { get; set; }
-    private List<ChordSimpleDto> availableChords = new();
-    private ChordSimpleDto selectedChord = new();
 
-    private string addFormSegment = string.Empty;
+    [Parameter] public bool FormOpen { get; set; } = false;
+    private List<ChordDto>? Chords { get; set; }
+    private ElementReference lyricInput =default!;
+    public bool shouldFocusInput = true;
+    private int _baseTabIndex = 0;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadChords();
+        await base.OnInitializedAsync();
     }
-    private async Task LoadChords()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var response = await _chordsApi.GetAllChords();
-        if (response.IsSuccessStatusCode)
+        if (firstRender)
         {
-            availableChords = response.Content!;
-        }
-        else
-        {
-            var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
-            _modalService.Show(new ModalOptionDto
+            if (FormOpen)
             {
-                Title = "Error",
-                Message = errorMessage,
-                ButtonText = "Close",
-                OptionType = OptionType.Error,
-                Context= new ModalContext
-                {
-                    ActionType = "LoadChords",
-                    Data = errorMessage
-                }
-            });
+                await lyricInput.FocusAsync();
+            }           
         }
+        if (shouldFocusInput && FormOpen)
+        {
+            shouldFocusInput = false;
+            await lyricInput.FocusAsync();
 
+            _baseTabIndex = await JsRt.InvokeAsync<int>(
+           "getTabIndexOrDefault",
+           lyricInput);
+            StateHasChanged();
+        }
     }
 
-    private void OpenForm()
+
+    public void OpenForm()
     {
-        OnFormOpenChanged.InvokeAsync(true);
+        FormOpen = true;
+        shouldFocusInput = true;        
     }
 
-    private void CloseForm()
+    public void CloseForm()
     {
-        OnFormOpenChanged.InvokeAsync(false);
+        FormOpen = false;
     }
 
     private void HandleSubmit()
@@ -95,39 +87,26 @@ else
         var newSegment = new SegmentCreateDto
             {
                 Id = Guid.NewGuid().ToString(),
-                Lyric = string.IsNullOrEmpty(addFormSegment.Trim()) ? "-" : addFormSegment.Trim(),
-                ChordId = selectedChord.Id,
-                ChordName = selectedChord.ChordName,
+                Lyric = GetLyric(SegmentText),
+                ChordId = SelectedChord.Id,
+                ChordName = SelectedChord.ChordName,
             };
 
         OnSegmentAdded.InvokeAsync(newSegment);
-        addFormSegment = "";
-        selectedChord = new ChordSimpleDto(); 
+        SegmentText = "";
+        SelectedChord = new ChordDto(); 
         CloseForm();
     } 
 
-    private async Task HandleChordSelected(ChordSimpleDto chord)
+    private async Task HandleChordSelected(ChordDto chord)
     {
-        selectedChord = chord;
-        // Save the chord selection to your visit history
-        await SaveChordToHistory(selectedChord);
+        SelectedChord = chord;
     }
 
-    private async Task SaveChordToHistory(ChordSimpleDto chord)
+    private string GetLyric(string SegmentText)
     {
-        // Your logic to save the chord to visit history
-    }
-
-    private async Task ConfirmModal()
-    {
-        //Handle specific contexts
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
+        return string.IsNullOrEmpty(SegmentText?.Trim()) 
+        ? "-" 
+        : SegmentText.Trim();
     }
 }

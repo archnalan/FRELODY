@@ -21,6 +21,7 @@ namespace FRELODYUI.Shared.Models
         Info = 3,
         Error = 4,
         Confirmation = 5,
+        Feedback = 6
     }
     public class ModalContext
     {
