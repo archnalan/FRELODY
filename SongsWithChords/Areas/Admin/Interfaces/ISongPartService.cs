@@ -1,5 +1,5 @@
 ﻿using FRELODYAPP.Dtos;
-using FRELODYAPP.ServiceHandler;
+using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Dtos.CreateDtos;
 
 namespace FRELODYAPP.Areas.Admin.Interfaces

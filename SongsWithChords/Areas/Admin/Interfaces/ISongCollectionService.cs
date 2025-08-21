@@ -1,8 +1,8 @@
 ﻿using FRELODYAPIs.Areas.Admin.ViewModels;
 using FRELODYAPP.Dtos;
-using FRELODYAPP.ServiceHandler;
 using FRELODYLIB.Models;
 using FRELODYLIB.ServiceHandler;
+using FRELODYLIB.ServiceHandler.ResultModels;
 
 namespace FRELODYAPIs.Areas.Admin.Interfaces
 {

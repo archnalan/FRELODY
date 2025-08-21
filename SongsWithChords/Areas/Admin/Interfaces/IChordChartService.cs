@@ -1,4 +1,4 @@
-﻿using FRELODYAPP.ServiceHandler;
+﻿using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
 using FRELODYSHRD.Dtos.HybridDtos;

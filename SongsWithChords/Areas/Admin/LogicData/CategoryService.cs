@@ -2,7 +2,7 @@ using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Dtos;
 using FRELODYAPP.Models;
-using FRELODYAPP.ServiceHandler;
+using FRELODYLIB.ServiceHandler.ResultModels;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

@@ -1,4 +1,4 @@
-﻿namespace FRELODYAPP.ServiceHandler
+﻿namespace FRELODYLIB.ServiceHandler.ResultModels
 {
     public class ServiceResult<T>
     {

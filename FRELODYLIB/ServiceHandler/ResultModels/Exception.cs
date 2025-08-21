@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace FRELODYAPP.ServiceHandler
+namespace FRELODYLIB.ServiceHandler.ResultModels
 {
 	public class NotFoundException: Exception
     {

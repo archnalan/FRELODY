@@ -17,6 +17,8 @@ using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPIs.Areas.Admin.LogicData;
 using System.Text.Json;
 using FRELODYAPP.Data.Extensions;
+using SongsWithChords.Middleware;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +54,10 @@ builder.Services.AddScoped<SmtpSenderService>();
 builder.Services.AddScoped<FileValidationService>();
 builder.Services.AddScoped<SecurityUtilityService>();
 builder.Services.AddScoped<TokenService>();
+
+// Register the global exception handler
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services.AddControllers()
 	.AddJsonOptions(options =>
@@ -187,10 +193,14 @@ using (var scope = app.Services.CreateScope())
 }
 	else
 	{
-		app.UseExceptionHandler("/Home/Error");
+		// Use the global exception handler in production
+		app.UseExceptionHandler();
 		// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
 		app.UseHsts();
 	}
+
+// Add global exception handling middleware
+app.UseExceptionHandler();
 
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();

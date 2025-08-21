@@ -1,6 +1,6 @@
 ﻿using FRELODYAPP.Dtos;
 using FRELODYAPP.Dtos.CompositeDtos;
-using FRELODYAPP.ServiceHandler;
+using FRELODYLIB.ServiceHandler.ResultModels;
 
 namespace FRELODYAPP.Areas.Admin.Interfaces
 {

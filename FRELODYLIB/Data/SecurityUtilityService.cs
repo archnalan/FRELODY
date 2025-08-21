@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using FRELODYAPP.ServiceHandler;
 using System.Net;
+using FRELODYLIB.ServiceHandler.ResultModels;
 
 namespace FRELODYAPP.Data
 {

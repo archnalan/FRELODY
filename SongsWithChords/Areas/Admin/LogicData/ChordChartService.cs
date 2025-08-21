@@ -1,12 +1,12 @@
 ﻿using Mapster;
 using FRELODYAPP.Models;
-using FRELODYAPP.ServiceHandler;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
 using FRELODYSHRD.Dtos.HybridDtos;
+using FRELODYLIB.ServiceHandler.ResultModels;
 
 namespace FRELODYAPP.Areas.Admin.LogicData
 {

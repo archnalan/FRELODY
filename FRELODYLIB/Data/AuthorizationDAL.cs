@@ -16,12 +16,12 @@ using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Dtos.UserDtos;
 using FRELODYAPP.Extensions;
 using FRELODYAPP.Models.SubModels;
-using FRELODYAPP.ServiceHandler;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Hosting;
+using FRELODYLIB.ServiceHandler.ResultModels;
 
 namespace FRELODYAPP.Data
 {

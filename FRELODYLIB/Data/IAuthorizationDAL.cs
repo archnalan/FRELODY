@@ -1,7 +1,7 @@
 ﻿using FRELODYAPP.Dtos.AuthDtos;
 using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Dtos.UserDtos;
-using FRELODYAPP.ServiceHandler;
+using FRELODYLIB.ServiceHandler.ResultModels;
 using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYAPP.Data

@@ -9,11 +9,11 @@ using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Dtos.AuthDtos;
 using FRELODYAPP.Dtos.UserDtos;
 using FRELODYAPP.Models.SubModels;
-using FRELODYAPP.ServiceHandler;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using FRELODYLIB.ServiceHandler.ResultModels;
 
 namespace FRELODYAPP.Data
 {
