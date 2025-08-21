@@ -28,10 +28,10 @@
     [Parameter] public SegmentCreateDto Content { get; set; } = default!;
     [Parameter] public bool Editing { get; set; }
     [Parameter] public bool Focused { get; set; }
-    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback<SegmentCreateDto> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto> OnDragStart { get; set; }
-
+    
     private ChordDto selectedChord = new();
     private string ChordName = string.Empty;
     private bool isInitialized = false;
@@ -77,12 +77,12 @@
         Content.Lyric = editedSegment.Lyric;
         Content.ChordId = editedSegment.ChordId;
         Content.ChordName = editedSegment.ChordName;
-        
+
         // Update the local ChordName for display
         ChordName = editedSegment.ChordName ?? string.Empty;
-        
+
         // Notify parent that save is complete
-        OnSave.InvokeAsync();
+        OnSave.InvokeAsync(editedSegment);
     }
 
     public void SetSelectedChord(ChordDto chord)

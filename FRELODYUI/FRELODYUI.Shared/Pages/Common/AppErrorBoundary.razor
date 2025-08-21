@@ -1,0 +1,14 @@
+@inherits ErrorBoundary
+
+@code {
+    [Parameter] public EventCallback<Exception> OnError { get; set; }
+
+    protected override Task OnErrorAsync(Exception exception)
+    {
+        if (OnError.HasDelegate)
+        {
+            return OnError.InvokeAsync(exception);
+        }
+        return Task.CompletedTask;
+    }
+}

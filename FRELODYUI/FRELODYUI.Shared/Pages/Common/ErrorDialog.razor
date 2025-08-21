@@ -1,0 +1,164 @@
+@inject ILogger<ErrorDialog> Logger
+
+@if (Visible)
+{
+    <div class="modal fade show" style="display: block; z-index: 200" tabindex="-1" role="dialog" aria-hidden="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        @Title
+                    </h5>
+                </div>
+                <div class="modal-body border-0 px-4 py-3">
+                    <p class="mb-3">@Message</p>
+                    
+                    @if (!string.IsNullOrEmpty(ErrorId))
+                    {
+                        <div class="alert alert-light border">
+                            <small class="text-muted">
+                                <strong>Error ID:</strong> @ErrorId
+                            </small>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer border-0 d-flex gap-2">
+                    @if (CanRetry)
+                    {
+                        <button type="button" class="btn btn-primary" @onclick="HandleRetry">
+                            <i class="bi bi-arrow-clockwise me-1"></i>
+                            Retry
+                        </button>
+                    }
+                    <button type="button" class="btn btn-outline-danger" @onclick="HandleReportBug">
+                        <i class="bi bi-bug me-1"></i>
+                        Report Bug
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="HandleReload">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        @GetReloadButtonText()
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show" style="z-index: 190"></div>
+}
+
+<FeedbackDialog IsVisible="@_feedbackVisible"
+                Content="@_feedbackContent"
+                OnSubmit="HandleFeedbackSubmit"
+                OnClose="CloseFeedback" />
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public string Title { get; set; } = "Unexpected Error";
+    [Parameter] public string Message { get; set; } = "Something went wrong. You can retry or reload the application.";
+    [Parameter] public string? ErrorId { get; set; }
+    [Parameter] public bool CanRetry { get; set; } = true;
+    [Parameter] public EventCallback OnRetry { get; set; }
+    [Parameter] public EventCallback OnReload { get; set; }
+    [Parameter] public Exception? Exception { get; set; }
+
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    private bool _feedbackVisible = false;
+    private UserFeedbackDto _feedbackContent = new();
+
+    private async Task HandleRetry()
+    {
+        if (OnRetry.HasDelegate)
+            await OnRetry.InvokeAsync();
+    }
+
+    private async Task HandleReload()
+    {
+        if (OnReload.HasDelegate)
+            await OnReload.InvokeAsync();
+        else
+        {
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+            // MAUI-specific restart logic handled in Routes.razor
+            await Task.CompletedTask;
+#else
+            // Web-specific reload using JSRuntime
+            await JSRuntime.InvokeVoidAsync("location.reload");
+#endif
+        }
+    }
+
+    private void HandleReportBug()
+    {
+        var platformInfo = GetPlatformInfo();
+        
+        _feedbackContent = new UserFeedbackDto
+        {
+            Title = "Bug Report",
+            Subject = $"Error: {Title}",
+            Comment = $"Error Details:\n" +
+                     $"Message: {Message}\n" +
+                     $"Error ID: {ErrorId ?? "N/A"}\n" +
+                     $"Platform: {platformInfo}\n" +
+                     $"Timestamp: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+                     $"Exception: {Exception?.GetType().Name ?? "Unknown"}\n\n" +
+                     $"Steps to reproduce:\n" +
+                     $"1. \n" +
+                     $"2. \n" +
+                     $"3. \n\n" +
+                     $"Additional information:",
+            SubjectLabel = "Bug Summary",
+            SubjectPlaceholder = "Brief description of the issue",
+            CommentLabel = "Bug Details",
+            CommentPlaceholder = "Please provide additional details about what you were doing when this error occurred...",
+
+            CommentHelperText = "The more details you provide, the better we can help fix this issue.",
+            SubmitButtonText = "Submit Bug Report"
+        };
+        
+        _feedbackVisible = true;
+        StateHasChanged();
+    }
+
+    private async Task HandleFeedbackSubmit(UserFeedbackDto feedback)
+    {
+        Logger.LogInformation("Bug report submitted for error: {ErrorId}", ErrorId);
+        await CloseFeedback();
+        
+        // Optionally close the error dialog after feedback submission
+        if (VisibleChanged.HasDelegate)
+            await VisibleChanged.InvokeAsync(false);
+    }
+
+    private async Task CloseFeedback()
+    {
+        _feedbackVisible = false;
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    private string GetReloadButtonText()
+    {
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+        return "Restart App";
+#else
+        return "Reload App";
+#endif
+    }
+
+    private string GetPlatformInfo()
+    {
+#if ANDROID
+        return $"Android - {DeviceInfo.Model} ({DeviceInfo.Version})";
+#elif IOS
+        return $"iOS - {DeviceInfo.Model} ({DeviceInfo.Version})";
+#elif MACCATALYST
+        return $"macOS - {DeviceInfo.Model} ({DeviceInfo.Version})";
+#elif WINDOWS
+        return $"Windows - {DeviceInfo.Model} ({DeviceInfo.Version})";
+#else
+        return "Web Browser";
+#endif
+    }
+}

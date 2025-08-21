@@ -52,9 +52,9 @@
     private Segment segmentRef = default!;
     private AddSegment addSegmentRef = default!;
     private bool addFormOpen = false;
-    private SegmentCreateDto editSegment;
-    private SegmentCreateDto editedSegment;
-    private ChordDto editedChord;
+    private SegmentCreateDto? editSegment;
+    private SegmentCreateDto? editedSegment;
+    private ChordDto? editedChord;
     private List<SegmentCreateDto> filteredSegments =>
         Segments?.Where(s => s.LineNumber == Line).OrderBy(s => s.LyricOrder).ToList() ?? new();
 
@@ -166,6 +166,7 @@
         }
         editSegment = null;
         OnEditModeSegmentIdChanged.InvokeAsync(null);
+        SetAddFormOpen(true);
     }
 
     private void HandleCancel()
