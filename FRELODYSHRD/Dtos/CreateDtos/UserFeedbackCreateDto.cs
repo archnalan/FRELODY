@@ -9,7 +9,6 @@ namespace FRELODYSHRD.Dtos.CreateDtos
         public string Subject { get; set; } = string.Empty;
 
         [Required]
-        [StringLength(255)]
         public string Comment { get; set; } = string.Empty;
 
         [StringLength(100)]

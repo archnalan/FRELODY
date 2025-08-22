@@ -2,17 +2,19 @@
 
 @if (Visible)
 {
-    <div class="modal fade show" style="display: block; z-index: 200" tabindex="-1" role="dialog" aria-hidden="false">
+    <div class="modal fade show" style="display: block; z-index: @(_feedbackVisible? "100" : "200")" tabindex="-1" role="dialog" aria-hidden="false">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title text-danger">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div class="modal-content p-2">
+                <div class="modal-header flex-column border-0 pb-0">
+                    <h2 class="text-danger text-center">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </h2>
+                    <h5 class="modal-title text-danger text-center">
                         @Title
                     </h5>
                 </div>
                 <div class="modal-body border-0 px-4 py-3">
-                    <p class="mb-3">@Message</p>
+                    <p class="mb-3 text-center">@Message</p>
                     
                     @if (!string.IsNullOrEmpty(ErrorId))
                     {
@@ -23,14 +25,7 @@
                         </div>
                     }
                 </div>
-                <div class="modal-footer border-0 d-flex gap-2">
-                    @if (CanRetry)
-                    {
-                        <button type="button" class="btn btn-primary" @onclick="HandleRetry">
-                            <i class="bi bi-arrow-clockwise me-1"></i>
-                            Retry
-                        </button>
-                    }
+                <div class="modal-footer border-0 justify-content-center gap-2">
                     <button type="button" class="btn btn-outline-danger" @onclick="HandleReportBug">
                         <i class="bi bi-bug me-1"></i>
                         Report Bug
@@ -39,11 +34,18 @@
                         <i class="bi bi-arrow-clockwise me-1"></i>
                         @GetReloadButtonText()
                     </button>
+                    @if (CanRetry)
+                    {
+                        <button type="button" class="btn btn-primary" @onclick="HandleRetry">
+                            <i class="bi bi-arrow-clockwise me-1"></i>
+                            Retry
+                        </button>
+                    }
                 </div>
             </div>
         </div>
     </div>
-    <div class="modal-backdrop fade show" style="z-index: 190"></div>
+    <div class="modal-backdrop fade show" style="z-index:@(_feedbackVisible? "90" : "190")"></div>
 }
 
 <FeedbackDialog IsVisible="@_feedbackVisible"

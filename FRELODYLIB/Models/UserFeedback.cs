@@ -12,7 +12,6 @@ namespace FRELODYAPP.Models
         public string Subject { get; set; }
 
         [Required]
-        [StringLength(255)]
         public string Comment { get; set; }
 
         [StringLength(100)]

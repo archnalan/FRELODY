@@ -60,6 +60,8 @@
 
     protected override void OnParametersSet()
     {
+        throw new NotImplementedException("This component is not intended for direct initialization. Use the SongBoard component instead.");
+
         if (!Focused && editSegment != null)
         {
             HandleSave();

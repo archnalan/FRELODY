@@ -31,7 +31,7 @@
     [Parameter] public EventCallback<SegmentCreateDto> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto> OnDragStart { get; set; }
-    
+
     private ChordDto selectedChord = new();
     private string ChordName = string.Empty;
     private bool isInitialized = false;
