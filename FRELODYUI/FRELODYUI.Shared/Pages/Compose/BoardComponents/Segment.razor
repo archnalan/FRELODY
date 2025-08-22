@@ -1,19 +1,20 @@
 ﻿@using FRELODYUI.Shared.Pages.Compose.ChordComponents
 @inject ILogger<Segment> _logger
 
-<div class="@($"d-flex align-items-center p-2 rounded cursor-pointer {(Focused ? "bg-dark" : "bg-secondary")}")">
+<div class="@($"h-100 w-100 d-flex align-items-between py-3 px-2 rounded cursor-pointer {(Focused ? "bg-dark" : "bg-secondary")}")">
     @if (Editing)
     {
         <AddSegment @ref="addSegmentRef"
                     FormOpen="Editing"
-                    Focused="Focused"
+                    IsMidSegments="true"
                     SelectedChord="@selectedChord"
                     SegmentText="@Content.Lyric"
+                    OnCancel= "HandleCancel"
                     OnSegmentAdded="HandleSegmentAdded"/>
     }
     else
     {
-        <div class="d-flex flex-column justify-content-between">
+        <div class="d-flex flex-column justify-content-between" style="@TextBoxSize">
             <div>
                 <p class="small text-white m-0">@ChordName</p>
             </div>
@@ -28,9 +29,11 @@
     [Parameter] public SegmentCreateDto Content { get; set; } = default!;
     [Parameter] public bool Editing { get; set; }
     [Parameter] public bool Focused { get; set; }
+    [Parameter] public string TextBoxSize { get; set; } = "width:8rem;"; 
     [Parameter] public EventCallback<SegmentCreateDto> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto> OnDragStart { get; set; }
+    [Parameter] public EventCallback<SegmentCreateDto> SegmentRemoved { get; set; }
 
     private ChordDto selectedChord = new();
     private string ChordName = string.Empty;
@@ -63,13 +66,16 @@
         await OnDragStart.InvokeAsync(Content);
     }
 
-    // private void SetAddFormOpen(bool open)
-    // {
-    //     if (!open)
-    //     {
-    //         OnCancel.InvokeAsync();
-    //     }
-    // }
+    private void HandleCancel()
+    {
+       Editing = false; 
+       if(string.IsNullOrEmpty(Content.ChordName) 
+       && string.IsNullOrEmpty(Content.Lyric))
+       {
+           if(SegmentRemoved.HasDelegate)
+                SegmentRemoved.InvokeAsync(Content);
+       }
+    }
 
     private void HandleSegmentAdded(SegmentCreateDto editedSegment)
     {
@@ -97,7 +103,7 @@
     public async Task<ChordDto> GetChord(string chordId)
     {
         try
-        {
+        {            
             var response = await _chordsApi.GetChordById(chordId);
             if (response.IsSuccessStatusCode)
             {

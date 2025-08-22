@@ -4,7 +4,7 @@
 {
     <div class="d-flex align-items-center p-2 rounded">
         <form class="d-flex position-relative" @onsubmit="HandleSubmit">
-            <div class="d-flex flex-column gap-2 me-1">                
+            <div class="d-flex flex-column gap-2 me-2">                
                <ChordsDropdown TabIndex="@(_baseTabIndex + 1)"
                                SelectedChord="SelectedChord" 
                                SelectedChordChanged="HandleChordSelected" />
@@ -13,20 +13,25 @@
                        tabindex="@_baseTabIndex"
                        class="form-control form-control-sm"
                        @bind="SegmentText"
-                       placeholder="Enter lyrics..." />
+                       placeholder="Enter lyric segment..." />
             </div>
-            <button type="button" tabindex="@(_baseTabIndex + 5)" class="btn btn-link btn-sm position-absolute top-0 end-0" @onclick="CloseForm">
-                <span class="text-danger">&times;</span>
-            </button>
-            <button type="submit" tabindex="@(_baseTabIndex + 4)" class="btn btn-primary btn-sm">
-                <i class="bi bi-pencil-square"></i>
+            <div tabindex="@(_baseTabIndex + 5)"
+                 class="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-white"
+                 style="display:flex; justify-content:center; align-items:center; width:1.5rem;height:1.5rem"
+                 @onclick="CloseForm">
+                <i class="bi bi-x text-danger"></i>
+            </div>
+            <button type="submit" tabindex="@(_baseTabIndex + 4)" 
+                class="btn btn-primary btn-sm">
+                Save
             </button>
         </form>
     </div>
 }
 else
 {
-    <button class="@($"btn btn-sm {(Focused ? "btn-outline-dark" : "btn-outline-secondary")}")"
+    <button class="@($"btn btn-sm px-3 {(Focused ? "btn-outline-dark" : "btn-outline-secondary")}")"
+            style="@TextBoxSize"
             @onclick="OpenForm">
         <i class="bi bi-plus"></i>
         Add a segment
@@ -35,11 +40,14 @@ else
 
 @code {
     [Parameter] public EventCallback<SegmentCreateDto> OnSegmentAdded { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public string TextBoxSize { get; set; } = "width:8rem;";
     [Parameter] public ChordDto SelectedChord { get; set; } = new();
     [Parameter] public string SegmentText { get; set; } = string.Empty;
+    [Parameter] public bool IsMidSegments { get; set; } 
+    [Parameter] public bool FormOpen { get; set; } 
     [Parameter] public bool Focused { get; set; }
 
-    [Parameter] public bool FormOpen { get; set; } = false;
     private List<ChordDto>? Chords { get; set; }
     private ElementReference lyricInput =default!;
     public bool shouldFocusInput = true;
@@ -74,12 +82,18 @@ else
     public void OpenForm()
     {
         FormOpen = true;
+        Focused = false;
         shouldFocusInput = true;        
     }
 
     public void CloseForm()
     {
+        if(OnCancel.HasDelegate)
+        {
+            OnCancel.InvokeAsync();
+        }
         FormOpen = false;
+        Focused = false;
     }
 
     private void HandleSubmit()
@@ -104,6 +118,7 @@ else
     }
 
     private string GetLyric(string SegmentText)
+    
     {
         return string.IsNullOrEmpty(SegmentText?.Trim()) 
         ? "-" 

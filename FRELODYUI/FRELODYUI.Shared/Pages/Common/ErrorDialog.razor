@@ -82,8 +82,8 @@
         else
         {
 #if ANDROID || IOS || MACCATALYST || WINDOWS
-            // MAUI-specific restart logic handled in Routes.razor
-            await Task.CompletedTask;
+            // MAUI-specific restart logic to be handled in Routes.razor
+           await Task.CompletedTask;
 #else
             // Web-specific reload using JSRuntime
             await JSRuntime.InvokeVoidAsync("location.reload");
@@ -105,7 +105,7 @@
                      $"Platform: {platformInfo}\n" +
                      $"Timestamp: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
                      $"Exception: {Exception?.GetType().Name ?? "Unknown"}\n\n" +
-                     $"Steps to reproduce:\n" +
+                     $"Steps to reproduce error:\n" +
                      $"1. \n" +
                      $"2. \n" +
                      $"3. \n\n" +

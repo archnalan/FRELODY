@@ -15,24 +15,28 @@
                   OnUpdate="@SortSegments"
                   Context="segment"
                   Class="d-flex flex-wrap w-100 gap-1"
-                  Style="@(Focused ? "min-height:5.5rem" : "min-height:4rem")">
+                  Style="@textBoxSize">
         <SortableItemTemplate>
-            <div class="d-flex align-items-end gap-2" @ondblclick="() => HandleDoubleClick(segment)">
+            <div @ondblclick="() => HandleDoubleClick(segment)">
                 <Segment @ref="segmentRef"
                          Content="segment"
                          Editing="@(EditModeSegmentId == segment.Id)"
                          Focused="Focused"
+                         TextBoxSize="@textBoxSize"
                          OnSave="HandleSave"
                          OnCancel="HandleCancel"
-                         OnDragStart="HandleDragStart" />
+                         OnDragStart="HandleDragStart" 
+                         SegmentRemoved="HandleSegmentRemoved" />
+                          
             </div>
         </SortableItemTemplate>
         <ActionItemTemplate>
-            <DropIndicator LineNumber="Line" />
+            @* <DropIndicator LineNumber="Line" /> *@
             
             <AddSegment @ref="addSegmentRef" 
                         FormOpen="addFormOpen"
                         OnSegmentAdded="HandleSegmentAdded"
+                        TextBoxSize="@textBoxSize"
                         Focused="Focused"/>
         </ActionItemTemplate>
     </SortableList>
@@ -57,11 +61,10 @@
     private ChordDto? editedChord;
     private List<SegmentCreateDto> filteredSegments =>
         Segments?.Where(s => s.LineNumber == Line).OrderBy(s => s.LyricOrder).ToList() ?? new();
+    string textBoxSize => Focused ? "min-height:5rem" : "min-height:4rem";
 
     protected override void OnParametersSet()
     {
-        throw new NotImplementedException("This component is not intended for direct initialization. Use the SongBoard component instead.");
-
         if (!Focused && editSegment != null)
         {
             HandleSave();
@@ -142,12 +145,11 @@
         {
             HandleSave();
         }
-        if (segmentRef != null)
+        if (segmentRef != null && !string.IsNullOrEmpty(segment.ChordId))
         {
-            var chord = await segmentRef.GetChord(segment.ChordId ?? "");
+            var chord = await segmentRef.GetChord(segment.ChordId);
             if (chord != null) segmentRef.SetSelectedChord(chord);
         }
-
         await OnEditModeSegmentIdChanged.InvokeAsync(segment.Id);
     }
 
@@ -219,6 +221,19 @@
         {
             _logger.LogError("Error adding segment: {Error}", ex);
         }       
+    }
+
+    private void HandleSegmentRemoved(SegmentCreateDto segment)
+    {
+        if (segment != null)
+        {
+            if (!string.IsNullOrEmpty(segment.Id))
+            {
+                Segments.RemoveAll(s => s.Id == segment.Id);
+                OnSegmentsUpdate.InvokeAsync(Segments);
+            }          
+        }
+     
     }
 
 }

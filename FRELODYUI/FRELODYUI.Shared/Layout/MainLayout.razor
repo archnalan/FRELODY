@@ -1,4 +1,6 @@
-﻿@inherits LayoutComponentBase
+﻿@using System.Security;
+@using System.Text.Json;
+@inherits LayoutComponentBase
 
 <div class="page">
     <div class="sidebar">
@@ -49,22 +51,47 @@
     private async Task HardReload()
     {
 #if ANDROID || IOS || MACCATALYST || WINDOWS
+        Application.Current.Quit();
         await Task.CompletedTask; // platform-specific restart handled elsewhere
 #else
         await JS.InvokeVoidAsync("location.reload");
 #endif
     }
 
-    private (string Title, string Message, bool CanRetry) GetErrorDetails(Exception ex) =>
-        ex switch
-        {
-            HttpRequestException => ("Network Error", "Unable to reach the server.", true),
-            TimeoutException => ("Timeout", "The request took too long.", true),
-            UnauthorizedAccessException => ("Access Denied", "You are not authorized.", false),
-            ArgumentException => ("Invalid Input", "Please verify your input.", true),
-            InvalidOperationException => ("Operation Failed", "Cannot complete the operation now.", true),
-            _ => ("Unexpected Error", "Something went wrong on this page.", true)
-        };
+private (string Title, string Message, bool CanRetry) GetErrorDetails(Exception ex) =>
+    ex switch
+    {
+        // Network / API
+        HttpRequestException => ("Network Error", "Unable to reach the server.", true),
+        TimeoutException => ("Timeout", "The request took too long.", true),
+        TaskCanceledException => ("Request Cancelled", "The request was cancelled (possibly due to timeout).", true),
+
+        // Auth / Permissions
+        UnauthorizedAccessException => ("Access Denied", "You are not authorized.", false),
+        SecurityException => ("Security Error", "Your action is restricted by security settings.", false),
+
+        // Input / Data
+        ArgumentNullException => ("Missing Input", "A required field was not provided.", true),
+        ArgumentException => ("Invalid Input", "Please verify your input.", true),
+        FormatException => ("Format Error", "Data is not in the expected format.", true),
+        JsonException => ("Data Error", "Failed to process server response.", true),
+
+        // State / Logic
+        InvalidOperationException => ("Operation Failed", "Cannot complete the operation now.", true),
+        NotSupportedException => ("Unsupported Action", "This feature isn’t available in your environment.", false),
+
+        // UI / MAUI-specific
+        NullReferenceException => ("Unexpected Error", "Something wasn’t initialized correctly.", true),
+        MissingMethodException => ("Component Error", "A required method was not found in the UI component.", false),
+        
+        // IO / File System
+        FileNotFoundException => ("Missing File", "A required file could not be found.", false),
+        DirectoryNotFoundException => ("Missing Folder", "A required directory could not be found.", false),
+        IOException => ("File Error", "There was a problem accessing a file or resource.", true),
+
+        // Fallback
+        _ => ("Unexpected Error", "Something went wrong on this page.", true)
+    };
 
     private string GenerateErrorId() =>
         $"ERR-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
