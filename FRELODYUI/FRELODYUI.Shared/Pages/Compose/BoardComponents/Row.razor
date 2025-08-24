@@ -17,7 +17,7 @@
                   Style="@textBoxSize">
         <SortableItemTemplate>
             <div @ondblclick="() => HandleDoubleClick(segment)">
-                <Segment @ref="segmentRef"
+                <Segment @ref="segmentRefs[segment.Id]"
                          Content="segment"
                          Editing="@(EditingSegment?.Id == segment.Id)"
                          FocusedLine="Focused"
@@ -26,12 +26,9 @@
                          OnCancel="HandleCancel"
                          OnDragStart="HandleDragStart" 
                          SegmentRemoved="HandleSegmentRemoved" />
-                          
             </div>
         </SortableItemTemplate>
         <ActionItemTemplate>
-            @* <DropIndicator LineNumber="Line" /> *@
-            
             <AddSegment @ref="addSegmentRef"
                         @bind-FormOpen="addFormOpen"
                         OnSegmentAdded="HandleSegmentAdded"
@@ -51,7 +48,7 @@
     [Parameter] public EventCallback<SegmentCreateDto?> OnEditingSegmentChanged { get; set; }
     [Parameter] public TabsComponent.TabsComponentItem? ActiveTab { get; set; }
 
-    private Segment segmentRef = default!;
+    private Dictionary<string, Segment> segmentRefs = new();
     private AddSegment addSegmentRef = default!;
     private bool addFormOpen = false;
     private SegmentCreateDto? editSegment;
@@ -60,7 +57,6 @@
     private List<SegmentCreateDto> filteredSegments =>
         Segments?.Where(s => s.LineNumber == Line).OrderBy(s => s.LyricOrder).ToList() ?? new();
     string textBoxSize => Focused ? "min-height:5rem" : "min-height:4rem";
-    private bool isInitialized = false;
 
     protected override void OnParametersSet()
     {
@@ -68,14 +64,12 @@
         {
             editSegment = EditingSegment;
             editedSegment = editSegment;
-            // editedChord remains for future chord sync if needed
         }
     }
 
     private void SortSegments((int oldIndex, int newIndex) indices)
     {
         var (oldIndex, newIndex) = indices;
-
         if (oldIndex == newIndex) return;
 
         var lineSegments = filteredSegments.ToList();
@@ -83,22 +77,16 @@
         lineSegments.RemoveAt(oldIndex);
 
         if (newIndex < lineSegments.Count)
-        {
             lineSegments.Insert(newIndex, itemToMove);
-        }
         else
-        {
             lineSegments.Add(itemToMove);
-        }
 
         for (int i = 0; i < lineSegments.Count; i++)
-        {
             lineSegments[i].LyricOrder = i + 1;
-        }
 
         var updatedSegments = Segments.Where(s => s.LineNumber != Line)
-                                    .Concat(lineSegments)
-                                    .ToList();
+                                      .Concat(lineSegments)
+                                      .ToList();
 
         OnSegmentsUpdate.InvokeAsync(updatedSegments);
     }
@@ -106,14 +94,6 @@
     private async Task HandleDragStart(SegmentCreateDto segment)
     {
         await JsRt.InvokeVoidAsync("setDragData", "segmentId", segment.Id);
-    }
-
-    private void HandleDragOver()
-    {
-    }
-
-    private void HandleDragLeave()
-    {
     }
 
     private async Task HandleDrop()
@@ -134,10 +114,12 @@
         {
             HandleSave(segment);
         }
-        if (segmentRef != null && !string.IsNullOrEmpty(segment.ChordId))
+        if (!string.IsNullOrEmpty(segment.ChordId)
+            && !string.IsNullOrEmpty(segment.Id)
+            && segmentRefs.ContainsKey(segment.Id))
         {
-            var chord = await segmentRef.GetChord(segment.ChordId);
-            if (chord != null) segmentRef.SetSelectedChord(chord);
+            var chord = await segmentRefs[segment.Id].GetChord(segment.ChordId);
+            if (chord != null) segmentRefs[segment.Id].SetSelectedChord(chord);
         }
         await OnEditingSegmentChanged.InvokeAsync(segment);
     }
@@ -156,9 +138,7 @@
             {
                 var index = Segments.FindIndex(s => s.Id == segment.Id);
                 if (index >= 0)
-                {
                     Segments[index] = segment;
-                }
             }
             OnSegmentsUpdate.InvokeAsync(Segments);
             SetAddFormOpen(segment.AddNextSegment);
@@ -177,24 +157,20 @@
     {
         addFormOpen = open;
         if (addFormOpen && addSegmentRef != null)
-        {
             addSegmentRef.shouldFocusInput = true;
-        }
     }
 
-    public void ClosePrevForm(int line)
+    public async Task ClosePrevFormAsync()
     {
-        if (addSegmentRef != null)
+        if (addSegmentRef != null && addSegmentRef.FormOpen)
         {
-            if (addSegmentRef.FormOpen)
-                addSegmentRef.SubmitAndExit();
+            await addSegmentRef.SubmitAndExitAsync();
         }
-        if (segmentRef != null)
+        if (EditingSegment != null 
+            && !string.IsNullOrEmpty(EditingSegment.Id)
+            && segmentRefs.ContainsKey(EditingSegment.Id))
         {
-            if (segmentRef.Editing)
-            {
-                segmentRef.HandleEditedAndExit();
-            }            
+            await segmentRefs[EditingSegment.Id].HandleEditedAndExitAsync();
         }
     }
 
@@ -207,12 +183,8 @@
                             : 0;
             segment.LyricOrder = maxOrder + 1;
             segment.LineNumber = Line;
-            segment.PartNumber = ActiveTab != null
-                                    ? ActiveTab.SectionNumber
-                                    : 1;
-            segment.PartName = ActiveTab != null
-                                    ? ActiveTab.SectionEnumValue
-                                    : SongSection.Verse;
+            segment.PartNumber = ActiveTab != null ? ActiveTab.SectionNumber : 1;
+            segment.PartName = ActiveTab != null ? ActiveTab.SectionEnumValue : SongSection.Verse;
 
             Segments.Add(segment);
             OnSegmentsUpdate.InvokeAsync(Segments);
@@ -235,5 +207,4 @@
             }          
         }     
     }
-
 }

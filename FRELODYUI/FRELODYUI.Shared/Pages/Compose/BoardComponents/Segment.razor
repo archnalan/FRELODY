@@ -44,13 +44,12 @@
     {
         if (firstRender)
         {
-            if(!isInitialized)
+            if (!isInitialized)
             {
                 if (!string.IsNullOrEmpty(Content.Id))
                 {
                     ChordName = Content.ChordName ?? string.Empty;
-                    if (string.IsNullOrEmpty(ChordName)
-                    && !string.IsNullOrEmpty(Content.ChordId))
+                    if (string.IsNullOrEmpty(ChordName) && !string.IsNullOrEmpty(Content.ChordId))
                     {
                         selectedChord = await GetChord(Content.ChordId);
                     }
@@ -69,10 +68,9 @@
     private void HandleCancel()
     {
         Editing = false; 
-        if(string.IsNullOrEmpty(Content.ChordName) 
-        && string.IsNullOrEmpty(Content.Lyric))
+        if (string.IsNullOrEmpty(Content.ChordName) && string.IsNullOrEmpty(Content.Lyric))
         {
-            if(SegmentRemoved.HasDelegate)
+            if (SegmentRemoved.HasDelegate)
                 SegmentRemoved.InvokeAsync(Content);
         }
     }
@@ -81,18 +79,13 @@
     {
         if (editedSegment != null)
         {
-            // Update the current Content with the edited values
             Content.Lyric = editedSegment.Lyric;
             Content.ChordId = editedSegment.ChordId;
             Content.ChordName = editedSegment.ChordName;
             Content.AddNextSegment = editedSegment.AddNextSegment;
-
-            // Update the local ChordName for display
             ChordName = editedSegment.ChordName ?? string.Empty;
         }
-        // Notify parent that save is complete
         OnSave.InvokeAsync(Content);
-
     }
 
     public void SetSelectedChord(ChordDto chord)
@@ -127,12 +120,16 @@
         }
     }
 
-    public void HandleEditedAndExit()
+    public async Task HandleEditedAndExitAsync()
     {
         if (addSegmentRef != null && addSegmentRef.FormOpen)
         {
-            addSegmentRef.SubmitAndExit();
+            await addSegmentRef.SubmitAndExitAsync();
         }
     }
 
+    public void HandleEditedAndExit()
+    {
+        _ = HandleEditedAndExitAsync();
+    }
 }

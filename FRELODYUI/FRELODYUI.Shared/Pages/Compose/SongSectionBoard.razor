@@ -14,7 +14,7 @@
         <div class="@($"flex-grow-1 h-0 border border-dashed {(lines.Count > 0 ? "border-secondary" : "border-primary")}")"></div>
         <button class="@($"btn btn-sm {(lines.Count > 0 ? "btn-outline-secondary" : "btn-outline-primary")}")"
                 disabled="@(lines.Count > 0)"
-                @onclick="() => AddLine(0)">
+                @onclick="async () => await AddLine(0)">
             <i class="bi bi-plus"></i>
             <span class="small">New Line</span>
         </button>
@@ -23,8 +23,8 @@
 
     @foreach (var line in lines)
     {
-        <div class="position-relative mb-3" id="@($"line-{line}")" @onmousedown="() => SetFocusedRow(line)">
-            <Row @ref="lineRef"
+        <div class="position-relative mb-3" id="@($"line-{line}")" @onmousedown="async () => await SetFocusedRow(line)">
+            <Row @ref="lineRefs[line]"
                  Line="@line"
                  Focused="@(focusedRow == line)"
                  Segments="@Segments"
@@ -38,7 +38,7 @@
             {
                 <div class="position-absolute bottom-0 end-0 mb-2 me-2">
                     <button class="btn btn-sm btn-outline-primary rounded-top-0 rounded-end-0"
-                            @onclick="() => AddLine(line)">
+                            @onclick="async () => await AddLine(line)">
                         <i class="bi bi-plus"></i>
                         <span class="small text-primary">New Line</span>
                     </button>
@@ -81,7 +81,7 @@
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
     [Parameter] public TabsComponent.TabsComponentItem? ActiveTab { get; set; } 
     private List<ChordDto> chords = new();
-    private Row? lineRef = null;
+    private Dictionary<int, Row> lineRefs = new();
     private int? focusedRow = null;
     private List<int> trackLines = new();
     private List<int> lines = new();
@@ -114,7 +114,6 @@
         {
             _logger.LogError("Error initializing SongSectionBoard: {Error}",ex);
         }
-
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -139,6 +138,20 @@
                     .OrderBy(l => l)
                     .ToList();
         }
+        PruneRowRefs();
+    }
+
+    private void PruneRowRefs()
+    {
+        var valid = new HashSet<int>(lines);
+        var stale = lineRefs.Keys.Where(k => !valid.Contains(k)).ToList();
+        foreach (var k in stale)
+            lineRefs.Remove(k);
+    }
+
+    private Row? TryGetRowRef(int line)
+    {
+        return lineRefs.TryGetValue(line, out var row) ? row : null;
     }
 
     private void HandleSegmentsUpdate(List<SegmentCreateDto> updatedSegments)
@@ -164,23 +177,23 @@
 
     private async Task SetFocusedRow(int line)
     {
-        if (lineRef != null && focusedRow != line)
+        if (focusedRow.HasValue && focusedRow != line)
         {
-            lineRef.ClosePrevForm(focusedRow ?? 0);
-            await Task.CompletedTask;
+            var prev = TryGetRowRef(focusedRow.Value);
+            if (prev is not null)
+                await prev.ClosePrevFormAsync();
         }
         focusedRow = line;
     }
 
-    private void AddLine(int afterLine)
+    private async Task AddLine(int afterLine)
     {
         try
         {
-            if (lineRef != null)
-            {
-                lineRef.ClosePrevForm(afterLine);
-                StateHasChanged();
-            }           
+            var prev = TryGetRowRef(afterLine);
+            if (prev is not null)
+                await prev.ClosePrevFormAsync();
+
             var lineIndex = lines.IndexOf(afterLine);
             int tempLineId = -1 * (trackLines.Count + 1); 
             var newSegmentId = Guid.NewGuid().ToString();
@@ -192,29 +205,29 @@
                 LineNumber = tempLineId,
                 PartNumber = ActiveTab != null ? ActiveTab.SectionNumber : 1,
                 PartName = ActiveTab != null ? ActiveTab.SectionEnumValue : SongSection.Verse,
-                LyricOrder = 1 // first item in the new line
+                LyricOrder = 1
             };
             Segments?.Add(newSegment);
 
             if (lineIndex >= 0 && lineIndex < trackLines.Count - 1)
-            {
                 trackLines.Insert(lineIndex + 1, tempLineId);
-            }
             else
-            {
                 trackLines.Add(tempLineId);
-            }
 
             RenumberLines();
             editingSegment = newSegment;
-            focusedRow = lines[lineIndex + 1];
+
+            if (lineIndex >= 0 && lineIndex + 1 < lines.Count)
+                focusedRow = lines[lineIndex + 1];
+            else if (lines.Count > 0)
+                focusedRow = lines[^1];
+
             StateHasChanged();
         }
         catch (Exception ex)
         {
             _logger.LogError("Error adding line: {Error}", ex);
         }
-
     }
 
     private void RenumberLines()
@@ -223,9 +236,7 @@
         {
             var newLineMap = new Dictionary<long, int>();
             for (int i = 0; i < trackLines.Count; i++)
-            {
                 newLineMap[trackLines[i]] = i + 1;
-            }
 
             Segments = Segments?.Select(s =>
             {
@@ -236,7 +247,6 @@
 
             trackLines = trackLines.Select(l => newLineMap.ContainsKey(l) ? newLineMap[l] : l).ToList();
             UpdateLines();
-            
         }
         catch (Exception ex)
         {
@@ -266,29 +276,15 @@
         trackLines.Remove(line);
         RenumberLines();
 
-        if (trackLines.Count > 0)
-        {
-            focusedRow = trackLines[0];
-        }
-        else
-        {
-            focusedRow = null;
-        }
+        focusedRow = trackLines.Count > 0 ? trackLines[0] : null;
 
         editingSegment = null;
         showDeleteDialog = false;
         lineToDelete = 0;
     }
 
-    private void HandleDragOver()
-    {
-        isOver = true;
-    }
-
-    private void HandleDragLeave()
-    {
-        isOver = false;
-    }
+    private void HandleDragOver() => isOver = true;
+    private void HandleDragLeave() => isOver = false;
 
     private async Task HandleDrop(DragEventArgs e, int line)
     {
@@ -296,8 +292,6 @@
         var segmentId = await JsRt.InvokeAsync<string>("getDragData", "segmentId");
         Segments?.RemoveAll(s => s.Id == segmentId);
         if (editingSegment?.Id == segmentId)
-        {
             editingSegment = null;
-        }
     }
 }
