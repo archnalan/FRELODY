@@ -9,8 +9,10 @@ namespace FRELODYUI.Shared.Models
     public class ModalOptionDto
     {
         public string? Title { get; set; }
+        public string? SubTitle { get; set; }
         public string? Message { get; set; }
         public string? ButtonText { get; set; }
+        public string? DangerText { get; set; }
         public OptionType OptionType { get; set; }
         public ModalContext? Context { get; set; } 
     }

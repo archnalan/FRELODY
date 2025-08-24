@@ -16,7 +16,7 @@
                   Class="d-flex flex-wrap w-100 gap-1"
                   Style="@textBoxSize">
         <SortableItemTemplate>
-            <div @ondblclick="() => HandleDoubleClick(segment)">
+            <div data-id="@segment.Id" @ondblclick="() => HandleDoubleClick(segment)">
                 <Segment @ref="segmentRefs[segment.Id]"
                          Content="segment"
                          Editing="@(EditingSegment?.Id == segment.Id)"

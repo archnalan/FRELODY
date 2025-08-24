@@ -6,13 +6,17 @@
 @typeparam T
 
 <div id="@Id" class="@Class" style="@Style">
-    @foreach (var item in Items)
+    @if (Items is not null)
     {
-        @if (SortableItemTemplate is not null)
+        @foreach (var item in Items)
         {
-            @SortableItemTemplate(item)
+            @if (SortableItemTemplate is not null)
+            {
+                @SortableItemTemplate(item)
+            }
         }
     }
+
     @ActionItemTemplate
 </div>
 
@@ -37,7 +41,7 @@
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
     [Parameter]
-    public string Group { get; set; } = Guid.NewGuid().ToString();
+    public string Group { get; set; } = "segments";
 
     [Parameter]
     public string? Pull { get; set; }
@@ -82,6 +86,12 @@
     [JSInvokable]
     public void OnRemoveJS(int oldIndex, int newIndex)
     {
+        if (newIndex == -1)
+        {
+            // Delete: Remove from Items (filteredSegments in Row will sync via parent)
+            // But since we remove by ID in HandleRemoveDrop, optional: Invoke a callback if needed
+            return;
+        }
         // remove the item from the list
         OnRemove.InvokeAsync((oldIndex, newIndex));
     }

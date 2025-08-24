@@ -6,6 +6,7 @@
                type="text"
                tabindex="@TabIndex" 
                placeholder="add chord..."
+               autocomplete="off"
                @bind="searchTerm"
                @oninput="HandleSearch"
                @onfocus="@(() => ToggleDropdown(true))" />

@@ -43,10 +43,8 @@
                         <span class="small text-primary">New Line</span>
                     </button>
                     <button class="@($"btn btn-sm btn-outline-danger rounded-top-0 rounded-start-0 {(isOver ? "bg-danger text-white" : "")}")"
-                            @onclick="() => ShowDeleteDialog(line)"
-                            @ondragover="HandleDragOver"
-                            @ondragleave="HandleDragLeave"
-                            @ondrop="e => HandleDrop(e, line)">
+                            id="@($"remove-button-{line}")"
+                            data-line="@line">
                         <i class="bi bi-fire"></i>
                         <span class="small">Remove</span>
                     </button>
@@ -64,16 +62,10 @@
     }
 </div>
 
-@if (showDeleteDialog)
-{
-    <DialogConfirm ModalTitle="@modalTitle"
-                   ModalSubtitle="@modalSubtitle"
-                   ModalMessage="@modalMessage"
-                   ModalDangerText="@modalDangerText"
-                   ModalButtonText="@modalButtonText"
-                   OnConfirm="() => DeleteLine(lineToDelete)"
-                   OnCancel="CloseDeleteDialog" />
-}
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+               Modal="@_modalService.CurrentModal"
+               OnConfirmModal="ConfirmModal"
+               OnCloseModal="CloseModal" />
 
 @code {
     [Parameter] public int SectionId { get; set; }
@@ -87,13 +79,11 @@
     private List<int> lines = new();
     private SegmentCreateDto? editingSegment = null;
     private bool isOver = false;
-    private string? modalTitle { get; set; }
-    private string? modalSubtitle { get; set; }
-    private string? modalMessage { get; set; }
-    private string? modalDangerText { get; set; }
-    private string? modalButtonText { get; set; }
-    private bool showDeleteDialog = false;
     private int lineToDelete;
+    private DotNetObjectReference<SongSectionBoard>? selfRef;
+    private int prevLinesCount;
+    private int? prevFocusedRow;
+    private IJSObjectReference? _module;
 
     protected override void OnInitialized()
     {
@@ -118,9 +108,33 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        try
         {
-            await JsRt.InvokeVoidAsync("initDragAndDrop");
+            if (firstRender)
+            {
+                _module = await JsRt.InvokeAsync<IJSObjectReference>("import", "./_content/FRELODYUI.Shared/Pages/Compose/SongSectionBoard.razor.js");
+                selfRef = DotNetObjectReference.Create(this);
+                await _module.InvokeVoidAsync("initRemoveZones", selfRef);
+                prevLinesCount = lines.Count;
+                prevFocusedRow = focusedRow;
+            }
+            else
+            {
+                bool linesChanged = lines.Count != prevLinesCount;
+                bool focusChanged = focusedRow != prevFocusedRow;
+
+                if (linesChanged || focusChanged)
+                {
+                    _module ??= await JsRt.InvokeAsync<IJSObjectReference>("import", "./_content/FRELODYUI.Shared/Pages/Compose/SongSectionBoard.razor.js");
+                    await _module.InvokeVoidAsync("initRemoveZones", selfRef);
+                    prevLinesCount = lines.Count;
+                    prevFocusedRow = focusedRow;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error running OnAfterRenderAsync: {Error}", ex);
         }
     }
 
@@ -184,6 +198,7 @@
                 await prev.ClosePrevFormAsync();
         }
         focusedRow = line;
+        StateHasChanged(); // ensure remove button renders before init in next render pass
     }
 
     private async Task AddLine(int afterLine)
@@ -256,18 +271,21 @@
 
     private void ShowDeleteDialog(int line)
     {
-        modalTitle = "Delete Line";
-        modalSubtitle = "Are you sure you want to delete this line?";
-        modalMessage = $"Segments in this line {line.ToString("00")}: will be deleted.";
-        modalDangerText = "This action is irreversible!";
-        modalButtonText = "Delete";
-        lineToDelete = line;
-        showDeleteDialog = true;
-    }
-
-    private void CloseDeleteDialog()
-    {
-        showDeleteDialog = false;
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Delete Line",
+            SubTitle = "Are you sure you want to delete this line?",
+            Message = $"Segments in this line {line.ToString("00")}: will be deleted.",
+            DangerText = "This action is irreversible!",
+            ButtonText = "Delete",
+            OptionType = OptionType.Confirmation,            
+            Context = new ModalContext
+            {
+                ActionType = "DeleteLine",
+                Data = line
+            }
+        });
+        StateHasChanged();
     }
 
     private void DeleteLine(int line)
@@ -279,19 +297,77 @@
         focusedRow = trackLines.Count > 0 ? trackLines[0] : null;
 
         editingSegment = null;
-        showDeleteDialog = false;
         lineToDelete = 0;
+        StateHasChanged();
     }
 
     private void HandleDragOver() => isOver = true;
     private void HandleDragLeave() => isOver = false;
 
-    private async Task HandleDrop(DragEventArgs e, int line)
+    [JSInvokable]
+    public async Task HandleRemoveDrop(int line, string segmentId)
     {
-        isOver = false;
-        var segmentId = await JsRt.InvokeAsync<string>("getDragData", "segmentId");
-        Segments?.RemoveAll(s => s.Id == segmentId);
-        if (editingSegment?.Id == segmentId)
-            editingSegment = null;
+        var segment = Segments?.FirstOrDefault(s => s.Id == segmentId);
+        if (segment != null)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Delete Segment",
+                SubTitle = "Are you sure you want to delete this segment?",
+                Message = $"The segment with lyric '{segment.Lyric}' will be deleted.",
+                DangerText = "This action is irreversible!",
+                ButtonText = "OK",
+                OptionType = OptionType.Confirmation,
+                Context = new ModalContext
+                {
+                    ActionType = "DeleteSegment",
+                    Data = segmentId
+                }
+            }); 
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "DeleteLine")
+        {
+            var line = (int)_modalService.CurrentModal.Context.Data!;
+            DeleteLine(line);
+        }
+        else if (_modalService.CurrentModal?.Context?.ActionType == "DeleteSegment")
+        {
+            var segmentId = _modalService.CurrentModal.Context.Data?.ToString();
+            Segments?.RemoveAll(s => s.Id == segmentId);
+            if (editingSegment?.Id == segmentId) editingSegment = null;
+
+            // Update everything
+            HandleSegmentsUpdate(Segments);  // This updates lines, invokes OnSegmentsUpdate
+
+        }
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_module is not null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch { /* ignore */ }
+        finally
+        {
+            selfRef?.Dispose();
+        }
     }
 }

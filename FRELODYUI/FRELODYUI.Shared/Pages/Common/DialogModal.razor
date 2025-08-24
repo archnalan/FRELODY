@@ -6,9 +6,9 @@
      role="dialog"
      aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="z-index:1055">
-        <div class="modal-content px-5">
+        <div class="modal-content text-center px-5">
             <div class="modal-body border-0 p-0 mt-4">
-                <div class="container p-2 text-center">
+                <div class="container p-2">
                     <div class="row mb-3 justify-content-center">
                         @switch (Modal.OptionType)
                         {
@@ -29,15 +29,15 @@
                                 break;
                         }
                     </div>
-                    <div class="row mb-2">
-                        <h5>@Modal.Title</h5>
-                    </div>
-                    <div class="row mb-3">
-                        <h6>@Modal.Message</h6>
+                    <div class="row">
+                        <h5 class="mb-3">@Modal.Title</h5>
+                        <h6 class="mb-2">@Modal.SubTitle</h6>
+                        <p class="m-0">@Modal.Message</p>
+                        <p class="m-0 text-danger">@Modal.DangerText</p>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer @(HasSingleButton ? "justify-content-center" : "justify-content-between") border-0 p-0 mb-3">
+            <div class="modal-footer justify-content-center gap-4 border-0 mb-3">
                 @if (Modal.OptionType == OptionType.Confirmation)
                 {
                     <button class="btn btn-outline-primary"
@@ -53,15 +53,15 @@
                 }
                 else
                 {
-                    <button class="btn btn-primary"
-                            style="width:7rem"
+                    <button type="button"
+                            class="@GetOkButtonClass()"
                             @onclick="CloseModal">
                         @(Modal.ButtonText ?? "OK")
                     </button>
                 }
             </div>
         </div>
-    </div>   
+    </div>
 </div>
 @if (IsVisible)
 {
@@ -75,8 +75,11 @@
     [Parameter] public EventCallback OnConfirmModal { get; set; }
     //[Parameter] public T? Data { get; set; }
 
-    private bool HasSingleButton =>
-        Modal.OptionType != OptionType.Confirmation;
+    private string GetOkButtonClass() => Modal.OptionType switch
+    {
+        OptionType.Error or OptionType.Warning => "btn btn-outline-danger",
+        _ => "btn btn-outline-primary"
+    };
 
     private async Task CloseModal()
     {
