@@ -22,5 +22,6 @@ namespace FRELODYSHRD.Dtos.CreateDtos
         public SongSection PartName { get; set; }
         [Required]
         public int LyricOrder { get; set; } 
+        public bool AddNextSegment { get; set; } = false; // for UI purpose
     }
 }

@@ -4,8 +4,7 @@
 <div tabindex="0" 
      class="@($"w-100 position-relative d-flex flex-wrap gap-3 bg-white" + 
             $" {(Focused ? "border border-primary" : "border border-secondary")}")"
-     style="@(Focused ? "padding:2.5rem" : "padding:1.75rem");border-radius:1rem; border-bottom-right-radius:0.5rem"
-     @onfocus="OnFocusRow">
+     style="@(Focused ? "padding:2.5rem" : "padding:1.75rem");border-radius:1rem; border-bottom-right-radius:0.5rem">
     <span class="@($"position-absolute top-0 start-0 badge {(Focused ? "bg-primary mt-2 ms-2" : "mt-1 ms-3")}")">
         Lyric Line @Line.ToString("00")
     </span>
@@ -20,8 +19,8 @@
             <div @ondblclick="() => HandleDoubleClick(segment)">
                 <Segment @ref="segmentRef"
                          Content="segment"
-                         Editing="@(EditModeSegmentId == segment.Id)"
-                         Focused="Focused"
+                         Editing="@(EditingSegment?.Id == segment.Id)"
+                         FocusedLine="Focused"
                          TextBoxSize="@textBoxSize"
                          OnSave="HandleSave"
                          OnCancel="HandleCancel"
@@ -33,11 +32,11 @@
         <ActionItemTemplate>
             @* <DropIndicator LineNumber="Line" /> *@
             
-            <AddSegment @ref="addSegmentRef" 
-                        FormOpen="addFormOpen"
+            <AddSegment @ref="addSegmentRef"
+                        @bind-FormOpen="addFormOpen"
                         OnSegmentAdded="HandleSegmentAdded"
                         TextBoxSize="@textBoxSize"
-                        Focused="Focused"/>
+                        FocusedLine="Focused" />
         </ActionItemTemplate>
     </SortableList>
 </div>
@@ -45,12 +44,11 @@
 @code {
     [Parameter] public int Line { get; set; }
     [Parameter] public bool Focused { get; set; }
-    [Parameter] public List<SegmentCreateDto> Segments { get; set; }
-    [Parameter] public string EditModeSegmentId { get; set; }
-    [Parameter] public EventCallback OnFocusRow { get; set; }
+    [Parameter] public List<SegmentCreateDto> Segments { get; set; } = new();
+    [Parameter] public SegmentCreateDto? EditingSegment { get; set; }
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
     [Parameter] public EventCallback<List<ChordDto>> OnChordsUpdate { get; set; }
-    [Parameter] public EventCallback<string> OnEditModeSegmentIdChanged { get; set; }
+    [Parameter] public EventCallback<SegmentCreateDto?> OnEditingSegmentChanged { get; set; }
     [Parameter] public TabsComponent.TabsComponentItem? ActiveTab { get; set; }
 
     private Segment segmentRef = default!;
@@ -62,19 +60,15 @@
     private List<SegmentCreateDto> filteredSegments =>
         Segments?.Where(s => s.LineNumber == Line).OrderBy(s => s.LyricOrder).ToList() ?? new();
     string textBoxSize => Focused ? "min-height:5rem" : "min-height:4rem";
+    private bool isInitialized = false;
 
     protected override void OnParametersSet()
     {
-        if (!Focused && editSegment != null)
+        if (EditingSegment != null)
         {
-            HandleSave();
-        }
-
-        if (EditModeSegmentId != null)
-        {
-            editSegment = Segments?.FirstOrDefault(s => s.Id == EditModeSegmentId);
+            editSegment = EditingSegment;
             editedSegment = editSegment;
-            //editedChord = Chords?.FirstOrDefault(c => c.Id == editSegment?.ChordId);
+            // editedChord remains for future chord sync if needed
         }
     }
 
@@ -97,13 +91,11 @@
             lineSegments.Add(itemToMove);
         }
 
-        // Update LyricOrder to match new positions
         for (int i = 0; i < lineSegments.Count; i++)
         {
             lineSegments[i].LyricOrder = i + 1;
         }
 
-        // Update the main segments list
         var updatedSegments = Segments.Where(s => s.LineNumber != Line)
                                     .Concat(lineSegments)
                                     .ToList();
@@ -118,12 +110,10 @@
 
     private void HandleDragOver()
     {
-        // Highlight logic would go here
     }
 
     private void HandleDragLeave()
     {
-        // Unhighlight logic
     }
 
     private async Task HandleDrop()
@@ -132,7 +122,6 @@
         var segment = Segments.First(s => s.Id == segmentId);
         segment.LineNumber = Line;
 
-        // Assign new LyricOrder based on current segments in this line
         var maxOrder = filteredSegments.Any() ? filteredSegments.Max(s => s.LyricOrder) : 0;
         segment.LyricOrder = maxOrder + 1;
 
@@ -143,40 +132,45 @@
     {
         if (editSegment != null)
         {
-            HandleSave();
+            HandleSave(segment);
         }
         if (segmentRef != null && !string.IsNullOrEmpty(segment.ChordId))
         {
             var chord = await segmentRef.GetChord(segment.ChordId);
             if (chord != null) segmentRef.SetSelectedChord(chord);
         }
-        await OnEditModeSegmentIdChanged.InvokeAsync(segment.Id);
+        await OnEditingSegmentChanged.InvokeAsync(segment);
     }
 
-    private void HandleSave()
+    private void HandleSave(SegmentCreateDto segment)
     {
-        if (editedSegment != null)
+        if (segment != null)
         {
-            if (string.IsNullOrWhiteSpace(editedSegment.Lyric) && editedChord == null)
+            if (string.IsNullOrWhiteSpace(segment.Lyric) && editedChord == null)
             {
-                Segments.RemoveAll(s => s.Id == editedSegment.Id);
+                Segments.RemoveAll(s => s.Id == segment.Id);
+                SetAddFormOpen(segment.AddNextSegment);
+                return;
             }
             else
             {
-                var index = Segments.FindIndex(s => s.Id == editedSegment.Id);
-                Segments[index] = editedSegment;
+                var index = Segments.FindIndex(s => s.Id == segment.Id);
+                if (index >= 0)
+                {
+                    Segments[index] = segment;
+                }
             }
             OnSegmentsUpdate.InvokeAsync(Segments);
+            SetAddFormOpen(segment.AddNextSegment);
         }
         editSegment = null;
-        OnEditModeSegmentIdChanged.InvokeAsync(null);
-        SetAddFormOpen(true);
+        OnEditingSegmentChanged.InvokeAsync(null);
     }
 
     private void HandleCancel()
     {
         editSegment = null;
-        OnEditModeSegmentIdChanged.InvokeAsync(null);
+        OnEditingSegmentChanged.InvokeAsync(null);
     }
 
     public void SetAddFormOpen(bool open)
@@ -190,32 +184,39 @@
 
     public void ClosePrevForm(int line)
     {
-        if (addSegmentRef != null && addSegmentRef.FormOpen)
+        if (addSegmentRef != null)
         {
-            addSegmentRef.CloseForm();
+            if (addSegmentRef.FormOpen)
+                addSegmentRef.SubmitAndExit();
+        }
+        if (segmentRef != null)
+        {
+            if (segmentRef.Editing)
+            {
+                segmentRef.HandleEditedAndExit();
+            }            
         }
     }
 
-    private void HandleSegmentAdded(SegmentCreateDto newSegment)
+    private void HandleSegmentAdded(SegmentCreateDto segment)
     {
         try
         {
-            // Set the LyricOrder for the new segment
             var maxOrder = filteredSegments.Any()
                             ? filteredSegments.Max(s => s.LyricOrder)
                             : 0;
-            newSegment.LyricOrder = maxOrder + 1;
-            newSegment.LineNumber = Line;
-            newSegment.PartNumber = ActiveTab != null
+            segment.LyricOrder = maxOrder + 1;
+            segment.LineNumber = Line;
+            segment.PartNumber = ActiveTab != null
                                     ? ActiveTab.SectionNumber
                                     : 1;
-            newSegment.PartName = ActiveTab != null
+            segment.PartName = ActiveTab != null
                                     ? ActiveTab.SectionEnumValue
                                     : SongSection.Verse;
 
-            Segments.Add(newSegment);
+            Segments.Add(segment);
             OnSegmentsUpdate.InvokeAsync(Segments);
-            SetAddFormOpen(true); //for next segment addition;
+            SetAddFormOpen(segment.AddNextSegment);
         }
         catch (Exception ex)
         {
@@ -232,8 +233,7 @@
                 Segments.RemoveAll(s => s.Id == segment.Id);
                 OnSegmentsUpdate.InvokeAsync(Segments);
             }          
-        }
-     
+        }     
     }
 
 }

@@ -1,16 +1,16 @@
 ﻿@using FRELODYUI.Shared.Pages.Compose.ChordComponents
 @inject ILogger<Segment> _logger
 
-<div class="@($"h-100 w-100 d-flex align-items-between py-3 px-2 rounded cursor-pointer {(Focused ? "bg-dark" : "bg-secondary")}")">
+<div class="@($"h-100 w-100 d-flex align-items-between py-3 px-2 rounded cursor-pointer {(FocusedLine ? "bg-dark" : "bg-secondary")}")">
     @if (Editing)
     {
         <AddSegment @ref="addSegmentRef"
-                    FormOpen="Editing"
+                    @bind-SelectedChord="selectedChord"
+                    @bind-FormOpen="Editing"
                     IsMidSegments="true"
-                    SelectedChord="@selectedChord"
                     SegmentText="@Content.Lyric"
                     OnCancel= "HandleCancel"
-                    OnSegmentAdded="HandleSegmentAdded"/>
+                    OnSegmentAdded="HandleSegmentEdited"/>
     }
     else
     {
@@ -28,7 +28,7 @@
 @code {
     [Parameter] public SegmentCreateDto Content { get; set; } = default!;
     [Parameter] public bool Editing { get; set; }
-    [Parameter] public bool Focused { get; set; }
+    [Parameter] public bool FocusedLine { get; set; }
     [Parameter] public string TextBoxSize { get; set; } = "width:8rem;"; 
     [Parameter] public EventCallback<SegmentCreateDto> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
@@ -68,27 +68,31 @@
 
     private void HandleCancel()
     {
-       Editing = false; 
-       if(string.IsNullOrEmpty(Content.ChordName) 
-       && string.IsNullOrEmpty(Content.Lyric))
-       {
-           if(SegmentRemoved.HasDelegate)
+        Editing = false; 
+        if(string.IsNullOrEmpty(Content.ChordName) 
+        && string.IsNullOrEmpty(Content.Lyric))
+        {
+            if(SegmentRemoved.HasDelegate)
                 SegmentRemoved.InvokeAsync(Content);
-       }
+        }
     }
 
-    private void HandleSegmentAdded(SegmentCreateDto editedSegment)
+    private void HandleSegmentEdited(SegmentCreateDto editedSegment)
     {
-        // Update the current Content with the edited values
-        Content.Lyric = editedSegment.Lyric;
-        Content.ChordId = editedSegment.ChordId;
-        Content.ChordName = editedSegment.ChordName;
+        if (editedSegment != null)
+        {
+            // Update the current Content with the edited values
+            Content.Lyric = editedSegment.Lyric;
+            Content.ChordId = editedSegment.ChordId;
+            Content.ChordName = editedSegment.ChordName;
+            Content.AddNextSegment = editedSegment.AddNextSegment;
 
-        // Update the local ChordName for display
-        ChordName = editedSegment.ChordName ?? string.Empty;
-
+            // Update the local ChordName for display
+            ChordName = editedSegment.ChordName ?? string.Empty;
+        }
         // Notify parent that save is complete
-        OnSave.InvokeAsync(editedSegment);
+        OnSave.InvokeAsync(Content);
+
     }
 
     public void SetSelectedChord(ChordDto chord)
@@ -122,4 +126,13 @@
             return new ChordDto();
         }
     }
+
+    public void HandleEditedAndExit()
+    {
+        if (addSegmentRef != null && addSegmentRef.FormOpen)
+        {
+            addSegmentRef.SubmitAndExit();
+        }
+    }
+
 }

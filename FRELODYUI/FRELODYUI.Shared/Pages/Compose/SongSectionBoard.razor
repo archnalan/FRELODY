@@ -23,17 +23,16 @@
 
     @foreach (var line in lines)
     {
-        <div class="position-relative mb-3" id="@($"line-{line}")">
+        <div class="position-relative mb-3" id="@($"line-{line}")" @onmousedown="() => SetFocusedRow(line)">
             <Row @ref="lineRef"
                  Line="@line"
                  Focused="@(focusedRow == line)"
                  Segments="@Segments"
                  ActiveTab="@ActiveTab"
-                 EditModeSegmentId="@editModeSegmentId"
-                 OnFocusRow="() => SetFocusedRow(line)"
+                 EditingSegment="@editingSegment"
                  OnSegmentsUpdate="HandleSegmentsUpdate"
                  OnChordsUpdate="HandleChordsUpdate"
-                 OnEditModeSegmentIdChanged="HandleEditModeSegmentIdChanged" />
+                 OnEditingSegmentChanged="HandleEditingSegmentChanged" />
 
             @if (focusedRow == line)
             {
@@ -81,13 +80,12 @@
     [Parameter] public List<SegmentCreateDto>? Segments { get; set; } = new();
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
     [Parameter] public TabsComponent.TabsComponentItem? ActiveTab { get; set; } 
-    // private List<SegmentCreateDto> segments = new();
     private List<ChordDto> chords = new();
     private Row? lineRef = null;
     private int? focusedRow = null;
     private List<int> trackLines = new();
     private List<int> lines = new();
-    private string? editModeSegmentId = null;
+    private SegmentCreateDto? editingSegment = null;
     private bool isOver = false;
     private string? modalTitle { get; set; }
     private string? modalSubtitle { get; set; }
@@ -102,7 +100,8 @@
         try
         {
             trackLines = Segments
-            .Where(s => s.PartName == SongSection.Verse && s.PartNumber == SectionId)
+            .Where(s => s.PartName == SongSection.Verse 
+                && s.PartNumber == SectionId)
             .Select(s => s.LineNumber)
             .Distinct()
             .ToList();
@@ -117,15 +116,6 @@
         }
 
     }
-
-    // protected override void OnParametersSet()
-    // {
-    //     if (InitialSegments != null)
-    //     {
-    //         Segments = InitialSegments;
-    //         UpdateLines();
-    //     }
-    // }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -167,13 +157,18 @@
         chords = updatedChords;
     }
 
-    private void HandleEditModeSegmentIdChanged(string id)
+    private void HandleEditingSegmentChanged(SegmentCreateDto? segment)
     {
-        editModeSegmentId = id;
+        editingSegment = segment;
     }
 
-    private void SetFocusedRow(int line)
+    private async Task SetFocusedRow(int line)
     {
+        if (lineRef != null && focusedRow != line)
+        {
+            lineRef.ClosePrevForm(focusedRow ?? 0);
+            await Task.CompletedTask;
+        }
         focusedRow = line;
     }
 
@@ -190,15 +185,17 @@
             int tempLineId = -1 * (trackLines.Count + 1); 
             var newSegmentId = Guid.NewGuid().ToString();
 
-            Segments?.Add(new SegmentCreateDto
+            var newSegment = new SegmentCreateDto
             {
                 Id = newSegmentId,
                 Lyric = "",
                 LineNumber = tempLineId,
                 PartNumber = ActiveTab != null ? ActiveTab.SectionNumber : 1,
                 PartName = ActiveTab != null ? ActiveTab.SectionEnumValue : SongSection.Verse,
-                LyricOrder = 1 //first item in the new line
-            });
+                LyricOrder = 1 // first item in the new line
+            };
+            Segments?.Add(newSegment);
+
             if (lineIndex >= 0 && lineIndex < trackLines.Count - 1)
             {
                 trackLines.Insert(lineIndex + 1, tempLineId);
@@ -209,7 +206,7 @@
             }
 
             RenumberLines();
-            editModeSegmentId = newSegmentId;
+            editingSegment = newSegment;
             focusedRow = lines[lineIndex + 1];
             StateHasChanged();
         }
@@ -278,7 +275,7 @@
             focusedRow = null;
         }
 
-        editModeSegmentId = null;
+        editingSegment = null;
         showDeleteDialog = false;
         lineToDelete = 0;
     }
@@ -298,5 +295,9 @@
         isOver = false;
         var segmentId = await JsRt.InvokeAsync<string>("getDragData", "segmentId");
         Segments?.RemoveAll(s => s.Id == segmentId);
+        if (editingSegment?.Id == segmentId)
+        {
+            editingSegment = null;
+        }
     }
 }

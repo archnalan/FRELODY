@@ -2,7 +2,7 @@
 
 @if (FormOpen)
 {
-    <div class="d-flex align-items-center p-2 rounded">
+    <div class="d-flex align-items-center p-2 rounded bg-dark">
         <form class="d-flex position-relative" @onsubmit="HandleSubmit">
             <div class="d-flex flex-column gap-2 me-2">                
                <ChordsDropdown TabIndex="@(_baseTabIndex + 1)"
@@ -12,7 +12,7 @@
                        type="text"
                        tabindex="@_baseTabIndex"
                        class="form-control form-control-sm"
-                       @bind="SegmentText"
+                       @bind="_segmentText"
                        placeholder="Enter lyric segment..." />
             </div>
             <div tabindex="@(_baseTabIndex + 5)"
@@ -30,7 +30,7 @@
 }
 else
 {
-    <button class="@($"btn btn-sm px-3 {(Focused ? "btn-outline-dark" : "btn-outline-secondary")}")"
+    <button class="@($"btn btn-sm px-3 {(FocusedLine ? "btn-outline-dark" : "btn-outline-secondary")}")"
             style="@TextBoxSize"
             @onclick="OpenForm">
         <i class="bi bi-plus"></i>
@@ -43,19 +43,32 @@ else
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public string TextBoxSize { get; set; } = "width:8rem;";
     [Parameter] public ChordDto SelectedChord { get; set; } = new();
+    [Parameter] public EventCallback<ChordDto> SelectedChordChanged { get; set; } 
     [Parameter] public string SegmentText { get; set; } = string.Empty;
     [Parameter] public bool IsMidSegments { get; set; } 
-    [Parameter] public bool FormOpen { get; set; } 
-    [Parameter] public bool Focused { get; set; }
+    [Parameter] public bool FormOpen { get; set; }
+    [Parameter] public EventCallback<bool> FormOpenChanged{ get; set; }
+    [Parameter] public bool FocusedLine { get; set; }
 
     private List<ChordDto>? Chords { get; set; }
     private ElementReference lyricInput =default!;
     public bool shouldFocusInput = true;
     private int _baseTabIndex = 0;
+    private SegmentCreateDto _newSegment = new();
+    private string _segmentText = string.Empty;
+    private bool isInitialized = false;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnParametersSet()
     {
-        await base.OnInitializedAsync();
+        if(FormOpen && !isInitialized)
+        {
+            if (!string.IsNullOrWhiteSpace(SegmentText) 
+            && string.IsNullOrEmpty(_segmentText))
+            {
+                _segmentText = SegmentText;
+            }
+            isInitialized = true;
+        }
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -82,8 +95,8 @@ else
     public void OpenForm()
     {
         FormOpen = true;
-        Focused = false;
-        shouldFocusInput = true;        
+        shouldFocusInput = true;
+        _ = FormOpenChanged.InvokeAsync(FormOpen);
     }
 
     public void CloseForm()
@@ -92,36 +105,75 @@ else
         {
             OnCancel.InvokeAsync();
         }
+        _segmentText = "";
+        var cleared = new ChordDto();
+        SelectedChord = cleared;
+        _ = SelectedChordChanged.InvokeAsync(cleared);
         FormOpen = false;
-        Focused = false;
+        _ = FormOpenChanged.InvokeAsync(_newSegment.AddNextSegment);
     }
 
     private void HandleSubmit()
     {
-        var newSegment = new SegmentCreateDto
+        _newSegment = new SegmentCreateDto
             {
                 Id = Guid.NewGuid().ToString(),
-                Lyric = GetLyric(SegmentText),
+                Lyric = GetLyric(_segmentText),
                 ChordId = SelectedChord.Id,
                 ChordName = SelectedChord.ChordName,
+                AddNextSegment = true
             };
 
-        OnSegmentAdded.InvokeAsync(newSegment);
-        SegmentText = "";
-        SelectedChord = new ChordDto(); 
+        OnSegmentAdded.InvokeAsync(_newSegment);
+        _segmentText = "";
+
+        // Clear selection and notify parent
+        var cleared = new ChordDto();
+        SelectedChord = cleared;
+        _ = SelectedChordChanged.InvokeAsync(cleared);
+
         CloseForm();
     } 
 
-    private async Task HandleChordSelected(ChordDto chord)
+    private void HandleChordSelected(ChordDto chord)
     {
         SelectedChord = chord;
+        // Propagate the change to parent (Segment) 
+        _ = SelectedChordChanged.InvokeAsync(chord);
     }
 
     private string GetLyric(string SegmentText)
-    
+
     {
         return string.IsNullOrEmpty(SegmentText?.Trim()) 
         ? "-" 
         : SegmentText.Trim();
+    }
+
+    public void SubmitAndExit()
+    {        
+        _newSegment = new SegmentCreateDto
+        {
+            Id = Guid.NewGuid().ToString(),
+            Lyric = GetLyric(_segmentText),
+            ChordId = SelectedChord.Id,
+            ChordName = SelectedChord.ChordName,
+            AddNextSegment = false
+        };
+        if (_newSegment.Lyric != "-" ||
+        !string.IsNullOrEmpty(_newSegment.ChordName))
+        {
+            OnSegmentAdded.InvokeAsync(_newSegment);
+            _segmentText = "";
+            var cleared = new ChordDto();
+            SelectedChord = cleared;
+            _ = SelectedChordChanged.InvokeAsync(cleared);
+        }
+        
+        FormOpen = false;
+        _ = FormOpenChanged.InvokeAsync(FormOpen);
+
+        if (IsMidSegments)
+            OnSegmentAdded.InvokeAsync(null);
     }
 }
