@@ -2,8 +2,8 @@
 
 @if (FormOpen)
 {
-    <div class="d-flex align-items-center p-2 rounded bg-dark">
-        <form class="d-flex position-relative" @onsubmit="HandleSubmit">
+    <div class="d-flex rounded bg-dark p-2" style="@TextBoxSize">
+        <form class="d-flex position-relative m-2" @onsubmit="HandleSubmit">
             <div class="d-flex flex-column gap-2 me-2">                
                <ChordsDropdown TabIndex="@(_baseTabIndex + 1)"
                                SelectedChord="SelectedChord" 
@@ -12,8 +12,8 @@
                        type="text"
                        tabindex="@_baseTabIndex"
                        class="form-control form-control-sm"
-                       @bind="_segmentText"
-                       @bind:event="oninput"
+                       @bind-Value="_segmentText"
+                       @bind-Value:event="oninput"
                        placeholder="Enter lyric segment..." />
             </div>
             <div tabindex="@(_baseTabIndex + 5)"
@@ -50,6 +50,7 @@ else
     [Parameter] public bool FormOpen { get; set; }
     [Parameter] public EventCallback<bool> FormOpenChanged{ get; set; }
     [Parameter] public bool FocusedLine { get; set; }
+    [Parameter] public EventCallback ClosePrevForm { get; set; }
 
     private ElementReference lyricInput;
     public bool shouldFocusInput = true;
@@ -89,8 +90,12 @@ else
         }
     }
 
-    public void OpenForm()
+    public async Task OpenForm()
     {
+        if (ClosePrevForm.HasDelegate)
+        {
+            await ClosePrevForm.InvokeAsync();
+        }
         FormOpen = true;
         shouldFocusInput = true;
         _ = FormOpenChanged.InvokeAsync(FormOpen);
@@ -159,12 +164,14 @@ else
             SelectedChord = cleared;
             await SelectedChordChanged.InvokeAsync(cleared);
         }
-        
-        FormOpen = false;
-        await FormOpenChanged.InvokeAsync(false);
+        else
+        {
+            if (IsMidSegments)
+                await OnSegmentAdded.InvokeAsync(null);
+        }
 
-        if (IsMidSegments)
-            await OnSegmentAdded.InvokeAsync(null);
+        FormOpen = false;
+        await FormOpenChanged.InvokeAsync(false);      
     }
 
     public void SubmitAndExit()

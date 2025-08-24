@@ -1,7 +1,7 @@
 ﻿@using FRELODYUI.Shared.Pages.Compose.ChordComponents
 @inject ILogger<Segment> _logger
 
-<div class="@($"h-100 w-100 d-flex align-items-between py-3 px-2 rounded cursor-pointer {(FocusedLine ? "bg-dark" : "bg-secondary")}")">
+<div class="@($"h-100 w-100 d-flex align-items-between rounded cursor-pointer {(FocusedLine ? "bg-dark" : "bg-secondary")}")">
     @if (Editing)
     {
         <AddSegment @ref="addSegmentRef"
@@ -10,11 +10,12 @@
                     IsMidSegments="true"
                     SegmentText="@Content.Lyric"
                     OnCancel= "HandleCancel"
+                    TextBoxSize="TextBoxSize"
                     OnSegmentAdded="HandleSegmentEdited"/>
     }
     else
     {
-        <div class="d-flex flex-column justify-content-between" style="@TextBoxSize">
+        <div class="d-flex flex-column justify-content-between py-2 m-2" style="@TextBoxSize">
             <div>
                 <p class="small text-white m-0">@ChordName</p>
             </div>
@@ -84,6 +85,14 @@
             Content.ChordName = editedSegment.ChordName;
             Content.AddNextSegment = editedSegment.AddNextSegment;
             ChordName = editedSegment.ChordName ?? string.Empty;
+        }
+        else
+        {
+            Content.Lyric = string.Empty;
+            Content.ChordId = string.Empty;
+            Content.ChordName = string.Empty;
+            Content.AddNextSegment = false;
+            ChordName = string.Empty;
         }
         OnSave.InvokeAsync(Content);
     }
