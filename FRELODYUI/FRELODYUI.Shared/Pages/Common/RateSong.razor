@@ -1,0 +1,197 @@
+@using FRELODYSHRD.Dtos.SubDtos
+@inject ILogger<RateSong> _logger
+
+@if (isLoading)
+{
+    <div class="text-center my-2">
+        <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+    </div>
+}
+else
+{
+    @* Aggregate summary (optional) *@
+    @if (ShowSummary && ratingInfo is not null && ratingInfo.TotalRatings > 0 && ratingInfo.AggregateRating.HasValue)
+    {
+        <div class="text-center mb-2">
+            <span class="text-warning">
+                @for (int i = 1; i <= 5; i++)
+                {
+                    var filled = i <= Math.Round(ratingInfo.AggregateRating.Value);
+                    <i class="bi @(filled ? "bi-star-fill" : "bi-star")"></i>
+                }
+            </span>
+            <span class="ms-2 text-muted small">
+                @ratingInfo.AggregateRating.Value.ToString("0.00") (@ratingInfo.TotalRatings)
+            </span>
+        </div>
+    }
+
+    @* Interactive panel (optional) *@
+    @if (ShowPanel)
+    {
+        @if (canRate)
+        {
+            <div class="border-top bg-white p-3 text-center">
+                <div class="mb-1 text-muted">
+                    @(string.IsNullOrEmpty(ratingInfo?.Reason) ? "Rate this song" : ratingInfo!.Reason)
+                </div>
+                @if (ratingInfo is not null)
+                {
+                    <div class="small text-secondary mb-2">
+                        Edits remaining: @ratingInfo.EditsRemaining / @ratingInfo.MaxEdits
+                    </div>
+                }
+                <div class="d-flex justify-content-center gap-2 my-2">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        var rating = i;
+                        var filled = rating <= selectedRating;
+                        <button type="button"
+                                class="btn btn-link p-0"
+                                title="@($"{i} star{(i > 1 ? "s" : "")}")"
+                                @onclick="@(() => OnSelectRating(i))"
+                                disabled="@isSubmitting">
+                            <i class="bi @(filled ? "bi-star-fill text-warning" : "bi-star text-warning")" style="font-size:1.6rem"></i>
+                        </button>
+                    }
+                </div>
+                <div>
+                    <button class="btn btn-primary btn-sm"
+                            disabled="@(isSubmitting || selectedRating == 0)"
+                            @onclick="SubmitAsync">
+                        @(isSubmitting ? "Submitting..." : "Submit rating")
+                    </button>
+                </div>
+                @if (!string.IsNullOrEmpty(error))
+                {
+                    <div class="text-danger mt-2 small">@error</div>
+                }
+                @if (!string.IsNullOrEmpty(info))
+                {
+                    <div class="text-success mt-2 small">@info</div>
+                }
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(ratingInfo?.Reason))
+        {
+            <div class="border-top bg-white p-3 text-center text-muted small">
+                @ratingInfo.Reason
+            </div>
+        }
+    }
+}
+
+@code {
+    [Parameter] public string SongId { get; set; } = string.Empty;
+    [Parameter] public bool ShowSummary { get; set; } = true;
+    [Parameter] public bool ShowPanel { get; set; } = true;
+    [Parameter] public EventCallback<decimal> OnRated { get; set; }
+
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+
+    private bool canRate = false;
+    private CanRateDto? ratingInfo;
+    private int selectedRating = 0;
+
+    private string? error;
+    private string? info;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SongId))
+        {
+            error = "Song ID is required.";
+            isLoading = false;
+            return;
+        }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        error = null;
+        info = null;
+
+        try
+        {
+            var resp = await _songsApi.CanUserRateSong(SongId);
+            if (resp.IsSuccessStatusCode)
+            {
+                ratingInfo = resp.Content;
+                canRate = ratingInfo?.CanRate == true;
+                selectedRating = (int)Math.Round((double)(ratingInfo?.YourRating ?? 0));
+            }
+            else
+            {
+                canRate = false;
+                error = $"Unable to load rating info (status {resp.StatusCode}).";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading rating info for {SongId}", SongId);
+            error = "An error occurred while loading rating info.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnSelectRating(int value)
+    {
+        error = null;
+        info = null;
+        selectedRating = value; // Changed from Math.Clamp(value, 1, 5)
+        StateHasChanged(); // Added to ensure UI updates
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (selectedRating <= 0 || string.IsNullOrWhiteSpace(SongId))
+            return;
+
+        try
+        {
+            error = null;
+            info = null;
+            isSubmitting = true;
+
+            var resp = await _songsApi.RateSong(SongId, selectedRating);
+            if (resp.IsSuccessStatusCode && resp.Content == true)
+            {
+                // Refresh gating & summary
+                var cr = await _songsApi.CanUserRateSong(SongId);
+                if (cr.IsSuccessStatusCode)
+                {
+                    ratingInfo = cr.Content;
+                    canRate = ratingInfo?.CanRate == true;
+                }
+
+                info = canRate && ratingInfo is not null
+                    ? $"Rating updated. Edits remaining: {ratingInfo.EditsRemaining}/{ratingInfo.MaxEdits}"
+                    : "Your rating has been recorded.";
+
+                if (OnRated.HasDelegate)
+                    await OnRated.InvokeAsync(selectedRating);
+            }
+            else
+            {
+                error = "Failed to submit rating.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Submit rating failed for {SongId}", SongId);
+            error = "An error occurred while submitting your rating.";
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+}

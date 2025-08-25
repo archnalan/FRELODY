@@ -3,4 +3,29 @@
         <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(Layout.MainLayout)">
+            <button class="btn btn-outline-primary mb-3" @onclick="GoBack">
+                <i class="bi bi-arrow-left"></i>
+                Back
+            </button>
+            <p role="alert">
+                Sorry, there's nothing at this address.
+                <a class="btn-link" href="/">Return home</a>
+            </p>
+        </LayoutView>
+    </NotFound>
 </Router>
+
+@code{
+
+    private async Task GoBack()
+    {
+        await JsRt.InvokeVoidAsync("goBack");
+    }
+
+    private void ReDirect()
+    {
+        _navManager.NavigateTo("/");
+    }
+}

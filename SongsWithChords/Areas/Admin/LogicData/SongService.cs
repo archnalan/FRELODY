@@ -5,8 +5,11 @@ using FRELODYAPP.Dtos;
 using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Models;
 using FRELODYLIB.Interfaces;
+using FRELODYLIB.Models;
+using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYSHRD.ModelTypes;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +20,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 {
     public class SongService : ISongService
     {
+        private const int MaxEditsPerRevision = 3;
+
         private readonly SongDbContext _context;
         private readonly ITenantProvider _tenantProvider;
         private readonly string _userId;
@@ -30,24 +35,96 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         }
 
         #region Get Songs
-        public async Task<ServiceResult<List<ComboBoxDto>>> GetSongsAsync()
+        public async Task<ServiceResult<PaginationDetails<ComboBoxDto>>> GetSongsAsync(int offset, int limit)
         {
             try
             {
-                var songs = await _context.Songs
-                    .Select(s => new ComboBoxDto
-                    {
-                        Id = s.SongNumber > 0 ? (int)s.SongNumber : 0,
-                        ValueText = s.Title,
-                        IdString = s.Id.ToString(),
-                    })
-                    .ToListAsync();
-                return ServiceResult<List<ComboBoxDto>>.Success(songs);
+                limit = limit <= 0 ? 10 : limit;
+
+                var page = await _context.Songs
+                        .OrderBy(s => s.Title)
+                        .ThenByDescending(s => s.Rating ?? 0)
+                        .ToPaginatedResultAsync(offset, limit);
+
+                var result = new PaginationDetails<ComboBoxDto>
+                {
+                    OffSet = page.OffSet,
+                    Limit = page.Limit,
+                    TotalSize = page.TotalSize,
+                    HasMore = page.HasMore,
+                    Data = page.Data?
+                        .Select(s => new ComboBoxDto
+                        {
+                            Id = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
+                            ValueText = s.Title,
+                            IdString = s.Id
+                        })
+                        .ToList()
+                };
+
+                return ServiceResult<PaginationDetails<ComboBoxDto>>.Success(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in GetSongs");
-                return ServiceResult<List<ComboBoxDto>>.Failure(ex);
+                return ServiceResult<PaginationDetails<ComboBoxDto>>.Failure(ex);
+            }
+        }
+
+        public async Task<ServiceResult<PaginationDetails<ComboBoxDto>>> SearchSongsAsync(string? keywords, int offset, int limit)
+        {
+            try
+            {
+                limit = limit <= 0 ? 10 : limit;
+
+                // Filter on the entity
+                var baseQuery = _context.Songs.AsQueryable();
+
+                if (!string.IsNullOrWhiteSpace(keywords))
+                {
+                    var kw = keywords.Trim();
+                    if (int.TryParse(kw, out var songNumber))
+                    {
+                        baseQuery = baseQuery.Where(s =>
+                            (s.SongNumber ?? 0) == songNumber ||
+                            EF.Functions.Like(s.Title, $"%{kw}%") ||
+                            (s.Slug != null && EF.Functions.Like(s.Slug, $"%{kw}%")));
+                    }
+                    else
+                    {
+                        baseQuery = baseQuery.Where(s =>
+                            EF.Functions.Like(s.Title, $"%{kw}%") ||
+                            (s.Slug != null && EF.Functions.Like(s.Slug, $"%{kw}%")));
+                    }
+                }
+
+                var page = await baseQuery
+                          .OrderBy(s => s.Title)
+                          .ThenByDescending(s => s.Rating ?? 0)
+                          .ToPaginatedResultAsync(offset, limit);
+
+                var result = new PaginationDetails<ComboBoxDto>
+                {
+                    OffSet = page.OffSet,
+                    Limit = page.Limit,
+                    TotalSize = page.TotalSize,
+                    HasMore = page.HasMore,
+                    Data = page.Data?
+                        .Select(s => new ComboBoxDto
+                        {
+                            Id = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
+                            ValueText = s.Title,
+                            IdString = s.Id
+                        })
+                        .ToList()
+                };
+
+                return ServiceResult<PaginationDetails<ComboBoxDto>>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in SearchSongsAsync");
+                return ServiceResult<PaginationDetails<ComboBoxDto>>.Failure(ex);
             }
         }
         #endregion
@@ -59,6 +136,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 var songs = await _context.Songs
                     .Where(s => s.CategoryId == categoryId)
+                    .OrderBy(s => s.Title)
+                    .ThenByDescending(s => s.Rating ?? 0)
                     .Select(s => new SongDto
                     {
                         Id = s.Id,
@@ -90,7 +169,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     {
                         Title = songDto.Title,
                         SongNumber = songDto.SongNumber,
-                        Slug = songDto.Title.ToLower().Replace(" ", "-")
+                        Slug = songDto.Title.ToLower().Replace(" ", "-"),
+                        Rating = 0m
                     };
                     await _context.Songs.AddAsync(song);
                     await _context.SaveChangesAsync();
@@ -323,10 +403,11 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     }
                     // Find the song to update
                     var song = await _context.Songs
-                        .Include(s => s.SongParts!)
-                            .ThenInclude(v => v.LyricLines!)
-                                .ThenInclude(ll => ll.LyricSegments!)
-                        .FirstOrDefaultAsync(s => s.Id == id);
+                        .Where(s => s.Id == id)
+                            .Include(s => s.SongParts!)
+                                .ThenInclude(v => v.LyricLines!)
+                                    .ThenInclude(ll => ll.LyricSegments!)
+                        .FirstOrDefaultAsync();
 
                     if (song == null)
                     {
@@ -461,20 +542,16 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             }
                         }
                     }
+                    song.ModifiedBy = _userId;
+                    song.Revision++;
 
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
                     var updatedSong = await GetSongById(song.Id);
-                    if (updatedSong.IsSuccess)
-                    {
-                        return ServiceResult<SongDto>.Success(updatedSong.Data);
-                    }
-                    else
-                    {
-                        var songDtoResult = song.Adapt<SongDto>();
-                        return ServiceResult<SongDto>.Success(songDtoResult);
-                    }
+                    return updatedSong.IsSuccess
+                        ? ServiceResult<SongDto>.Success(updatedSong.Data)
+                        : ServiceResult<SongDto>.Success(song.Adapt<SongDto>());
                 }
                 catch (Exception ex)
                 {
@@ -510,6 +587,146 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in MarkSongAsFavorite");
+                return ServiceResult<bool>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Set Song Rating
+        public async Task<ServiceResult<CanRateDto>> CanUserRateSong(string songId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(songId))
+                    return ServiceResult<CanRateDto>.Failure(new BadRequestException("Song ID is required."));
+
+                var song = await _context.Songs.FirstOrDefaultAsync(s => s.Id == songId);
+                if (song is null)
+                    return ServiceResult<CanRateDto>.Failure(new NotFoundException("Song not found."));
+
+                var userId = _userId;
+                var existing = await _context.SongUserRatings
+                    .FirstOrDefaultAsync(r => r.SongId == songId && r.UserId == userId);
+
+                var aggQ = _context.SongUserRatings.Where(r => r.SongId == songId);
+                var total = await aggQ.CountAsync();
+                var avg = total > 0 ? await aggQ.AverageAsync(r => r.Rating) : 0m;
+
+                var dto = new CanRateDto
+                {
+                    AggregateRating = total > 0 ? Math.Round(avg, 2, MidpointRounding.AwayFromZero) : null,
+                    TotalRatings = total,
+                    MaxEdits = MaxEditsPerRevision
+                };
+
+                if (existing is null)
+                {
+                    dto.CanRate = true;
+                    dto.EditsRemaining = MaxEditsPerRevision;
+                    return ServiceResult<CanRateDto>.Success(dto);
+                }
+
+                // If song was revised after their last rating: reset allowance for the new revision
+                if (existing.RevisionAtRating < song.Revision)
+                {
+                    dto.CanRate = true;
+                    dto.YourRating = existing.Rating;
+                    dto.EditsRemaining = MaxEditsPerRevision;
+                    dto.Reason = "Song has changed. You can rate this version.";
+                    return ServiceResult<CanRateDto>.Success(dto);
+                }
+
+                // Same revision: compute remaining edits
+                var remaining = Math.Max(0, MaxEditsPerRevision - existing.ModificationCount);
+                dto.YourRating = existing.Rating;
+                dto.EditsRemaining = remaining;
+
+                if (remaining > 0)
+                {
+                    dto.CanRate = true;
+                    dto.Reason = $"You can adjust your rating. {remaining} edit(s) left.";
+                }
+                else
+                {
+                    dto.CanRate = false;
+                    dto.Reason = "You’ve reached the maximum number of rating edits for this version.";
+                }
+
+                return ServiceResult<CanRateDto>.Success(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in CanUserRateSong");
+                return ServiceResult<CanRateDto>.Failure(ex);
+            }
+        }
+
+        public async Task<ServiceResult<bool>> SetSongRating(string songId, decimal rating)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(songId))
+                    return ServiceResult<bool>.Failure(new BadRequestException("Song ID is required."));
+                if (rating < 0 || rating > 5)
+                    return ServiceResult<bool>.Failure(new BadRequestException("Rating must be between 0 and 5."));
+
+                var song = await _context.Songs.FirstOrDefaultAsync(s => s.Id == songId);
+                if (song is null)
+                    return ServiceResult<bool>.Failure(new NotFoundException("Song not found."));
+
+                var userId = _userId;
+                var existing = await _context.SongUserRatings
+                    .FirstOrDefaultAsync(r => r.SongId == songId && r.UserId == userId);
+
+                var rounded = Math.Round(rating, 2, MidpointRounding.AwayFromZero);
+
+                if (existing is null)
+                {
+                    _context.SongUserRatings.Add(new SongUserRating
+                    {
+                        SongId = songId,
+                        UserId = userId,
+                        Rating = rounded,
+                        RevisionAtRating = song.Revision,
+                        ModificationCount = 0,
+                        RatedAt = DateTimeOffset.UtcNow
+                    });
+                }
+                else if (existing.RevisionAtRating < song.Revision)
+                {
+                    // New revision: reset edit counter
+                    existing.Rating = rounded;
+                    existing.RevisionAtRating = song.Revision;
+                    existing.ModificationCount = 0;
+                    existing.RatedAt = DateTimeOffset.UtcNow;
+                }
+                else
+                {
+                    // Same revision: enforce edit cap
+                    if (existing.ModificationCount >= MaxEditsPerRevision)
+                        return ServiceResult<bool>.Failure(new BadRequestException("You’ve reached the maximum number of rating edits for this version."));
+
+                    existing.Rating = rounded;
+                    existing.ModificationCount += 1;
+                    existing.RatedAt = DateTimeOffset.UtcNow;
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Refresh aggregate rating on Song
+                var q = _context.SongUserRatings.Where(r => r.SongId == songId);
+                var count = await q.CountAsync();
+                var avg = count > 0 ? await q.AverageAsync(r => r.Rating) : 0m;
+
+                song.Rating = Math.Round(avg, 2, MidpointRounding.AwayFromZero);
+                song.ModifiedBy = userId;
+                await _context.SaveChangesAsync();
+
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in SetSongRating");
                 return ServiceResult<bool>.Failure(ex);
             }
         }

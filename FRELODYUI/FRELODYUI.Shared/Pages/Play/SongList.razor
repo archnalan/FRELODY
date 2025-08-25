@@ -1,130 +1,163 @@
-﻿@layout UserLayout
-@page "/songs-list"
+﻿@page "/songs-list"
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@inject ILogger<SongList> _logger
+@implements IDisposable
 
-<div class="container-fluid bg-light vh-100">
+<div class="container-fluid bg-light vh-100" style="max-width:55rem;justify-self:center">
     <div class="position-sticky top-0 bg-light py-3 z-10">
         <div class="container">
             <h2 class="text-center mb-4">Song Library</h2>
-            <div class="row">
-                <div class="col-8">
-                    <div class="input-group">
-                        <input @onchange="(e) => HandleSearch(e)" type="text" class="form-control" placeholder="Search..." />
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <div class="row row align-items-center">
+                <div class="col-9">
+                    <div class="position-relative w-100">
+                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ps-2 text-secondary"></i>
+                        <input @bind-value="_searchInput"
+                               @bind-value:event="oninput"
+                               @bind-value:after="OnSearchInput"
+                               type="text"
+                               class="form-control ps-5"
+                               placeholder="Search..." />
                     </div>
                 </div>
-                <div class="col-4 d-flex justify-content-end">
-                    <a href="create/step1" class="btn btn-primary">Add Song <i class="bi bi-file-earmark-plus"></i></a>
+                <div class="col-3 d-flex justify-content-end">
+                    <button type="button" class="btn btn-primary" @onclick="AddSong">Add Song <i class="bi bi-file-earmark-plus"></i></button>
                 </div>
             </div>
         </div>
     </div>
-    <div class="container mt-5">
-        @if (isLoading)
-        {
-            <div class="d-flex justify-content-center align-items-center" style="height: 256px;">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
-        }
-        else if (!string.IsNullOrEmpty(error))
+    <div class="container mt-4">
+        @if (!string.IsNullOrEmpty(error))
         {
             <div class="alert alert-danger" role="alert">
                 @error
-                <button class="btn btn-sm btn-link" @onclick="@(async () => await LoadSongs())">Try Again</button>
+                <button class="btn btn-sm btn-link" @onclick="Refresh">Try Again</button>
             </div>
         }
-        else if (songs.Count == 0)
-        {
-            <div class="alert alert-info" role="alert">
-                No songs found. Please add songs to your library.
-            </div>
-        }
-        else
-        {
-            <div class="row">
-                @foreach (var song in filteredSongs)
-                {
+        <div class="row">
+            <Virtualize Context="song"
+                        ItemsProvider="ProvideSongsAsync"
+                        ItemSize="170"
+                        OverscanCount="3"
+                        @ref="_virtualize">
+                <ItemContent>
                     <div class="col-12 col-md-6 col-lg-4 col-xl-3 mb-4">
-                        <div class="card h-100">
+                        <div class="card h-100 shadow" style="border-radius:0.5rem">
                             <div class="card-body d-flex flex-column justify-content-between">
                                 <h5 class="card-title">
-                                    <span class="font-weight-light">@song.IdString</span>
-                                    <span class="ms-2">@song.ValueText</span>
+                                    <span class="mb-3">@song.ValueText</span>
                                 </h5>
-                                <div class="d-flex justify-content-end">
+                                <span class="font-weight-light text-muted">@song.IdString</span>
+                                <div class="d-flex justify-content-end mt-3">
                                     <button class="btn btn-outline-secondary btn-sm me-2" @onclick="() => NavigateToDetails(song.IdString)">Details</button>
-                                    <button class="btn btn-primary btn-sm" @onclick="() => NavigateToPlay(song.IdString)">Play</button>
+                                    <button class="btn btn-primary btn-sm" @onclick="@(() => OnSongDisplay(song.IdString))">Play</button>
                                 </div>
                             </div>
                         </div>
                     </div>
-                }
-            </div>
-        }
+                </ItemContent>
+                <Placeholder>
+                    <div class="col-12 col-md-6 col-lg-4 col-xl-3 mb-4 ">
+                        <div class="card h-100 placeholder-wave shadow" style="border-radius:0.5rem">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <span class="placeholder col-7 mb-3"></span>
+                                </h5>
+                                <span class="placeholder col-3"></span>
+                                <div class="d-flex justify-content-end mt-3">
+                                    <span class="placeholder col-3 me-2"></span>
+                                    <span class="placeholder col-2"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Placeholder>
+            </Virtualize>
+        </div>
     </div>
 </div>
 
 @code {
-    private List<ComboBoxDto> songs = new List<ComboBoxDto>();
-    private List<ComboBoxDto> filteredSongs = new List<ComboBoxDto>();
-    private bool isLoading = true;
     private string error = string.Empty;
+    private bool IsNavigating = false;
 
-    protected override async Task OnInitializedAsync()
+    // UI input vs applied search term
+    private string _searchInput = string.Empty;
+    private string _searchTerm = string.Empty;
+
+    private Virtualize<ComboBoxDto>? _virtualize;
+
+    // debounce state
+    private CancellationTokenSource? _debounceCts;
+    private const int SearchDebounceMs = 500;
+
+    protected override Task OnInitializedAsync()
     {
-        await LoadSongs();
+        // Virtualize will load on first render via ItemsProvider.
+        return Task.CompletedTask;
     }
 
-    private async Task LoadSongs()
+    private async ValueTask<ItemsProviderResult<ComboBoxDto>> ProvideSongsAsync(ItemsProviderRequest request)
     {
         try
         {
-            isLoading = true;
-            StateHasChanged();
-            var response = await _songsApi.GetSongs();
-            if (response != null)
+            error = string.Empty;
+
+            var offset = request.StartIndex;
+            var limit = request.Count <= 0 ? 10 : request.Count;
+
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
             {
-                songs = response.Content!.ToList();
-                filteredSongs = new List<ComboBoxDto>(songs);
-                error = string.Empty;
+                var response = await _songsApi.SearchSongs(_searchTerm, offset, limit);
+                var page = response?.Content;
+                var items = page?.Data ?? new List<ComboBoxDto>();
+                var total = page?.TotalSize ?? 0;
+                return new ItemsProviderResult<ComboBoxDto>(items, total);
             }
             else
             {
-                songs = new List<ComboBoxDto>();
-                filteredSongs = new List<ComboBoxDto>();
-                error = "No songs found";
+                var response = await _songsApi.GetSongs(offset, limit);
+                var page = response?.Content;
+                var items = page?.Data ?? new List<ComboBoxDto>();
+                var total = page?.TotalSize ?? 0;
+                return new ItemsProviderResult<ComboBoxDto>(items, total);
             }
         }
         catch (Exception ex)
         {
-            songs = new List<ComboBoxDto>();
-            filteredSongs = new List<ComboBoxDto>();
+            _logger.LogError(ex, "Error fetching songs during virtualization.");
             error = $"Error fetching songs: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
+            return new ItemsProviderResult<ComboBoxDto>(Array.Empty<ComboBoxDto>(), 0);
         }
     }
 
-    private void HandleSearch(ChangeEventArgs e)
+    private async Task OnSearchInput()
     {
-        var searchQuery = (e.Value?.ToString() ?? "").ToLower();
-        var normalizedQuery = searchQuery.TrimStart('0');
-        if (!string.IsNullOrEmpty(searchQuery))
+        // restart debounce window
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _debounceCts = cts;
+
+        try
         {
-            filteredSongs = songs.Where(s =>
-                s.Id.ToString().Contains(normalizedQuery) ||
-                s.ValueText.ToLower().Contains(searchQuery)
-            ).ToList();
+            await Task.Delay(SearchDebounceMs, cts.Token);
+
+            // apply the debounced input as the active search term
+            _searchTerm = (_searchInput ?? string.Empty).Trim();
+
+            await Refresh();
         }
-        else
+        catch (TaskCanceledException)
         {
-            filteredSongs = new List<ComboBoxDto>(songs);
+            // expected when new keystrokes arrive
         }
-        StateHasChanged();
+    }
+
+    private async Task Refresh()
+    {
+        error = string.Empty;
+        if (_virtualize is not null)
+            await _virtualize.RefreshDataAsync();
     }
 
     private void NavigateToDetails(string id)
@@ -135,5 +168,42 @@
     private void NavigateToPlay(string id)
     {
         _navManager.NavigateTo($"/player/{id}");
+    }
+
+    private void AddSong()
+    {
+        _navManager.NavigateTo("/compose");
+    }
+
+    private async Task OnSongDisplay(string songId)
+    {
+        try
+        {
+            IsNavigating = true;
+            StateHasChanged();
+            _navManager.NavigateTo($"/songs/{songId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error navigating to song: {ex.Message}");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "An error occurred while trying to display the song.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+        finally
+        {
+            IsNavigating = false;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
     }
 }

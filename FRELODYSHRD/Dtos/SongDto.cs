@@ -45,6 +45,12 @@ namespace FRELODYAPP.Dtos
 
         public string? CategoryId { get; set; }
 
+        public bool? IsFavorite { get; set; }
+
+        [Range(0, 5)]
+        [Column(TypeName = "decimal(3,2)")]
+        public decimal? Rating { get; set; }
+
         public virtual ICollection<SongPartDto>? SongParts { get; set; }
         public virtual ICollection<UserFeedbackDto>? Feedback { get; set; }        
     }

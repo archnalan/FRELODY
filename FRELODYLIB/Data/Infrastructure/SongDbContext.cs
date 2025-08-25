@@ -30,6 +30,7 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<Category> Categories { get; set; }
         public DbSet<Song> Songs { get; set; }
         public DbSet<SongPart> SongParts { get; set; }
+        public DbSet<SongUserRating> SongUserRatings { get; set; }
         public DbSet<LyricLine> LyricLines { get; set; }
         public DbSet<LyricSegment> LyricSegments { get; set; }
         public DbSet<Chord> Chords { get; set; }
@@ -59,6 +60,9 @@ namespace FRELODYAPP.Data.Infrastructure
                     (x.TenantId == _tenantId || x.TenantId == null) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongPart>().HasQueryFilter(x => 
+                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<SongUserRating>().HasQueryFilter(x =>
                     (x.TenantId == _tenantId || x.TenantId == null) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<LyricLine>().HasQueryFilter(x => 
@@ -179,6 +183,19 @@ namespace FRELODYAPP.Data.Infrastructure
             {
                 b.HasIndex(u => u.TenantId);
                 b.HasQueryFilter(u => u.TenantId == _tenantId);
+            });
+
+            builder.Entity<SongUserRating>(b =>
+            {
+                b.HasOne<Song>()
+                 .WithMany()
+                 .HasForeignKey(r => r.SongId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasOne<User>()
+                 .WithMany()
+                 .HasForeignKey(r => r.UserId)
+                 .OnDelete(DeleteBehavior.Restrict); 
             });
 
             foreach (var entityType in builder.Model.GetEntityTypes())

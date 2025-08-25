@@ -44,6 +44,12 @@ namespace FRELODYAPP.Models
 
 		public bool? IsFavorite { get; set; }
 
+        [Range(0, 5)]
+        [Column(TypeName = "decimal(3,2)")]
+        public decimal? Rating { get; set; }
+
+        public int Revision { get; set; } = 1;
+
         public virtual ICollection<SongPart>? SongParts { get; set; }
 
 		public virtual ICollection<UserFeedback>? Feedback { get; set; }

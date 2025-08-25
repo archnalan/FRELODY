@@ -1,4 +1,5 @@
 ﻿@page "/songs/{SongId}"
+@using FRELODYSHRD.Dtos.SubDtos
 @inject ILogger<Song> _logger
 
 <div class="w-100 d-flex justify-content-center mx-auto p-6 bg-light ">
@@ -12,14 +13,22 @@
     else if (song != null)
     {
         <div class="w-100 h-100 shadow-lg border border-light rounded rounded-3 my-4" style="max-width:55rem;">
-            <div class="d-flex gap-2 my-3 me-2" style="justify-content:end">
-                <button class="btn btn-outline-primary" @onclick="@(() => CustomizeSong(song.Id))">
-                    <i class="bi bi-pencil-square"></i>
-                    Customize
-                </button>
-                <ShareDropdown Song="song" OnActionCompleted="() => StateHasChanged()" />
+            <div class="d-flex gap-2 my-3 me-2" style="justify-content:space-between">
+                <div class="ms-2">
+                    <button class="btn btn-outline-primary" @onclick="GoBack">
+                        <i class="bi bi-arrow-left"></i>
+                        Back 
+                    </button>
+                </div>
+                <div class="d-flex gap-2 me-2">
+                    <button class="btn btn-outline-primary" @onclick="@(() => CustomizeSong(song.Id))">
+                        <i class="bi bi-pencil-square"></i>
+                        Customize
+                    </button>
+                    <ShareDropdown Song="song" OnActionCompleted="() => StateHasChanged()" />
+                </div>
             </div>
-            <div class="d-flex justify-content-center align-items-center mb-4">
+            <div class="d-flex justify-content-center align-items-center mb-2">
                 @if (song.SongNumber.HasValue)
                 {
                     <h3 class="text-black text-opacity-50 me-3">
@@ -31,7 +40,11 @@
                 </h3>
             </div>
 
-            <div class="song-content">
+            @* Aggregate rating summary (reusable component) *@
+            <RateSong SongId="@SongId" ShowSummary="true" ShowPanel="false" />
+
+            <!-- content -->
+            <div class="song-content mt-2">
                 @if (song.SongParts?.Any() == true)
                 {
                     foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
@@ -40,7 +53,6 @@
                             <h2 class="font-semibold text-center text-opacity-75 my-2">
                                 Verse @verse.PartNumber.ToString("D2")
                             </h2>
-
                             @if (verse.LyricLines?.Any() == true)
                             {
                                 foreach (var line in verse.LyricLines.OrderBy(l => l.LyricLineOrder))
@@ -70,6 +82,9 @@
                     }
                 }
             </div>
+
+            @* Bottom “rate this song” panel (reusable component) *@
+            <RateSong SongId="@SongId" ShowSummary="false" ShowPanel="true" />
         </div>
     }
 </div>
@@ -83,19 +98,15 @@
 }
 
 @code {
-    [Parameter]
-    public string SongId { get; set; } = string.Empty;
+    [Parameter] public string SongId { get; set; } = string.Empty;
 
     private SongDto? song;
     private bool isLoading = true;
-    private ModalOptionDto modalOption = default!;
 
     protected override async Task OnParametersSetAsync()
     {
         if (!string.IsNullOrEmpty(SongId))
-        {
             await LoadSong();
-        }
     }
 
     private async Task LoadSong()
@@ -268,6 +279,12 @@
         }
     }
 
+    private async Task GoBack()
+    {
+        //_navManager.NavigateTo("/songs-list");
+        await JsRt.InvokeVoidAsync("goBack");
+    }
+
     private async Task ShareLinkAsync()
     {
         try
@@ -314,5 +331,4 @@
             });
         }
     }
-
 }

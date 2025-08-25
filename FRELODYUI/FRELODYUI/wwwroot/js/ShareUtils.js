@@ -68,3 +68,26 @@ window.getTabIndexOrDefault = (el) => {
     // Otherwise, return a safe base number
     return 1000; // big enough so we don't clash with native flow
 };
+
+
+(function () {
+    function appBasePath() {
+        const base = document.querySelector("base");
+        const href = (base && base.getAttribute("href")) || "/";
+        return href.endsWith("/") ? href : href + "/";
+    }
+
+    // Call from C#: await JsRt.InvokeVoidAsync("goBack");
+    window.goBack = function () {
+        try {
+            // If there is at least one prior entry in this tab/session, go back.
+            if (history.length > 1) {
+                history.go(-1);
+                return;
+            }
+        } catch { /* ignore and fall through */ }
+
+        // Fallback to app base (no hardcoded /songs-list)
+        location.assign(appBasePath());
+    };
+})();

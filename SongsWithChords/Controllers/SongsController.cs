@@ -1,7 +1,9 @@
 ﻿using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPP.Dtos;
 using FRELODYAPP.Dtos.SubDtos;
+using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.SubDtos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -53,10 +55,10 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<ComboBoxDto>), 200)]
-        public async Task<IActionResult> GetAllSongs()
+        [ProducesResponseType(typeof(PaginationDetails<ComboBoxDto>), 200)]
+        public async Task<IActionResult> GetSongs([FromQuery]int offset, [FromQuery]int limit)
         {
-            var songResult = await _songService.GetSongsAsync();
+            var songResult = await _songService.GetSongsAsync(offset,limit);
 
             if (!songResult.IsSuccess)
                 return StatusCode(songResult.StatusCode, new { message = songResult.Error.Message });
@@ -64,9 +66,21 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
             return Ok(songResult.Data);
         }
 
+        [HttpGet]
+        [ProducesResponseType(typeof(PaginationDetails<ComboBoxDto>), 200)]
+        public async Task<IActionResult> SearchSongs([FromQuery]string? keywords, [FromQuery] int offset, [FromQuery] int limit)
+        {
+            var songResult = await _songService.SearchSongsAsync(keywords, offset, limit);
+            
+            if (!songResult.IsSuccess)
+                return StatusCode(songResult.StatusCode, new { message = songResult.Error.Message });
+            
+            return Ok(songResult.Data);
+        }
+
         [HttpPut]
         [ProducesResponseType(typeof(bool), 200)]
-        public async Task<IActionResult> MarkSongFavoriteStatus(string songId, bool favorite)
+        public async Task<IActionResult> MarkSongFavoriteStatus([FromQuery]string songId, [FromQuery]bool favorite)
         {
             var result = await _songService.MarkSongFavoriteStatus(songId, favorite);
             if (!result.IsSuccess)
@@ -84,5 +98,29 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
             return Ok(songResult.Data);
         }
         
+        [HttpGet]
+        [ProducesResponseType(typeof(CanRateDto), 200)]
+        public async Task<IActionResult> CanUserRateSong([FromQuery] string songId)
+        {
+            var result = await _songService.CanUserRateSong(songId);
+            
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            
+            return Ok(result.Data);
+        }
+
+        [HttpPut]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> RateSong([FromQuery] string songId, [FromQuery] decimal rating)
+        {
+            var result = await _songService.SetSongRating(songId, rating);
+            
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            
+            return Ok(result.Data);
+        }
+
     }
 }

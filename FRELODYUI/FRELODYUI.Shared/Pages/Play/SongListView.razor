@@ -174,7 +174,7 @@
         await SetActiveView(activeView);
         await LoadData();
     }
-    //apply debounce and search when SearchQuery changes
+
     private async Task OnSearchInput(ChangeEventArgs e)
     {
         SearchQuery = e.Value?.ToString() ?? string.Empty;
@@ -276,6 +276,7 @@
             SongBooks.Add(songBook);
         }
     }
+
     private void ToggleSongBookExpansion(SongBookView songBook)
     {
         if (!string.IsNullOrEmpty(songBook.Id))
@@ -353,6 +354,7 @@
             await LoadData();
         }
     }
+
     private async Task SetActiveView(ActiveView view)
     {
         if (activeView != view)
