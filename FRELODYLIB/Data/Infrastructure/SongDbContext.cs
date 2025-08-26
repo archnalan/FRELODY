@@ -195,6 +195,7 @@ namespace FRELODYAPP.Data.Infrastructure
                 b.HasOne<User>()
                  .WithMany()
                  .HasForeignKey(r => r.UserId)
+                 .IsRequired(false)
                  .OnDelete(DeleteBehavior.Restrict); 
             });
 

@@ -11,8 +11,7 @@ namespace FRELODYAPP.Models
         [Required]
         public string SongId { get; set; } = default!;
 
-        [Required]
-        public string UserId { get; set; } = default!;
+        public string? UserId { get; set; }
 
         [Range(0, 5)]
         [Column(TypeName = "decimal(3,2)")]

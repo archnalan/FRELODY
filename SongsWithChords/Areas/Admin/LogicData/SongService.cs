@@ -20,7 +20,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 {
     public class SongService : ISongService
     {
-        private const int MaxEditsPerRevision = 3;
+        private const int MaxEditsPerRevision = 2;
 
         private readonly SongDbContext _context;
         private readonly ITenantProvider _tenantProvider;
@@ -674,7 +674,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 if (song is null)
                     return ServiceResult<bool>.Failure(new NotFoundException("Song not found."));
 
-                var userId = _userId;
+                var userId = string.IsNullOrEmpty(_userId) ? null : _userId;
                 var existing = await _context.SongUserRatings
                     .FirstOrDefaultAsync(r => r.SongId == songId && r.UserId == userId);
 
@@ -704,7 +704,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 {
                     // Same revision: enforce edit cap
                     if (existing.ModificationCount >= MaxEditsPerRevision)
-                        return ServiceResult<bool>.Failure(new BadRequestException("You’ve reached the maximum number of rating edits for this version."));
+                        return ServiceResult<bool>.Failure(new BadRequestException("You've reached the maximum number of rating edits for this version."));
 
                     existing.Rating = rounded;
                     existing.ModificationCount += 1;

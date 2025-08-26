@@ -1,11 +1,7 @@
-﻿using FRELODYAPP.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace FRELODYAPP.Data
+﻿
+namespace FRELODYUI.Shared.Services
 {
-	public class ChordTransposer:IChordHandler
+	public class ChordTransposer
 	{
 		private readonly Dictionary<string, int> _sharpChromaticScale;
 		private readonly Dictionary<string, int> _flatChromaticScale;

@@ -91,3 +91,7 @@ window.getTabIndexOrDefault = (el) => {
         location.assign(appBasePath());
     };
 })();
+
+function getBoundingClientRect(element) {
+    return element.getBoundingClientRect();
+}

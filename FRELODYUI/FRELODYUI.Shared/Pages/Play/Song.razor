@@ -1,6 +1,7 @@
 ﻿@page "/songs/{SongId}"
 @using FRELODYSHRD.Dtos.SubDtos
 @inject ILogger<Song> _logger
+@implements IDisposable
 
 <div class="w-100 d-flex justify-content-center mx-auto p-6 bg-light ">
     @if (isLoading)
@@ -12,7 +13,7 @@
     }
     else if (song != null)
     {
-        <div class="w-100 h-100 shadow-lg border border-light rounded rounded-3 my-4" style="max-width:55rem;">
+        <div class="w-100 h-100 shadow-lg border border-light rounded rounded-3 my-4 px-4" style="max-width:55rem;">
             <div class="d-flex gap-2 my-3 me-2" style="justify-content:space-between">
                 <div class="ms-2">
                     <button class="btn btn-outline-primary" @onclick="GoBack">
@@ -24,7 +25,7 @@
                     <button class="btn btn-outline-primary" @onclick="@(() => CustomizeSong(song.Id))">
                         <i class="bi bi-pencil-square"></i>
                         Customize
-                    </button>
+                    </button>                  
                     <ShareDropdown Song="song" OnActionCompleted="() => StateHasChanged()" />
                 </div>
             </div>
@@ -47,17 +48,62 @@
             <div class="song-content mt-2">
                 @if (song.SongParts?.Any() == true)
                 {
+                    <div class="w-100 d-flex align-items-center justify-content-center gap-5 text-center">
+                        <div class="d-flex align-items-end">
+                            <span class="btn btn-sm rounded-circle btn-outline-secondary me-2" @onclick="ResetTranspose" title="Reset to original transpose">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </span>
+                            <div class="d-flex flex-column">
+                                <label>Transpose</label>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-0 rounded-start"
+                                            @onclick="DecreaseTranspose"
+                                            disabled="@(transpose <= -12)">
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <span class="btn btn-sm btn-outline-secondary rounded-0" style="width:2.5rem">@transpose</span>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-0 rounded-end"
+                                            @onclick="IncreaseTranspose"
+                                            disabled="@(transpose >= 12)">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-end">
+                            <div class="d-flex flex-column">
+                                <label>Capo</label>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-0 rounded-start"
+                                            @onclick="DecreaseCapo"
+                                            disabled="@(capo <= 0)">
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <span class="btn btn-sm btn-outline-secondary rounded-0" style="width:2.5rem">@capo</span>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-0 rounded-end"
+                                            @onclick="IncreaseCapo"
+                                            disabled="@(capo >= 12)">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <span class="btn btn-sm rounded-circle btn-outline-secondary ms-2" @onclick="ResetCapo" title="Reset capo">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </span>
+                        </div>
+                        
+                    </div>
                     foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
                     {
-                        <div class="verse-section mb-6">
-                            <h2 class="font-semibold text-center text-opacity-75 my-2">
+                        <div class="verse-section mb-6 ms-4">
+                            <h4 class="font-semibold text-center text-opacity-75 my-2">
                                 Verse @verse.PartNumber.ToString("D2")
-                            </h2>
+                            </h4>
                             @if (verse.LyricLines?.Any() == true)
                             {
                                 foreach (var line in verse.LyricLines.OrderBy(l => l.LyricLineOrder))
                                 {
-                                    <div class="lyric-line d-flex flex-wrap gap-2 mb-2">
+                                    <div class="lyric-line d-flex flex-wrap mb-2">
                                         @if (line.LyricSegments?.Any() == true)
                                         {
                                             foreach (var segment in line.LyricSegments.OrderBy(s => s.LyricOrder))
@@ -66,7 +112,7 @@
                                                     @if (segment.Chord != null)
                                                     {
                                                         <div class="chord text-sm text-primary fw-bold" style="cursor:pointer" >
-                                                            @segment.Chord.ChordName
+                                                            @GetTransposedChordName(segment.Chord.ChordName)
                                                         </div>
                                                     }
                                                     <div class="lyric text-opacity-75">
@@ -83,7 +129,7 @@
                 }
             </div>
 
-            @* Bottom “rate this song” panel (reusable component) *@
+            @* Bottom "rate this song" panel (reusable component) *@
             <RateSong SongId="@SongId" ShowSummary="false" ShowPanel="true" />
         </div>
     }
@@ -102,6 +148,10 @@
 
     private SongDto? song;
     private bool isLoading = true;
+    private int transpose = 0;
+    private int capo = 0;
+    private ChordTransposer? chordTransposer;
+    private string[]? originalChords;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -120,6 +170,7 @@
             if (response.IsSuccessStatusCode)
             {
                 song = response.Content;
+                InitializeChordTransposer();
             }
             else
             {
@@ -160,6 +211,92 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private void InitializeChordTransposer()
+    {
+        if (song?.SongParts?.Any() == true)
+        {
+            // Extract all unique chord names from the song
+            var chords = song.SongParts
+                .SelectMany(part => part.LyricLines ?? Enumerable.Empty<LyricLineDto>())
+                .SelectMany(line => line.LyricSegments ?? Enumerable.Empty<LyricSegmentDto>())
+                .Where(segment => segment.Chord != null)
+                .Select(segment => segment.Chord!.ChordName)
+                .Distinct()
+                .ToArray();
+
+            if (chords.Length > 0)
+            {
+                chordTransposer = new ChordTransposer();
+                chordTransposer.StoreOriginalChords(chords);
+                originalChords = chords;
+            }
+        }
+    }
+
+    private string GetTransposedChordName(string originalChordName)
+    {
+        if (chordTransposer == null || string.IsNullOrEmpty(originalChordName))
+            return originalChordName;
+
+        var totalSemitones = transpose - capo; // Capo effectively transposes down
+        return chordTransposer.TransposeChord(originalChordName, totalSemitones);
+    }
+
+    private void IncreaseTranspose()
+    {
+        if (transpose < 12)
+        {
+            transpose++;
+            StateHasChanged();
+        }
+    }
+
+    private void DecreaseTranspose()
+    {
+        if (transpose > -12)
+        {
+            transpose--;
+            StateHasChanged();
+        }
+    }
+
+    private void IncreaseCapo()
+    {
+        if (capo < 12)
+        {
+            capo++;
+            StateHasChanged();
+        }
+    }
+
+    private void DecreaseCapo()
+    {
+        if (capo > 0)
+        {
+            capo--;
+            StateHasChanged();
+        }
+    }
+
+    private void ResetTranspose()
+    {
+        transpose = 0;
+        //StateHasChanges();
+    }
+
+    private void ResetCapo()
+    {
+        capo = 0;
+        //StateHasChanges();
+    }
+
+    public void Dispose()
+    {
+        // Clean up any resources if needed
+        chordTransposer = null;
+        originalChords = null;
     }
 
     private void CustomizeSong(string songId)
@@ -211,7 +348,7 @@
     {
         if (song is null) return string.Empty;
 
-        // simple standalone HTML for printing/sharing
+        // simple standalone HTML for printing/sharing with transposed chords
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("<style>body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding:24px;} .title{font-weight:700; font-size:1.4rem; text-align:center; margin-bottom:8px;} .num{opacity:.6; margin-right:8px;} .section{margin-top:20px;} .line{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:6px;} .seg{display:flex; flex-direction:column; min-width:40px;} .ch{color:#0d6efd; font-weight:600; font-size:.9rem;} .ly{opacity:.9;}</style>");
         sb.Append("<div class='header' style='display:flex; justify-content:center; align-items:center; margin-bottom:8px;'>");
@@ -220,6 +357,15 @@
             sb.Append($"<span class='num'>{song.SongNumber.Value:D3}</span>");
         }
         sb.Append($"<div class='title'>{System.Net.WebUtility.HtmlEncode(song.Title)}</div></div>");
+
+        // Add transpose/capo info if applied
+        if (transpose != 0 || capo != 0)
+        {
+            sb.Append($"<div style='text-align:center; margin-bottom:16px; font-size:0.9rem; opacity:0.8;'>");
+            if (transpose != 0) sb.Append($"Transposed: {transpose:+#;-#;0} ");
+            if (capo != 0) sb.Append($"Capo: {capo}");
+            sb.Append("</div>");
+        }
 
         if (song.SongParts?.Any() == true)
         {
@@ -238,7 +384,8 @@
                                 sb.Append("<div class='seg'>");
                                 if (seg.Chord != null)
                                 {
-                                    sb.Append($"<div class='ch'>{System.Net.WebUtility.HtmlEncode(seg.Chord.ChordName)}</div>");
+                                    var transposedChord = GetTransposedChordName(seg.Chord.ChordName);
+                                    sb.Append($"<div class='ch'>{System.Net.WebUtility.HtmlEncode(transposedChord)}</div>");
                                 }
                                 sb.Append($"<div class='ly'>{System.Net.WebUtility.HtmlEncode(seg.Lyric ?? string.Empty)}</div>");
                                 sb.Append("</div>");
