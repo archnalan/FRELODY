@@ -269,7 +269,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                         LineNumber = lineNumber,
                                         LyricLineId = lyricLine.Id,
                                         ChordId = segmentDto.ChordId,
-                                        LyricOrder = segmentDto.LyricOrder 
+                                        LyricOrder = segmentDto.LyricOrder,
+                                        ChordAlignment = segmentDto.ChordAlignment
                                     });
                                 }
 
@@ -534,7 +535,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                         LineNumber = lineNumber,
                                         LyricLineId = lyricLine.Id,
                                         ChordId = segmentDto.ChordId,
-                                        LyricOrder = segmentDto.LyricOrder
+                                        LyricOrder = segmentDto.LyricOrder,
+                                        ChordAlignment = segmentDto.ChordAlignment
                                     });
                                 }
 

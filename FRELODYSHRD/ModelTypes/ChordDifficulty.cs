@@ -14,6 +14,14 @@
         Advanced = 3
     }
 
+    public enum Alignment
+    {
+        Left = 1,
+        Center = 2,
+        Right = 3,
+        Justify = 4
+    }
+
     public enum ChordType
     {
         Major = 1,

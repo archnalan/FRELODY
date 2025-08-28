@@ -4,6 +4,7 @@ using FRELODYAPP.Dtos.SubDtos;
 using Microsoft.AspNetCore.Http;
 using FRELODYAPP.Data;
 using FRELODYSHRD.Dtos;
+using FRELODYAPP.Interfaces;
 
 namespace FRELODYAPP.Dtos
 {
@@ -25,6 +26,8 @@ namespace FRELODYAPP.Dtos
         public string? LyricFilePath { get; set; }
 
         public string? ChordId { get; set; }
+
+        public Alignment? ChordAlignment { get; set; }
 
         public string? LyricLineId { get; set; }
 

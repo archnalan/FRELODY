@@ -1,103 +1,76 @@
-﻿
-namespace FRELODYUI.Shared.Services
+﻿namespace FRELODYUI.Shared.Services
 {
-	public class ChordTransposer
-	{
-		private readonly Dictionary<string, int> _sharpChromaticScale;
-		private readonly Dictionary<string, int> _flatChromaticScale;
-		private  Dictionary<string, int> _usedScale;
+    public static class ChordTransposer
+    {
+        private static readonly Dictionary<string, int> _sharpChromaticScale = new()
+        {
+            { "C", 0}, {"C#", 1}, {"D", 2}, {"D#", 3}, {"E", 4}, {"F", 5}, {"F#", 6},
+            {"G", 7}, {"G#", 8}, {"A", 9}, {"A#", 10}, {"B", 11}
+        };
 
-		private List<string> _originalChords;
-		public ChordTransposer()
-		{
-			_sharpChromaticScale = new Dictionary<string, int>
-			{
-				{ "C", 0},{"C#",1},{"D",2},{"D#",3}, {"E",4},{"F",5}, {"F#",6},
-				{"G",7 },{"G#",8},{"A",9},{"A#",10},{"B",11}
-			};
-			_flatChromaticScale = new Dictionary<string, int>
-			{
-				{ "C", 0},{"Db",1},{"D",2},{"Eb",3}, {"E",4},{"F",5}, {"Gb",6},
-				{"G",7 },{"Ab",8},{"A",9},{"Bb",10},{"B",11}
-			};
+        private static readonly Dictionary<string, int> _flatChromaticScale = new()
+        {
+            { "C", 0}, {"Db", 1}, {"D", 2}, {"Eb", 3}, {"E", 4}, {"F", 5}, {"Gb", 6},
+            {"G", 7}, {"Ab", 8}, {"A", 9}, {"Bb", 10}, {"B", 11}
+        };
 
-			_originalChords = new List<string>();
+        public static Dictionary<string, int> DetermineScale(IEnumerable<string> chords)
+        {
+            int sharpCount = chords.Sum(chord => chord.Count(c => c == '#'));
+            int flatCount = chords.Sum(chord => chord.Count(c => c == 'b'));
 
-		}
+            if (flatCount > sharpCount) return _flatChromaticScale;
+            if (sharpCount > flatCount) return _sharpChromaticScale;
 
-		public void StoreOriginalChords(string[] chords)
-		{
-			_originalChords = chords.ToList();
-			_usedScale = DetermineScale(_originalChords);
-		}
+            return _sharpChromaticScale;
+        }
 
-		public Dictionary<string, int> DetermineScale(List<string> chords)
-		{
-			int sharpCount = chords.Sum(chord=>chord.Count(c=>c=='#'));
-			int flatCount = chords.Sum(chord => chord.Count(c => c == 'b'));
+        public static string[] TransposeChords(string[] originalChords, int semitones)
+        {
+            var scale = DetermineScale(originalChords);
+            return originalChords.Select(chord => TransposeChord(chord, semitones, scale)).ToArray();
+        }
 
-			if (flatCount > sharpCount) return _flatChromaticScale;
+        public static string TransposeChord(string chord, int semitones, Dictionary<string, int>? scale = null)
+        {
+            chord = chord.Trim().Replace(" ", ""); // Remove any spaces
 
-			if(sharpCount > flatCount) return _sharpChromaticScale;
+            var match = System.Text.RegularExpressions
+                .Regex.Match(chord, @"^([A-G])(#|b)?(m|maj|min|sus|aug|dim|add)?(\d+)?(/([A-G])(#|b)?)?$");
 
-			return _sharpChromaticScale;
-		}
+            if (!match.Success) return chord;
 
-		public string[] ResetChords()
-		{
-			return _originalChords.ToArray();
-		}
+            var rootNote = match.Groups[1].Value + match.Groups[2].Value;
+            var chordQuality = match.Groups[3].Value + match.Groups[4].Value;
+            var bassNote = (!string.IsNullOrEmpty(match.Groups[5].Value)) ?
+                match.Groups[6].Value + match.Groups[7].Value : string.Empty;
 
-		public string[] TransposeChords(int semitones)
-		{
-			return _originalChords.Select(chord => TransposeChord(chord, semitones)).ToArray();
-		}
+            // Use provided scale or determine from the chord itself
+            scale ??= DetermineScale(new[] { chord });
 
-		public string TransposeChord(string chord, int semitones)
-		{			
-			chord = chord.Trim().Replace(" ", "");//Remove any spaces
+            // Transpose the root note
+            var transposedRoot = TransposeNote(rootNote, semitones, scale);
+            var transposedBass = !string.IsNullOrEmpty(bassNote) ?
+                TransposeNote(bassNote, semitones, scale) : string.Empty;
 
-			var match = System.Text.RegularExpressions
-				.Regex.Match(chord, @"^([A-G])(#|b)?(m|maj|min|sus|aug|dim|add)?(\d+)?(/([A-G])(#|b)?)?$");
-			
-			/*[RegularExpression(@"^([A-G])(b|#)?(m|maj|min|dim|aug|sus|add)?(2|4|5|6|7|9|11|13)?(#|b)?(\/[A-G](#|b)?)?$",
-			ErrorMessage = "Invalid Chord Format!")]*/
+            return $"{transposedRoot}{chordQuality}{(string.IsNullOrEmpty(transposedBass) ? "" : "/" + transposedBass)}";
+        }
 
-			if (!match.Success) return chord;
+        public static string TransposeNote(string note, int semitones, Dictionary<string, int> scale)
+        {
+            try
+            {
+                if (!scale.TryGetValue(note, out var noteIndex))
+                    return note;
 
-			var rootNote = match.Groups[1].Value + match.Groups[2].Value;
-			var chordQuality = match.Groups[3].Value + match.Groups[4];
-			var bassNote = (string.IsNullOrEmpty(match.Groups[5].Value) == false) ? 
-				match.Groups[5].Value.TrimStart('/'):string.Empty;
-
-			//call the transposeNote method
-			var transposedRoot = TransposeNote(rootNote, semitones);
-			var transposedBass = !string.IsNullOrEmpty(bassNote)? 
-				TransposeNote(bassNote, semitones): string.Empty;
-
-			return $"{transposedRoot}{chordQuality}{(string.IsNullOrEmpty(transposedBass)?"":"/"+ transposedBass)}";
-		}
-
-		public string TransposeNote(string note, int semitones)
-		{
-			//Determine which scale was used
-			var scale = _usedScale;
-
-			try
-			{
-				//Get and manipulate the note in scale
-				var noteIndex = scale[note];
-				if (noteIndex == -1) return note;
-				var newIndex = (noteIndex + semitones + 12) % 12;
-
-				var newNote = scale.FirstOrDefault(x => x.Value == newIndex).Key;
-				return newNote;
-
-			}
-			catch (Exception ex)
-			{
-				return $"Error: {ex.Message}";
-			}
-		}
-	}
+                var newIndex = (noteIndex + semitones + 12) % 12;
+                var newNote = scale.FirstOrDefault(x => x.Value == newIndex).Key;
+                return newNote ?? note;
+            }
+            catch (Exception ex)
+            {
+                return $"Error: {ex.Message}";
+            }
+        }
+    }
 }

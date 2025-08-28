@@ -42,7 +42,7 @@
             </div>
 
             @* Aggregate rating summary (reusable component) *@
-            <RateSong SongId="@SongId" ShowSummary="true" ShowPanel="false" />
+            <SongRating SongId="@SongId" ShowSummary="true" ShowPanel="false" />
 
             <!-- content -->
             <div class="song-content mt-2">
@@ -111,9 +111,11 @@
                                                 <div class="lyric-segment d-flex flex-column justify-content-end">
                                                     @if (segment.Chord != null)
                                                     {
-                                                        <div class="chord text-sm text-primary fw-bold" style="cursor:pointer" >
-                                                            @GetTransposedChordName(segment.Chord.ChordName)
-                                                        </div>
+                                                        <div class="w-100 d-flex @GetChordAlignmentClass(segment)">
+                                                            <h6 class="chord text-sm text-primary fw-bolder" style="cursor:pointer">
+                                                                @GetTransposedChordName(segment.Chord.ChordName)
+                                                            </h6>
+                                                        </div>                                                       
                                                     }
                                                     <div class="lyric text-opacity-75">
                                                         @segment.Lyric
@@ -130,7 +132,7 @@
             </div>
 
             @* Bottom "rate this song" panel (reusable component) *@
-            <RateSong SongId="@SongId" ShowSummary="false" ShowPanel="true" />
+            <SongRating SongId="@SongId" ShowSummary="false" ShowPanel="true" />
         </div>
     }
 </div>
@@ -150,7 +152,7 @@
     private bool isLoading = true;
     private int transpose = 0;
     private int capo = 0;
-    private ChordTransposer? chordTransposer;
+    private Dictionary<string, int>? chordScale;
     private string[]? originalChords;
 
     protected override async Task OnParametersSetAsync()
@@ -170,7 +172,7 @@
             if (response.IsSuccessStatusCode)
             {
                 song = response.Content;
-                InitializeChordTransposer();
+                InitializeChordScale();
             }
             else
             {
@@ -213,7 +215,7 @@
         }
     }
 
-    private void InitializeChordTransposer()
+    private void InitializeChordScale()
     {
         if (song?.SongParts?.Any() == true)
         {
@@ -228,8 +230,7 @@
 
             if (chords.Length > 0)
             {
-                chordTransposer = new ChordTransposer();
-                chordTransposer.StoreOriginalChords(chords);
+                chordScale = ChordTransposer.DetermineScale(chords);
                 originalChords = chords;
             }
         }
@@ -237,11 +238,11 @@
 
     private string GetTransposedChordName(string originalChordName)
     {
-        if (chordTransposer == null || string.IsNullOrEmpty(originalChordName))
+        if (chordScale == null || string.IsNullOrEmpty(originalChordName))
             return originalChordName;
 
         var totalSemitones = transpose - capo; // Capo effectively transposes down
-        return chordTransposer.TransposeChord(originalChordName, totalSemitones);
+        return ChordTransposer.TransposeChord(originalChordName, totalSemitones, chordScale);
     }
 
     private void IncreaseTranspose()
@@ -283,19 +284,31 @@
     private void ResetTranspose()
     {
         transpose = 0;
-        //StateHasChanges();
+        StateHasChanged();
     }
 
     private void ResetCapo()
     {
         capo = 0;
-        //StateHasChanges();
+        StateHasChanged();
+    }
+
+    private string GetChordAlignmentClass(LyricSegmentDto segment)
+    {
+        return segment.ChordAlignment switch
+        {
+            Alignment.Left => "justify-content-start",
+            Alignment.Center => "justify-content-center",
+            Alignment.Right => "justify-content-end",
+            Alignment.Justify => "justify-content-between",
+            _ => "justify-content-start"
+        };
     }
 
     public void Dispose()
     {
         // Clean up any resources if needed
-        chordTransposer = null;
+        chordScale = null;
         originalChords = null;
     }
 

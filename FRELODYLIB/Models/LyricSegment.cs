@@ -3,6 +3,7 @@ using FRELODYAPP.Data;
 using FRELODYAPP.Models.SubModels;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using FRELODYAPP.Interfaces;
 
 namespace FRELODYAPP.Models
 {
@@ -24,10 +25,12 @@ namespace FRELODYAPP.Models
 
         [StringLength(255)]
 		public string? LyricFilePath { get; set; }
+
+		public string? LyricLineId{ get;  set; }	
 		
 		public string? ChordId { get; set; }
 
-		public string? LyricLineId{ get;  set; }	
+		public Alignment? ChordAlignment { get; set; }
 
 		[ForeignKey(nameof(ChordId))]
 		public virtual Chord? Chord { get; set; }

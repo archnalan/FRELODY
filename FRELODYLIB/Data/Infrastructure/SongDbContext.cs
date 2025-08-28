@@ -161,6 +161,10 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<UserFeedback>()
                 .Property(e => e.Status)
                 .HasConversion<string>();
+            
+            builder.Entity<LyricSegment>()
+                .Property(e => e.ChordAlignment)
+                .HasConversion<string>();
 
             // Configure ShareLink relationships
             builder.Entity<ShareLink>()

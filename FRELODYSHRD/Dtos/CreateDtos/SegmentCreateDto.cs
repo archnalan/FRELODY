@@ -1,4 +1,5 @@
-﻿using FRELODYSHRD.ModelTypes;
+﻿using FRELODYAPP.Interfaces;
+using FRELODYSHRD.ModelTypes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -12,7 +13,7 @@ namespace FRELODYSHRD.Dtos.CreateDtos
     {
         public string? Id { get; set; } // key value for UI
         [Required]
-        public string Lyric { get; set; }
+        public string Lyric { get; set; } = string.Empty;
         public int LineNumber { get; set; }
         public string? ChordId { get; set; }
         public string? ChordName { get; set; }
@@ -23,5 +24,6 @@ namespace FRELODYSHRD.Dtos.CreateDtos
         [Required]
         public int LyricOrder { get; set; } 
         public bool AddNextSegment { get; set; } = false; // for UI purpose
+        public Alignment? ChordAlignment { get; set; } = Alignment.Left;
     }
 }

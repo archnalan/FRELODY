@@ -20,8 +20,7 @@ namespace FRELODYAPP.Models
 		//Will be assigned path of guitar chord position 1
 		[StringLength(255)]
 		public string? ChordAudioFilePath { get; set; }
-
-		
+				
 		public virtual ICollection<ChordChart>? ChordCharts { get; set; }
 
 		public virtual ICollection<LyricSegment>? LyricSegments { get; set; }

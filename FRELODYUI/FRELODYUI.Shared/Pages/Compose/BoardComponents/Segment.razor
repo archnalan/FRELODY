@@ -1,4 +1,5 @@
 ﻿@using FRELODYUI.Shared.Pages.Compose.ChordComponents
+@using FRELODYSHRD.ModelTypes
 @inject ILogger<Segment> _logger
 
 <div class="@($"h-100 w-100 d-flex align-items-between rounded cursor-pointer {(FocusedLine ? "bg-dark" : "bg-secondary")}")">
@@ -16,11 +17,40 @@
     else
     {
         <div class="d-flex flex-column justify-content-between py-2 m-2" style="@TextBoxSize">
-            <div>
-                <p class="small text-white m-0">@ChordName</p>
+            <div class="d-flex align-items-center position-relative @GetChordAlignmentClass()">
+                @if (!string.IsNullOrEmpty(ChordName))
+                {
+                    @if (ShowAlign)
+                    {
+                        @* Left unindent icon - show when center or right aligned *@
+                        @if (Content.ChordAlignment == Alignment.Center || Content.ChordAlignment == Alignment.Right)
+                        {
+                            <i class="bi bi-unindent text-primary cursor-pointer me-1"
+                               @onclick="HandleUnindentClick"
+                               title="Move chord left"></i>
+                        }
+                    }
+                   
+                    
+                    @* Chord name with dynamic alignment *@
+                    <h6 class="fw-bolder text-white align-self-center m-0" 
+                       @onclick="()=> ShowAlign = !ShowAlign"
+                       style="cursor: pointer;">@ChordName</h6>
+
+                    @if (ShowAlign)
+                    {
+                        @* Right indent icon - show when left or center aligned *@
+                        @if (Content.ChordAlignment == Alignment.Left || Content.ChordAlignment == Alignment.Center)
+                        {
+                            <i class="bi bi-indent text-primary cursor-pointer ms-1"
+                               @onclick="HandleIndentClick"
+                               title="Move chord right"></i>
+                        }
+                    }
+                }
             </div>
             <div>
-                <p class="small text-white m-0">@Content.Lyric</p>
+                <h6 class="fw-normal text-white m-0">@Content.Lyric</h6>
             </div>
         </div>
     }
@@ -40,6 +70,7 @@
     private string ChordName = string.Empty;
     private bool isInitialized = false;
     private AddSegment addSegmentRef = default!;
+    private bool ShowAlign = false;
 
     protected async override void OnAfterRender(bool firstRender)
     {
@@ -59,6 +90,46 @@
                 StateHasChanged();
             }
         }
+    }
+
+    private string GetChordAlignmentClass()
+    {
+        return Content.ChordAlignment switch
+        {
+            Alignment.Left => "justify-content-start",
+            Alignment.Center => "justify-content-center",
+            Alignment.Right => "justify-content-end",
+            Alignment.Justify => "justify-content-between",
+            _ => "justify-content-start"
+        };
+    }
+
+    private async Task HandleIndentClick()
+    {
+        // Move chord alignment to the right
+        Content.ChordAlignment = Content.ChordAlignment switch
+        {
+            Alignment.Left => Alignment.Center,
+            Alignment.Center => Alignment.Right,
+            _ => Content.ChordAlignment
+        };
+        
+        await OnSave.InvokeAsync(Content);
+        StateHasChanged();
+    }
+
+    private async Task HandleUnindentClick()
+    {
+        // Move chord alignment to the left
+        Content.ChordAlignment = Content.ChordAlignment switch
+        {
+            Alignment.Right => Alignment.Center,
+            Alignment.Center => Alignment.Left,
+            _ => Content.ChordAlignment
+        };
+        
+        await OnSave.InvokeAsync(Content);
+        StateHasChanged();
     }
 
     private async Task HandleDragStart()
@@ -84,6 +155,7 @@
             Content.ChordId = editedSegment.ChordId;
             Content.ChordName = editedSegment.ChordName;
             Content.AddNextSegment = editedSegment.AddNextSegment;
+            Content.ChordAlignment = editedSegment.ChordAlignment;
             ChordName = editedSegment.ChordName ?? string.Empty;
         }
         else
@@ -92,6 +164,7 @@
             Content.ChordId = string.Empty;
             Content.ChordName = string.Empty;
             Content.AddNextSegment = false;
+            Content.ChordAlignment = Alignment.Left;
             ChordName = string.Empty;
         }
         OnSave.InvokeAsync(Content);
