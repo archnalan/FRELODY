@@ -4,12 +4,13 @@
     <div class="d-flex flex-column w-100">
         <div class="p-2 border border-secondary rounded rounded-3 bg-light">
             
-            <SortableList Id="sortable-tabs"
-                              Handle=".drag-handle"
-                              Items="Items"
-                              OnUpdate="@SortTabs"
-                              Context="item"
-                              Class="p-2 border rounded rounded-3 flex-wrap d-flex  gap-2 fw-bold text-primary bg-light">
+            <SortableList @key="_sortableListKey" 
+                          Id="sortable-tabs"
+                          Handle=".drag-handle"
+                          Items="Items"
+                          OnUpdate="@SortTabs"
+                          Context="item"
+                          Class="p-2 border rounded rounded-3 flex-wrap d-flex  gap-2 fw-bold text-primary bg-light">
                <SortableItemTemplate>
                     <div @key="item.Id" class="d-flex align-items-center gap-2" style="transition: transform 0.2s ease-in-out;">
                             <div class="drag-handle d-flex align-items-center justify-content-center text-muted"
@@ -100,6 +101,7 @@
     [Parameter] public EventCallback<int> OnTabAdd { get; set; }
     [Parameter] public Func<int, RenderFragment>? RenderTab { get; set; }
     [Parameter] public EventCallback<TabsComponentItem> ActiveTabInfoChanged { get; set; }
+    [Parameter] public EventCallback<List<TabsComponentItem>> OnTabSort { get; set; }
     private readonly Dictionary<int, ElementReference> _sectionNumberInputs = new();
 
     private List<TabsComponentItem> Items { get; set; } = new();
@@ -108,6 +110,7 @@
     private int? tabIdToRemove = null;
     private const int INITIAL_ID = 1;
     private const int NAME_MAX_LEN = 7;
+    private int _sortableListKey = 0;
 
     private bool ShowInputHide = false;
     private readonly HashSet<string> SingleInstanceSections = new()
@@ -138,6 +141,9 @@
 
         if (oldIndex == newIndex) return;
 
+        // Remember the currently selected tab before reordering
+        var currentlySelectedTab = SelectedTab;
+
         var itemToMove = Items[oldIndex];
         Items.RemoveAt(oldIndex);
 
@@ -156,6 +162,50 @@
             Items[i].DisplayOrder = i + 1;
         }
 
+        // Renumber SectionNumber within each section type group
+        var groupedItems = Items
+            .Where(item => SectionAllowsNumbering(item.SectionName))
+            .GroupBy(item => item.SectionName)
+            .ToList();
+
+        foreach (var group in groupedItems)
+        {
+            var sortedGroup = group.OrderBy(item => item.DisplayOrder).ToList();
+            for (int i = 0; i < sortedGroup.Count; i++)
+            {
+                sortedGroup[i].SectionNumber = i + 1;
+            }
+        }
+               
+        // Maintain the previously selected tab instead of automatically selecting the moved tab
+        // Only change selection if the currently selected tab doesn't exist anymore
+        if (Items.Any(item => item.Id == currentlySelectedTab))
+        {
+            SelectedTab = currentlySelectedTab;
+            var activeTab = Items.FirstOrDefault(item => item.Id == currentlySelectedTab);
+            if (activeTab != null && ActiveTabInfoChanged.HasDelegate)
+            {
+                ActiveTabInfoChanged.InvokeAsync(activeTab);
+            }
+        }
+        else if (Items.Any())
+        {
+            // Fallback: select the first tab if the previously selected tab no longer exists
+            SelectedTab = Items[0].Id;
+            if (ActiveTabInfoChanged.HasDelegate)
+            {
+                ActiveTabInfoChanged.InvokeAsync(Items[0]);
+            }
+        }
+        Items = Items.OrderBy(x => x.DisplayOrder).ToList();
+        // Notify parent first so it can realign segment data before we refresh UI
+        if (OnTabSort.HasDelegate)
+        {
+            OnTabSort.InvokeAsync(Items);
+        }
+        
+        // Force UI refresh
+        _sortableListKey++;
         StateHasChanged();
     }
 
@@ -171,15 +221,17 @@
 
         if (InitialItems != null)
         {
+            // Preserve parent-provided Ids; only compute DisplayOrder locally.
             Items = InitialItems.Select((item, i) => new TabsComponentItem
             {
-                Id = INITIAL_ID + i,
-                SectionName = item.SectionName.ToString(),
+                Id = item.Id,
+                SectionName = item.SectionName,
                 SectionNumber = item.SectionNumber,
                 Content = item.Content,
-                DisplayOrder = INITIAL_ID + i // Add display order to maintain user's intended sequence
+                DisplayOrder = i + 1
             }).ToList();
         }
+        Items = Items.OrderBy(x => x.DisplayOrder).ToList();
         await base.OnInitializedAsync();
     }
 

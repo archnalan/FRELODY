@@ -38,6 +38,7 @@
                            ItemsCountLimit="MAX_SECTIONS"
                            OnTabAdd="HandleTabAdd"
                            RenderTab="RenderVerseTab"
+                           OnTabSort="HandleTabSort"
                            ActiveTabInfoChanged ="HandleActiveTabInfoChanged"/>
         }
         else
@@ -67,10 +68,11 @@
     private bool isLoading = true;
 
     private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
-            Segments="@AllPartsSegments.GetValueOrDefault(id)"
-            ActiveTab="activeTabItem"
-            OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />
-    ;
+                  Segments="@AllPartsSegments.GetValueOrDefault(id, new List<SegmentCreateDto>())"
+                  ActiveTab="activeTabItem"
+                  OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />
+;
+
 
 
     protected override async Task OnInitializedAsync()
@@ -100,6 +102,8 @@
                             builder.AddAttribute(2, "OnSegmentsUpdate",
                                 EventCallback.Factory.Create<List<SegmentCreateDto>>(
                                     this, segments => HandleVerseUpdate(1, segments)));
+                            builder.AddAttribute(3, "Segments", AllPartsSegments[1]);
+                            builder.AddAttribute(4, "ActiveTab", activeTabItem);
                             builder.CloseComponent();
                         }
                     }
@@ -154,6 +158,7 @@
                                         EventCallback.Factory.Create<List<SegmentCreateDto>>(
                                             this, segments => HandleVerseUpdate(part.PartNumber, segments)));
                                     builder.AddAttribute(3, "Segments", AllPartsSegments[part.PartNumber]);
+                                    builder.AddAttribute(4, "ActiveTab", activeTabItem);
                                     builder.CloseComponent();
                                 }
                             });
@@ -225,7 +230,7 @@
                     Data = "Attempted to save song with no segments"
                 }
             });
-           
+
             _logger.LogWarning("No segments found to save.");
             return;
         }
@@ -255,7 +260,7 @@
                     Data = songResult.Content?.ToString() ?? "No content"
                 }
             });
-            
+
             _logger.LogInformation("Song {songData} saved successfully!", songData);
         }
         else
@@ -273,7 +278,7 @@
                     Data = songResult.Content?.ToString() ?? "No content"
                 }
             });
-            
+
             _logger.LogError("Failed to save song: {Error}", errorMessage);
         }
     }
@@ -286,7 +291,7 @@
         {
             foreach (var segment in segments)
             {
-                segment.PartNumber = tabItem.SectionNumber;
+                // Do not override PartNumber on selection; sorting/renumbering will set it.
                 segment.PartName = tabItem.SectionEnumValue;
             }
         }
@@ -306,6 +311,48 @@
         }
     }
 
+    private void HandleTabSort(List<TabsComponent.TabsComponentItem> sortedItems)
+    {
+        // Create new segments dictionary preserving the content but updating positions
+        var newAllPartsSegments = new Dictionary<int, List<SegmentCreateDto>>();
+
+        // Copy segments to their new positions and update part numbers
+        for (int i = 0; i < sortedItems.Count; i++)
+        {
+            var tab = sortedItems[i];
+            var newPartNumber = i + 1; // Position-based part number (1, 2, 3, etc.)
+
+            if (AllPartsSegments.TryGetValue(tab.Id, out var segments))
+            {
+                // Create a copy of segments and update their part numbers to match new position
+                var updatedSegments = segments.Select(segment => new SegmentCreateDto
+                {
+                    Id = segment.Id,
+                    Lyric = segment.Lyric,
+                    ChordId = segment.ChordId,
+                    ChordName = segment.ChordName,
+                    LineNumber = segment.LineNumber,
+                    PartNumber = newPartNumber, // Use position-based numbering
+                    PartName = tab.SectionEnumValue,
+                    LyricOrder = segment.LyricOrder,
+                    AddNextSegment = segment.AddNextSegment,
+                    ChordAlignment = segment.ChordAlignment
+                }).ToList();
+
+                newAllPartsSegments[tab.Id] = updatedSegments;
+            }
+            else
+            {
+                // Create empty list for new tabs
+                newAllPartsSegments[tab.Id] = new List<SegmentCreateDto>();
+            }
+        }
+
+        AllPartsSegments = newAllPartsSegments;
+
+        // Force re-render of the tabs content by triggering StateHasChanged
+        StateHasChanged();
+    }
     private async Task ConfirmModal()
     {
         // handle specific contexts awaiting confirmation
