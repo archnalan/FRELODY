@@ -13,7 +13,6 @@ namespace FRELODYAPP.Models
 		[StringLength(100)]
 		public string Title { get; set; }
 
-		[Required]
 		public int? SongNumber { get; set; }
 
 		[Required]

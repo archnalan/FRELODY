@@ -26,6 +26,7 @@ namespace FRELODYUI
             builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
             builder.Services.AddScoped<IShareService, ShareService>();
             builder.Services.AddScoped<IModalService, ModalService>();
+            builder.Services.AddScoped<ChordLyricExtrator>();
 
             var baseAddressApi = new Uri("https://localhost:7077");
 

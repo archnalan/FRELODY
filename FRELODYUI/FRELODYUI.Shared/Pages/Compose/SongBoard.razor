@@ -59,7 +59,7 @@
     [Parameter]
     public string? SongId { get; set; }
     const int MAX_SECTIONS = 25;
-    private string SongTitle = "My New Song";
+    private string? SongTitle = "My New Song";
     private int SongNumber = 1;
     private Dictionary<int, List<SegmentCreateDto>> AllPartsSegments =
     new() { [1] = new List<SegmentCreateDto>() };

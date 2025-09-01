@@ -1,5 +1,4 @@
 ﻿
-
 <div class="dropend" style="width: 100%;">
     <div class="position-relative">
         <input class="form-control form-control-sm pe-4"
@@ -19,6 +18,10 @@
     {
         <div class="dropdown-menu show"
              style="position: absolute; top: 0; left: 100%; width: 200px; max-height: 300px; overflow-y: auto; z-index:5">
+            <button tabindex="@(TabIndex + 1)" class="dropdown-item text-muted" type="button" @onclick="() => SelectNone()">
+                <i class="bi bi-x-circle"></i> None
+            </button>
+            <div class="dropdown-divider"></div>
             @foreach (var chord in filteredChords)
             {
                 <button tabindex="@(TabIndex + 1)" class="dropdown-item" type="button" @onclick="() => SelectChord(chord)">
@@ -30,7 +33,7 @@
                 <div class="dropdown-item text-muted">No chords found</div>
             }
             <div class="dropdown-divider"></div>
-            <button tabindex="@(TabIndex + 2)" class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
+            <button tabindex="@(TabIndex + 3)" class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
                 <i class="bi bi-plus-circle-dotted"></i> Customize
             </button>
         </div>
@@ -124,6 +127,15 @@
         searchTerm = chord.ChordName;
         showDropdown = false;
         await SelectedChordChanged.InvokeAsync(chord);
+    }
+
+    private async Task SelectNone()
+    {
+        var emptyChord = new ChordDto();
+        SelectedChord = emptyChord;
+        searchTerm = "";
+        showDropdown = false;
+        await SelectedChordChanged.InvokeAsync(emptyChord);
     }
 
     private void ToggleDropdown(bool show)
