@@ -135,9 +135,10 @@
                                         Lyric = segment.Lyric,
                                         ChordId = segment.ChordId?.ToString(),
                                         ChordName = segment.Chord?.ChordName,
+                                        ChordAlignment = segment.ChordAlignment,
                                         LineNumber = line.LyricLineOrder,
                                         PartNumber = part.PartNumber,
-                                        PartName = SongSection.Verse,
+                                        PartName = part.PartName ?? SongSection.Verse,
                                         LyricOrder = segment.LyricOrder
                                     });
                             }
@@ -291,7 +292,7 @@
         {
             foreach (var segment in segments)
             {
-                // Do not override PartNumber on selection; sorting/renumbering will set it.
+                segment.PartNumber = tabItem.SectionNumber;
                 segment.PartName = tabItem.SectionEnumValue;
             }
         }
@@ -353,6 +354,7 @@
         // Force re-render of the tabs content by triggering StateHasChanged
         StateHasChanged();
     }
+
     private async Task ConfirmModal()
     {
         // handle specific contexts awaiting confirmation
