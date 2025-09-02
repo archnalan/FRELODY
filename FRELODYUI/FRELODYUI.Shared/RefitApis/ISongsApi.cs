@@ -40,5 +40,8 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Get("/api/songs/can-user-rate-song")]
         Task<IApiResponse<CanRateDto>> CanUserRateSong([Query] string songId);
+
+        [Delete("/api/songs/delete-song")]
+        Task<IApiResponse<bool>> DeleteSong([Query] string songId);
     }
 }

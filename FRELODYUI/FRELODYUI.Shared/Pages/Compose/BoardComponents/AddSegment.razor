@@ -118,6 +118,12 @@ else
 
     private async Task HandleSubmit()
     {
+        if(string.IsNullOrWhiteSpace(_segmentText) 
+        && string.IsNullOrEmpty(SelectedChord.ChordName))
+        {
+            // both lyric and chord are empty, do nothing
+            return;
+        }
         _newSegment = new SegmentCreateDto
         {
             Id = Guid.NewGuid().ToString(),

@@ -122,5 +122,17 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
             return Ok(result.Data);
         }
 
+        [HttpDelete]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> DeleteSong([FromQuery] string songId)
+        {
+            var result = await _songService.DeleteSong(songId);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+
+            return Ok(result.Data);
+        }
+
     }
 }

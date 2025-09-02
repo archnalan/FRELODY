@@ -23,8 +23,8 @@
                                     <select class="form-select form-select-sm border-secondary bg-light fw-normal p-1"
                                             style="min-width:5.5rem"
                                             value="@item.SectionName"
-                                            @onchange="@((ChangeEventArgs e) => HandleSectionChanged(item.Id, e.Value?.ToString()))"
-                                            @onclick:stopPropagation="SelectedTab == item.Id">
+                                            @onmousedown:preventDefault="SelectedTab != item.Id"
+                                            @onchange="@((ChangeEventArgs e) => HandleSectionChanged(item.Id, e.Value?.ToString()))">
                                         @foreach (var sectionName in SongSectionNames)
                                         {
                                             <option value="@sectionName" disabled="@IsSectionDisabled(sectionName, item.Id)" >
@@ -43,12 +43,12 @@
                                                    min="0"
                                                    value="@(item.SectionNumber == 0 ? "" : item.SectionNumber.ToString())"
                                                    @onchange="@(e => HandleSectionNumberChanged(item.Id, e))"
-                                                   @onclick:stopPropagation="SelectedTab == item.Id"/>
+                                                   @onmousedown:preventDefault="SelectedTab != item.Id" />
                                             @if (ShowInputHide)
                                             {
                                                 <span class="d-flex align-items-center justify-content-center position-absolute top-0 start-50 translate-middle badge rounded-circle bg-danger text-center"
                                                     style="width:1.25rem; height:1.25rem" @onclick="()=>HideNumberInputFromSection(item)"
-                                                  @onclick:stopPropagation="SelectedTab == item.Id">
+                                                    @onmousedown:preventDefault="SelectedTab != item.Id">
                                                     <i class="bi bi-x"></i>
                                                 </span>                                                
                                             }
@@ -58,7 +58,7 @@
                                 <div class="d-flex align-items-center">
                                     <button class="btn btn-sm btn-outline-light rounded-circle text-primary text-decoration-none m-1"
                                             @onclick="() => HandleTabRemove(item.Id)"
-                                            @onclick:stopPropagation="true"
+                                            @onmousedown:preventDefault="SelectedTab != item.Id"
                                             title="Remove section">
                                         <i class="bi bi-x text-danger"></i>
                                     </button>

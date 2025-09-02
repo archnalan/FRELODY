@@ -18,5 +18,6 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<SongDto>> UpdateSong(string id, SimpleSongCreateDto songDto);
         Task<ServiceResult<bool>> SetSongRating(string songId, decimal rating);
         Task<ServiceResult<CanRateDto>> CanUserRateSong(string songId);
+        Task<ServiceResult<bool>> DeleteSong(string songId);
     }
 }

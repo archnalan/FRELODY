@@ -18,10 +18,11 @@
         <div class="d-flex align-items-center justify-content-between mb-3">
             <div class="d-flex flex-grow-1">
                 <input type="number"
-                       @bind="SongNumber"
+                       @bind="FormattedSongNumber"
                        class="form-control me-2"
                        placeholder="Song Number"
-                       style="width:5rem" />
+                       style="width:5rem" 
+                       min="1"/>
 
                 <input type="text"
                        @bind="SongTitle"
@@ -60,7 +61,7 @@
     public string? SongId { get; set; }
     const int MAX_SECTIONS = 25;
     private string? SongTitle = "My New Song";
-    private int SongNumber = 1;
+    private int SongNumber = 1;   
     private Dictionary<int, List<SegmentCreateDto>> AllPartsSegments =
     new() { [1] = new List<SegmentCreateDto>() };
     private List<TabsComponent.TabsComponentItem> initialPartsItems = new();
@@ -71,9 +72,18 @@
                   Segments="@AllPartsSegments.GetValueOrDefault(id, new List<SegmentCreateDto>())"
                   ActiveTab="activeTabItem"
                   OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />
-;
-
-
+    ;
+    private string FormattedSongNumber
+    {
+        get => SongNumber.ToString("D3");
+        set
+        {
+            if (int.TryParse(value, out var num))
+            {
+                SongNumber = num;
+            }
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -358,9 +368,10 @@
     private async Task ConfirmModal()
     {
         // handle specific contexts awaiting confirmation
-        if (_modalService.CurrentModal.Context?.ActionType == "")
+        if (_modalService.CurrentModal.Context?.ActionType == "SongSaved")
         {
-           
+            _modalService.Close();
+            _navManager.NavigateTo("/songs-list");
         }
         await CloseModal();
     }

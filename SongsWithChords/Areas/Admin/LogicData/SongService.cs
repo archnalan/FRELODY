@@ -733,5 +733,32 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
         #endregion
+
+        #region Soft Delete Song 
+        public async Task<ServiceResult<bool>> DeleteSong(string songId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(songId))
+                {
+                    return ServiceResult<bool>.Failure(
+                        new BadRequestException("Song ID is required."));
+                }
+                var song = await _context.Songs
+                    .FirstOrDefaultAsync(s => s.Id == songId);
+                if (song == null) return ServiceResult<bool>.Failure(
+                    new NotFoundException("Song not found."));
+                song.IsDeleted = true;
+                song.ModifiedBy = _userId;
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in DeleteSong");
+                return ServiceResult<bool>.Failure(ex);
+            }
+        }
+        #endregion
     }
 }
