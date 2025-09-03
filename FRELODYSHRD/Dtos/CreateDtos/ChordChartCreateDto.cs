@@ -12,5 +12,8 @@ namespace FRELODYSHRD.Dtos.CreateDtos
 
         [StringLength(100)]
         public string? PositionDescription { get; set; }
+        
+        [StringLength(255)]
+        public string? ChartAudioFilePath { get; set; }
     }
 }

@@ -38,6 +38,8 @@ builder.Services.AddRefitClient<ISongSectionsApi>()
 builder.Services.AddRefitClient<IFeedbackApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
+builder.Services.AddRefitClient<IFileUploadApi>()
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
 // Add device-specific services used by the FRELODYUI.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();

@@ -42,6 +42,8 @@ builder.Services.AddRefitClient<ISongSectionsApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 builder.Services.AddRefitClient<IFeedbackApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+builder.Services.AddRefitClient<IFileUploadApi>()
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
 var app = builder.Build();
 

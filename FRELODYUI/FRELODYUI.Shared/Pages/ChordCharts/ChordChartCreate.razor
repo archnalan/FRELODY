@@ -1,0 +1,528 @@
+﻿@page "/chord-charts/create"
+@page "/chord-charts/edit/{Id}"
+@using FRELODYUI.Shared.Pages.Compose.ChordComponents
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components
+@using Refit
+@inject ILogger<ChordChartCreate> _logger
+@implements IDisposable
+
+<div class="container-fluid bg-light vh-100 d-flex justify-content-center overflow-y-scroll bg-secondary position-relative">
+    <div class="@GetInnerContainerClass()" style="height:fit-content">
+        <h3 class="text-center my-3">@HeaderText chart</h3>
+
+        <EditForm Model="@FormModel" OnValidSubmit="@HandleValidSubmit" FormName="chartForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <!-- Chord Selection -->
+            <div class="row mb-4">
+                <label class="text-black col-md-3 col-form-label">
+                    <strong class="fs-5">Chord</strong>
+                </label>
+                <div class="w-100 col-md-9">
+                    <div class="d-flex justify-content-between mb-2">
+                        <InputSelect @bind-Value="@FormModel.ChordId" class="form-select me-3">
+                            @if (SelectedChord != null)
+                            {
+                                <option value="@SelectedChord.Id">@SelectedChord.ChordName</option>
+                            }
+                            else
+                            {
+                                <option value="">Pick a Chord</option>
+                            }
+
+                            @foreach (var chord in Chords)
+                            {
+                                <option value="@chord.Id">@chord.ChordName</option>
+                            }
+                        </InputSelect>
+
+                        <div class="position-relative">
+                            <button type="button" class="btn btn-info" @onclick="OpenCreateChordModal">
+                                <span class="me-1">+</span> Chord
+                            </button>
+                        </div>
+                    </div>
+                    <ValidationMessage For="@(() => FormModel.ChordId)" />
+                </div>
+            </div>
+
+            <!-- Fret Position -->
+            <div class="row mb-4 ">
+                <label class="text-black col-md-3 col-form-label">
+                    <strong class="fs-5">Fret</strong>
+                </label>
+                <div class="w-100 col-md-9">
+                    <InputNumber @bind-Value="@FormModel.FretPosition" class="form-control" min="1" max="24" />
+                    <ValidationMessage For="@(() => FormModel.FretPosition)" />
+                </div>
+            </div>
+
+            <!-- Chart Image Upload -->
+            <div class="row mb-4">
+                <label class="text-lg col-md-3 col-form-label">
+                    <strong class="fs-5">Chart Image</strong>
+                </label>
+                <div class="w-100 col-md-9">
+                    <div class="d-flex flex-column gap-3">
+                        <InputFile id="chartImageUpload"
+                                   OnChange="@HandleChartUpload"
+                                   accept="image/*"
+                                   class="form-control"
+                                   disabled="@IsUploadingChart" />
+
+                        @if (IsUploadingChart)
+                        {
+                            <div class="text-info">
+                                <i class="spinner-border spinner-border-sm"></i> Uploading chart image...
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(ChartPreview))
+                        {
+                            <div class="position-relative" style="max-height: 15rem; overflow: hidden;">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2"
+                                        @onclick="HandleRemoveFile">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                                <img src="@ChartPreview"
+                                     alt="chart preview"
+                                     class="img-fluid rounded"
+                                     style="max-height: 15rem;" />
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(ChartUploadError))
+                        {
+                            <div class="text-danger small">@ChartUploadError</div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audio Upload -->
+            <div class="row mb-4">
+                <label class="text-lg col-md-3 col-form-label">
+                    <strong class="fs-5">Audio</strong>
+                </label>
+                <div class="w-100 col-md-9">
+                    <div class="d-flex flex-column gap-3">
+                        <InputFile id="audioUpload"
+                                   OnChange="@HandleAudioUpload"
+                                   accept="audio/*"
+                                   class="form-control"
+                                   disabled="@IsUploadingAudio" />
+
+                        @if (IsUploadingAudio)
+                        {
+                            <div class="text-info">
+                                <i class="spinner-border spinner-border-sm"></i> Uploading audio...
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(AudioPreview))
+                        {
+                            <div class="position-relative p-3 border rounded">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2"
+                                        @onclick="HandleRemoveAudioFile">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                                <audio controls class="w-100">
+                                    <source src="@AudioPreview" />
+                                    Your browser does not support this audio format.
+                                </audio>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(AudioUploadError))
+                        {
+                            <div class="text-danger small">@AudioUploadError</div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-4">
+                <label for="description" class="form-label">
+                    <strong class="fs-5">Notes</strong>
+                </label>
+                <InputTextArea id="description"
+                              @bind-Value="@FormModel.PositionDescription"
+                              class="form-control"
+                              rows="3"
+                              placeholder="Add any notes about this chord chart..." />
+                <ValidationMessage For="@(() => FormModel.PositionDescription)" />
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-end mb-4 gap-2">
+                <button type="button" class="btn btn-outline-secondary" @onclick="NavigateBack">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary" disabled="@(IsSubmitting || IsUploadingChart || IsUploadingAudio)">
+                    @if (IsSubmitting)
+                    {
+                        <i class="spinner-border spinner-border-sm me-2"></i>
+                    }
+                    @HeaderText Chart
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger">@ErrorMessage</div>
+            }
+        </EditForm>
+    </div>
+</div>
+
+
+@if (showCustomizeModal)
+{
+    <ChordCustomize Show="showCustomizeModal"
+                    Content="SelectedChord"
+                    OnSave="HandleChordSaved" 
+                    OnCancel="CloseCustomizeModal" />
+}
+
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private ChordChartForm FormModel = new();
+    private List<ChordDto> Chords = new List<ChordDto>();
+    private ChordDto SelectedChord = new();
+    private string HeaderText = "Create";
+    private string ChartPreview = "";
+    private string AudioPreview = "";
+    private bool IsSubmitting = false;
+    private bool IsUploadingChart = false;
+    private bool IsUploadingAudio = false;
+    private string ErrorMessage = "";
+    private string ChartUploadError = "";
+    private string AudioUploadError = "";
+    private bool showDropdown = false;
+    private bool showCustomizeModal = false;
+    private string Theme = "autumn";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadChords();
+
+        if (!string.IsNullOrEmpty(Id))
+        {
+            await LoadChartForEdit(Id);
+            HeaderText = "Edit";
+        }
+    }
+
+    private string GetInnerContainerClass()
+    {
+        var baseClass = "w-75 mb-5 border bg-light px-5 pt-3 pb-4 rounded-3 mt-3 shadow";
+        return Theme == "dark" ? baseClass + " text-light bg-dark" : baseClass + " text-dark";
+    }
+
+    private async Task LoadChords()
+    {
+        try
+        {
+            var response = await _chordsApi.GetAllChords();
+            if (response.IsSuccessStatusCode)
+            {
+                Chords = response.Content!;
+            }
+            else
+            {
+                ErrorMessage = "Failed to load chords";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading chords");
+            ErrorMessage = "Failed to load chords";
+        }
+    }
+
+    private async Task LoadChartForEdit(string chartId)
+    {
+        try
+        {
+            var response = await _chordChartsApi.GetChordChartById(chartId.ToString());
+
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                var chart = response.Content;
+                FormModel.Id = chart.Id;
+                FormModel.ChordId = chart.ChordId;
+                FormModel.FretPosition = chart.FretPosition ?? 1;
+                FormModel.PositionDescription = chart.PositionDescription;
+                FormModel.FilePath = chart.FilePath;
+                FormModel.ChartAudioFilePath = chart.ChartAudioFilePath;
+
+                // Set previews if files exist
+                if (!string.IsNullOrEmpty(chart.FilePath))
+                {
+                    ChartPreview = chart.FilePath;
+                }
+
+                if (!string.IsNullOrEmpty(chart.ChartAudioFilePath))
+                {
+                    AudioPreview = chart.ChartAudioFilePath;
+                }
+
+                // Find the selected chord
+                SelectedChord = Chords.FirstOrDefault(c => c.Id == chart.ChordId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading chart for edit");
+            ErrorMessage = "Failed to load chart data";
+        }
+    }
+
+    private async Task HandleChartUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        IsUploadingChart = true;
+        ChartUploadError = "";
+
+        try
+        {
+            // Create preview immediately
+            var buffer = new byte[file.Size];
+            await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).ReadAsync(buffer);
+            ChartPreview = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+
+            // Upload to server
+            var streamPart = new StreamPart(new MemoryStream(buffer), file.Name, file.ContentType);
+            var uploadResponse = await _fileUploadApi.UploadChartImage(streamPart);
+
+            if (uploadResponse.IsSuccessStatusCode && uploadResponse.Content.Success)
+            {
+                FormModel.FilePath = uploadResponse.Content.FilePath;
+                ChartPreview = FormModel.FilePath; // Use server URL for preview
+            }
+            else
+            {
+                ChartUploadError = "Failed to upload chart image";
+                HandleRemoveFile();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading chart image");
+            ChartUploadError = "Error uploading chart image";
+            HandleRemoveFile();
+        }
+        finally
+        {
+            IsUploadingChart = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleAudioUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        IsUploadingAudio = true;
+        AudioUploadError = "";
+
+        try
+        {
+            // Create preview immediately
+            var buffer = new byte[file.Size];
+            await file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024).ReadAsync(buffer);
+            AudioPreview = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+
+            // Upload to server
+            var streamPart = new StreamPart(new MemoryStream(buffer), file.Name, file.ContentType);
+            var uploadResponse = await _fileUploadApi.UploadChartAudio(streamPart);
+
+            if (uploadResponse.IsSuccessStatusCode && uploadResponse.Content.Success)
+            {
+                FormModel.ChartAudioFilePath = uploadResponse.Content.FilePath;
+                AudioPreview = FormModel.ChartAudioFilePath; // Use server URL for preview
+            }
+            else
+            {
+                AudioUploadError = "Failed to upload audio file";
+                HandleRemoveAudioFile();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading audio file");
+            AudioUploadError = "Error uploading audio file";
+            HandleRemoveAudioFile();
+        }
+        finally
+        {
+            IsUploadingAudio = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleRemoveFile()
+    {
+        ChartPreview = "";
+        FormModel.FilePath = "";
+        ChartUploadError = "";
+    }
+
+    private void HandleRemoveAudioFile()
+    {
+        AudioPreview = "";
+        FormModel.ChartAudioFilePath = "";
+        AudioUploadError = "";
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        IsSubmitting = true;
+        ErrorMessage = "";
+
+        try
+        {
+            IApiResponse<ChordChartEditDto> response;
+
+            if (!string.IsNullOrEmpty(FormModel.Id)) // Edit existing
+            {
+                var editDto = new ChordChartEditDto
+                {
+                    Id = FormModel.Id,
+                    ChordId = FormModel.ChordId,
+                    FretPosition = FormModel.FretPosition,
+                    PositionDescription = FormModel.PositionDescription,
+                    FilePath = FormModel.FilePath,
+                    ChartAudioFilePath = FormModel.ChartAudioFilePath
+                };
+                response = await _chordChartsApi.UpdateChordChart(editDto);
+            }
+            else // Create new
+            {
+                var createDto = new ChordChartCreateDto
+                {
+                    ChordId = FormModel.ChordId,
+                    FretPosition = FormModel.FretPosition,
+                    PositionDescription = FormModel.PositionDescription,
+                    FilePath = FormModel.FilePath,
+                    ChartAudioFilePath = FormModel.ChartAudioFilePath
+                };
+                response = await _chordChartsApi.CreateChordChart(createDto);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                var fileName = FormModel.FilePath?.Split('/').Last() ?? "chart";
+                var successMessage = !string.IsNullOrEmpty(FormModel.Id)
+                    ? $"Chord chart {fileName} updated successfully"
+                    : $"Chord chart {fileName} created successfully";
+
+                _navManager.NavigateTo($"/chord-charts?success={Uri.EscapeDataString(successMessage)}");
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                ErrorMessage = errorMessage ?? "An error occurred while saving the chart";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error submitting chart form");
+            ErrorMessage = "An error occurred while saving the chart";
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+
+    private void OpenCreateChordModal()
+    {
+        showCustomizeModal = true;
+        showDropdown = false;
+        SelectedChord.ChordName = SelectedChord.ChordName ?? "";
+        StateHasChanged();
+    }
+
+    private void CloseCustomizeModal()
+    {
+        showCustomizeModal = false;
+    }
+
+    private async Task HandleChordSaved(ChordDto newChord)
+    {
+        newChord = Chords.FirstOrDefault(c =>
+                   c.ChordName.Trim().ToLower() == newChord.ChordName.Trim().ToLower())
+                   ?? newChord;
+        if (!Chords.Any(c => c.Id == newChord.Id))
+        {
+            var chord = new ChordCreateDto
+            {
+                ChordName = newChord.ChordName,
+                ChordType = ChordTypeService.DetermineChordType(newChord.ChordName),
+            };
+            var response = await _chordsApi.CreateChord(chord);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        ActionType = "CreateChord",
+                        Data = errorMessage
+                    }
+                });
+                return;
+            }
+            Chords.Add(newChord);
+        }
+
+        SelectedChord = newChord;
+        showDropdown = false;
+        CloseCustomizeModal();
+    }
+
+
+    private void NavigateBack()
+    {
+        _navManager.NavigateTo("/chord-charts");
+    }
+
+
+    private async Task ConfirmModal()
+    {
+        //Handle specific contexts
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        // Cleanup if needed
+    }
+}

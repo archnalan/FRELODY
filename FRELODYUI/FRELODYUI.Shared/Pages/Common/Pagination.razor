@@ -1,0 +1,45 @@
+﻿@using Microsoft.AspNetCore.Components
+
+<div class="join">
+    @if (CurrentPage > 0)
+    {
+        <button class="join-item btn btn-sm" @onclick="() => PageChanged(CurrentPage - 1)">
+            &laquo;
+        </button>
+    }
+
+    @for (int i = Math.Max(0, CurrentPage - 2); i < Math.Min(PageCount, CurrentPage + 3); i++)
+    {
+        <button class="join-item btn btn-sm @(i == CurrentPage ? "btn-active" : "")"
+                @onclick="() => PageChanged(i)">
+            @(i + 1)
+        </button>
+    }
+
+    @if (CurrentPage < PageCount - 1)
+    {
+        <button class="join-item btn btn-sm" @onclick="() => PageChanged(CurrentPage + 1)">
+            &raquo;
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int PageCount { get; set; }
+
+    [Parameter]
+    public int CurrentPage { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnPageChanged { get; set; }
+
+    private async Task PageChanged(int newPage)
+    {
+        if (newPage != CurrentPage && newPage >= 0 && newPage < PageCount)
+        {
+            CurrentPage = newPage;
+            await OnPageChanged.InvokeAsync(newPage);
+        }
+    }
+}

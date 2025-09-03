@@ -24,9 +24,11 @@
 @using System.Diagnostics
 @using FRELODYSHRD.Services
 @using FRELODYAPP.Interfaces
+@using FRELODYSHRD.Dtos.EditDtos
 
 @inject ChordLyricExtrator _extractor
 @inject NavigationManager _navManager
+@inject IFileUploadApi _fileUploadApi
 @inject ISongsApi _songsApi
 @inject IJSRuntime JsRt
 @inject IApiResponseHandler _apiResponseHandler
