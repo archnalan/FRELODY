@@ -1,4 +1,4 @@
-﻿@page "/chord-charts/create"
+﻿@page "/chord-charts/create/{chordId}"
 @page "/chord-charts/edit/{Id}"
 @using FRELODYUI.Shared.Pages.Compose.ChordComponents
 @using Microsoft.AspNetCore.Components.Forms
@@ -9,6 +9,12 @@
 
 <div class="container-fluid bg-light vh-100 d-flex justify-content-center overflow-y-scroll bg-secondary position-relative">
     <div class="@GetInnerContainerClass()" style="height:fit-content">
+        <div class="ms-2">
+            <button class="btn btn-outline-primary" @onclick="GoBack">
+                <i class="bi bi-arrow-left"></i>
+                Back
+            </button>
+        </div>
         <h3 class="text-center my-3">@HeaderText chart</h3>
 
         <EditForm Model="@FormModel" OnValidSubmit="@HandleValidSubmit" FormName="chartForm">
@@ -160,7 +166,7 @@
 
             <!-- Action Buttons -->
             <div class="d-flex justify-content-end mb-4 gap-2">
-                <button type="button" class="btn btn-outline-secondary" @onclick="NavigateBack">
+                <button type="button" class="btn btn-outline-secondary" @onclick="GoBack">
                     Cancel
                 </button>
                 <button type="submit" class="btn btn-primary" disabled="@(IsSubmitting || IsUploadingChart || IsUploadingAudio)">
@@ -195,9 +201,10 @@
              OnConfirmModal="ConfirmModal" />
 
 @code {
+    [Parameter] public string? chordId { get; set; }
     [Parameter] public string? Id { get; set; }
 
-    private ChordChartForm FormModel = new();
+    private ChordChartDto FormModel = new();
     private List<ChordDto> Chords = new List<ChordDto>();
     private ChordDto SelectedChord = new();
     private string HeaderText = "Create";
@@ -222,6 +229,11 @@
             await LoadChartForEdit(Id);
             HeaderText = "Edit";
         }
+        else if (!string.IsNullOrEmpty(chordId))
+        {
+            SelectedChord = Chords.FirstOrDefault(c => c.Id == chordId) ?? new ChordDto();
+            FormModel.ChordId = SelectedChord.Id;
+        }
     }
 
     private string GetInnerContainerClass()
@@ -234,10 +246,10 @@
     {
         try
         {
-            var response = await _chordsApi.GetAllChords();
+            var response = await _chordsApi.GetChords();
             if (response.IsSuccessStatusCode)
             {
-                Chords = response.Content!;
+                Chords = response.Content?.Data!;
             }
             else
             {
@@ -416,7 +428,7 @@
                 var createDto = new ChordChartCreateDto
                 {
                     ChordId = FormModel.ChordId,
-                    FretPosition = FormModel.FretPosition,
+                    FretPosition = FormModel.FretPosition.HasValue ? FormModel.FretPosition.Value : 1,
                     PositionDescription = FormModel.PositionDescription,
                     FilePath = FormModel.FilePath,
                     ChartAudioFilePath = FormModel.ChartAudioFilePath
@@ -502,11 +514,11 @@
     }
 
 
-    private void NavigateBack()
+    private async Task GoBack()
     {
-        _navManager.NavigateTo("/chord-charts");
+        //_navManager.NavigateTo("/songs-list");
+        await JsRt.InvokeVoidAsync("goBack");
     }
-
 
     private async Task ConfirmModal()
     {

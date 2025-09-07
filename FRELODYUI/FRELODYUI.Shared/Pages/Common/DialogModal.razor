@@ -6,26 +6,26 @@
      role="dialog"
      aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="z-index:1055">
-        <div class="modal-content text-center px-5">
-            <div class="modal-body border-0 p-0 mt-4">
+        <div class="modal-content text-center">
+            <div class="modal-body border-0 p-0 mt-3">
                 <div class="container p-2">
-                    <div class="row mb-3 justify-content-center">
+                    <div class="row justify-content-center">
                         @switch (Modal.OptionType)
                         {
                             case OptionType.Success:
-                                <i class="bi bi-patch-check-fill text-success" style="font-size: 3.5rem;"></i>
+                                <i class="bi bi-patch-check-fill text-success" style="font-size: 3rem;"></i>
                                 break;
                             case OptionType.Warning:
-                                <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3.5rem;"></i>
+                                <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3rem;"></i>
                                 break;
                             case OptionType.Error:
-                                <i class="bi bi-x-octagon-fill text-danger" style="font-size: 3.5rem;"></i>
+                                <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
                                 break;
                             case OptionType.Feedback:
-                                <i class="bi bi-chat-square-text-fill text-info" style="font-size: 3.5rem;"></i>
+                                <i class="bi bi-chat-square-text-fill text-info" style="font-size: 3rem;"></i>
                                 break;
                             default:
-                                <i class="bi bi-info-circle-fill text-info" style="font-size: 3.5rem;"></i>
+                                <i class="bi bi-info-circle-fill text-info" style="font-size: 3rem;"></i>
                                 break;
                         }
                     </div>
@@ -38,7 +38,7 @@
                 </div>
             </div>
             <div class="modal-footer justify-content-center gap-4 border-0 mb-3">
-                @if (Modal.OptionType == OptionType.Confirmation)
+                @if (Modal.OptionType != OptionType.Info)
                 {
                     <button class="btn btn-outline-primary"
                             style="width:7rem"

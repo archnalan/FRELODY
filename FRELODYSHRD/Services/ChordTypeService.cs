@@ -325,6 +325,73 @@ namespace FRELODYSHRD.Services
             var determinedType = DetermineChordType(chordName);
             return determinedType.HasValue;
         }
+
+        public static ChordDifficulty DetermineChordDifficulty(string chordName)
+        {
+            var chordType = DetermineChordType(chordName);
+
+            if (!chordType.HasValue)
+                return ChordDifficulty.Medium; 
+
+            switch (chordType.Value)
+            {
+                // Easy chords
+                case ChordType.Major:
+                case ChordType.Minor:
+                case ChordType.Suspended:
+                case ChordType.Sixth:
+                case ChordType.DominantSeventh:
+                    return ChordDifficulty.Easy;
+
+                // Intermediate chords
+                case ChordType.MajorSeventh:
+                case ChordType.MinorSeventh:
+                case ChordType.MinorSixth:
+                case ChordType.Ninth:
+                case ChordType.Augmented:
+                case ChordType.Diminished:
+                case ChordType.HalfDiminishedSeventh:
+                case ChordType.SeventhSuspendedFourth:
+                    return ChordDifficulty.Medium;
+
+                // Advanced chords (altered, extended, or rare forms)
+                case ChordType.AugmentedSeventh:
+                case ChordType.DiminishedSeventh:
+                case ChordType.MinorMajorSeventh:
+                case ChordType.SeventhSharpNine:
+                case ChordType.SeventhFlatNine:
+                case ChordType.SeventhSharpFive:
+                case ChordType.SeventhFlatFive:
+                case ChordType.SeventhFlatThirteen:
+                case ChordType.SeventhSharpEleven:
+                case ChordType.AugmentedEleventh:
+                case ChordType.Thirteenth:
+                case ChordType.ThirteenthFlatNine:
+                case ChordType.ThirteenthSharpNine:
+                case ChordType.ThirteenthFlatFive:
+                case ChordType.ThirteenthSharpEleven:
+                case ChordType.ThirteenthSharpFifth:
+                case ChordType.ThirteenthFlatNineFlatFive:
+                case ChordType.ThirteenthFlatNineSharpFive:
+                case ChordType.ThirteenthSharpNineFlatFive:
+                case ChordType.ThirteenthSharpNineSharpFive:
+                case ChordType.ThirteenthFlatNineSharpEleven:
+                case ChordType.ThirteenthSharpNineSharpEleven:
+                case ChordType.ThirteenthSharpNineFlatThirteen:
+                case ChordType.ThirteenthSharpNineSharpThirteen:
+                case ChordType.ThirteenthFlatNineSharpThirteen:
+                case ChordType.ThirteenthFlatNineFlatThirteen:
+                case ChordType.ThirteenthSharpFiveSharpNine:
+                case ChordType.ThirteenthSharpFiveFlatNine:
+                case ChordType.ThirteenthFlatFiveSharpNine:
+                    return ChordDifficulty.Advanced;
+
+                // Fallback
+                default:
+                    return ChordDifficulty.Medium;
+            }
+        }
+
     }
 }
 

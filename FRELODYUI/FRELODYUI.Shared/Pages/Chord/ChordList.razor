@@ -1,0 +1,419 @@
+﻿@page "/chords"
+@using FRELODYUI.Shared.Pages.Compose.ChordComponents
+@using Microsoft.AspNetCore.Components
+@using System.Threading
+@inject NavigationManager NavigationManager
+@inject ILogger<ChordList> Logger
+@implements IDisposable
+
+<div class="w-100 h-100 overflow-auto position-relative bg-light">
+    <div class="@GetInnerContainerClass()">
+        <div class="w-75 position-sticky text-center top-0 bg-light">
+            <h3 class="m-3 text-primary">Chords</h3>
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success text-wrap mb-2" role="alert">
+                    @successMessage
+                </div>
+            }
+            <div class="rounded-3 bg-white shadow-sm p-3 mb-2 min-w-15rem">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex w-50 position-relative me-3">
+                        <input type="text"
+                               class="form-control h-12 ps-5 rounded-3"
+                               placeholder="Search a chord..."
+                               @bind-value="searchQuery"
+                               @bind-value:event="oninput"
+                               @bind-value:after="OnSearchInput" />
+                        <button class="btn btn-link position-absolute border-0 start-0 top-0 h-100">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                    <button class="btn btn-outline-primary"
+                         @onclick="@(() => OpenChordCreateModal("Create"))">
+                        <span class="me-2">Add Chord</span>
+                        <i class="bi bi-plus-circle fs-5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="w-75 mt-3">
+            @if (isLoading)
+            {
+                <div class="row g-4">
+                    @for (int i = 0; i < 4; i++)
+                    {
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <div class="d-flex flex-column gap-3">
+                                <div class="placeholder-glow">
+                                    <div class="placeholder w-100" style="height: 15rem; background-color: #e9ecef"></div>
+                                </div>
+                                <div class="placeholder-glow">
+                                    <div class="placeholder" style="width: 7rem; height: 1rem"></div>
+                                </div>
+                                <div class="placeholder-glow">
+                                    <div class="placeholder w-100" style="height: 1.25rem"></div>
+                                </div>
+                                <div class="placeholder-glow">
+                                    <div class="placeholder w-100" style="height: 1.25rem"></div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else if (filteredChords.Any())
+            {
+                <ChordCard @ref="chordCardRef"
+                    Charts="charts"
+                    SearchTerm="@searchTerm"
+                    CurrentChords="chords"
+                    OnFetchChord="FetchChord"
+                    OnSetToDelete="SetToDelete"
+                    OnSetOpenConfirm="SetOpenConfirm"
+                    OnSetOpenChordEdit="OpenChordCreateModal" />
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <p>No chords found</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (showChordCreateModal)
+{
+    <ChordCustomize Show="showChordCreateModal"
+                Content="selectedChord"
+                OnSave="HandleChordCreated" 
+                OnCancel="CloseChordCreateModal" />
+}
+
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    private List<ChordDto> chords = new();
+    private List<ChordDto> filteredChords = new();
+    private List<ChordChartEditDto> charts = new();
+    private string searchQuery = "";
+    private string successMessage = "";
+    private bool isLoading = true;
+    private bool showChordCreateModal = false;
+    private bool showConfirmDeleteModal = false;
+    private ChordDto? selectedChord = new();
+    private ChordDto? editedChord = new();
+    private string modalHeaderText = "Create";
+    private string createdName = "";
+    private string editedName = "";
+    private string searchTerm = "";
+    private ChordCard? chordCardRef;
+    // Theme
+    private string theme = "light";
+    private CancellationTokenSource? _debounceCts;
+    private const int SearchDebounceMs = 500;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadChords();
+        await LoadCharts();
+
+        // Check for success message from navigation state
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query).TryGetValue("success", out var success))
+        {
+            successMessage = success;
+            await Task.Delay(5000);
+            successMessage = "";
+            StateHasChanged();
+        }
+    }
+
+    private void OnSearchInput()
+    {
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _debounceCts = cts;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(SearchDebounceMs, cts.Token);
+                if (!cts.Token.IsCancellationRequested)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        searchTerm = searchQuery;
+                        StateHasChanged();
+                    });
+                }
+            }
+            catch (TaskCanceledException) { }
+        });
+    }
+
+    private string GetInnerContainerClass()
+    {
+        return $"{(theme == "dark" ? "text-light bg-dark" : "text-dark bg-light")} d-flex flex-column justify-content-start align-items-center h-100";
+    }
+
+    private async Task LoadChords()
+    {
+        try
+        {
+            isLoading = true;
+            var response = await _chordsApi.GetChords();
+            if(response.IsSuccessStatusCode)
+            {
+                chords = response.Content?.Data!;
+                filteredChords = chords;
+                return;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "OK",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        Data = response,
+                        ActionType = "LoadChords"
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading chords");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadCharts()
+    {
+        try
+        {
+            var response = await _chordChartsApi.GetAllChordCharts();
+            if (response.IsSuccessStatusCode)
+            {
+                charts = response.Content!;
+                return;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "OK",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        Data = response,
+                        ActionType = "LoadChords"
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading charts");
+        }
+    }
+
+    private void HandleSearch(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString()?.ToLower() ?? "";
+
+        if (string.IsNullOrEmpty(searchQuery))
+        {
+            filteredChords = chords;
+        }
+        else
+        {
+            filteredChords = chords.Where(c =>
+                c.Id.ToString().Contains(searchQuery) ||
+                c.Difficulty.ToString().Contains(searchQuery) ||
+                c.ChordName.ToLower().Contains(searchQuery)
+            ).ToList();
+        }
+    }
+
+    private async Task FetchChord(string id)
+    {
+        try
+        {
+            // Simulate API call
+            await Task.Delay(100);
+            selectedChord = chords.FirstOrDefault(c => c.Id == id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error fetching chord");
+        }
+    }
+
+    private void OpenChordCreateModal(string headerText)
+    {
+        modalHeaderText = headerText;
+        selectedChord = new ChordDto();
+        showChordCreateModal = true;
+    }
+
+    private void CloseChordCreateModal()
+    {
+        showChordCreateModal = false;
+        selectedChord = null;
+    }
+
+    private void SetToDelete(ChordDto chord)
+    {
+        _modalService.Show(new ModalOptionDto
+            {
+                Title = "Confirm Delete",
+                Message = $"Are you sure you want to delete chord \"{chord.ChordName}\"?",
+                DangerText = "This action cannot be undone!",
+                ButtonText = "Delete",
+                OptionType = OptionType.Warning,
+                Context = new ModalContext
+                {
+                    ActionType = "DeleteChord",
+                    Data = chord.Id!
+                }
+            });
+    }
+
+    private void SetOpenConfirm(bool show)
+    {
+        showConfirmDeleteModal = show;
+    }
+
+    private async Task HandleDelete(string chordId)
+    {
+        try
+        {
+            var response = await _chordsApi.DeleteChord(chordId);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        ActionType = "DeleteChord",
+                        Data = errorMessage
+                    }
+                });
+                return;
+            }
+            await LoadChords();
+            CloseDeleteModal();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting chord");
+        }
+    }
+
+    private async Task HandleChordCreated(ChordDto chord)
+    {
+        editedChord = chords.FirstOrDefault(c =>
+                   c.ChordName.Trim().ToLower() == chord.ChordName.Trim().ToLower())
+                   ?? chord;
+
+        Refit.IApiResponse<ChordEditDto?> response;
+        if (string.IsNullOrEmpty(chord.Id))
+        {
+            var newChord = new ChordCreateDto
+            {
+                ChordName = chord.ChordName,
+                ChordType = ChordTypeService.DetermineChordType(chord.ChordName),
+                ChordDifficulty = ChordTypeService.DetermineChordDifficulty(chord.ChordName),
+            };
+            response = await _chordsApi.CreateChord(newChord);
+        }
+        else
+        {
+            var editChord = new ChordEditDto
+            {
+                Id = chord.Id,
+                ChordName = chord.ChordName,
+                ChordType = ChordTypeService.DetermineChordType(chord.ChordName),
+                Difficulty = ChordTypeService.DetermineChordDifficulty(chord.ChordName),
+            };
+
+            response = await _chordsApi.UpdateChord(editChord);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = errorMessage,
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "CreateChord",
+                    Data = errorMessage
+                }
+            });
+            return;
+        }
+        await LoadChords();
+        if (chordCardRef != null) chordCardRef.Refresh();
+        CloseChordCreateModal();
+    }
+
+    private void CloseDeleteModal()
+    {
+        showConfirmDeleteModal = false;
+    }
+
+    private async Task ConfirmModal()
+    {
+        if(_modalService.CurrentModal?.Context?.ActionType == "LoadChords")
+        {
+            await LoadChords();
+        }
+        else if(_modalService.CurrentModal?.Context?.ActionType == "DeleteChord" && _modalService.CurrentModal.Context.Data is string chordId)
+        {
+            await HandleDelete(chordId);
+        }
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();        
+    }
+}

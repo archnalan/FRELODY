@@ -1,21 +1,22 @@
-﻿using Mapster;
-using FRELODYAPP.Areas.Admin.Interfaces;
-using FRELODYAPP.Models;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Web.Http.ModelBinding;
+﻿using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Data.Infrastructure;
+using FRELODYAPP.Models;
+using FRELODYLIB.ServiceHandler;
+using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
 using FRELODYSHRD.Dtos.HybridDtos;
-using FRELODYSHRD.Dtos;
-using FRELODYLIB.ServiceHandler.ResultModels;
+using Mapster;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Web.Http.ModelBinding;
 
 namespace FRELODYAPP.Areas.Admin.LogicData
 {
     public class ChordService : IChordService
-	{
-		private readonly SongDbContext _context;
+    {
+        private readonly SongDbContext _context;
         private readonly ILogger<ChordService> _logger;
         public ChordService(SongDbContext context, ILogger<ChordService> logger)
         {
@@ -23,31 +24,44 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             _logger = logger;
         }
 
-        public async Task<ServiceResult<List<ChordDto>>> GetChordsAsync()
-		{
-			try
+        public async Task<ServiceResult<PaginationDetails<ChordDto>>> GetChordsAsync(int offset, int limit)
+        {
+            try
             {
-                var chords = await _context.Chords
-                                .OrderBy(c => c.ChordName)
-                                .ToListAsync();
+                limit = limit <= 0 ? 10 : limit;
 
-                var chordsDto = chords.Adapt<List<ChordDto>>();
+                var baseQuery = _context.Chords
+                    .AsQueryable();
 
-                return ServiceResult<List<ChordDto>>.Success(chordsDto);
+                var page = await baseQuery
+                    .OrderBy(c => c.ChordName)
+                    .ThenBy(c => c.Difficulty)
+                    .ToPaginatedResultAsync(offset, limit);
+
+                var result = new PaginationDetails<ChordDto>
+                {
+                    OffSet = page.OffSet,
+                    Limit = page.Limit,
+                    TotalSize = page.TotalSize,
+                    HasMore = page.HasMore,
+                    Data = page.Data?
+                        .Select(c => c.Adapt<ChordDto>())
+                        .ToList()
+                };
+
+                return ServiceResult<PaginationDetails<ChordDto>>.Success(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving chords:{Error}", ex);
-                return ServiceResult<List<ChordDto>>.Failure(new
-                    Exception($"Error retrieving chords. Details: {ex.Message}"));
+                _logger.LogError(ex, "Error in GetChords");
+                return ServiceResult<PaginationDetails<ChordDto>>.Failure(ex);
             }
-           
-		}
-		
-		public async Task<ServiceResult<List<ChordWithChartsDto>>> GetChordsWithChartsAsync()
-		{
-			try
-			{
+        }
+
+        public async Task<ServiceResult<List<ChordWithChartsDto>>> GetChordsWithChartsAsync()
+        {
+            try
+            {
                 var chords = await _context.Chords
                                .OrderBy(c => c.ChordName)
                                .Include(ch => ch.ChordCharts)
@@ -62,13 +76,13 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                 _logger.LogError(ex, "Error retrieving chords with charts: {Error}", ex);
                 return ServiceResult<List<ChordWithChartsDto>>.Failure(new
                     Exception($"Error retrieving chords with charts. Details: {ex.Message}"));
-            }   
-		}
+            }
+        }
 
-		public async Task<ServiceResult<ChordDto>> GetChordByIdAsync(string id)
-		{
-			try
-			{
+        public async Task<ServiceResult<ChordDto>> GetChordByIdAsync(string id)
+        {
+            try
+            {
                 var chord = await _context.Chords.FindAsync(id);
 
                 if (chord == null) return ServiceResult<ChordDto>.Failure(new
@@ -79,14 +93,14 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                 return ServiceResult<ChordDto>.Success(chordDto);
 
             }
-			catch(Exception ex)
-			{
+            catch (Exception ex)
+            {
                 _logger.LogError(ex, "Error retrieving chord by ID: {Id}. Error: {Error}", id, ex);
                 return ServiceResult<ChordDto>.Failure(new
                     Exception($"Error retrieving chord with ID: {id}. Details: {ex.Message}"));
             }
-			
-		}
+
+        }
 
         public async Task<ServiceResult<ChordWithChartsDto>> GetChordWithChartsByIdAsync(string id)
         {
@@ -118,10 +132,10 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 
         }
 
-		public async Task<ServiceResult<ChordEditDto>> CreateChordAsync(ChordCreateDto chordDto)
-		{
-			try
-			{
+        public async Task<ServiceResult<ChordEditDto>> CreateChordAsync(ChordCreateDto chordDto)
+        {
+            try
+            {
                 if (chordDto == null) return ServiceResult<ChordEditDto>.Failure(new
                 BadRequestException("Chord data is Required"));
 
@@ -153,8 +167,8 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                 return ServiceResult<ChordEditDto>.Failure(new
                     Exception($"Error creating chord. Details: {ex.Message}"));
             }
-            
-		}
+
+        }
 
         public async Task<ServiceResult<ChordDto>> CreateSimpleChordAsync(ChordDto chordDto)
         {
@@ -190,55 +204,98 @@ namespace FRELODYAPP.Areas.Admin.LogicData
         }
 
         public async Task<ServiceResult<ChordEditDto>> UpdateChordAsync(ChordEditDto chordDto)
-		{
-           
-			if (chordDto == null) return ServiceResult<ChordEditDto>.Failure(new
-				BadRequestException("Chord data is Required"));
+        {
 
-			var chord = await _context.Chords.FindAsync(chordDto.Id);
-			if (chord == null) return ServiceResult<ChordEditDto>.Failure(new
-				NotFoundException($"Chord with ID: {chordDto.Id} does not exist."));
+            if (chordDto == null) return ServiceResult<ChordEditDto>.Failure(new
+                BadRequestException("Chord data is Required"));
 
-			var chordExists = await _context.Chords
-							.AnyAsync(ch => ch.ChordName == chordDto.ChordName && ch.Id != chordDto.Id);
-			if (chordExists) return ServiceResult<ChordEditDto>.Failure(new
-				ConflictException($"Chord: {chordDto.ChordName} already exists."));
+            var chord = await _context.Chords.FindAsync(chordDto.Id);
+            if (chord == null) return ServiceResult<ChordEditDto>.Failure(new
+                NotFoundException($"Chord with ID: {chordDto.Id} does not exist."));
 
-			try
-			{
-				chord.ChordName = chordDto.ChordName;
-				chord.Difficulty = chordDto.Difficulty;
-				chord.ChordType = chordDto.ChordType;
+            var chordExists = await _context.Chords
+                            .AnyAsync(ch => ch.ChordName == chordDto.ChordName && ch.Id != chordDto.Id);
+            if (chordExists) return ServiceResult<ChordEditDto>.Failure(new
+                ConflictException($"Chord: {chordDto.ChordName} already exists."));
+
+            try
+            {
+                chord.ChordName = chordDto.ChordName;
+                chord.Difficulty = chordDto.Difficulty;
+                chord.ChordType = chordDto.ChordType;
 
                 await _context.SaveChangesAsync();
 
                 var updatedChord = chord.Adapt<Chord, ChordEditDto>();
                 return ServiceResult<ChordEditDto>.Success(updatedChord);
             }
-			catch (Exception ex)
-			{
+            catch (Exception ex)
+            {
                 _logger.LogError(ex, "Error updating chord: {ChordName}. Error: {Error}", chordDto.ChordName, ex);
                 return ServiceResult<ChordEditDto>.Failure(new Exception(ex.Message));
-			}			
-		}
+            }
+        }
 
-		public async Task<ServiceResult<bool>> DeleteChordAsync(string id)
-		{
-			var chord = await _context.Chords.FindAsync(id);
-			if (chord == null) return ServiceResult<bool>.Failure(new
-				NotFoundException($"Chord with ID: {id} does not exist."));
-			try
-			{
-				_context.Chords.Remove(chord);
-				await _context.SaveChangesAsync();
+        public async Task<ServiceResult<bool>> DeleteChordAsync(string id)
+        {
+            var chord = await _context.Chords.FindAsync(id);
+            if (chord == null) return ServiceResult<bool>.Failure(new
+                NotFoundException($"Chord with ID: {id} does not exist."));
+            try
+            {
+                chord.IsDeleted = true;
+                await _context.SaveChangesAsync();
 
                 return ServiceResult<bool>.Success(true);
             }
-			catch (Exception ex)
-			{
+            catch (Exception ex)
+            {
                 _logger.LogError(ex, "Error deleting chord with ID: {Id}. Error: {Error}", id, ex);
                 return ServiceResult<bool>.Failure(new Exception(ex.Message));
-			}
-		}
-	}
+            }
+        }
+        public async Task<ServiceResult<PaginationDetails<ChordDto>>> SearchChordsAsync(string? keywords, int offset, int limit)
+        {
+            try
+            {
+                limit = limit <= 0 ? 10 : limit;
+
+                var baseQuery = _context.Chords
+                    .AsQueryable();
+
+                if (!string.IsNullOrWhiteSpace(keywords))
+                {
+                    var kw = keywords.Trim();
+                    baseQuery = baseQuery.Where(c =>
+                        EF.Functions.Like(c.ChordName, $"%{kw}%") ||
+                        (c.ChordType != null && EF.Functions.Like(c.ChordType.ToString(), $"%{kw}%")));
+                }
+
+                var page = await baseQuery
+                    .OrderBy(c => c.ChordName)
+                    .ThenBy(c => c.Difficulty)
+                    .ToPaginatedResultAsync(offset, limit);
+
+                var result = new PaginationDetails<ChordDto>
+                {
+                    OffSet = page.OffSet,
+                    Limit = page.Limit,
+                    TotalSize = page.TotalSize,
+                    HasMore = page.HasMore,
+                    Data = page.Data?
+                        .Select(c => c.Adapt<ChordDto>())
+                        .ToList()
+                };
+
+                return ServiceResult<PaginationDetails<ChordDto>>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in SearchChordsAsync");
+                return ServiceResult<PaginationDetails<ChordDto>>.Failure(ex);
+            }
+        }
+
+    }
+
 }

@@ -1,4 +1,5 @@
 using FRELODYAPP.Dtos;
+using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
@@ -12,7 +13,7 @@ namespace FRELODYUI.Shared.RefitApis
     public interface IChordsApi
     {
         [Get("/api/chords/get-all-chords")]
-        Task<IApiResponse<List<ChordDto>>> GetAllChords();
+        Task<IApiResponse<PaginationDetails<ChordDto>>> GetChords([Query]int? offset = 0, [Query]int? limit = 100);
 
         [Get("/api/chords/get-chords-with-charts")]
         Task<IApiResponse<List<ChordWithChartsDto>>> GetChordsWithCharts();
@@ -33,6 +34,9 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<ChordEditDto>> UpdateChord([Body] ChordEditDto chordDto);
 
         [Delete("/api/chords/delete-chord")]
-        Task<IApiResponse<object>> DeleteChord([Query] string id);
+        Task<IApiResponse<bool>> DeleteChord([Query] string id);
+
+        [Get("/api/chords/search-chords")]
+        Task<IApiResponse<PaginationDetails<ChordDto>>> SearchChords([Query] string? keywords, [Query] int offset = 0, [Query] int limit = 10);
     }
 }

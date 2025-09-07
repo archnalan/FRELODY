@@ -169,7 +169,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
 
             try
             {
-                _context.ChordCharts.Remove(chart);
+                chart.IsDeleted = true;
                 await _context.SaveChangesAsync();
                 return ServiceResult<bool>.Success(true);
             }

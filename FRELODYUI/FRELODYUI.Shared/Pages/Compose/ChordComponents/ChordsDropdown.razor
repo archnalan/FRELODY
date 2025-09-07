@@ -77,11 +77,11 @@
 
     private async Task LoadChords()
     {
-        var response = await _chordsApi.GetAllChords();
+        var response = await _chordsApi.GetChords();
         if (response.IsSuccessStatusCode)
         {
-            AvailableChords = response.Content!;
-            filteredChords = response.Content!;
+            AvailableChords = response.Content?.Data!;
+            filteredChords = response.Content?.Data!;
         }
         else
         {

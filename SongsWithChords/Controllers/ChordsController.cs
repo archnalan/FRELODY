@@ -1,4 +1,5 @@
 ﻿using FRELODYAPP.Areas.Admin.Interfaces;
+using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
@@ -18,10 +19,12 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<ChordDto>), 200)]
-        public async Task<IActionResult> GetAllChords()
+        [ProducesResponseType(typeof(PaginationDetails<ChordDto>), 200)]
+        public async Task<IActionResult> GetAllChords([FromQuery]int? offset, [FromQuery]int? limit)
         {
-            var chordResult = await _chordService.GetChordsAsync();
+            var offset1 = offset ?? 0;
+            var limit1 = limit ?? int.MaxValue;
+            var chordResult = await _chordService.GetChordsAsync(offset1, limit1);
             if (!chordResult.IsSuccess)
                 return StatusCode(chordResult.StatusCode, new { message = chordResult.Error.Message });
 
@@ -57,6 +60,42 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         {
             var chordResult = await _chordService.CreateSimpleChordAsync(chordDto);
 
+            if (!chordResult.IsSuccess)
+                return StatusCode(chordResult.StatusCode, new { message = chordResult.Error.Message });
+            
+            return Ok(chordResult.Data);
+        }
+
+        [HttpPut]
+        [ProducesResponseType(typeof(ChordEditDto), 200)]
+        public async Task<ActionResult> UpdateChord([FromBody] ChordEditDto chordDto)
+        {
+            var chordResult = await _chordService.UpdateChordAsync(chordDto);
+
+            if (!chordResult.IsSuccess)
+                return StatusCode(chordResult.StatusCode, new { message = chordResult.Error.Message });
+            
+            return Ok(chordResult.Data);
+        }
+
+        [HttpDelete]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> DeleteChord([FromQuery] string id)
+        {
+            var chordResult = await _chordService.DeleteChordAsync(id);
+
+            if (!chordResult.IsSuccess)
+                return StatusCode(chordResult.StatusCode, new { message = chordResult.Error.Message });
+            
+            return Ok(chordResult.Data);
+        }
+
+        [HttpGet]
+        [ProducesResponseType(typeof(PaginationDetails<ChordDto>), 200)]
+        public async Task<IActionResult> SearchChords([FromQuery]string? keywords, [FromQuery] int offset = 0, [FromQuery] int limit = 10)
+        {
+            var chordResult = await _chordService.SearchChordsAsync(keywords, offset, limit);
+            
             if (!chordResult.IsSuccess)
                 return StatusCode(chordResult.StatusCode, new { message = chordResult.Error.Message });
             
