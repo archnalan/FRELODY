@@ -11,11 +11,11 @@ namespace FRELODYUI.Shared.RefitApis
     public interface IFileUploadApi
     {
         [Multipart]
-        [Post("/api/fileupload/uploadchartimage")]
+        [Post("/api/file-upload/upload-chart-image")]
         Task<IApiResponse<FileUploadResult>> UploadChartImage([AliasAs("file")] StreamPart file);
 
         [Multipart]
-        [Post("/api/fileupload/uploadchartaudio")]
+        [Post("/api/file-upload/upload-chart-audio")]
         Task<IApiResponse<FileUploadResult>> UploadChartAudio([AliasAs("file")] StreamPart file);
     }
 }

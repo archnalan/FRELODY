@@ -90,7 +90,7 @@
                             <div class="position-relative" style="max-height: 15rem; overflow: hidden;">
                                 <button type="button"
                                         class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2"
-                                        @onclick="HandleRemoveFile">
+                                        @onclick="ClearChartFile">
                                     <i class="bi bi-x"></i>
                                 </button>
                                 <img src="@ChartPreview"
@@ -133,7 +133,7 @@
                             <div class="position-relative p-3 border rounded">
                                 <button type="button"
                                         class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2"
-                                        @onclick="HandleRemoveAudioFile">
+                                        @onclick="ClearAudioFile">
                                     <i class="bi bi-x"></i>
                                 </button>
                                 <audio controls class="w-100">
@@ -214,7 +214,9 @@
     private bool IsUploadingChart = false;
     private bool IsUploadingAudio = false;
     private string ErrorMessage = "";
+    private StreamPart? ChartStream;
     private string ChartUploadError = "";
+    private StreamPart? AudioStream;
     private string AudioUploadError = "";
     private bool showDropdown = false;
     private bool showCustomizeModal = false;
@@ -234,6 +236,7 @@
             SelectedChord = Chords.FirstOrDefault(c => c.Id == chordId) ?? new ChordDto();
             FormModel.ChordId = SelectedChord.Id;
         }
+        FormModel.FretPosition = 1;
     }
 
     private string GetInnerContainerClass()
@@ -307,7 +310,7 @@
         if (file == null) return;
 
         IsUploadingChart = true;
-        ChartUploadError = "";
+        ClearChartFile();
 
         try
         {
@@ -316,26 +319,14 @@
             await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).ReadAsync(buffer);
             ChartPreview = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
 
-            // Upload to server
-            var streamPart = new StreamPart(new MemoryStream(buffer), file.Name, file.ContentType);
-            var uploadResponse = await _fileUploadApi.UploadChartImage(streamPart);
+            ChartStream = new StreamPart(new MemoryStream(buffer), file.Name, file.ContentType);
 
-            if (uploadResponse.IsSuccessStatusCode && uploadResponse.Content.Success)
-            {
-                FormModel.FilePath = uploadResponse.Content.FilePath;
-                ChartPreview = FormModel.FilePath; // Use server URL for preview
-            }
-            else
-            {
-                ChartUploadError = "Failed to upload chart image";
-                HandleRemoveFile();
-            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error uploading chart image");
             ChartUploadError = "Error uploading chart image";
-            HandleRemoveFile();
+            ClearChartFile();
         }
         finally
         {
@@ -359,26 +350,14 @@
             await file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024).ReadAsync(buffer);
             AudioPreview = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
 
-            // Upload to server
-            var streamPart = new StreamPart(new MemoryStream(buffer), file.Name, file.ContentType);
-            var uploadResponse = await _fileUploadApi.UploadChartAudio(streamPart);
-
-            if (uploadResponse.IsSuccessStatusCode && uploadResponse.Content.Success)
-            {
-                FormModel.ChartAudioFilePath = uploadResponse.Content.FilePath;
-                AudioPreview = FormModel.ChartAudioFilePath; // Use server URL for preview
-            }
-            else
-            {
-                AudioUploadError = "Failed to upload audio file";
-                HandleRemoveAudioFile();
-            }
+            AudioStream = new StreamPart(new MemoryStream(buffer), file.Name, file.ContentType);
+            
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error uploading audio file");
             AudioUploadError = "Error uploading audio file";
-            HandleRemoveAudioFile();
+            ClearAudioFile();
         }
         finally
         {
@@ -387,14 +366,14 @@
         }
     }
 
-    private void HandleRemoveFile()
+    private void ClearChartFile()
     {
         ChartPreview = "";
         FormModel.FilePath = "";
         ChartUploadError = "";
     }
 
-    private void HandleRemoveAudioFile()
+    private void ClearAudioFile()
     {
         AudioPreview = "";
         FormModel.ChartAudioFilePath = "";
@@ -409,6 +388,46 @@
         try
         {
             IApiResponse<ChordChartEditDto> response;
+            if (ChartStream != null)
+            {
+                var uploadResponse = await _fileUploadApi.UploadChartImage(ChartStream);
+
+                if (uploadResponse.IsSuccessStatusCode && uploadResponse.Content!.Success)
+                {
+                    FormModel.FilePath = uploadResponse.Content.FilePath;
+                    ChartPreview = FormModel.FilePath; 
+                }
+                else
+                {
+                    ChartUploadError = "Failed to upload chart image";
+                    ClearChartFile();
+                }
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(FormModel.FilePath))
+                {
+                    ChartUploadError = "Chart image is required";
+                    IsSubmitting = false;
+                    return;
+                }                
+            }
+
+            if( AudioStream != null)
+            {
+                var uploadResponse = await _fileUploadApi.UploadChartAudio(AudioStream);
+
+                if (uploadResponse.IsSuccessStatusCode && uploadResponse.Content!.Success)
+                {
+                    FormModel.ChartAudioFilePath = uploadResponse.Content.FilePath;
+                    AudioPreview = FormModel.ChartAudioFilePath; // Use server URL for preview
+                }
+                else
+                {
+                    AudioUploadError = "Failed to upload audio file";
+                    ClearAudioFile();
+                }
+            }
 
             if (!string.IsNullOrEmpty(FormModel.Id)) // Edit existing
             {
