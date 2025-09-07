@@ -68,12 +68,10 @@
             {
                 <ChordCard @ref="chordCardRef"
                     Charts="charts"
-                    SearchTerm="@searchTerm"
                     CurrentChords="chords"
-                    OnFetchChord="FetchChord"
                     OnSetToDelete="SetToDelete"
                     OnSetOpenConfirm="SetOpenConfirm"
-                    OnSetOpenChordEdit="OpenChordCreateModal" />
+                    OnSetOpenChordEdit="OpenChordEditModal" />
             }
             else
             {
@@ -112,7 +110,6 @@
     private string modalHeaderText = "Create";
     private string createdName = "";
     private string editedName = "";
-    private string searchTerm = "";
     private ChordCard? chordCardRef;
     // Theme
     private string theme = "light";
@@ -135,28 +132,28 @@
         }
     }
 
-    private void OnSearchInput()
+    private async Task OnSearchInput()
     {
         _debounceCts?.Cancel();
         _debounceCts?.Dispose();
-        var cts = new CancellationTokenSource();
-        _debounceCts = cts;
-        _ = Task.Run(async () =>
+
+        _debounceCts = new CancellationTokenSource();
+        var token = _debounceCts.Token;
+
+        try
         {
-            try
+            await Task.Delay(SearchDebounceMs, token);
+            if (token.IsCancellationRequested) return;
+
+            if (chordCardRef is not null)
             {
-                await Task.Delay(SearchDebounceMs, cts.Token);
-                if (!cts.Token.IsCancellationRequested)
-                {
-                    await InvokeAsync(() =>
-                    {
-                        searchTerm = searchQuery;
-                        StateHasChanged();
-                    });
-                }
+                await chordCardRef.Refresh(searchQuery.Trim().ToLowerInvariant());
             }
-            catch (TaskCanceledException) { }
-        });
+        }
+        catch (TaskCanceledException)
+        {
+            // Swallow – expected when user keeps typing
+        }
     }
 
     private string GetInnerContainerClass()
@@ -254,24 +251,17 @@
         }
     }
 
-    private async Task FetchChord(string id)
-    {
-        try
-        {
-            // Simulate API call
-            await Task.Delay(100);
-            selectedChord = chords.FirstOrDefault(c => c.Id == id);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error fetching chord");
-        }
-    }
-
     private void OpenChordCreateModal(string headerText)
     {
         modalHeaderText = headerText;
         selectedChord = new ChordDto();
+        showChordCreateModal = true;
+    }
+
+    private void OpenChordEditModal(ChordDto chord)
+    {
+        modalHeaderText = "Edit";
+        selectedChord = chord;
         showChordCreateModal = true;
     }
 
@@ -382,7 +372,7 @@
             return;
         }
         await LoadChords();
-        if (chordCardRef != null) chordCardRef.Refresh();
+        if (chordCardRef != null) await chordCardRef.Refresh();
         CloseChordCreateModal();
     }
 

@@ -1,5 +1,6 @@
 ﻿using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Data.Infrastructure;
+using FRELODYAPP.Interfaces;
 using FRELODYAPP.Models;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
@@ -260,15 +261,46 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             {
                 limit = limit <= 0 ? 10 : limit;
 
-                var baseQuery = _context.Chords
-                    .AsQueryable();
+                var baseQuery = _context.Chords.AsQueryable();
 
                 if (!string.IsNullOrWhiteSpace(keywords))
                 {
                     var kw = keywords.Trim();
-                    baseQuery = baseQuery.Where(c =>
-                        EF.Functions.Like(c.ChordName, $"%{kw}%") ||
-                        (c.ChordType != null && EF.Functions.Like(c.ChordType.ToString(), $"%{kw}%")));
+                    var pattern = $"%{kw}%";
+                    var kwLower = kw.ToLowerInvariant();
+                    var difficultySynonyms = new Dictionary<string, ChordDifficulty>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        { "easy", ChordDifficulty.Easy },
+                        { "beginner", ChordDifficulty.Easy },
+                        { "medium", ChordDifficulty.Medium },
+                        { "intermediate", ChordDifficulty.Medium },
+                        { "advanced", ChordDifficulty.Advanced },
+                        { "expert", ChordDifficulty.Advanced }
+                    };
+                    if (difficultySynonyms.TryGetValue(kwLower, out var difficulty))
+                    {
+                        baseQuery = baseQuery.Where(c =>
+                            EF.Functions.Like(c.ChordName, pattern) ||
+                            (c.Difficulty.HasValue && c.Difficulty == difficulty));
+                    }
+                    else
+                    {
+                        var matchingTypes = Enum
+                        .GetValues<ChordType>()
+                        .Where(t => t.ToString().Contains(kw, StringComparison.OrdinalIgnoreCase))
+                        .ToArray();
+                        if (matchingTypes.Length > 0)
+                        {
+                            baseQuery = baseQuery.Where(c =>
+                                EF.Functions.Like(c.ChordName, pattern) ||
+                                (c.ChordType.HasValue && matchingTypes.Contains(c.ChordType.Value)));
+                        }
+                        else
+                        {
+                            baseQuery = baseQuery.Where(c =>
+                                EF.Functions.Like(c.ChordName, pattern));
+                        } 
+                    }
                 }
 
                 var page = await baseQuery
@@ -295,7 +327,6 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                 return ServiceResult<PaginationDetails<ChordDto>>.Failure(ex);
             }
         }
-
     }
 
 }

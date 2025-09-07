@@ -112,19 +112,13 @@
     public List<ChordDto> CurrentChords { get; set; } = new();
 
     [Parameter]
-    public EventCallback<string> OnFetchChord { get; set; }
-
-    [Parameter]
     public EventCallback<ChordDto> OnSetToDelete { get; set; }
 
     [Parameter]
     public EventCallback<bool> OnSetOpenConfirm { get; set; }
 
     [Parameter]
-    public EventCallback<string> OnSetOpenChordEdit { get; set; }
-
-    [Parameter]
-    public string SearchTerm { get; set; } = string.Empty;
+    public EventCallback<ChordDto> OnSetOpenChordEdit { get; set; }
 
     private string _searchTerm { get; set; } = string.Empty;
     private Virtualize<ChordDto>? _virtualize;
@@ -136,20 +130,15 @@
     private int currentIndex = 0;
     private Timer? carouselTimer;
 
-    protected override Task OnParametersSetAsync()
-    {
-        if (_searchTerm != SearchTerm)
-        {
-            _searchTerm = SearchTerm;
-            _virtualize?.RefreshDataAsync();
-        }
-        return base.OnParametersSetAsync();
-    }
 
-    public async Task Refresh()
+    public async Task Refresh(string? searchTerm = null)
     {
-        await Task.Delay(100);
-        _virtualize?.RefreshDataAsync();
+        _searchTerm = searchTerm ?? string.Empty;
+
+        if (_virtualize is not null)
+        {
+            await _virtualize.RefreshDataAsync();
+        }
     }
 
     private async ValueTask<ItemsProviderResult<ChordDto>> ProvideChordsAsync(ItemsProviderRequest request)
@@ -188,8 +177,7 @@
 
     private async Task HandleEditChord(ChordDto chord)
     {
-        await OnFetchChord.InvokeAsync(chord.Id);
-        await OnSetOpenChordEdit.InvokeAsync("Edit");
+        await OnSetOpenChordEdit.InvokeAsync(chord);
     }
 
     private void HandleDeleteChord(ChordDto chord)
