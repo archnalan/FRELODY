@@ -3,85 +3,51 @@
 @inject ILogger<SongList> _logger
 @implements IDisposable
 
-<div class="container-fluid bg-light vh-100" style="max-width:55rem;justify-self:center">
-    <div class="position-sticky top-0 bg-light py-3"style="z-index:10">
-        <div class="container">
-            <h2 class="text-center mb-4">Song Library</h2>
-            <div class="row row align-items-center">
-                <div class="col-9">
-                    <div class="position-relative w-100">
-                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ps-2 text-secondary"></i>
-                        <input @bind-value="_searchInput"
-                               @bind-value:event="oninput"
-                               @bind-value:after="OnSearchInput"
-                               type="text"
-                               class="form-control ps-5"
-                               placeholder="Search..." />
-                    </div>
-                </div>
-                <div class="col-3 d-flex justify-content-end">
-                    <button type="button" class="btn btn-primary" @onclick="AddSong">Add Song <i class="bi bi-file-earmark-plus"></i></button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="container mt-4" style="z-index:0">
-        @if (!string.IsNullOrEmpty(error))
-        {
-            <div class="alert alert-danger" role="alert">
-                @error
-                <button class="btn btn-sm btn-link" @onclick="Refresh">Try Again</button>
-            </div>
-        }
-        <div class="row">
-            <Virtualize Context="song"
-                        ItemsProvider="ProvideSongsAsync"
-                        ItemSize="170"
-                        OverscanCount="3"
-                        @ref="_virtualize">
-                <ItemContent>
-                    <div class="col-12 col-md-6 col-lg-4 col-xl-3 mb-4">
-                        <div class="card h-100 shadow" style="border-radius:0.5rem">
-                            <div class="card-body d-flex flex-column justify-content-between">
-                                <div class="d-flex justify-content-between mb-3">
-                                    <h5 class="card-title">
-                                        <span class="mb-3">@song.ValueText</span>
-                                    </h5>
-                                    <!--close icon-->
-                                    <span class="cursor-pointer text-muted ms-2" @onclick="() => RemoveSong(song.IdString)">
-                                        <i class="bi bi-x"></i>
-                                    </span>
+<Virtualize Context="song"
+            ItemsProvider="ProvideSongsAsync"
+            ItemSize="170"
+            OverscanCount="3"
+            @ref="_virtualize">
+    <ItemContent>
+        <div class="col-12 col-md-6 col-lg-4 col-xl-3 mb-4">
+            <div class="card h-100 shadow-sm" style="border-radius:0.5rem">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div class="d-flex justify-content-between mb-3">
+                        <h5 class="card-title">
+                            <span class="mb-3">@song.ValueText</span>
+                        </h5>
+                        <!--close icon-->
+                        <span class="cursor-pointer text-muted ms-2" @onclick="() => RemoveSong(song.IdString)">
+                            <i class="bi bi-x"></i>
+                        </span>
 
-                                </div>
-                                <span class="font-weight-light text-muted">@song.IdString</span>
-                                <div class="d-flex justify-content-end mt-3">
-                                    <button class="btn btn-outline-secondary btn-sm me-2" @onclick="() => NavigateToDetails(song.IdString)">Details</button>
-                                    <button class="btn btn-primary btn-sm" @onclick="@(() => OnSongDisplay(song.IdString))">Play</button>
-                                </div>
-                            </div>
-                        </div>
                     </div>
-                </ItemContent>
-                <Placeholder>
-                    <div class="col-12 col-md-6 col-lg-4 col-xl-3 mb-4 ">
-                        <div class="card h-100 placeholder-wave shadow" style="border-radius:0.5rem">
-                            <div class="card-body">
-                                <h5 class="card-title">
-                                    <span class="placeholder col-7 mb-3"></span>
-                                </h5>
-                                <span class="placeholder col-3"></span>
-                                <div class="d-flex justify-content-end mt-3">
-                                    <span class="placeholder col-3 me-2"></span>
-                                    <span class="placeholder col-2"></span>
-                                </div>
-                            </div>
-                        </div>
+                    <span class="font-weight-light text-muted">@song.IdString</span>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button class="btn btn-outline-secondary btn-sm me-2" @onclick="() => NavigateToDetails(song.IdString)"><i class="bi bi-list"></i></button>
+                        <button class="btn btn-primary btn-sm" @onclick="@(() => OnSongDisplay(song.IdString))"><i class="bi bi-play-fill"></i></button>
                     </div>
-                </Placeholder>
-            </Virtualize>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
+    </ItemContent>
+    <Placeholder>
+        <div class="col-12 col-md-6 col-lg-4 col-xl-3 mb-4 ">
+            <div class="card h-100 placeholder-wave shadow" style="border-radius:0.5rem">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <span class="placeholder col-7 mb-3"></span>
+                    </h5>
+                    <span class="placeholder col-3"></span>
+                    <div class="d-flex justify-content-end mt-3">
+                        <span class="placeholder col-3 me-2"></span>
+                        <span class="placeholder col-2"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Placeholder>
+</Virtualize>
 
 <DialogModal IsVisible="_modalService.IsModalVisible"
              Modal="@_modalService.CurrentModal"
@@ -142,29 +108,6 @@
         }
     }
 
-    private async Task OnSearchInput()
-    {
-        // restart debounce window
-        _debounceCts?.Cancel();
-        _debounceCts?.Dispose();
-        var cts = new CancellationTokenSource();
-        _debounceCts = cts;
-
-        try
-        {
-            await Task.Delay(SearchDebounceMs, cts.Token);
-
-            // apply the debounced input as the active search term
-            _searchTerm = (_searchInput ?? string.Empty).Trim();
-
-            await Refresh();
-        }
-        catch (TaskCanceledException)
-        {
-            // expected when new keystrokes arrive
-        }
-    }
-
     private void RemoveSong(string? songId)
     {
         if(!string.IsNullOrEmpty(songId))
@@ -196,11 +139,6 @@
     private void NavigateToPlay(string id)
     {
         _navManager.NavigateTo($"/player/{id}");
-    }
-
-    private void AddSong()
-    {
-        _navManager.NavigateTo("/compose");
     }
 
     private void OnSongDisplay(string songId)

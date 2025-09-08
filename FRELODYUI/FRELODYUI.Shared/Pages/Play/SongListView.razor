@@ -2,36 +2,7 @@
 @inject ILogger<SongListView> _logger
 
 <div class="w-100 d-flex flex-column align-items-center" style="max-width:55rem;justify-self:center">
-    <div class="w-100 d-flex flex-column mt-4" style="max-width:35rem; justify-self:center">
-        <div class="position-relative mb-3">
-            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-            <input type="text" class="form-control ps-5" placeholder="Search songs..."
-                   @bind="SearchQuery" @oninput="OnSearchInput" />
-        </div>
-
-        <div class="d-flex justify-content-between mb-3">
-            <div class="d-flex align-items-center">
-                <button class="btn @(viewMode == ViewMode.All ? "btn-primary" : "") p-2 border border-end-0 rounded-3 rounded-end-0"
-                        @onclick="() => SetViewMode(ViewMode.All)" style="width:3.5rem">
-                    All
-                </button>
-                <button class="btn @(viewMode == ViewMode.Favorites ? "btn-primary" : "") p-2 border rounded-3 rounded-start-0"
-                        @onclick="() => SetViewMode(ViewMode.Favorites)" style="width:3.5rem">
-                    Fav
-                </button>
-            </div>
-            <div class="d-flex align-items-center">
-                <button class="btn p-2 border rounded-3 rounded-end-0 @(activeView == ActiveView.Expanded ? "btn-primary" : "")" @onclick="() => SetActiveView(ActiveView.Expanded)" style="width:3.5rem">
-                    <i class="bi bi-list"></i>
-                </button>
-                <button class="btn p-2 border border-start-0 rounded-3 rounded-start-0 @(activeView == ActiveView.Collapsed ? "btn-primary" : "")" @onclick="() => SetActiveView(ActiveView.Collapsed)" style="width:3.5rem">
-                    <i class="bi bi-grid-fill"></i>
-                </button>
-            </div>
-        </div>
-
-    </div>
-   
+    
     @if (IsLoading)
     {
         <FRELODYUI.Shared.Pages.PlaceHolders.SongListViewPlaceholder />
@@ -346,7 +317,7 @@
         }
     }
 
-    private async Task SetViewMode(ViewMode mode)
+    public async Task SetViewMode(ViewMode mode)
     {
         if (viewMode != mode)
         {
@@ -355,7 +326,7 @@
         }
     }
 
-    private async Task SetActiveView(ActiveView view)
+    public async Task SetActiveView(ActiveView view)
     {
         if (activeView != view)
         {

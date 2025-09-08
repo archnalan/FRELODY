@@ -9,6 +9,7 @@ namespace FRELODYUI.Shared.Models
     public enum ViewMode
     {
         All,
+        Catalogue,
         Favorites,       
     }
     public enum ActiveView

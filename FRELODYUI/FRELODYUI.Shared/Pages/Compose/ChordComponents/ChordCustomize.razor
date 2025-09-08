@@ -6,7 +6,7 @@
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content p-2">
             <div class="modal-header border-0">
-                <h5 class="modal-title">Add Chord</h5>
+                <h5 class="modal-title">@ModalHeaderText Chord</h5>
                 <button type="button" class="btn btn-close" @onclick="Close"></button>
             </div>
             <div class="modal-body border-0 px-3">
@@ -51,6 +51,7 @@
 
 @code {
     [Parameter] public ChordDto Content { get; set; } = new();
+    [Parameter] public string ModalHeaderText { get; set; } = "Create";
     [Parameter] public EventCallback<ChordDto> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool show { get; set; }

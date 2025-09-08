@@ -1,0 +1,176 @@
+﻿@page "/chord-charts/{Id}"
+@using Microsoft.AspNetCore.Components
+@inject ILogger<ChordChartDetail> Logger
+
+<div class="w-100 h-100 d-flex flex-column justify-content-start align-items-center bg-light">
+    <div class="@GetInnerContainerClass()">
+        <div class="d-flex align-items-center text-primary mb-3">
+            <button class="btn btn-link text-decoration-none p-0 me-3" @onclick="NavigateBack">
+                <i class="bi bi-arrow-left fs-3"></i>
+            </button>
+            <h3 class="text-primary mb-0">
+                Chord Chart Details
+            </h3>
+        </div>
+
+        <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
+            <strong class="mb-2 mb-md-0">Chord:</strong>
+            <span class="text-muted">@chordName</span>
+        </div>
+        <hr class="@GetLineClass()" />
+
+        <div class="d-flex flex-column flex-md-row justify-content-between mt-3">
+            <strong class="mb-2 mb-md-0">Fret:</strong>
+            <span class="text-muted">@chart?.FretPosition</span>
+        </div>
+        <hr class="@GetLineClass()" />
+
+        <div class="d-flex flex-column mt-3">
+            <strong class="mb-2">Chart Image:</strong>
+            @if (!string.IsNullOrEmpty(chartPreview))
+            {
+                <img src="@chartPreview"
+                     alt="chart preview"
+                     class="img-fluid rounded border"
+                     style="max-width: 18rem; max-height: 8rem; object-fit: contain; background-color: @(theme == "dark" ? "white" : ""); margin-bottom: 0.5rem;" />
+            }
+            else
+            {
+                <div class="text-muted">No chart image available</div>
+            }
+        </div>
+        <hr class="@GetLineClass()" />
+
+        <div class="d-flex flex-column mt-3">
+            <strong class="mb-2">Audio:</strong>
+            @if (!string.IsNullOrEmpty(audioPreview))
+            {
+                <audio controls
+                       class="w-100"
+                       style="max-height: 5rem; object-fit: contain; margin-bottom: 0.5rem;">
+                    <source src="@audioPreview" />
+                    Your browser does not support this audio format.
+                </audio>
+            }
+            else
+            {
+                <div class="text-muted">No audio available</div>
+            }
+        </div>
+        <hr class="@GetLineClass()" />
+
+        <div class="d-flex flex-column flex-md-row justify-content-between mt-3">
+            <strong class="mb-2 mb-md-0">Description:</strong>
+            <span class="text-muted text-md-end">@chart?.PositionDescription</span>
+        </div>
+        <hr class="@GetLineClass()" />
+
+        <div class="d-flex justify-content-end mb-3 mt-4">
+            <button class="btn btn-outline-secondary me-2" @onclick="NavigateBack">
+                Back
+            </button>
+            <button class="btn btn-outline-primary px-4" @onclick="NavigateToEdit">
+                Edit
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+
+    private ChordChartEditDto? chart = new();
+    private string chartPreview = "";
+    private string audioPreview = "";
+    private string chordName = "Loading...";
+    private string theme = "light";
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(Id))
+        {
+            await LoadChartDetails(Id);
+        }
+        else
+        {
+            Logger.LogWarning("No chart ID provided");
+        }
+    }
+
+    private string GetInnerContainerClass()
+    {
+        var baseClass = "w-75 w-md-50 border bg-white px-5 pt-3 pb-3 rounded-3 mt-5 shadow";
+        return theme == "dark" ? baseClass + " text-light bg-dark border-dark" : baseClass + " text-dark bg-white";
+    }
+
+    private string GetLineClass()
+    {
+        return theme == "dark" ? "border-top border-2 border-dark" : "border-top border-light";
+    }
+
+    private async Task LoadChartDetails(string chartId)
+    {
+        try
+        {
+            isLoading = true;
+
+            var response = await _chordChartsApi.GetChordChartById(chartId);
+
+            if (response.IsSuccessStatusCode)
+            {
+                chart = response.Content;
+            }
+
+            chartPreview = chart.FilePath;
+            audioPreview = chart.ChartAudioFilePath;
+
+            // Load chord name
+            await LoadChordName(chart.ChordId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading chart details");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadChordName(string chordId)
+    {
+        try
+        {
+            var response = await _chordsApi.GetChordById(chordId);
+            if (response.IsSuccessStatusCode)
+            {
+                var chordResult = response.Content!;
+                chordName = chordResult.ChordName;
+            }
+            else
+            {
+                chordName = "Unknown Chord";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading chord name");
+            chordName = "Error loading chord name";
+        }
+    }
+
+    private void NavigateBack()
+    {
+        _navManager.NavigateTo("/chord-charts");
+    }
+
+    private void NavigateToEdit()
+    {
+        if (!string.IsNullOrEmpty(Id))
+        {
+            _navManager.NavigateTo($"/chord-charts/edit/{Id}");
+        }
+    }
+}

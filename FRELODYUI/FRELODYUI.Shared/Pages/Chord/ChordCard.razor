@@ -8,78 +8,16 @@
                 OverscanCount="3"
                 @ref="_virtualize">
                 <ItemContent>
-            @{var chordCharts = Charts.Where(c => c.ChordId == chord.Id).ToList();}
             <div class="col-12 col-md-6 col-lg-3">
                 <div class="card h-100 shadow-sm" style="border-radius:.75rem;">
                     <div class="card-img-top">
-                        @if (Charts.Count > 0)
-                        {
-                            <div class="carousel slide" data-bs-ride="carousel">
-                                <div class="carousel-inner">
-                                    @for (int i = 0; i < Charts.Count; i++)
-                                    {
-                                        var chart = Charts[i];
-                                        <div class="carousel-item @(i == 0 ? "active" : "")" key="@chart.Id">
-                                            <div class="d-flex justify-content-center align-items-center position-relative">
-                                                <img src="@DisplayChart(chart)"
-                                                     alt="@chord?.ChordName"
-                                                     class="img-thumbnail bg-light"
-                                                     style="max-height: 15rem; border-radius: 0.5em; object-fit: contain; background-color: @(Theme == "dark" ? "#ddd" : "")" />
-                                            </div>
-                                        </div>
-                                        <!--Add, Edit, Delete chart buttons, only icons-->
-                                        <div class="carousel-indicators text-center mt-2">
-                                            <button class="btn btn-sm btn-outline-primary"
-                                                    @onclick="@(() => EditChart(chart.Id))">
-                                                <i class="bi bi-plus me-1"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-secondary mx-2"
-                                                    @onclick="@(() => _logger.LogInformation($"Edit chart {chart.Id} clicked"))">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger"
-                                                    @onclick="@(() => DeleteChart(chart.Id))">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    }
-                                </div>
-                                <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
-                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                    <span class="visually-hidden">Previous</span>
-                                </button>
-                                <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="next">
-                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                    <span class="visually-hidden">Next</span>
-                                </button>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="carousel slide">
-                                <div class="d-flex justify-content-center my-2">
-                                    <img src="@PlaceholderImagePath"
-                                         alt="No chord image to show"
-                                         class="img-thumbnail bg-light"
-                                         style="max-height: 15rem; border-radius: 0.5em; object-fit: contain; background-color: @(Theme == "dark" ? "#ddd" : "")" />
-                                </div>
-                                <div class="carousel-indicators text-center mb-2">
-                                    <button class="btn btn-sm btn-outline-secondary"
-                                            @onclick="@(() => NavigateToAddChart(chord.Id))">
-                                        <i class="bi bi-plus me-1"></i> Add Chart
-                                    </button>
-                                </div>
-                            </div>
-
-                        }
-
+                        <ChordCarousel Chord="chord"/>                      
                     </div>
                     <div class="card-body">
                         <h5 class="card-title">@chord.ChordName</h5>
                         <p class="card-text mb-1">
                             Difficulty: <span class="text-muted">@GetDifficultyText(chord.Difficulty)</span>
                         </p>
-                        <small class="text-muted">@chordCharts.Count chart(s)</small>
 
                         <div class="card-actions d-flex justify-content-center mt-3">
                             <button class="btn btn-sm btn-info me-2" @onclick="() => NavigateToDetails(chord.Id)">
@@ -105,11 +43,6 @@
 </div>
 
 @code {
-    [Parameter]
-    public List<ChordChartEditDto> Charts { get; set; } = new();
-
-    [Parameter]
-    public List<ChordDto> CurrentChords { get; set; } = new();
 
     [Parameter]
     public EventCallback<ChordDto> OnSetToDelete { get; set; }
@@ -190,16 +123,7 @@
     {
         // Navigation would be implemented based on your routing
         _logger.LogInformation($"Navigating to chord details: {chordId}");
-    }
-
-    private void NavigateToAddChart(string? chordId)
-    {
-        _navManager.NavigateTo($"/chord-charts/create/{chordId}");
-    }
-
-    private void EditChart(string chartId)
-    {
-        _navManager.NavigateTo($"/chord-charts/edit/{chartId}");
+        _navManager.NavigateTo($"/chords/{chordId}");
     }
 
     private string GetDifficultyText(ChordDifficulty? difficulty)
@@ -211,30 +135,6 @@
             ChordDifficulty.Advanced => "Advanced",
             _ => "Unknown"
         };
-    }
-
-    private string DisplayChart(ChordChartEditDto chart)
-    {
-        if (!string.IsNullOrEmpty(chart.FilePath))
-        {
-            return chart.FilePath;
-        }
-        return PlaceholderImagePath;
-    }
-
-    private async Task DeleteChart(string chartId)
-    {
-        var chartToRemove = Charts.FirstOrDefault(c => c.Id == chartId);
-        if (chartToRemove != null)
-        {
-            var response = await _chordChartsApi.DeleteChordChart(chartId);
-            Charts.Remove(chartToRemove);
-            if (currentIndex >= Charts.Count)
-            {
-                currentIndex = Charts.Count - 1;
-            }
-            StateHasChanged();
-        }
     }
 
     public void Dispose()

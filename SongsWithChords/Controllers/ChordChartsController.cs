@@ -46,6 +46,18 @@ namespace FRELODYAPIs.Controllers
             return Ok(result.Data);
         }
 
+
+        [HttpGet]
+        public async Task<IActionResult> GetChartsByChordId(string chordId)
+        {
+            var chartsResult = await _chordChartService.GetChartsByChordIdAsync(chordId);
+
+            if (!chartsResult.IsSuccess)
+                return StatusCode(chartsResult.StatusCode, new { message = chartsResult.Error.Message });
+
+            return Ok(chartsResult.Data);
+        }
+
         [HttpGet]
         [ProducesResponseType(typeof(ChartWithParentChordDto), 200)]
         public async Task<IActionResult> GetChartWithParentChordById([FromQuery] string id)

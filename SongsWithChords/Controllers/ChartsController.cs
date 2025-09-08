@@ -43,8 +43,8 @@ namespace FRELODYAPIs.Controllers
 
 			return Ok(chartResult.Data);
 		}
-
-		[HttpPost("create")]
+		
+        [HttpPost("create")]
 		public async Task<IActionResult> CreateChordChart([FromForm] ChordChartCreateDto chartCreateDto)
 		{
 			if (chartCreateDto == null) return BadRequest("Chord Chart data is required.");			

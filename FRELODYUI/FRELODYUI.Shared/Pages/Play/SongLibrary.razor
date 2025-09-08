@@ -1,0 +1,247 @@
+﻿@page "/songs-library"
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@inject ILogger<SongLibrary> _logger
+@implements IDisposable
+
+<div class="container-fluid bg-light vh-100" style="max-width:55rem;justify-self:center">
+    <div class="container bg-light text-center mt-3" >
+        <div class="position-sticky text-center top-0 bg-light" style="z-index:5">
+            <h3 class="m-3">Song Library</h3>
+            <div class="rounded-3 bg-white shadow p-3 mb-2" style="min-width:15rem">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex w-50 position-relative me-3">
+                        <input type="text"
+                               class="form-control h-12 ps-5 rounded-3"
+                               placeholder="Search..."
+                               @bind-value="searchQuery"
+                               @bind-value:event="oninput"
+                               @bind-value:after="OnSearchInput" />
+                        <button class="btn btn-link position-absolute border-0 start-0 top-0 h-100">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary"
+                            @onclick="AddSong">
+                        Add Song <i class="bi bi-file-earmark-plus"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-center align-items-center my-3">
+            <div class="d-flex align-items-center bg-white me-5 rounded rounded-3 gap-3 p-2 shadow">
+                <button class="btn @(viewMode == ViewMode.All ? "btn-outline-primary" : "btn-outline-secondary")"
+                        @onclick="() => SetViewMode(ViewMode.All)" style="width:3.5rem">
+                    @if (viewMode == ViewMode.All)
+                    {
+                        <i class="bi bi-collection-play-fill"></i>
+                    }
+                    else
+                    {
+                        <i class="bi bi-collection-play"></i>
+                    }
+                </button>
+                <button class="btn @(viewMode == ViewMode.Catalogue ? "btn-outline-primary" : "btn-outline-secondary")"
+                        @onclick="() => SetViewMode(ViewMode.Catalogue)" style="width:3.5rem">
+                    @if (viewMode == ViewMode.Catalogue)
+                    {
+                        <i class="bi bi-journals"></i>
+                    }
+                    else
+                    {
+                        <i class="bi bi-journal"></i>
+                    }
+                </button>
+                <button class="btn @(viewMode == ViewMode.Favorites ? "btn-outline-primary" : "btn-outline-secondary")"
+                        @onclick="() => SetViewMode(ViewMode.Favorites)" style="width:3.5rem">
+                    @if (viewMode == ViewMode.Favorites)
+                    {
+                        <i class="bi bi-heart-fill"></i>
+                    }
+                    else
+                    {
+                        <i class="bi bi-heart"></i>
+                    }
+                </button>
+            </div>
+            <div class="d-flex align-items-center bg-white rounded rounded-3 gap-3 p-2 shadow">
+                <button class="btn @(activeView == ActiveView.Expanded ? "btn-outline-primary" : "btn-outline-secondary")" @onclick="() => SetActiveView(ActiveView.Expanded)" style="width:3.5rem">
+                    @if (activeView == ActiveView.Expanded)
+                    {
+                        <i class="bi bi-list"></i>
+                    }
+                    else
+                    {
+                        <i class="bi bi-list-task"></i>
+                    }
+                </button>
+                <button class="btn @(activeView == ActiveView.Collapsed ? "btn-outline-primary" : "btn-outline-secondary")" @onclick="() => SetActiveView(ActiveView.Collapsed)" style="width:3.5rem">
+                    @if (activeView == ActiveView.Collapsed)
+                    {
+                        <i class="bi bi-grid-fill"></i>
+                    }
+                    else
+                    {
+                        <i class="bi bi-grid"></i>
+                    }
+                </button>
+            </div>
+        </div>
+
+        @switch (viewMode)
+        {
+            case ViewMode.All:
+                <div class="row" style="z-index:0">
+                    <SongList />
+                </div>
+                break;
+            default:
+                <div class="row" style="z-index:0">
+                    <SongListView @ref="songListViewRef" />
+                </div>
+                break;
+        }
+
+    </div>
+</div>
+
+<DialogModal IsVisible="_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    private string error = string.Empty;
+    private bool IsNavigating = false;
+
+    private ViewMode viewMode = ViewMode.All;
+    private ActiveView activeView = ActiveView.Expanded;
+    private SongListView? songListViewRef;
+
+    // UI input vs applied search term
+    private string searchQuery = string.Empty;
+    private string _searchTerm = string.Empty;
+    private string theme = "light";
+    private Virtualize<ComboBoxDto>? _virtualize;
+
+    // debounce state
+    private CancellationTokenSource? _debounceCts;
+    private const int SearchDebounceMs = 500;
+
+    protected override Task OnInitializedAsync()
+    {
+        // Virtualize will load on first render via ItemsProvider.
+        return Task.CompletedTask;
+    }
+
+
+    private async Task SetViewMode(ViewMode mode)
+    {
+        if (viewMode != mode)
+        {
+            viewMode = mode;
+            if (songListViewRef != null) await songListViewRef.SetViewMode(mode);
+        }
+    }
+
+    private async Task SetActiveView(ActiveView view)
+    {
+        if (activeView != view)
+        {
+            activeView = view;
+            if (songListViewRef != null) await songListViewRef.SetActiveView(view);
+            switch (activeView)
+            {
+                case ActiveView.Expanded:
+                    // Expand all song books and categories
+                    // foreach (var book in SongBooks)
+                    // {
+                    //     _songBookExpansionState[book.Id ?? ""] = true;
+                    //     foreach (var cat in book.Categories)
+                    //     {
+                    //         _categoryExpansionState[cat.Id ?? ""] = true;
+                    //     }
+                    // }
+                    break;
+                case ActiveView.Collapsed:
+                    // Collapse all song books and categories
+                    // foreach (var book in SongBooks)
+                    // {
+                    //     _songBookExpansionState[book.Id ?? ""] = false;
+                    //     foreach (var cat in book.Categories)
+                    //     {
+                    //         _categoryExpansionState[cat.Id ?? ""] = false;
+                    //     }
+                    // }
+                    break;
+                default:
+                    // Default: keep current expansion state
+                    break;
+            }
+            //await LoadData();
+        }
+    }
+
+    private string GetLineClass()
+    {
+        return theme == "dark" ? "border-top border-2 border-dark" : "border-top border-light";
+    }
+
+    private async Task OnSearchInput()
+    {
+        // restart debounce window
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _debounceCts = cts;
+
+        try
+        {
+            await Task.Delay(SearchDebounceMs, cts.Token);
+
+            // apply the debounced input as the active search term
+            _searchTerm = (_searchTerm ?? string.Empty).Trim();
+
+            
+        }
+        catch (TaskCanceledException)
+        {
+            // expected when new keystrokes arrive
+        }
+    }
+
+    private void NavigateToPlay(string id)
+    {
+        _navManager.NavigateTo($"/player/{id}");
+    }
+
+    private void AddSong()
+    {
+        _navManager.NavigateTo("/compose");
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "")
+        {
+        }
+        else
+        {
+            _modalService.Close();
+        }
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+    }
+}

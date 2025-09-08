@@ -1,0 +1,230 @@
+﻿@page "/chords/{Id}"
+@using FRELODYUI.Shared.Pages.Compose.ChordComponents
+@using Microsoft.AspNetCore.Components
+@inject ILogger<ChordDetail> Logger
+
+<div class="w-100 h-100 d-flex flex-column justify-content-start align-items-center bg-light">
+    <div class="@GetInnerContainerClass()">
+        <div class="d-flex align-items-center text-primary mb-3">
+            <button class="btn btn-link text-decoration-none p-0 me-3" @onclick="NavigateBack">
+                <i class="bi bi-arrow-left fs-3"></i>
+            </button>
+            <h3 class="text-primary mb-0">
+                Chord Details
+            </h3>
+        </div>
+
+        <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
+            <strong class="mb-2 mb-md-0">Chord:</strong>
+            <span class="text-muted">@chord?.ChordName</span>
+        </div>
+        <hr class="@GetLineClass()" />
+
+        <div class="d-flex flex-column flex-md-row justify-content-between mt-3">
+            <strong class="mb-2 mb-md-0">Difficulty:</strong>
+            <span class="text-primary fw-semibold">@GetDifficultyText(chord?.Difficulty ?? 0)</span>
+        </div>
+        <hr class="@GetLineClass()" />
+
+        <div class="d-flex flex-column mt-3">
+            <strong class="mb-2">Charts:</strong>
+            <div class="w-100 w-md-50 mb-2">
+                <ChordCarousel @ref="chordCarouselRef" Chord="chord" />
+            </div>            
+        </div>
+        <hr class="@GetLineClass()" />
+
+        <div class="d-flex justify-content-end mb-3 mt-4">
+            <button class="btn btn-outline-secondary me-2" @onclick="NavigateBack">
+                Back
+            </button>
+            <button class="btn btn-outline-primary px-4" @onclick="@(() => EditChord())">
+                Edit
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (showChordModal)
+{
+    <ChordCustomize Show="showChordModal"
+                    ModalHeaderText="@modalHeaderText" 
+                    Content="chord"
+                    OnSave="HandleChordSubmit" 
+                    OnCancel="CloseChordModal" />
+}
+
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+
+    private ChordDto? chord;
+    private List<ChordChartEditDto> charts = new();
+    private List<ChordChartEditDto> filteredCharts = new();
+    private string theme = "light";
+    private bool isLoading = true;
+    private bool showChordModal = false;
+    private string modalHeaderText = "Create";
+    private ChordCarousel? chordCarouselRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(Id))
+        {
+            await LoadChordDetails(Id);
+        }
+        else
+        {
+            Logger.LogWarning("No chord ID provided");
+        }
+    }
+
+    private string GetInnerContainerClass()
+    {
+        var baseClass = "w-75 w-md-50 border bg-white px-5 pt-3 pb-3 rounded-3 mt-5 shadow";
+        return theme == "dark" ? baseClass + " text-light bg-dark border-dark" : baseClass + " text-dark bg-white";
+    }
+
+    private string GetLineClass()
+    {
+        return theme == "dark" ? "border-top border-2 border-dark" : "border-top border-light";
+    }
+
+    private string GetDifficultyText(ChordDifficulty difficulty)
+    {
+        return difficulty switch
+        {
+            ChordDifficulty.Easy => "Beginner",
+            ChordDifficulty.Medium => "Intermediate",
+            ChordDifficulty.Advanced => "Advanced",
+            ChordDifficulty.Expert => "Expert",
+            _ => "Unknown"
+        };
+    }
+
+    private async Task LoadChordDetails(string chordId)
+    {
+        try
+        {
+            isLoading = true;
+            var response = await _chordsApi.GetChordById(chordId);
+            if (response.IsSuccessStatusCode)
+            {
+                chord = response.Content;
+            }
+            else
+            {
+                var errorMsg = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = $"Failed to load chord details. {errorMsg}",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext { ActionType = "LoadChordDetails", Data = chordId }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading chord details");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleChordSubmit(ChordDto chord)
+    {
+        Refit.IApiResponse<ChordEditDto?> response;
+        if (string.IsNullOrEmpty(chord.Id))
+        {
+            var newChord = new ChordCreateDto
+            {
+                ChordName = chord.ChordName,
+                ChordType = ChordTypeService.DetermineChordType(chord.ChordName),
+                ChordDifficulty = ChordTypeService.DetermineChordDifficulty(chord.ChordName),
+            };
+            response = await _chordsApi.CreateChord(newChord);
+        }
+        else
+        {
+            var editChord = new ChordEditDto
+            {
+                Id = chord.Id,
+                ChordName = chord.ChordName,
+                ChordType = ChordTypeService.DetermineChordType(chord.ChordName),
+                Difficulty = ChordTypeService.DetermineChordDifficulty(chord.ChordName),
+            };
+
+            response = await _chordsApi.UpdateChord(editChord);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = errorMessage,
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "CreateChord",
+                    Data = errorMessage
+                }
+            });
+            return;
+        }
+        await LoadChordDetails(chord.Id ?? "");
+        if (chordCarouselRef != null)  await chordCarouselRef.LoadCharts(chord.Id ?? "");
+        CloseChordModal();
+    }
+
+    private void CloseChordModal()
+    {
+        showChordModal = false;
+    }
+
+    private void NavigateBack()
+    {
+        _navManager.NavigateTo("/chords");
+    }
+
+    private void AddChart(string? chordId)
+    {
+        _navManager.NavigateTo($"/chord-charts/create/{chordId}");
+    }
+
+    private void EditChord()
+    {
+        modalHeaderText = "Edit";
+        showChordModal = true;
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "")
+        {
+        }
+        else
+        {
+            _modalService.Close();
+        }
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+}

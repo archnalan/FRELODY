@@ -9,6 +9,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
     {
         Task<ServiceResult<ChordChartEditDto>> CreateChordChartAsync(ChordChartCreateDto chartDto);
         Task<ServiceResult<bool>> DeleteChordChartAsync(string id);
+        Task<ServiceResult<List<ChordChartEditDto>>> GetChartsByChordIdAsync(string chordId);
         Task<ServiceResult<ChartWithParentChordDto>> GetChartWithParentChordByIdAsync(string id);
         Task<ServiceResult<ChordChartEditDto>> GetChordChartByIdAsync(string id);
         Task<ServiceResult<List<ChordChartEditDto>>> GetChordChartsAsync();

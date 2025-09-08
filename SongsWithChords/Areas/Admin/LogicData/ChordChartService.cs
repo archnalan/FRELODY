@@ -61,6 +61,25 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
         }
 
+        public async Task<ServiceResult<List<ChordChartEditDto>>> GetChartsByChordIdAsync(string chordId)
+        {
+            try
+            {
+                var charts = await _context.ChordCharts
+                    .Where(c => c.ChordId == chordId)
+                    .OrderBy(c => c.FretPosition)
+                    .ToListAsync();
+                var chartsDto = charts.Adapt<List<ChordChartEditDto>>();
+                return ServiceResult<List<ChordChartEditDto>>.Success(chartsDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving chord charts by Chord ID: {ChordId}. Error: {Error}", chordId, ex);
+                return ServiceResult<List<ChordChartEditDto>>.Failure(
+                    new Exception($"Error retrieving chord charts by Chord ID: {chordId}. Details: {ex.Message}"));
+            }
+        }
+
         public async Task<ServiceResult<ChartWithParentChordDto>> GetChartWithParentChordByIdAsync(string id)
         {
             try

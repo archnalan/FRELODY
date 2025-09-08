@@ -17,6 +17,9 @@ namespace FRELODYUI.Shared.RefitApis
         [Get("/api/chord-charts/get-chord-chart-by-id")]
         Task<IApiResponse<ChordChartEditDto>> GetChordChartById([Query] string id);
 
+        [Get("/api/chord-charts/get-charts-by-chord-id")]
+        Task<IApiResponse<List<ChordChartEditDto>>> GetChartsByChordId([Query] string chordId);
+
         [Get("/api/chord-charts/get-chart-with-parent-chord-by-id")]
         Task<IApiResponse<ChartWithParentChordDto>> GetChartWithParentChordById([Query] string id);
 

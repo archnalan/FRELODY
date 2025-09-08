@@ -5,6 +5,7 @@
 		Easy = 1,
         Medium = 2,
         Advanced = 3,
+        Expert = 4
     }
 
     public enum PlayLevel

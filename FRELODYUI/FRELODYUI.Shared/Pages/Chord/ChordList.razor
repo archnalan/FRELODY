@@ -67,11 +67,9 @@
             else if (filteredChords.Any())
             {
                 <ChordCard @ref="chordCardRef"
-                    Charts="charts"
-                    CurrentChords="chords"
-                    OnSetToDelete="SetToDelete"
-                    OnSetOpenConfirm="SetOpenConfirm"
-                    OnSetOpenChordEdit="OpenChordEditModal" />
+                           OnSetToDelete="SetToDelete"
+                           OnSetOpenConfirm="SetOpenConfirm"
+                           OnSetOpenChordEdit="OpenChordEditModal" />
             }
             else
             {
@@ -86,9 +84,10 @@
 @if (showChordCreateModal)
 {
     <ChordCustomize Show="showChordCreateModal"
-                Content="selectedChord"
-                OnSave="HandleChordCreated" 
-                OnCancel="CloseChordCreateModal" />
+                    ModalHeaderText="modalHeaderText"
+                    Content="selectedChord"
+                    OnSave="HandleChordCreated" 
+                    OnCancel="CloseChordCreateModal" />
 }
 
 <DialogModal IsVisible="@_modalService.IsModalVisible"
@@ -99,7 +98,6 @@
 @code {
     private List<ChordDto> chords = new();
     private List<ChordDto> filteredChords = new();
-    private List<ChordChartEditDto> charts = new();
     private string searchQuery = "";
     private string successMessage = "";
     private bool isLoading = true;
@@ -119,7 +117,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadChords();
-        await LoadCharts();
 
         // Check for success message from navigation state
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
@@ -197,39 +194,6 @@
         finally
         {
             isLoading = false;
-        }
-    }
-
-    private async Task LoadCharts()
-    {
-        try
-        {
-            var response = await _chordChartsApi.GetAllChordCharts();
-            if (response.IsSuccessStatusCode)
-            {
-                charts = response.Content!;
-                return;
-            }
-            else
-            {
-                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
-                _modalService.Show(new ModalOptionDto
-                {
-                    Title = "Error",
-                    Message = errorMessage,
-                    ButtonText = "OK",
-                    OptionType = OptionType.Error,
-                    Context = new ModalContext
-                    {
-                        Data = response,
-                        ActionType = "LoadChords"
-                    }
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading charts");
         }
     }
 
