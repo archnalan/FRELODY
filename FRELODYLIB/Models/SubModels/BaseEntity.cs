@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using FRELODYSHRD.Dtos.SubDtos;
+using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYAPP.Models.SubModels
 {
@@ -9,6 +10,7 @@ namespace FRELODYAPP.Models.SubModels
         public DateTime? DateCreated { get; set; }
         public DateTime? DateModified { get; set; }
         public bool? IsDeleted { get; set; }
+        public Access? Access { get; set; }
 
         [StringLength(255)]
         public string? ModifiedBy { get; set; }
@@ -23,5 +25,5 @@ namespace FRELODYAPP.Models.SubModels
         bool? IsDeleted { get; set; }
         string? ModifiedBy { get; set; }
         string? TenantId { get; set; }
-    }    
+    }  
 }

@@ -92,7 +92,7 @@
         {
             case ViewMode.All:
                 <div class="row" style="z-index:0">
-                    <SongList />
+                    <SongList @ref="songListRef" />
                 </div>
                 break;
             default:
@@ -116,6 +116,7 @@
 
     private ViewMode viewMode = ViewMode.All;
     private ActiveView activeView = ActiveView.Expanded;
+    private SongList? songListRef;
     private SongListView? songListViewRef;
 
     // UI input vs applied search term
@@ -199,10 +200,14 @@
         {
             await Task.Delay(SearchDebounceMs, cts.Token);
 
-            // apply the debounced input as the active search term
-            _searchTerm = (_searchTerm ?? string.Empty).Trim();
+            _searchTerm = (searchQuery ?? string.Empty).Trim();
 
-            
+            if (songListViewRef != null) 
+                await songListViewRef.SearchTermChanged(_searchTerm);
+
+            if (songListRef != null) 
+                await songListRef.SearchTermChanged(_searchTerm);
+
         }
         catch (TaskCanceledException)
         {

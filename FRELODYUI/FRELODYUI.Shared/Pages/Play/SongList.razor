@@ -1,9 +1,9 @@
 ﻿@page "/songs-list"
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @inject ILogger<SongList> _logger
-@implements IDisposable
 
-<Virtualize Context="song"
+<Virtualize @key="RefreshKey" 
+            Context="song"
             ItemsProvider="ProvideSongsAsync"
             ItemSize="170"
             OverscanCount="3"
@@ -58,15 +58,10 @@
     private string error = string.Empty;
     private bool IsNavigating = false;
 
-    // UI input vs applied search term
-    private string _searchInput = string.Empty;
     private string _searchTerm = string.Empty;
+    private string RefreshKey = Guid.NewGuid().ToString();
 
     private Virtualize<ComboBoxDto>? _virtualize;
-
-    // debounce state
-    private CancellationTokenSource? _debounceCts;
-    private const int SearchDebounceMs = 500;
 
     protected override Task OnInitializedAsync()
     {
@@ -122,6 +117,14 @@
                 Context = new ModalContext { ActionType = "DeleteSong", Data = songId }
             });
         }         
+    }
+
+    public async Task SearchTermChanged(string searchTerm)
+    {
+        _searchTerm = searchTerm;
+        RefreshKey = Guid.NewGuid().ToString();
+        await Task.CompletedTask;
+        StateHasChanged();
     }
 
     private async Task Refresh()
@@ -201,11 +204,5 @@
         await Task.Delay(100);
         _modalService.Close();
         StateHasChanged();
-    }
-
-    public void Dispose()
-    {
-        _debounceCts?.Cancel();
-        _debounceCts?.Dispose();
     }
 }

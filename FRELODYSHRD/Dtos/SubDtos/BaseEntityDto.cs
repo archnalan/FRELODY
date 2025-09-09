@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using DocumentFormat.OpenXml.Math;
+using FRELODYSHRD.Dtos.SubDtos;
+using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYAPP.Dtos.SubDtos
 {
@@ -7,6 +9,7 @@ namespace FRELODYAPP.Dtos.SubDtos
         public string Id { get; set; }
         public DateTime? DateCreated { get; set; }
         public DateTime? DateModified { get; set; }
+        public Access? Access { get; set; }
 
         [StringLength(255)]
         public virtual string? TenantId { get; set; }

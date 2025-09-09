@@ -2,6 +2,7 @@
 using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
 using FRELODYLIB.Models;
+using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYSHRD.ModelTypes;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -48,35 +49,40 @@ namespace FRELODYAPP.Data.Infrastructure
                     (x.TenantId == _tenantId || x.TenantId == null) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongCollection>().HasQueryFilter(x =>
-                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    ((x.TenantId == _tenantId || x.TenantId == null)
+                    || (x.Access == Access.Public))
                     && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<SongBook>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
+            builder.Entity<SongBook>().HasQueryFilter(x =>
+                    ((x.TenantId == _tenantId || x.TenantId == null)
+                    || (x.Access == Access.Public))
                     && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Category>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
+            builder.Entity<Category>().HasQueryFilter(x =>
+                     ((x.TenantId == _tenantId || x.TenantId == null)
+                    || (x.Access == Access.Public))
                     && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<Song>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
-                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Song>().HasQueryFilter(x =>
+                    ((x.TenantId == _tenantId || x.TenantId == null)
+                    || (x.Access == Access.Public))&&
+                    (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongPart>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    ((x.TenantId == _tenantId || x.TenantId == null) 
+                    || (x.Access == Access.Public)) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongUserRating>().HasQueryFilter(x =>
                     (x.TenantId == _tenantId || x.TenantId == null) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<LyricLine>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
+            builder.Entity<LyricLine>().HasQueryFilter(x =>
+                     ((x.TenantId == _tenantId || x.TenantId == null)
+                    || (x.Access == Access.Public))
                     && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<LyricSegment>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
+            builder.Entity<LyricSegment>().HasQueryFilter(x =>
+                    ((x.TenantId == _tenantId || x.TenantId == null)
+                    || (x.Access == Access.Public))
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Chord>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
-                    && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<ChordChart>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
-                    && (x.IsDeleted == false || x.IsDeleted == null));
+                    x.IsDeleted == false || x.IsDeleted == null);
+            builder.Entity<ChordChart>().HasQueryFilter(x =>
+                   x.IsDeleted == false || x.IsDeleted == null);
             builder.Entity<UserFeedback>().HasQueryFilter(x => 
                     (x.TenantId == _tenantId || x.TenantId == null) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
@@ -208,13 +214,16 @@ namespace FRELODYAPP.Data.Infrastructure
 
                 if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType) || typeof(IBaseEntity).IsAssignableFrom(entityType.ClrType))
                 {
-                    // Apply index on IsDeleted
-                    builder.Entity(entityType.ClrType)
-                        .HasIndex(nameof(BaseEntity.IsDeleted));
+                    var entityBuilder = builder.Entity(entityType.ClrType);
 
-                    //Apply index on TenantId
-                    builder.Entity(entityType.ClrType)
-                        .HasIndex(nameof(BaseEntity.TenantId));
+                    entityBuilder.HasIndex(nameof(BaseEntity.IsDeleted));
+                    entityBuilder.HasIndex(nameof(BaseEntity.DateCreated));
+                    entityBuilder.HasIndex(nameof(BaseEntity.DateModified));
+                    entityBuilder.HasIndex(nameof(BaseEntity.ModifiedBy));
+                    entityBuilder.HasIndex(nameof(BaseEntity.TenantId));
+                    
+                    if (entityType.FindProperty(nameof(BaseEntity.Access)) != null)
+                        entityBuilder.HasIndex(nameof(BaseEntity.Access));
 
                     if (entityType.ClrType != typeof(Tenant) && typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
                     {
@@ -226,19 +235,6 @@ namespace FRELODYAPP.Data.Infrastructure
                             .IsRequired(false) // Set as not required (nullable)
                             .OnDelete(DeleteBehavior.Restrict); // Restrict delete behavior
                     }
-
-                    // Apply index on DateTimeCreated
-                    builder.Entity(entityType.ClrType)
-                         .HasIndex(nameof(BaseEntity.DateCreated));
-
-                    // Apply index on DateTimeModified
-                    builder.Entity(entityType.ClrType)
-                        .HasIndex(nameof(BaseEntity.DateModified));
-
-                    // Apply index on LastModifiedBy
-                    builder.Entity(entityType.ClrType)
-                        .HasIndex(nameof(BaseEntity.ModifiedBy));
-
                 }
             }
 
