@@ -31,5 +31,19 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Delete("/api/chord-charts/delete-chord-chart")]
         Task<IApiResponse<object>> DeleteChordChart([Query] string id);
+
+        [Multipart]
+        [Post("/api/chord-charts/create-chord-chart-files")]
+        Task<IApiResponse<ChordChartEditDto>> CreateChordChartFiles(
+           [AliasAs("chartImage")] StreamPart? chartImage,
+           [AliasAs("chartAudio")] StreamPart? chartAudio,
+           [Query] string chartDataJson);
+
+        [Multipart]
+        [Put("/api/chord-charts/update-chord-chart-files")]
+        Task<IApiResponse<ChordChartEditDto>> UpdateChordChartFiles(
+            [AliasAs("chartImage")] StreamPart? chartImage,
+            [AliasAs("chartAudio")] StreamPart? chartAudio,
+            [Query] string chartDataJson);
     }
 }

@@ -38,9 +38,6 @@ builder.Services.AddRefitClient<ISongSectionsApi>()
 builder.Services.AddRefitClient<IFeedbackApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
-builder.Services.AddRefitClient<IFileUploadApi>()
-    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
-
 // Add device-specific services used by the FRELODYUI.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
@@ -48,4 +45,5 @@ builder.Services.AddScoped<IPrintService, WebPrintService>();
 builder.Services.AddScoped<IClipboardService, WebClipboardService>();
 builder.Services.AddScoped<IShareService, ShareService>();
 builder.Services.AddScoped<IModalService, ModalService>();
+builder.Services.AddScoped<ChordLyricExtrator>();
 await builder.Build().RunAsync();

@@ -21,6 +21,7 @@ builder.Services.AddScoped<IPrintService, WebPrintService>();
 builder.Services.AddScoped<IClipboardService, WebClipboardService>();
 builder.Services.AddScoped<IShareService, ShareService>();
 builder.Services.AddScoped<IModalService, ModalService>();
+builder.Services.AddScoped<ChordLyricExtrator>();
 
 var baseAddressApi = new Uri("https://localhost:7018");
 
@@ -42,8 +43,6 @@ builder.Services.AddRefitClient<ISongSectionsApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 builder.Services.AddRefitClient<IFeedbackApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
-builder.Services.AddRefitClient<IFileUploadApi>()
-    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
 var app = builder.Build();
 

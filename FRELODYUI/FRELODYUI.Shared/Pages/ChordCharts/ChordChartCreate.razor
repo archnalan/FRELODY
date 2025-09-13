@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components
 @using Refit
+@using System.Text.Json
 @inject ILogger<ChordChartCreate> _logger
 @implements IDisposable
 
@@ -203,6 +204,7 @@
 @code {
     [Parameter] public string? chordId { get; set; }
     [Parameter] public string? Id { get; set; }
+    private string? ApiBaseUrl = "https://localhost:7077";
 
     private ChordChartDto FormModel = new();
     private List<ChordDto> Chords = new List<ChordDto>();
@@ -224,6 +226,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        //ApiBaseUrl = Configuration["ApiSettings:BaseUrl"]?.TrimEnd('/');
+
         await LoadChords();
 
         if (!string.IsNullOrEmpty(Id))
@@ -285,7 +289,7 @@
                 // Set previews if files exist
                 if (!string.IsNullOrEmpty(chart.FilePath))
                 {
-                    ChartPreview = chart.FilePath;
+                    ChartPreview = DisplayChart(chart.FilePath);
                 }
 
                 if (!string.IsNullOrEmpty(chart.ChartAudioFilePath))
@@ -318,7 +322,7 @@
             var buffer = new byte[file.Size];
             await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).ReadAsync(buffer);
             ChartPreview = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
-
+            FormModel.FilePath = file.Name; // Temporary, will be replaced after upload
             ChartStream = new StreamPart(new MemoryStream(buffer), file.Name, file.ContentType);
 
         }
@@ -366,6 +370,15 @@
         }
     }
 
+    private string DisplayChart(string filePath)
+    {
+        if (string.IsNullOrEmpty(filePath))
+            return "";
+        if (filePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            return filePath;
+        return $"{ApiBaseUrl}/{filePath.TrimStart('/')}";
+    }
+
     private void ClearChartFile()
     {
         ChartPreview = "";
@@ -388,46 +401,6 @@
         try
         {
             IApiResponse<ChordChartEditDto> response;
-            if (ChartStream != null)
-            {
-                var uploadResponse = await _fileUploadApi.UploadChartImage(ChartStream);
-
-                if (uploadResponse.IsSuccessStatusCode && uploadResponse.Content!.Success)
-                {
-                    FormModel.FilePath = uploadResponse.Content.FilePath;
-                    ChartPreview = FormModel.FilePath; 
-                }
-                else
-                {
-                    ChartUploadError = "Failed to upload chart image";
-                    ClearChartFile();
-                }
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(FormModel.FilePath))
-                {
-                    ChartUploadError = "Chart image is required";
-                    IsSubmitting = false;
-                    return;
-                }                
-            }
-
-            if( AudioStream != null)
-            {
-                var uploadResponse = await _fileUploadApi.UploadChartAudio(AudioStream);
-
-                if (uploadResponse.IsSuccessStatusCode && uploadResponse.Content!.Success)
-                {
-                    FormModel.ChartAudioFilePath = uploadResponse.Content.FilePath;
-                    AudioPreview = FormModel.ChartAudioFilePath; // Use server URL for preview
-                }
-                else
-                {
-                    AudioUploadError = "Failed to upload audio file";
-                    ClearAudioFile();
-                }
-            }
 
             if (!string.IsNullOrEmpty(FormModel.Id)) // Edit existing
             {
@@ -440,27 +413,43 @@
                     FilePath = FormModel.FilePath,
                     ChartAudioFilePath = FormModel.ChartAudioFilePath
                 };
-                response = await _chordChartsApi.UpdateChordChart(editDto);
+
+                var chartDataJson = JsonSerializer.Serialize(editDto, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                response = await _chordChartsApi.UpdateChordChartFiles(
+                    ChartStream,
+                    AudioStream,
+                    chartDataJson);
             }
             else // Create new
             {
                 var createDto = new ChordChartCreateDto
                 {
                     ChordId = FormModel.ChordId,
-                    FretPosition = FormModel.FretPosition.HasValue ? FormModel.FretPosition.Value : 1,
-                    PositionDescription = FormModel.PositionDescription,
-                    FilePath = FormModel.FilePath,
-                    ChartAudioFilePath = FormModel.ChartAudioFilePath
+                    FretPosition = FormModel.FretPosition ?? 1,
+                    PositionDescription = FormModel.PositionDescription
                 };
-                response = await _chordChartsApi.CreateChordChart(createDto);
+
+                var chartDataJson = JsonSerializer.Serialize(createDto, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                response = await _chordChartsApi.CreateChordChartFiles(
+                    ChartStream,
+                    AudioStream,
+                    chartDataJson);
             }
 
             if (response.IsSuccessStatusCode)
             {
-                var fileName = FormModel.FilePath?.Split('/').Last() ?? "chart";
+                var chart = response.Content!;
                 var successMessage = !string.IsNullOrEmpty(FormModel.Id)
-                    ? $"Chord chart {fileName} updated successfully"
-                    : $"Chord chart {fileName} created successfully";
+                    ? $"Chord chart updated successfully"
+                    : $"Chord chart created successfully";
 
                 _navManager.NavigateTo($"/chord-charts?success={Uri.EscapeDataString(successMessage)}");
             }
@@ -531,7 +520,6 @@
         showDropdown = false;
         CloseCustomizeModal();
     }
-
 
     private async Task GoBack()
     {
