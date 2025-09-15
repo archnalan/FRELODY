@@ -20,9 +20,13 @@
                             <i class="bi bi-search"></i>
                         </button>
                     </div>
-                    <button type="button" class="btn btn-outline-primary"
+                    <button type="button" 
+                            class="btn btn-outline-primary"
+                            data-bs-toggle="tooltip"
+                            title="Add a Song"
                             @onclick="AddSong">
-                        Add Song <i class="bi bi-file-earmark-plus"></i>
+                        <span class="me-2 d-none d-md-inline">Add Song</span> 
+                        <i class="bi bi-file-earmark-plus"></i>
                     </button>
                 </div>
             </div>
@@ -31,6 +35,8 @@
         <div class="d-flex justify-content-center align-items-center my-3">
             <div class="d-flex align-items-center bg-white me-5 rounded rounded-3 gap-3 p-2 shadow">
                 <button class="btn @(viewMode == ViewMode.All ? "btn-outline-primary" : "btn-outline-secondary")"
+                        data-bs-toggle="tooltip"
+                        title="View All Songs"
                         @onclick="() => SetViewMode(ViewMode.All)" style="width:3.5rem">
                     @if (viewMode == ViewMode.All)
                     {
@@ -42,6 +48,8 @@
                     }
                 </button>
                 <button class="btn @(viewMode == ViewMode.Catalogue ? "btn-outline-primary" : "btn-outline-secondary")"
+                        data-bs-toggle="tooltip"
+                        title="View by Catalogue"
                         @onclick="() => SetViewMode(ViewMode.Catalogue)" style="width:3.5rem">
                     @if (viewMode == ViewMode.Catalogue)
                     {
@@ -53,6 +61,8 @@
                     }
                 </button>
                 <button class="btn @(viewMode == ViewMode.Favorites ? "btn-outline-primary" : "btn-outline-secondary")"
+                        data-bs-toggle="tooltip"
+                        title="View Favorites"
                         @onclick="() => SetViewMode(ViewMode.Favorites)" style="width:3.5rem">
                     @if (viewMode == ViewMode.Favorites)
                     {
@@ -65,7 +75,10 @@
                 </button>
             </div>
             <div class="d-flex align-items-center bg-white rounded rounded-3 gap-3 p-2 shadow">
-                <button class="btn @(activeView == ActiveView.Expanded ? "btn-outline-primary" : "btn-outline-secondary")" @onclick="() => SetActiveView(ActiveView.Expanded)" style="width:3.5rem">
+                <button class="btn @(activeView == ActiveView.Expanded ? "btn-outline-primary" : "btn-outline-secondary")" 
+                        data-bs-toggle="tooltip"
+                        title="Expanded View"
+                        @onclick="() => SetActiveView(ActiveView.Expanded)" style="width:3.5rem">
                     @if (activeView == ActiveView.Expanded)
                     {
                         <i class="bi bi-list"></i>
@@ -75,7 +88,10 @@
                         <i class="bi bi-list-task"></i>
                     }
                 </button>
-                <button class="btn @(activeView == ActiveView.Collapsed ? "btn-outline-primary" : "btn-outline-secondary")" @onclick="() => SetActiveView(ActiveView.Collapsed)" style="width:3.5rem">
+                <button class="btn @(activeView == ActiveView.Collapsed ? "btn-outline-primary" : "btn-outline-secondary")" 
+                        data-bs-toggle="tooltip"
+                        title="Collapsed View"
+                        @onclick="() => SetActiveView(ActiveView.Collapsed)" style="width:3.5rem">
                     @if (activeView == ActiveView.Collapsed)
                     {
                         <i class="bi bi-grid-fill"></i>
@@ -92,7 +108,7 @@
         {
             case ViewMode.All:
                 <div class="row" style="z-index:0">
-                    <SongList @ref="songListRef" />
+                    <SongList @ref="songListRef" ViewStyle="activeView" />
                 </div>
                 break;
             default:
@@ -141,7 +157,11 @@
         if (viewMode != mode)
         {
             viewMode = mode;
-            if (songListViewRef != null) await songListViewRef.SetViewMode(mode);
+            if (songListViewRef != null)
+            {
+                await songListViewRef.SetViewMode(mode);
+                await songListViewRef.SetActiveView(activeView);
+            }
         }
     }
 
@@ -150,36 +170,16 @@
         if (activeView != view)
         {
             activeView = view;
-            if (songListViewRef != null) await songListViewRef.SetActiveView(view);
-            switch (activeView)
+            if (songListViewRef != null)
             {
-                case ActiveView.Expanded:
-                    // Expand all song books and categories
-                    // foreach (var book in SongBooks)
-                    // {
-                    //     _songBookExpansionState[book.Id ?? ""] = true;
-                    //     foreach (var cat in book.Categories)
-                    //     {
-                    //         _categoryExpansionState[cat.Id ?? ""] = true;
-                    //     }
-                    // }
-                    break;
-                case ActiveView.Collapsed:
-                    // Collapse all song books and categories
-                    // foreach (var book in SongBooks)
-                    // {
-                    //     _songBookExpansionState[book.Id ?? ""] = false;
-                    //     foreach (var cat in book.Categories)
-                    //     {
-                    //         _categoryExpansionState[cat.Id ?? ""] = false;
-                    //     }
-                    // }
-                    break;
-                default:
-                    // Default: keep current expansion state
-                    break;
+                await songListViewRef.SetActiveView(view);
+                await songListViewRef.SetViewMode(viewMode);
             }
-            //await LoadData();
+            if (songListRef != null)
+            {
+                await songListRef.SetActiveView(view);
+                //await songListRef.SetViewMode(viewMode);
+            }
         }
     }
 

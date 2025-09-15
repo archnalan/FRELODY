@@ -94,7 +94,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         }
         #endregion
 
-
         #region Delete song book by Id
         public async Task<ServiceResult<bool>> DeleteSongBook(string id)
         {

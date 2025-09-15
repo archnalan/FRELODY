@@ -4,7 +4,7 @@
 .songbook-header {
     cursor: pointer;
     padding: 10px;
-    border: 1px solid #ced4da;
+    border: 2px solid #ced4da;
     border-radius: 5px;
     display: flex;
     justify-content: space-between;
@@ -15,7 +15,7 @@
 .category-header {
     cursor: pointer;
     padding: 10px;
-    border: 1px solid #ced4da;
+    border: 1.5px solid #ced4da;
     display: flex;
     justify-content: space-between;
     align-items: center;

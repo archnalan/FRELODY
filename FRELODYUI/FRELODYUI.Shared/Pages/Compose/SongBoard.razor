@@ -15,24 +15,66 @@
     }
     else
     {
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="d-flex flex-grow-1">
+        <div class="row row-cols-lg-12 g-2 align-items-center">
+            <!-- Input 1 -->
+            <div class="col-3 col-md-2">
                 <input type="number"
                        @bind="FormattedSongNumber"
-                       class="form-control me-2"
-                       placeholder="Song Number"
-                       style="width:5rem" 
-                       min="1"/>
+                       class="form-control"
+                       placeholder="Song #"
+                       min="1" />
+            </div>
 
+            <!-- Input 2 -->
+            <div class="col-9 col-md-4">
                 <input type="text"
                        @bind="SongTitle"
-                       class="form-control w-50"
+                       class="form-control"
                        placeholder="Song Title" />
             </div>
-            <button @onclick="HandleSongSave" class="btn btn-outline-primary">
-                Save Song
-            </button>
+
+            <!-- Dropdown -->
+            <div class="col-9 col-md-4">
+                @if (string.IsNullOrEmpty(selectedSongBook?.Id))
+                {
+                    <SongBookDropdown @ref="songBookDropdownRef"
+                                      SelectedSongBook="selectedSongBook"
+                                      SelectedSongBookChanged="HandleSongBookChanged" />
+
+                }
+                else if(selectedSongBook != null && !string.IsNullOrEmpty(selectedSongBook.Id))
+                {
+                    <div class="w-100 row">
+                        <div class="col-4 btn btn-link text-decoration-none" 
+                             @onclick="ChangeBookSelection">
+                            <strong class="text-sm-start">
+                                @(selectedSongBook.Title.Length > MAX_TITLE_LEN
+                                                        ? selectedSongBook.Title.Substring(0, 15) + "…"
+                                                        : selectedSongBook.Title)
+                            </strong>
+                        </div>
+                        <div class="col-8">
+                            <CategoriesDropdown SelectedCategory="@selectedCategory"
+                                                SelectedCategoryChanged="HandleCategoryChanged"
+                                                SongBookId="@selectedSongBook.Id"
+                                                TabIndex="10" />
+                        </div>
+                       
+                    </div>
+                }
+            </div>
+
+            <!-- Save Button -->
+            <div class="col-3 col-md-2 d-grid">
+                <button type="button" 
+                        class="btn btn-outline-primary"
+                        @onclick="HandleSongSave" >
+                    <span class="me-2 d-none d-md-inline">Save Song</span>
+                    <i class="bi bi-clipboard-check"></i>
+                </button>
+            </div>
         </div>
+
         @if (initialPartsItems.Any())
         {
             <TabsComponent InitialItems="initialPartsItems"
@@ -60,12 +102,17 @@
     [Parameter]
     public string? SongId { get; set; }
     const int MAX_SECTIONS = 25;
-    private string? SongTitle = "My New Song";
+    private string SongTitle = "My New Song";
     private int SongNumber = 1;   
     private Dictionary<int, List<SegmentCreateDto>> AllPartsSegments =
     new() { [1] = new List<SegmentCreateDto>() };
     private List<TabsComponent.TabsComponentItem> initialPartsItems = new();
     private TabsComponent.TabsComponentItem? activeTabItem;
+    private SongBookDto? selectedSongBook = null;
+    private CategoryDto? selectedCategory = null; 
+    private SimpleSongCreateDto songData = new();
+    private SongBookDropdown? songBookDropdownRef;
+    private const int MAX_TITLE_LEN = 15;
     private bool isLoading = true;
 
     private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
@@ -220,12 +267,10 @@
     private async Task HandleSongSave()
     {
         var allSegments = AllPartsSegments.Values.SelectMany(v => v).ToList();
-        var songData = new SimpleSongCreateDto
-        {
-            Title = SongTitle,
-            SongNumber = SongNumber,
-            SongLyrics = allSegments
-        };
+
+        songData.Title = SongTitle;
+        songData.SongNumber = SongNumber;
+        songData.SongLyrics = allSegments;
 
         if (allSegments.Count == 0)
         {
@@ -363,6 +408,38 @@
 
         // Force re-render of the tabs content by triggering StateHasChanged
         StateHasChanged();
+    }
+
+    private async Task HandleSongBookChanged(SongBookDto? newSongBook)
+    {
+        selectedSongBook = newSongBook;
+        songData.SongBookId = newSongBook?.Id;
+        // Reset selected category when song book changes
+        selectedCategory = null;
+        songData.CategoryId = null;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleCategoryChanged(CategoryDto? newCategory)
+    {
+        selectedCategory = newCategory;
+        songData.CategoryId = newCategory?.Id;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void ChangeBookSelection()
+    {
+        selectedSongBook = null;
+        selectedCategory = null;
+        songData.SongBookId = null;
+        songData.CategoryId = null;
+        StateHasChanged();
+
+        if (songBookDropdownRef != null)
+        {
+           await songBookDropdownRef.FocusInput();
+        }
     }
 
     private async Task ConfirmModal()

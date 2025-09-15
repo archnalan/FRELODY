@@ -12,7 +12,7 @@
         <div class="w-100 songbook-container">
             @foreach (var songBook in SongBooks)
             {
-                <div class="songbook-header bg-Indigo-30 mb-2"
+                <div class="songbook-header bg-Indigo-30 my-2"
                      @onclick="() => ToggleSongBookExpansion(songBook)">
                     <div class="d-flex flex-column gap-1">
                         <span class="fs-5 fw-semibold">@songBook.Title</span>

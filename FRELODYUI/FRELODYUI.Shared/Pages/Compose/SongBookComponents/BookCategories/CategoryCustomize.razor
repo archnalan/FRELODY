@@ -1,0 +1,108 @@
+﻿@inject ILogger<CategoryCustomize> _logger
+
+<div class="modal fade @(show ? "show" : "")"
+     style="display: @(show ? "block" : "none"); z-index:10"
+     tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content p-2">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">@ModalHeaderText Category</h5>
+                <button type="button" class="btn btn-close" @onclick="Close"></button>
+            </div>
+            <div class="modal-body border-0 px-3">
+                <EditForm Model="@Content" OnValidSubmit="@Save" Context="formContext">
+                    <DataAnnotationsValidator />
+
+                    <div class="form-group mb-3">
+                        <label>Category Name</label>
+                        <InputText class="form-control" @bind-Value="@Content.Name" autocomplete="off" required />
+                        <div style="min-height:1.5rem">
+                            <ValidationMessage For="@(() => Content.Name)" />
+                            @if (formContext.GetValidationMessages(() => Content.Name).Any())
+                            {
+                                <span class="text-muted small">
+                                    <a href="#" @onclick="@(() => OpenFeedbackDialog())" @onclick:preventDefault="true">
+                                        Report issue with category
+                                    </a>
+                                </span>
+                            }
+                        </div>
+                    </div>
+                    <div class="form-group text-end">
+                        <button type="button" class="btn btn-outline-danger me-3" @onclick="Close">Cancel</button>
+                        <button type="submit" class="btn btn-outline-primary">Save</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (show)
+{
+    <div class="modal-backdrop fade show" style="z-index:0"></div>
+}
+
+<FeedbackDialog IsVisible="@showFeedbackDialog"
+                Content="@feedbackData"
+                OnSubmit="@HandleFeedbackSubmit"
+                OnClose="@CloseFeedbackDialog" />
+
+@code {
+    [Parameter] public CategoryDto Content { get; set; } = new();
+    [Parameter] public string ModalHeaderText { get; set; } = "Create";
+    [Parameter] public EventCallback<CategoryDto> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool show { get; set; }
+
+    private bool showFeedbackDialog = false;
+    private UserFeedbackDto feedbackData = new();
+
+    public void Open()
+    {
+        show = true;
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        show = false;
+        OnCancel.InvokeAsync();
+    }
+
+    private async Task Save()
+    {
+        await OnSave.InvokeAsync(Content);
+        show = false;
+    }
+
+    private void OpenFeedbackDialog()
+    {
+        feedbackData = new UserFeedbackDto
+        {
+            Subject = $"Category Issue: {Content.Name ?? "Unknown"}",
+            Title = "Report Category Issue",
+            SubjectLabel = "Category Name",
+            SubjectPlaceholder = "Enter the category name...",
+            CommentLabel = "Description",
+            CommentPlaceholder = "Describe the issue with this category...",
+            CommentHelperText = "Help us improve our category system",
+            SubmitButtonText = "Submit"
+        };
+        showFeedbackDialog = true;
+        StateHasChanged();
+    }
+
+    private void CloseFeedbackDialog()
+    {
+        showFeedbackDialog = false;
+        feedbackData = new();
+        StateHasChanged();
+    }
+
+    private async Task HandleFeedbackSubmit(UserFeedbackDto feedback)
+    {
+        CloseFeedbackDialog();
+        await Task.CompletedTask;
+    }
+}

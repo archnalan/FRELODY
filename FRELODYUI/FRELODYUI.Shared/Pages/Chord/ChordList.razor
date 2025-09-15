@@ -31,8 +31,10 @@
                         </button>
                     </div>
                     <button class="btn btn-outline-primary"
+                         data-bs-toggle="tooltip"
+                         title="Add Chord"
                          @onclick="@(() => OpenChordCreateModal("Create"))">
-                        <span class="me-2">Add Chord</span>
+                        <span class="me-2 d-none d-md-inline">Add Chord</span>
                         <i class="bi bi-plus-circle fs-5"></i>
                     </button>
                 </div>
@@ -84,7 +86,7 @@
 @if (showChordCreateModal)
 {
     <ChordCustomize Show="showChordCreateModal"
-                    ModalHeaderText="modalHeaderText"
+                    ModalHeaderText="@modalHeaderText"
                     Content="selectedChord"
                     OnSave="HandleChordCreated" 
                     OnCancel="CloseChordCreateModal" />

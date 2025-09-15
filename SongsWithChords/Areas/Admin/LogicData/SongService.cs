@@ -42,7 +42,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 limit = limit <= 0 ? 10 : limit;
 
                 var page = await _context.Songs
-                        .OrderBy(s => s.Title)
+                        .OrderBy(s => s.SongNumber)
                         .ThenByDescending(s => s.Rating ?? 0)
                         .ToPaginatedResultAsync(offset, limit);
 
@@ -99,7 +99,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 }
 
                 var page = await baseQuery
-                          .OrderBy(s => s.Title)
+                          .OrderBy(s => s.SongNumber)
                           .ThenByDescending(s => s.Rating ?? 0)
                           .ToPaginatedResultAsync(offset, limit);
 
@@ -136,7 +136,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 var songs = await _context.Songs
                     .Where(s => s.CategoryId == categoryId)
-                    .OrderBy(s => s.Title)
+                    .OrderBy(s => s.SongNumber)
                     .ThenByDescending(s => s.Rating ?? 0)
                     .Select(s => new SongDto
                     {
@@ -164,11 +164,17 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 try
                 {
-                    // Create and save the Song first
+                    bool categoryExists = false;
+                    if( !string.IsNullOrEmpty(songDto.CategoryId))
+                    {
+                        categoryExists = await _context.Categories
+                            .AnyAsync(c => c.Id == songDto.CategoryId);
+                    }
                     var song = new Song
                     {
                         Title = songDto.Title,
                         SongNumber = songDto.SongNumber,
+                        CategoryId = categoryExists ? songDto.CategoryId : null,
                         Slug = songDto.Title.ToLower().Replace(" ", "-"),
                         Rating = 0m
                     };

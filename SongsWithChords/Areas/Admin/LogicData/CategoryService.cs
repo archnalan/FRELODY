@@ -96,5 +96,109 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
         #endregion
+
+        #region Create a category
+        public async Task<ServiceResult<CategoryDto>> CreateCategory(CategoryDto categoryDto)
+        {
+            try
+            {
+                if (categoryDto == null)
+                {
+                    return ServiceResult<CategoryDto>.Failure(
+                        new BadRequestException("Category data is required"));
+                }
+                if (!string.IsNullOrEmpty(categoryDto.ParentCategoryId))
+                {
+                    bool parentExists = await _context.Categories
+                        .AnyAsync(c => c.Id == categoryDto.ParentCategoryId);
+                    if (!parentExists)
+                    {
+                        return ServiceResult<CategoryDto>.Failure(
+                            new BadRequestException($"Parent category of does not exist. ID:{categoryDto.ParentCategoryId} "));
+                    }
+                }
+
+                if(!string.IsNullOrEmpty(categoryDto.SongBookId))
+                {
+                    bool songBookExists = await _context.SongBooks
+                        .AnyAsync(sb => sb.Id == categoryDto.SongBookId);
+                    if (!songBookExists)
+                    {
+                        return ServiceResult<CategoryDto>.Failure(
+                            new BadRequestException($"Song book does not exist. ID:{categoryDto.SongBookId} "));
+                    }
+                }
+
+                var category = categoryDto.Adapt<Category>();
+                category.Id = Guid.NewGuid().ToString();
+                _context.Categories.Add(category);
+                await _context.SaveChangesAsync();
+                var createdCategoryDto = category.Adapt<CategoryDto>();
+                return ServiceResult<CategoryDto>.Success(createdCategoryDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("An error occurred while creating a category. {Error}", ex);
+                return ServiceResult<CategoryDto>.Failure(
+                    new ServerErrorException("An error occurred while creating the category."));
+            }
+        }
+        #endregion
+
+        #region Update a category
+        public async Task<ServiceResult<CategoryDto>> UpdateCategory(string categoryId, CategoryDto categoryDto)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(categoryId) || categoryDto == null)
+                {
+                    return ServiceResult<CategoryDto>.Failure(
+                        new BadRequestException("Category ID and data are required"));
+                }
+                var existingCategory = await _context.Categories.FindAsync(categoryId);
+                if (existingCategory == null)
+                {
+                    return ServiceResult<CategoryDto>.Failure(
+                        new NotFoundException($"Category not found. ID: {categoryId}"));
+                }
+                if (!string.IsNullOrEmpty(categoryDto.ParentCategoryId))
+                {
+                    bool parentExists = await _context.Categories
+                        .AnyAsync(c => c.Id == categoryDto.ParentCategoryId && c.Id != categoryId);
+                    if (!parentExists)
+                    {
+                        return ServiceResult<CategoryDto>.Failure(
+                            new BadRequestException($"Parent category does not exist. ID:{categoryDto.ParentCategoryId} "));
+                    }
+                }
+                if (!string.IsNullOrEmpty(categoryDto.SongBookId))
+                {
+                    bool songBookExists = await _context.SongBooks
+                        .AnyAsync(sb => sb.Id == categoryDto.SongBookId);
+                    if (!songBookExists)
+                    {
+                        return ServiceResult<CategoryDto>.Failure(
+                            new BadRequestException($"Song book does not exist. ID:{categoryDto.SongBookId} "));
+                    }
+                }
+                existingCategory.Name = categoryDto.Name;
+                existingCategory.ParentCategoryId = categoryDto.ParentCategoryId;
+                existingCategory.Sorting = categoryDto.Sorting;
+                existingCategory.CategorySlug = categoryDto.CategorySlug;
+                existingCategory.SongBookId = categoryDto.SongBookId;
+                _context.Categories.Update(existingCategory);
+                await _context.SaveChangesAsync();
+                var updatedCategoryDto = existingCategory.Adapt<CategoryDto>();
+                return ServiceResult<CategoryDto>.Success(updatedCategoryDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("An error occurred while updating category {CategoryId}. {Error}", categoryId, ex);
+                return ServiceResult<CategoryDto>.Failure(
+                    new ServerErrorException("An error occurred while updating the category."));
+            }
+        }
+        #endregion
+
     }
 }

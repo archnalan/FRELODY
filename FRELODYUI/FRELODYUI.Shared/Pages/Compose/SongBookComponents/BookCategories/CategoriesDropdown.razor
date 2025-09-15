@@ -1,0 +1,253 @@
+﻿@inject ILogger<CategoriesDropdown> _logger
+
+<div class="dropdown" style="width: 100%;">
+    <div class="position-relative">
+        <input class="form-control form-control-sm pe-4"
+               type="text"
+               tabindex="@TabIndex" 
+               placeholder="add category..."
+               autocomplete="off"
+               @bind="searchTerm"
+               @oninput="HandleSearch"
+               @onfocus="@(() => ToggleDropdown(true))" />
+
+        <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-2 text-muted"
+           @onclick="@(() => ToggleDropdown(!showDropdown))"></i>
+    </div>   
+    
+    @if (showDropdown)
+    {
+        <div class="dropdown-menu show w-100"
+             style="position: absolute; max-height: 300px; overflow-y: auto; z-index:5">
+            <button tabindex="@(TabIndex + 1)" class="dropdown-item text-muted" type="button" @onclick="() => SelectNone()">
+                <i class="bi bi-x-circle"></i> None
+            </button>
+            <div class="dropdown-divider"></div>
+            @foreach (var category in filteredCategories)
+            {
+                <button tabindex="@(TabIndex + 1)" class="dropdown-item" type="button" @onclick="() => SelectCategory(category)">
+                    <div class="d-flex flex-column">
+                        <span class="fw-semibold">@category.Name</span>
+                        @if (category.Sorting.HasValue)
+                        {
+                            <small class="text-muted">Order: @category.Sorting.Value</small>
+                        }
+                    </div>
+                </button>
+            }
+            @if (!filteredCategories.Any())
+            {
+                <div class="dropdown-item text-muted">No categories found</div>
+            }
+            <div class="dropdown-divider"></div>
+            <button tabindex="@(TabIndex + 3)" class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
+                <i class="bi bi-plus-circle-dotted"></i> Add New Category
+            </button>
+        </div>
+        <div style="z-index:0" class="modal-backdrop bg-transparent" @onclick="() => ToggleDropdown(false)"></div>
+    }
+</div>
+
+@if (showCustomizeModal)
+{
+    <CategoryCustomize Show="showCustomizeModal"
+                       Content="SelectedCategory"
+                       OnSave="HandleCategorySaved" 
+                       OnCancel="CloseCustomizeModal" />
+}
+
+@if (_modalService.IsModalVisible)
+{
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
+}
+
+@code {
+    [Parameter] public CategoryDto SelectedCategory { get; set; } = new();
+    [Parameter] public EventCallback<CategoryDto> SelectedCategoryChanged { get; set; }
+    [Parameter] public string? SongBookId { get; set; }
+    [Parameter] public int TabIndex { get; set; } = 0;
+
+    private string searchTerm = "";
+    private bool showDropdown = false;
+    private bool showCustomizeModal = false;
+    private List<CategoryDto> AvailableCategories { get; set; } = new();
+    private List<CategoryDto> filteredCategories = new();
+
+    protected async override Task OnInitializedAsync()
+    {
+        searchTerm = SelectedCategory?.Name ?? "";
+        if (!string.IsNullOrEmpty(SongBookId))
+        {
+            await LoadCategories();
+        }
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            Refit.IApiResponse<List<CategoryDto>> response;
+
+            if (!string.IsNullOrEmpty(SongBookId))
+            {
+                // Load categories for specific song book
+                response = await _categoriesApi.GetCategoriesBySongBookId(SongBookId);
+            }
+            else
+            {
+                // Load all categories
+                response = await _categoriesApi.GetAllCategories();
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                AvailableCategories = response.Content!;
+                filteredCategories = response.Content!;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        ActionType = "LoadCategories",
+                        Data = errorMessage
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading categories");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "An error occurred while loading categories.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "LoadCategories",
+                    Data = ex.Message
+                }
+            });
+        }
+    }
+
+    private void HandleSearch(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        FilterCategories();
+    }
+
+    private void FilterCategories()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredCategories = AvailableCategories;
+            return;
+        }
+
+        filteredCategories = AvailableCategories
+            .Where(c => c.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private async Task SelectCategory(CategoryDto category)
+    {
+        SelectedCategory = category;
+        searchTerm = category.Name;
+        showDropdown = false;
+        await SelectedCategoryChanged.InvokeAsync(category);
+    }
+
+    private async Task SelectNone()
+    {
+        var emptyCategory = new CategoryDto();
+        SelectedCategory = emptyCategory;
+        searchTerm = "";
+        showDropdown = false;
+        await SelectedCategoryChanged.InvokeAsync(emptyCategory);
+    }
+
+    private void ToggleDropdown(bool show)
+    {
+        showDropdown = show;
+    }
+
+    private void OpenCustomizeModal()
+    {
+        showCustomizeModal = true;
+        showDropdown = false;
+        SelectedCategory = new();
+        SelectedCategory.Name = searchTerm;
+        StateHasChanged();
+    }
+
+    private void CloseCustomizeModal()
+    {
+        showCustomizeModal = false;
+    }
+
+    private async Task HandleCategorySaved(CategoryDto newCategory)
+    {
+        // Check if category already exists
+        newCategory = AvailableCategories.FirstOrDefault(c => 
+                     c.Name.Trim().ToLower() == newCategory.Name.Trim().ToLower()) 
+                     ?? newCategory;
+        
+        if (!AvailableCategories.Any(c => c.Id == newCategory.Id))
+        {
+            newCategory.SongBookId = SongBookId;
+            var response = await _categoriesApi.CreateCategory(newCategory);
+
+            if (response.IsSuccessStatusCode)
+            {
+                newCategory = response.Content!;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        ActionType = "CreateCategory",
+                        Data = errorMessage
+                    }
+                });
+                return;
+            }
+            AvailableCategories.Add(newCategory);
+        }
+
+        // Select the new category
+        await SelectCategory(newCategory);
+        CloseCustomizeModal();
+    }
+
+    private async Task ConfirmModal()
+    {
+        //Handle specific contexts
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+}

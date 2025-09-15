@@ -1,0 +1,140 @@
+﻿@if (Show)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Song Book</h5>
+                    <button type="button" class="btn-close" @onclick="Cancel"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="songBook" OnValidSubmit="SaveSongBook">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Title *</label>
+                            <InputText class="form-control" @bind-Value="songBook.Title" placeholder="Song book title" />
+                            <ValidationMessage For="@(() => songBook.Title)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Author</label>
+                            <InputText class="form-control" @bind-Value="songBook.Author" placeholder="Author name" />
+                            <ValidationMessage For="@(() => songBook.Author)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Publisher *</label>
+                            <InputText class="form-control" @bind-Value="songBook.Publisher" placeholder="Publisher name" />
+                            <ValidationMessage For="@(() => songBook.Publisher)" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Publication Date *</label>
+                                    <InputDate class="form-control" @bind-Value="songBook.PublicationDate" />
+                                    <ValidationMessage For="@(() => songBook.PublicationDate)" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Language *</label>
+                                    <InputText class="form-control" @bind-Value="songBook.Language" placeholder="Language" />
+                                    <ValidationMessage For="@(() => songBook.Language)" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">ISBN *</label>
+                                    <InputText class="form-control" @bind-Value="songBook.ISBN" placeholder="ISBN (10-13 characters)" />
+                                    <ValidationMessage For="@(() => songBook.ISBN)" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Edition</label>
+                                    <InputText class="form-control" @bind-Value="songBook.Edition" placeholder="Edition" />
+                                    <ValidationMessage For="@(() => songBook.Edition)" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Subtitle</label>
+                            <InputText class="form-control" @bind-Value="songBook.SubTitle" placeholder="Subtitle" />
+                            <ValidationMessage For="@(() => songBook.SubTitle)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="songBook.Description" placeholder="Description" />
+                            <ValidationMessage For="@(() => songBook.Description)" />
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Song Book</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public SongBookDto Content { get; set; } = new();
+    [Parameter] public EventCallback<SongBookDto> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private SongBookDto songBook = new();
+
+    protected override void OnParametersSet()
+    {
+        if (Show)
+        {
+            songBook = new SongBookDto
+            {
+                Title = Content?.Title ?? "",
+                Author = Content?.Author ?? "",
+                Publisher = Content?.Publisher ?? "",
+                Language = Content?.Language ?? "English",
+                PublicationDate = Content?.PublicationDate ?? DateTime.Today,
+                ISBN = Content?.ISBN ?? "",
+                Edition = Content?.Edition ?? "",
+                SubTitle = Content?.SubTitle ?? "",
+                Description = Content?.Description ?? ""
+            };
+        }
+    }
+
+    private async Task SaveSongBook()
+    {
+        // Generate ID if creating new
+        if (string.IsNullOrEmpty(songBook.Id))
+        {
+            songBook.Id = Guid.NewGuid().ToString();
+        }
+
+        // Generate slug from title
+        if (string.IsNullOrEmpty(songBook.Slug))
+        {
+            songBook.Slug = songBook.Title?.ToLowerInvariant()
+                .Replace(" ", "-")
+                .Replace("'", "")
+                .Replace("\"", "");
+        }
+
+        await OnSave.InvokeAsync(songBook);
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+}

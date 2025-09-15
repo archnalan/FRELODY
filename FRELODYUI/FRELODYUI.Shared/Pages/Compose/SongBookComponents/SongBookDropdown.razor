@@ -1,0 +1,224 @@
+﻿@inject ILogger<SongBookDropdown> _logger
+
+<div class="dropdown" style="width: 100%;">
+    <div class="position-relative">
+        <input class="form-control form-control-sm pe-4"
+               type="text"
+               tabindex="@TabIndex" 
+               @ref="searchInput"
+               placeholder="add song book..."
+               autocomplete="off"
+               @bind="searchTerm"
+               @oninput="HandleSearch"
+               @onfocus="@(() => ToggleDropdown(true))" />
+
+        <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-2 text-muted"
+           @onclick="@(() => ToggleDropdown(!showDropdown))"></i>
+    </div>   
+    
+    @if (showDropdown)
+    {
+        <div class="dropdown-menu show w-100"
+             style="position: absolute; max-height: 300px; overflow-y: auto; z-index:5">
+            <button tabindex="@(TabIndex + 1)" class="dropdown-item text-muted" type="button" @onclick="() => SelectNone()">
+                <i class="bi bi-x-circle"></i> None
+            </button>
+            <div class="dropdown-divider"></div>
+            @foreach (var songBook in filteredSongBooks)
+            {
+                <button tabindex="@(TabIndex + 1)" class="dropdown-item" type="button" @onclick="() => SelectSongBook(songBook)">
+                    <div class="d-flex flex-column">
+                        <span class="fw-semibold">@songBook.Title</span>
+                        @if (!string.IsNullOrEmpty(songBook.Author))
+                        {
+                            <small class="text-muted">by @songBook.Author</small>
+                        }
+                    </div>
+                </button>
+            }
+            @if (!filteredSongBooks.Any())
+            {
+                <div class="dropdown-item text-muted">No song books found</div>
+            }
+            <div class="dropdown-divider"></div>
+            <button tabindex="@(TabIndex + 3)" class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
+                <i class="bi bi-plus-circle-dotted"></i> Add New Song Book
+            </button>
+        </div>
+        <div style="z-index:0" class="modal-backdrop bg-transparent" @onclick="() => ToggleDropdown(false)"></div>
+    }
+</div>
+
+@if (showCustomizeModal)
+{
+    <SongBookCustomize Show="showCustomizeModal"
+                       Content="SelectedSongBook"
+                       OnSave="HandleSongBookSaved" 
+                       OnCancel="CloseCustomizeModal" />
+}
+
+@if (_modalService.IsModalVisible)
+{
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
+}
+
+@code {
+    [Parameter] public SongBookDto SelectedSongBook { get; set; } = new();
+    [Parameter] public EventCallback<SongBookDto> SelectedSongBookChanged { get; set; }
+    [Parameter] public int TabIndex { get; set; } = 0;
+
+    private string searchTerm = "";
+    private bool showDropdown = false;
+    private bool showCustomizeModal = false;
+    private List<SongBookDto> AvailableSongBooks { get; set; } = new();
+    private List<SongBookDto> filteredSongBooks = new();
+    private ElementReference searchInput;
+
+    protected async override Task OnInitializedAsync()
+    {
+        searchTerm = SelectedSongBook?.Title ?? "";
+        await LoadSongBooks();
+    }
+
+    private async Task LoadSongBooks()
+    {
+        var response = await _songsBooksApi.GetAllSongBooks();
+        if (response.IsSuccessStatusCode)
+        {
+            AvailableSongBooks = response.Content!;
+            filteredSongBooks = response.Content!;
+        }
+        else
+        {
+            var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = errorMessage,
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "LoadSongBooks",
+                    Data = errorMessage
+                }
+            });
+        }
+    }
+
+    public async Task FocusInput()
+    {
+        await searchInput.FocusAsync();
+    }
+
+    private void HandleSearch(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        FilterSongBooks();
+    }
+
+    private void FilterSongBooks()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredSongBooks = AvailableSongBooks;
+            return;
+        }
+
+        filteredSongBooks = AvailableSongBooks
+            .Where(sb => sb.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                        (!string.IsNullOrEmpty(sb.Author) && sb.Author.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrEmpty(sb.Publisher) && sb.Publisher.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+    }
+
+    private async Task SelectSongBook(SongBookDto songBook)
+    {
+        SelectedSongBook = songBook;
+        searchTerm = songBook.Title;
+        showDropdown = false;
+        await SelectedSongBookChanged.InvokeAsync(songBook);
+    }
+
+    private async Task SelectNone()
+    {
+        var emptySongBook = new SongBookDto();
+        SelectedSongBook = emptySongBook;
+        searchTerm = "";
+        showDropdown = false;
+        await SelectedSongBookChanged.InvokeAsync(emptySongBook);
+    }
+
+    private void ToggleDropdown(bool show)
+    {
+        showDropdown = show;
+    }
+
+    private void OpenCustomizeModal()
+    {
+        showCustomizeModal = true;
+        showDropdown = false;
+        if (SelectedSongBook != null) SelectedSongBook.Title = searchTerm;
+        StateHasChanged();
+    }
+
+    private void CloseCustomizeModal()
+    {
+        showCustomizeModal = false;
+    }
+
+    private async Task HandleSongBookSaved(SongBookDto newSongBook)
+    {
+        // Check if song book already exists
+        newSongBook = AvailableSongBooks.FirstOrDefault(sb => 
+                     sb.Title.Trim().ToLower() == newSongBook.Title.Trim().ToLower()) 
+                     ?? newSongBook;
+        
+        if (!AvailableSongBooks.Any(sb => sb.Id == newSongBook.Id))
+        {
+            var response = await _songsBooksApi.CreateSongBook(newSongBook);
+            if(!response.IsSuccessStatusCode)
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        ActionType = "CreateSongBook",
+                        Data = errorMessage
+                    }
+                });
+                return;
+            }
+            
+            // Add the created song book to the list
+            var createdSongBook = response.Content!;
+            AvailableSongBooks.Add(createdSongBook);
+            newSongBook = createdSongBook;
+        }
+
+        // Select the new song book
+        await SelectSongBook(newSongBook);
+        CloseCustomizeModal();
+    }
+
+    private async Task ConfirmModal()
+    {
+        //Handle specific contexts
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+}

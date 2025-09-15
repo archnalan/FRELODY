@@ -20,16 +20,23 @@
                         </p>
 
                         <div class="card-actions d-flex justify-content-center mt-3">
-                            <button class="btn btn-sm btn-info me-2" @onclick="() => NavigateToDetails(chord.Id)">
+                            <button class="btn btn-sm btn-info me-2"
+                                    data-bs-toggle="tooltip"
+                                    title="View Chord Details" 
+                                    @onclick="() => NavigateToDetails(chord.Id)">
                                 <i class="bi bi-list"></i>
                             </button>
 
                             <button class="btn btn-sm btn-primary me-2"
+                                    data-bs-toggle="tooltip"
+                                    title="Edit Chord"
                                     @onclick="async () => await HandleEditChord(chord)">
-                                <i class="bi bi-pencil"></i>
+                                <i class="bi bi-pen"></i>
                             </button>
 
                             <button class="btn btn-sm btn-danger"
+                                    data-bs-toggle="tooltip"
+                                    title="Delete Chord"
                                     @onclick="() => HandleDeleteChord(chord)">
                                 <i class="bi bi-trash"></i>
                             </button>

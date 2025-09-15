@@ -53,5 +53,29 @@ namespace FRELODYAPIs.Controllers
             }
             return Ok(result.Data);
         }
+
+        [HttpPost]
+        [ProducesResponseType(typeof(CategoryDto), 200)]
+        public async Task<IActionResult> CreateCategory([FromBody] CategoryDto categoryDto)
+        {
+            var result = await _categoryService.CreateCategory(categoryDto);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
+            return Ok(result.Data);
+        }
+
+        [HttpPut]
+        [ProducesResponseType(typeof(CategoryDto), 200)]
+        public async Task<IActionResult> UpdateCategory([FromBody] CategoryDto categoryDto)
+        {
+            var result = await _categoryService.UpdateCategory(categoryDto.Id, categoryDto);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
+            return Ok(result.Data);
+        }
     }
 }

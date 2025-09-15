@@ -1,0 +1,7 @@
+.fixed-height-img {
+    height: 15rem;
+    min-height: 15rem;
+    max-height: 15rem;
+    object-fit: contain;
+    border-radius: 0.5em;
+}

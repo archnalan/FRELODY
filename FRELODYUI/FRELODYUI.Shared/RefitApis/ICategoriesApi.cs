@@ -15,5 +15,11 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Get("/api/categories/get-all-songs-by-category-id")]
         Task<IApiResponse<List<SongDto>>> GetAllSongsByCategoryId([Query] string categoryId);
+
+        [Post("/api/categories/create-category")]
+        Task<IApiResponse<CategoryDto>> CreateCategory([Body] CategoryDto categoryDto);
+
+        [Put("/api/categories/update-category")]
+        Task<IApiResponse<CategoryDto>> UpdateCategory([Body] CategoryDto categoryDto);
     }
 }

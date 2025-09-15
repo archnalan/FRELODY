@@ -9,30 +9,43 @@
             @for (int i = 0; i < Charts.Count; i++)
             {
                 var chart = Charts[i];
+                _currentChartIndex = i;
                 <div class="carousel-item @(i == 0 ? "active" : "")">
                     <div class="d-flex justify-content-center align-items-center position-relative">
                         <img src="@DisplayChart(chart)"
                              alt="@Chord?.ChordName"
-                             class="img-thumbnail bg-light"
-                             style="max-height: 15rem; border-radius: 0.5em; object-fit: contain; background-color: @(Theme == "dark" ? "#ddd" : "")" />
-                    </div>
-
-                    <!-- Action buttons -->
-                    <div class="text-center mt-2">
-                        <button class="btn btn-sm btn-outline-primary"
-                                @onclick="@(() => AddChart(Chord?.Id))">
-                            <i class="bi bi-plus me-1"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary mx-2"
-                                @onclick="@(() => EditChart(chart.Id))">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger"
-                                @onclick="@(() => DeleteChart(chart.Id))">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                             class="img-thumbnail bg-light fixed-height-img"
+                             style="background-color: @(Theme == "dark" ? "#ddd" : "")" />
                     </div>
                 </div>
+            }
+        </div>
+
+        <!-- Action buttons -->
+        <div class="text-center mt-2">
+            <button class="btn btn-sm btn-outline-primary"
+                    style="scale:0.75" 
+                    data-bs-toggle="tooltip"
+                    title="Add a new chart"
+                    @onclick="@(() => AddChart(Chord?.Id))">
+                <i class="bi bi-plus me-1"></i>
+            </button>
+            @if (CurrentChart != null)
+            {
+                <button class="btn btn-sm btn-outline-secondary mx-2"
+                        style="scale:0.75"
+                        data-bs-toggle="tooltip"
+                        title="Edit current chart"
+                        @onclick="@(() => EditChart(CurrentChart.Id))">
+                    <i class="bi bi-file-earmark-diff"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger"
+                        style="scale:0.75" 
+                        data-bs-toggle="tooltip"
+                        title="Delete current chart"
+                        @onclick="@(() => DeleteChart(CurrentChart.Id))">
+                    <i class="bi bi-file-earmark-x"></i>
+                </button>
             }
         </div>
 
@@ -41,20 +54,23 @@
             <div class="carousel-indicators">
                 @for (int i = 0; i < Charts.Count; i++)
                 {
+                    var index = i;
                     <button type="button"
+                            class="@(i == _currentChartIndex ? "active" : "")"
+                            @onclick="@(() => GoToChart(index))"
                             data-bs-target="#chordCarousel"
-                            data-bs-slide-to="@i"
-                            class="@(i == 0 ? "active" : "")"
-                            aria-current="@(i == 0 ? "true" : "false")"
-                            aria-label="Slide @(i + 1)">
-                    </button>
+                            data-bs-slide-to="@i"></button>
                 }
             </div>
-            <button class="carousel-control-prev" type="button" data-bs-target="#chordCarousel" data-bs-slide="prev">
+            <button class="carousel-control-prev" type="button"
+                    @onclick="PreviousChart"
+                    data-bs-target="#chordCarousel" data-bs-slide="prev">
                 <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                 <span class="visually-hidden">Previous</span>
             </button>
-            <button class="carousel-control-next" type="button" data-bs-target="#chordCarousel" data-bs-slide="next">
+            <button class="carousel-control-next" type="button"
+                    @onclick="NextChart"
+                    data-bs-target="#chordCarousel" data-bs-slide="next">
                 <span class="carousel-control-next-icon" aria-hidden="true"></span>
                 <span class="visually-hidden">Next</span>
             </button>
@@ -90,10 +106,14 @@ else
 
     private List<ChordChartEditDto> Charts { get; set; } = new();
     private const string PlaceholderImagePath = "/_content/FRELODYUI.Shared/images/no_image_placeholder.png";
+    private int _currentChartIndex = 0;
 
     private string Theme = "light";
     private bool isLoading = true;
     private string? ApiBaseUrl = "https://localhost:7077";
+    private ChordChartEditDto? CurrentChart => Charts.Count > 0 && _currentChartIndex >= 0 && _currentChartIndex < Charts.Count
+       ? Charts[_currentChartIndex]
+       : null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -187,6 +207,30 @@ else
             return chart.FilePath.StartsWith('/') ? chart.FilePath : $"/{chart.FilePath}";
         }
         return PlaceholderImagePath;
+    }
+
+    private void NextChart()
+    {
+        if (Charts.Count > 1)
+        {
+            _currentChartIndex = (_currentChartIndex + 1) % Charts.Count;
+        }
+    }
+
+    private void PreviousChart()
+    {
+        if (Charts.Count > 1)
+        {
+            _currentChartIndex = _currentChartIndex == 0 ? Charts.Count - 1 : _currentChartIndex - 1;
+        }
+    }
+
+    private void GoToChart(int index)
+    {
+        if (index >= 0 && index < Charts.Count)
+        {
+            _currentChartIndex = index;
+        }
     }
     
     private void AddChart(string? chordId)
