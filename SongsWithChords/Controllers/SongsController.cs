@@ -122,6 +122,16 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
             return Ok(result.Data);
         }
 
+        [HttpGet]
+        [ProducesResponseType(typeof(List<ComboBoxDto>), 200)]
+        public async Task<IActionResult> GetFavoriteSongs([FromQuery]string? userId = null)
+        {
+            var result = await _songService.GetFavoriteSongs(userId);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            return Ok(result.Data);
+        }
+
         [HttpDelete]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> DeleteSong([FromQuery] string songId)

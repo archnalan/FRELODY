@@ -23,6 +23,25 @@
         Justify = 4
     }
 
+    public enum SongDisplay
+    {
+        LyricsOnly,
+        LyricsAndChords,
+    }
+
+    public enum Theme
+    {
+        Light,
+        Dark,
+        System
+    }
+
+    public enum ChordDisplay
+    {
+        Inline,
+        Above
+    }
+
     public enum ChordType
     {
         Major = 1,

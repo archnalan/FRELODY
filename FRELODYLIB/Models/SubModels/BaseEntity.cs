@@ -13,6 +13,9 @@ namespace FRELODYAPP.Models.SubModels
         public Access? Access { get; set; }
 
         [StringLength(255)]
+        public string? CreatedBy { get; set; }
+
+        [StringLength(255)]
         public string? ModifiedBy { get; set; }
 
         [StringLength(450)] //From the Primary key length
@@ -23,6 +26,7 @@ namespace FRELODYAPP.Models.SubModels
         DateTime? DateCreated { get; set; }
         DateTime? DateModified { get; set; }
         bool? IsDeleted { get; set; }
+        string? CreatedBy { get; set; }
         string? ModifiedBy { get; set; }
         string? TenantId { get; set; }
     }  

@@ -1,0 +1,555 @@
+@page "/user-profile"
+@page "/user-profile/{userId}"
+@using FRELODYAPP.Dtos.UserDtos
+@using FRELODYSHRD.Dtos
+@using FRELODYUI.Shared.Pages.useraccount.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components
+@using Refit
+@using System.Text.Json
+@inject ILogger<UserProfile> _logger
+@implements IDisposable
+
+<div class="container-fluid bg-light vh-100 overflow-y-scroll position-relative">
+    <div class="@GetInnerContainerClass()" style="min-height: 100vh;">
+        
+        @if (isLoading)
+        {
+            <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Profile Header Section -->
+            <div class="profile-header mb-4">
+                @if (isEditingProfile)
+                {
+                    <EditProfileHeader 
+                        UserProfile="@userProfile" 
+                        OnSave="HandleProfileSave" 
+                        OnCancel="CancelProfileEdit"
+                        IsSubmitting="@isSubmittingProfile" />
+                }
+                else
+                {
+                    <ViewProfileHeader 
+                        UserProfile="@userProfile" 
+                        OnEdit="StartProfileEdit" />
+                }
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <ul class="nav nav-tabs" id="profileTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == "library" ? "active" : "")" 
+                                    @onclick="@(() => SetActiveTab("library"))" 
+                                    type="button">
+                                <i class="bi bi-collection-play me-2"></i>Library
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == "settings" ? "active" : "")" 
+                                    @onclick="@(() => SetActiveTab("settings"))" 
+                                    type="button">
+                                <i class="bi bi-gear me-2"></i>Settings
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == "account" ? "active" : "")" 
+                                    @onclick="@(() => SetActiveTab("account"))" 
+                                    type="button">
+                                <i class="bi bi-person-gear me-2"></i>Account
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Library Tab -->
+                @if (activeTab == "library")
+                {
+                    <div class="tab-pane fade show active">
+                        <LibrarySection 
+                            FavoriteSongs="@favoriteSongs"
+                            RecentPlays="@recentPlays"
+                            Collections="@collections"
+                            OnSearchChanged="HandleLibrarySearch"
+                            IsLoading="@isLoadingLibrary" />
+                    </div>
+                }
+
+                <!-- Settings Tab -->
+                @if (activeTab == "settings")
+                {
+                    <div class="tab-pane fade show active">
+                        <SettingsSection 
+                            UserSettings="@userSettings"
+                            OnSettingsChanged="HandleSettingsChange"
+                            OnSaveSettings="SaveUserSettings"
+                            IsLoading="@isLoadingSettings"
+                            IsSaving="@isSavingSettings" />
+                    </div>
+                }
+
+                <!-- Account Tab -->
+                @if (activeTab == "account")
+                {
+                    <div class="tab-pane fade show active">
+                        <AccountSection 
+                            UserProfile="@userProfile"
+                            OnPasswordChange="HandlePasswordChange"
+                            OnExportData="HandleDataExport"
+                            OnDeleteAccount="HandleAccountDeletion" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modals -->
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    [Parameter] public string? userId { get; set; }
+
+    // User data
+    private UpdateUserProfileOutDto userProfile = new();
+    private SettingDto userSettings = new();
+    
+    // Library data
+    private List<ComboBoxDto> favoriteSongs = new();
+    private List<SongPlayHistoryDto> recentPlays = new();
+    private List<SongCollectionDto> collections = new();
+
+    // UI state
+    private string activeTab = "library";
+    private string theme = "light";
+    private bool isLoading = true;
+    private bool isLoadingLibrary = false;
+    private bool isLoadingSettings = false;
+    private bool isSavingSettings = false;
+    private bool isEditingProfile = false;
+    private bool isSubmittingProfile = false;
+
+    // Search and filtering
+    private string librarySearchQuery = "";
+    private CancellationTokenSource? _debounceCts;
+    private const int SearchDebounceMs = 500;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserProfile();
+        await LoadInitialData();
+    }
+
+    private string GetInnerContainerClass()
+    {
+        var baseClass = "container py-4";
+        return theme == "dark" ? baseClass + " text-light bg-dark" : baseClass + " text-dark bg-light";
+    }
+
+    private async Task LoadUserProfile()
+    {
+        try
+        {
+            isLoading = true;
+            
+            // For now, simulate loading user profile
+            // In real implementation, you would call your user API
+            userProfile = new UpdateUserProfileOutDto
+            {
+                Id = userId ?? "current-user",
+                FirstName = "John",
+                LastName = "Doe",
+                UserName = "johndoe",
+                AboutMe = "Music enthusiast and songwriter",
+                ProfilePicUrl = "",
+                CoverPicUrl = "",
+                TotalSongs = 42
+            };
+
+            await LoadUserSettings();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading user profile");
+            ShowErrorModal("Failed to load user profile");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadUserSettings()
+    {
+        try
+        {
+            isLoadingSettings = true;
+            var response = await _settingsApi.GetUserSettings(userId);
+            
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                userSettings = response.Content;
+            }
+            else
+            {
+                // Create default settings if none exist
+                userSettings = new SettingDto
+                {
+                    ChordFont = "Arial",
+                    LyricFont = "Arial",
+                    ChordFontSize = "14",
+                    LyricFontSize = "16",
+                    SongDisplay = SongDisplay.LyricsAndChords,
+                    Theme = Theme.Light,
+                    ChordDisplay = ChordDisplay.Above,
+                    ChordDifficulty = ChordDifficulty.Medium,
+                    PlayLevel = PlayLevel.Medium
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading user settings");
+        }
+        finally
+        {
+            isLoadingSettings = false;
+        }
+    }
+
+    private async Task LoadInitialData()
+    {
+        await Task.WhenAll(
+            LoadFavoriteSongs(),
+            LoadRecentPlays(),
+            LoadCollections()
+        );
+    }
+
+    private async Task LoadFavoriteSongs()
+    {
+        try
+        {
+            isLoadingLibrary = true;
+            var response = await _songsApi.GetFavoriteSongs();
+            
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                favoriteSongs = response.Content.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading favorite songs");
+        }
+        finally
+        {
+            isLoadingLibrary = false;
+        }
+    }
+
+    private async Task LoadRecentPlays()
+    {
+        try
+        {
+            var response = await _playHistoryApi.GetRecentPlays(userId, 10);
+            
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                recentPlays = response.Content;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading recent plays");
+        }
+    }
+
+    private async Task LoadCollections()
+    {
+        try
+        {
+            var response = await _songCollectionsApi.GetAllSongCollections();
+            
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                collections = response.Content;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading collections");
+        }
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        StateHasChanged();
+    }
+
+    private void StartProfileEdit()
+    {
+        isEditingProfile = true;
+        StateHasChanged();
+    }
+
+    private void CancelProfileEdit()
+    {
+        isEditingProfile = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleProfileSave(UpdateUserProfile updatedProfile)
+    {
+        try
+        {
+            isSubmittingProfile = true;
+            
+            // Call user API to update profile
+            // var response = await _userApi.UpdateUserProfile(updatedProfile);
+            
+            // Simulate API call for now
+            await Task.Delay(1000);
+            
+            // Update local profile data
+            userProfile.FirstName = updatedProfile.FirstName;
+            userProfile.LastName = updatedProfile.LastName;
+            userProfile.AboutMe = updatedProfile.AboutMe;
+            userProfile.Address = updatedProfile.Address;
+            userProfile.ProfilePicUrl = updatedProfile.ProfilePicUrl ?? "";
+            userProfile.CoverPicUrl = updatedProfile.CoverPhotoUrl ?? "";
+
+            isEditingProfile = false;
+            
+            ShowSuccessModal("Profile updated successfully!");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating profile");
+            ShowErrorModal("Failed to update profile");
+        }
+        finally
+        {
+            isSubmittingProfile = false;
+        }
+    }
+
+    private async Task HandleSettingsChange(SettingDto settings)
+    {
+        userSettings = settings;
+        StateHasChanged();
+    }
+
+    private async Task SaveUserSettings()
+    {
+        try
+        {
+            isSavingSettings = true;
+            
+            IApiResponse<SettingDto> response;
+            
+            if (string.IsNullOrEmpty(userSettings.Id))
+            {
+                response = await _settingsApi.CreateSetting(userSettings);
+            }
+            else
+            {
+                response = await _settingsApi.UpdateSetting(userSettings);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                ShowSuccessModal("Settings saved successfully!");
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                ShowErrorModal($"Failed to save settings: {errorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving settings");
+            ShowErrorModal("Failed to save settings");
+        }
+        finally
+        {
+            isSavingSettings = false;
+        }
+    }
+
+    private async Task HandleLibrarySearch(string searchQuery)
+    {
+        librarySearchQuery = searchQuery;
+        
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _debounceCts = new CancellationTokenSource();
+        
+        try
+        {
+            await Task.Delay(SearchDebounceMs, _debounceCts.Token);
+            
+            // Implement search logic for library items
+            if (string.IsNullOrEmpty(searchQuery))
+            {
+                await LoadInitialData();
+            }
+            else
+            {
+                // Filter existing data or make API calls with search parameters
+                favoriteSongs = favoriteSongs.Where(s => 
+                    s.ValueText?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true
+                ).ToList();
+                
+                collections = collections.Where(c => 
+                    c.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true
+                ).ToList();
+            }
+            
+            StateHasChanged();
+        }
+        catch (TaskCanceledException)
+        {
+            // Expected when cancelled
+        }
+    }
+
+    private async Task HandlePasswordChange()
+    {
+        // Implement password change logic
+        ShowInfoModal("Password change functionality will be implemented");
+    }
+
+    private async Task HandleDataExport()
+    {
+        // Implement data export logic
+        ShowInfoModal("Data export functionality will be implemented");
+    }
+
+    private async Task HandleAccountDeletion()
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Delete Account",
+            Message = "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.",
+            DangerText = "This action is irreversible!",
+            ButtonText = "Delete Account",
+            OptionType = OptionType.Error,
+            Context = new ModalContext
+            {
+                ActionType = "DeleteAccount",
+                Data = userProfile.Id
+            }
+        });
+    }
+
+    private void ShowSuccessModal(string message)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Success",
+            Message = message,
+            ButtonText = "OK",
+            OptionType = OptionType.Success,
+            Context = new ModalContext { ActionType = "Success" }
+        });
+    }
+
+    private void ShowErrorModal(string message)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Error",
+            Message = message,
+            ButtonText = "OK",
+            OptionType = OptionType.Error,
+            Context = new ModalContext { ActionType = "Error" }
+        });
+    }
+
+    private void ShowInfoModal(string message)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Information",
+            Message = message,
+            ButtonText = "OK",
+            OptionType = OptionType.Info,
+            Context = new ModalContext { ActionType = "Info" }
+        });
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "DeleteAccount")
+        {
+            try
+            {
+                // Implement account deletion logic
+                await Task.Delay(1000); // Simulate API call
+                ShowSuccessModal("Account deletion initiated. You will receive a confirmation email.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting account");
+                ShowErrorModal("Failed to delete account");
+            }
+        }
+        
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+    }
+}
+
+<!-- Component Styles -->
+<style>
+    .profile-header {
+        margin-bottom: 2rem;
+    }
+    
+    .nav-tabs .nav-link {
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: #6c757d;
+        padding: 1rem 1.5rem;
+    }
+    
+    .nav-tabs .nav-link.active {
+        background-color: transparent;
+        border-bottom-color: #0d6efd;
+        color: #0d6efd;
+        font-weight: 600;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        border-color: transparent;
+        color: #0d6efd;
+    }
+</style>

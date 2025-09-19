@@ -38,8 +38,10 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<ChordChart> ChordCharts { get; set; }
         public DbSet<UserFeedback> UserFeedback { get; set; }
         public DbSet<Page> Pages { get; set; }
+        public DbSet<Setting> Settings { get; set; }
         public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
         public DbSet<ShareLink> ShareLinks { get; set; }
+        public DbSet<SongPlayHistory> SongPlayHistories { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -79,6 +81,9 @@ namespace FRELODYAPP.Data.Infrastructure
                     ((x.TenantId == _tenantId || x.TenantId == null)
                     || (x.Access == Access.Public))
                     && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Setting>().HasQueryFilter(x =>
+                    (x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Chord>().HasQueryFilter(x => 
                     x.IsDeleted == false || x.IsDeleted == null);
             builder.Entity<ChordChart>().HasQueryFilter(x =>
@@ -91,6 +96,9 @@ namespace FRELODYAPP.Data.Infrastructure
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<ShareLink>().HasQueryFilter(x => 
                     x.IsActive != false);
+            builder.Entity<SongPlayHistory>().HasQueryFilter(x =>
+                   (x.TenantId == _tenantId || x.TenantId == null)
+                   && (x.IsDeleted == false || x.IsDeleted == null));
 
             // Configure Song and its children
             builder.Entity<Song>()
@@ -147,6 +155,23 @@ namespace FRELODYAPP.Data.Infrastructure
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<SongPlayHistory>(b =>
+            {
+                b.HasOne<Song>()
+                 .WithMany()
+                 .HasForeignKey(h => h.SongId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasOne<User>()
+                 .WithMany()
+                 .HasForeignKey(h => h.UserId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasIndex(h => new { h.SongId, h.UserId });
+                b.HasIndex(h => h.PlayedAt);
+                b.HasIndex(h => h.PlaySource);
+            });
+
             // Configure Chord properties to be stored as strings
             builder.Entity<Chord>()
                 .Property(c => c.Difficulty)
@@ -171,6 +196,24 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<LyricSegment>()
                 .Property(e => e.ChordAlignment)
                 .HasConversion<string>();
+
+            builder.Entity<Setting>(s =>
+            {
+                s.Property(e => e.PlayLevel)
+                .HasConversion<string>();
+
+                s.Property(e=>e.SongDisplay)
+                .HasConversion<string>();
+
+                s.Property(e=>e.ChordDisplay)
+                .HasConversion<string>();
+
+                s.Property(e => e.Theme)
+                .HasConversion<string>();
+
+                s.Property(e => e.ChordDifficulty)
+                .HasConversion<string>();
+            });
 
             // Configure ShareLink relationships
             builder.Entity<ShareLink>()
@@ -269,6 +312,7 @@ namespace FRELODYAPP.Data.Infrastructure
                     entity.Entity.DateModified = DateTime.UtcNow;
                     entity.Entity.ModifiedBy = _userId;
                     entity.Entity.TenantId = entity.Entity.TenantId;
+                    entity.Entity.CreatedBy = _userId;
                 }
                 else if (entity.State == EntityState.Modified)
                 {

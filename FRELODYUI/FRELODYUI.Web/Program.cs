@@ -43,6 +43,10 @@ builder.Services.AddRefitClient<ISongSectionsApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 builder.Services.AddRefitClient<IFeedbackApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+builder.Services.AddRefitClient<ISettingsApi>()
+               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+builder.Services.AddRefitClient<ISongPlayHistoryApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
 var app = builder.Build();
 

@@ -1,0 +1,233 @@
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        @if (IsLoading)
+        {
+            <div class="d-flex justify-content-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading settings...</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Appearance Settings -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-palette me-2"></i>Appearance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Theme</label>
+                            <select class="form-select" @bind="settingsModel.Theme">
+                                @foreach (var theme in Enum.GetValues<Theme>())
+                                {
+                                    <option value="@theme">@theme</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Song Display Mode</label>
+                            <select class="form-select" @bind="settingsModel.SongDisplay">
+                                @foreach (var display in Enum.GetValues<SongDisplay>())
+                                {
+                                    <option value="@display">@GetDisplayName(display)</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Font Settings -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-fonts me-2"></i>Typography
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Chord Font</label>
+                            <select class="form-select" @bind="settingsModel.ChordFont">
+                                <option value="Arial">Arial</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Courier New">Courier New</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Chord Font Size</label>
+                            <select class="form-select" @bind="settingsModel.ChordFontSize">
+                                <option value="12">12px</option>
+                                <option value="14">14px</option>
+                                <option value="16">16px</option>
+                                <option value="18">18px</option>
+                                <option value="20">20px</option>
+                                <option value="24">24px</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Lyric Font</label>
+                            <select class="form-select" @bind="settingsModel.LyricFont">
+                                <option value="Arial">Arial</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Courier New">Courier New</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Lyric Font Size</label>
+                            <select class="form-select" @bind="settingsModel.LyricFontSize">
+                                <option value="14">14px</option>
+                                <option value="16">16px</option>
+                                <option value="18">18px</option>
+                                <option value="20">20px</option>
+                                <option value="22">22px</option>
+                                <option value="24">24px</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chord Settings -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-music-note me-2"></i>Chord Preferences
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Chord Display</label>
+                            <select class="form-select" @bind="settingsModel.ChordDisplay">
+                                @foreach (var display in Enum.GetValues<ChordDisplay>())
+                                {
+                                    <option value="@display">@GetChordDisplayName(display)</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Preferred Difficulty</label>
+                            <select class="form-select" @bind="settingsModel.ChordDifficulty">
+                                @foreach (var difficulty in Enum.GetValues<ChordDifficulty>())
+                                {
+                                    <option value="@difficulty">@GetDifficultyName(difficulty)</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Play Level</label>
+                            <select class="form-select" @bind="settingsModel.PlayLevel">
+                                @foreach (var level in Enum.GetValues<PlayLevel>())
+                                {
+                                    <option value="@level">@GetPlayLevelName(level)</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Button -->
+            <div class="d-flex justify-content-end">
+                <button class="btn btn-primary" @onclick="SaveSettings" disabled="@IsSaving">
+                    @if (IsSaving)
+                    {
+                        <i class="spinner-border spinner-border-sm me-2"></i>
+                    }
+                    Save Settings
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public SettingDto? UserSettings { get; set; }
+    [Parameter] public EventCallback<SettingDto> OnSettingsChanged { get; set; }
+    [Parameter] public EventCallback OnSaveSettings { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+
+    private SettingDto settingsModel = new();
+
+    protected override void OnInitialized()
+    {
+        if (UserSettings != null)
+        {
+            settingsModel = new SettingDto
+            {
+                Id = UserSettings.Id,
+                ChordFont = UserSettings.ChordFont,
+                LyricFont = UserSettings.LyricFont,
+                ChordFontSize = UserSettings.ChordFontSize,
+                LyricFontSize = UserSettings.LyricFontSize,
+                SongDisplay = UserSettings.SongDisplay,
+                Theme = UserSettings.Theme,
+                ChordDisplay = UserSettings.ChordDisplay,
+                ChordDifficulty = UserSettings.ChordDifficulty,
+                PlayLevel = UserSettings.PlayLevel
+            };
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (UserSettings != null && settingsModel.Id != UserSettings.Id)
+        {
+            OnInitialized();
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        await OnSettingsChanged.InvokeAsync(settingsModel);
+        await OnSaveSettings.InvokeAsync();
+    }
+
+    private string GetDisplayName(SongDisplay display) => display switch
+    {
+        SongDisplay.LyricsOnly => "Lyrics Only",
+        SongDisplay.LyricsAndChords => "Lyrics and Chords",
+        _ => display.ToString()
+    };
+
+    private string GetChordDisplayName(ChordDisplay display) => display switch
+    {
+        ChordDisplay.Inline => "Inline with Lyrics",
+        ChordDisplay.Above => "Above Lyrics",
+        _ => display.ToString()
+    };
+
+    private string GetDifficultyName(ChordDifficulty difficulty) => difficulty switch
+    {
+        ChordDifficulty.Easy => "Beginner",
+        ChordDifficulty.Medium => "Intermediate",
+        ChordDifficulty.Advanced => "Advanced",
+        ChordDifficulty.Expert => "Expert",
+        _ => difficulty.ToString()
+    };
+
+    private string GetPlayLevelName(PlayLevel level) => level switch
+    {
+        PlayLevel.Easy => "Beginner",
+        PlayLevel.Medium => "Intermediate",
+        PlayLevel.Advanced => "Advanced",
+        _ => level.ToString()
+    };
+}

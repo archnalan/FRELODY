@@ -168,6 +168,18 @@
         {
             IsNavigating = true;
             StateHasChanged();
+            // Log the song play from list (fire and forget)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _playHistoryApi.LogSongPlay(songId, "SongList");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to log song play from list for song {SongId}", songId);
+                }
+            });
             _navManager.NavigateTo($"/songs/{songId}");
         }
         catch (Exception ex)

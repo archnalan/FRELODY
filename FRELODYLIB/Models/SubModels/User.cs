@@ -30,6 +30,8 @@ namespace FRELODYAPP.Models.SubModels
 
         public bool? IsDeleted { get; set; }
 
+        public string? CreatedBy { get; set; }
+
         public string? ModifiedBy { get; set; }
 
         public string? TenantId { get; set; }

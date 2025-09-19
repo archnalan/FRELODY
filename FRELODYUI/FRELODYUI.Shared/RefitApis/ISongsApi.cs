@@ -41,6 +41,9 @@ namespace FRELODYUI.Shared.RefitApis
         [Get("/api/songs/can-user-rate-song")]
         Task<IApiResponse<CanRateDto>> CanUserRateSong([Query] string songId);
 
+        [Get("/api/songs/get-favorite-songs")]
+        Task<IApiResponse<IEnumerable<ComboBoxDto>>> GetFavoriteSongs();
+
         [Delete("/api/songs/delete-song")]
         Task<IApiResponse<bool>> DeleteSong([Query] string songId);
     }

@@ -1,0 +1,62 @@
+
+<div class="card shadow-sm">
+    <!-- Cover Photo Section -->
+    <div class="position-relative" style="height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        @if (!string.IsNullOrEmpty(UserProfile?.CoverPicUrl))
+        {
+            <img src="@UserProfile.CoverPicUrl" alt="Cover Photo" class="w-100 h-100 object-fit-cover" />
+        }
+        
+        <!-- Edit Button -->
+        <button class="btn btn-outline-light position-absolute top-0 end-0 m-3" @onclick="OnEdit">
+            <i class="bi bi-pencil me-2"></i>Edit Profile
+        </button>
+    </div>
+
+    <!-- Profile Info Section -->
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <!-- Profile Picture -->
+                <div class="position-relative">
+                    @if (!string.IsNullOrEmpty(UserProfile?.ProfilePicUrl))
+                    {
+                        <img src="@UserProfile.ProfilePicUrl" alt="@UserProfile.FirstName @UserProfile.LastName" 
+                             class="rounded-circle border border-4 border-white shadow" 
+                             style="width: 100px; height: 100px; object-fit: cover; margin-top: -50px;" />
+                    }
+                    else
+                    {
+                        <div class="rounded-circle border border-4 border-white shadow bg-primary d-flex align-items-center justify-content-center text-white fw-bold" 
+                             style="width: 100px; height: 100px; margin-top: -50px; font-size: 2rem;">
+                            @(UserProfile?.FirstName?.FirstOrDefault())@(UserProfile?.LastName?.FirstOrDefault())
+                        </div>
+                    }
+                </div>
+            </div>
+            
+            <div class="col">
+                <h2 class="mb-1">@UserProfile?.FirstName @UserProfile?.LastName</h2>
+                <p class="text-muted mb-2">@@@UserProfile?.UserName</p>
+                
+                @if (!string.IsNullOrEmpty(UserProfile?.AboutMe))
+                {
+                    <p class="mb-2">@UserProfile.AboutMe</p>
+                }
+                
+                <div class="d-flex gap-3 text-muted small">
+                    <span><i class="bi bi-music-note me-1"></i>@UserProfile?.TotalSongs songs</span>
+                    @if (!string.IsNullOrEmpty(UserProfile?.Address))
+                    {
+                        <span><i class="bi bi-geo-alt me-1"></i>@UserProfile.Address</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public UpdateUserProfileOutDto? UserProfile { get; set; }
+    [Parameter] public EventCallback OnEdit { get; set; }
+}

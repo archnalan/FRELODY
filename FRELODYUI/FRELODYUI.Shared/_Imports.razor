@@ -27,6 +27,7 @@
 @using FRELODYSHRD.Services
 @using FRELODYAPP.Interfaces
 @using FRELODYSHRD.Dtos.EditDtos
+@using FRELODYAPP.Dtos.UserDtos
 
 @inject ChordLyricExtrator _extractor
 @inject NavigationManager _navManager
@@ -44,4 +45,6 @@
 @inject IClipboardService _clipboardService
 @inject IModalService _modalService
 @inject IFeedbackApi _feedbackApi
+@inject ISongPlayHistoryApi _playHistoryApi
+@inject ISettingsApi _settingsApi
 @*Blazor's _localStorageService*@

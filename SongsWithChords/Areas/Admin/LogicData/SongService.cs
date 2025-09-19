@@ -740,6 +740,36 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         }
         #endregion
 
+        #region Get Favorite Songs
+        public async Task<ServiceResult<List<ComboBoxDto>>> GetFavoriteSongs(string? userId = null)
+        {
+            try
+            {
+                userId ??= _userId;
+                var songs = await _context.Songs
+                    .Where(s => s.IsFavorite == true 
+                        && (string.IsNullOrEmpty(userId) || 
+                        s.CreatedBy == userId ||
+                        s.ModifiedBy == userId))
+                    .OrderBy(s => s.SongNumber)
+                    .ThenByDescending(s => s.Rating ?? 0)
+                    .Select(s => new ComboBoxDto
+                    {
+                        Id = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
+                        ValueText = s.Title,
+                        IdString = s.Id
+                    })
+                    .ToListAsync();
+                return ServiceResult<List<ComboBoxDto>>.Success(songs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetFavoriteSongs");
+                return ServiceResult<List<ComboBoxDto>>.Failure(ex);
+            }
+        }
+        #endregion
+
         #region Soft Delete Song 
         public async Task<ServiceResult<bool>> DeleteSong(string songId)
         {

@@ -1,0 +1,132 @@
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Security Settings -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-shield-lock me-2"></i>Security
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="mb-1">Password</h6>
+                        <small class="text-muted">Change your account password</small>
+                    </div>
+                    <button class="btn btn-outline-primary" @onclick="OnPasswordChange">
+                        Change Password
+                    </button>
+                </div>
+                
+                <hr />
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Two-Factor Authentication</h6>
+                        <small class="text-muted">Add an extra layer of security (Coming Soon)</small>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" disabled>
+                        <label class="form-check-label text-muted">
+                            Enable 2FA
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Information -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-lines-fill me-2"></i>Account Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Username</label>
+                        <p class="mb-0">@UserProfile?.UserName</p>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Full Name</label>
+                        <p class="mb-0">@UserProfile?.FirstName @UserProfile?.LastName</p>
+                    </div>
+                    
+                    <div class="col-12">
+                        <label class="form-label text-muted">Account ID</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" value="@UserProfile?.Id" readonly />
+                            <button class="btn btn-outline-secondary" type="button" title="Copy ID">
+                                <i class="bi bi-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-database me-2"></i>Data Management
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="mb-1">Export Data</h6>
+                        <small class="text-muted">Download all your data (Coming Soon)</small>
+                    </div>
+                    <button class="btn btn-outline-info" @onclick="OnExportData" disabled>
+                        <i class="bi bi-download me-2"></i>Export
+                    </button>
+                </div>
+                
+                <hr />
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Connected Accounts</h6>
+                        <small class="text-muted">Manage your connected social accounts (Coming Soon)</small>
+                    </div>
+                    <button class="btn btn-outline-secondary" disabled>
+                        <i class="bi bi-link-45deg me-2"></i>Manage
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card shadow-sm border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Danger Zone
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1 text-danger">Delete Account</h6>
+                        <small class="text-muted">
+                            Permanently delete your account and all associated data. 
+                            This action cannot be undone.
+                        </small>
+                    </div>
+                    <button class="btn btn-danger" @onclick="OnDeleteAccount">
+                        <i class="bi bi-trash me-2"></i>Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public UpdateUserProfileOutDto? UserProfile { get; set; }
+    [Parameter] public EventCallback OnPasswordChange { get; set; }
+    [Parameter] public EventCallback OnExportData { get; set; }
+    [Parameter] public EventCallback OnDeleteAccount { get; set; }
+}
