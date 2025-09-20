@@ -51,5 +51,7 @@ builder.Services.AddScoped<IPrintService, WebPrintService>();
 builder.Services.AddScoped<IClipboardService, WebClipboardService>();
 builder.Services.AddScoped<IShareService, ShareService>();
 builder.Services.AddScoped<IModalService, ModalService>();
+builder.Services.AddScoped<IStorageService, WebStorageService>();
 builder.Services.AddScoped<ChordLyricExtrator>();
+builder.Services.AddScoped<GlobalAuthStateProvider>();
 await builder.Build().RunAsync();

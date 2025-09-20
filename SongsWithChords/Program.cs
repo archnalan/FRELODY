@@ -17,7 +17,6 @@ using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPIs.Areas.Admin.LogicData;
 using System.Text.Json;
 using FRELODYAPP.Data.Extensions;
-using SongsWithChords.Middleware;
 using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -58,7 +57,7 @@ builder.Services.AddScoped<SecurityUtilityService>();
 builder.Services.AddScoped<TokenService>();
 
 // Register the global exception handler
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+//builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddControllers()

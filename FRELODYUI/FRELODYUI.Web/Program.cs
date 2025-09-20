@@ -1,7 +1,9 @@
+using Blazored.LocalStorage;
 using FRELODYSHRD.Interfaces;
 using FRELODYUI.Services;
 using FRELODYUI.Shared.RefitApis;
 using FRELODYUI.Shared.Services;
+using FRELODYUI.Web.Client.Services;
 using FRELODYUI.Web.Components;
 using FRELODYUI.Web.Services;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -14,14 +16,17 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
+builder.Services.AddBlazoredLocalStorage();
 // Add device-specific services used by the FRELODYUI.Shared project
-builder.Services.AddSingleton<IFormFactor, FormFactor>();
+builder.Services.AddSingleton<IFormFactor, FRELODYUI.Web.Client.Services.FormFactor>();
 builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
 builder.Services.AddScoped<IPrintService, WebPrintService>();
 builder.Services.AddScoped<IClipboardService, WebClipboardService>();
 builder.Services.AddScoped<IShareService, ShareService>();
 builder.Services.AddScoped<IModalService, ModalService>();
+builder.Services.AddScoped<IStorageService, WebStorageService>();
 builder.Services.AddScoped<ChordLyricExtrator>();
+builder.Services.AddScoped<GlobalAuthStateProvider>();
 
 var baseAddressApi = new Uri("https://localhost:7018");
 
