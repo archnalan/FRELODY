@@ -18,6 +18,10 @@ using FRELODYAPIs.Areas.Admin.LogicData;
 using System.Text.Json;
 using FRELODYAPP.Data.Extensions;
 using System.Diagnostics;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,8 +34,6 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddScoped<ITenantProvider, TenantProvider>();
 
 builder.Services.AddDatabaseSeeder();
-builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = true)
-	.AddEntityFrameworkStores<SongDbContext>();
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
@@ -51,11 +53,107 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<ISongPlayHistoryService, SongPlayHistoryService>();
+builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<SmtpSenderService>();
 builder.Services.AddScoped<FileValidationService>();
 builder.Services.AddScoped<SecurityUtilityService>();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddIdentity<User, IdentityRole>
+            (options =>
+            {
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequireDigit = false;
+                options.Password.RequiredLength = 4;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequireLowercase = false;
+                options.User.RequireUniqueEmail = true;
+            })
+            .AddEntityFrameworkStores<SongDbContext>()
+            .AddDefaultTokenProviders();
 
+builder.Services.AddAuthentication(option =>
+{
+    option.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    option.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Query.TryGetValue("access_key_value_temp_refresh", out var token))
+                    context.Token = token;
+                return Task.CompletedTask;
+            }
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogInformation("Token validation failed : {headers}", context.Request.Headers);
+
+                logger.LogError(context.Exception, "JWT validation failed");
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                //log token
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogInformation("Token validated: {token}", context.SecurityToken);
+
+                var TenantId = context.Request.Headers["TenantId"].FirstOrDefault();
+                //if (TenantId == null)
+                //{
+
+                //    context.Fail("TenantId header missing");
+                //    context.Response.StatusCode = 401;
+                //    context.Response.ContentType = "application/json";
+                //    var result = System.Text.Json.JsonSerializer.Serialize(new { message = $"Missing TenantId header" });
+                //    return context.Response.WriteAsync(result);
+
+                //}
+                var token = context.SecurityToken as JsonWebToken;
+                var tenantIdFromToken = token.GetPayloadValue<string>("TenantId");
+
+
+                if (!string.IsNullOrEmpty(tenantIdFromToken))
+                {
+                    //Logger.LogInformation("Here is the client id from the request {clientId}", clientId);
+                    //if (tenantIdFromToken != TenantId)
+                    //{
+                    //    context.Fail("Invalid TenantId");
+                    //    context.Response.StatusCode = 401;
+                    //    context.Response.ContentType = "application/json";
+                    //    var result = System.Text.Json.JsonSerializer.Serialize(new { message = $"Invalid TenantId header or Token" });
+                    //    return context.Response.WriteAsync(result);
+                    //}
+                }
+
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddRazorComponents();
+builder.Services.AddRazorPages();
 // Register the global exception handler
 //builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -209,6 +307,7 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(

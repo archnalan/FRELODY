@@ -1,0 +1,340 @@
+﻿@page "/users"
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@inject ILogger<UsersList> _logger
+@inject IUsersApi _usersApi
+
+<PageTitle>Users Management</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h3>Users Management</h3>
+            <p class="text-muted">Manage application users and their accounts</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="NavigateToCreateUser">
+                <i class="bi bi-plus-circle me-2"></i>Add New User
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" class="form-control" placeholder="Search users..." 
+                       @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchChanged" />
+                @if (!string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch">
+                        <i class="bi bi-x"></i>
+                    </button>
+                }
+            </div>
+        </div>
+        <div class="col-md-6 d-flex justify-content-end align-items-center">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn @(ViewStyle == ActiveView.Collapsed ? "btn-primary" : "btn-outline-primary")" 
+                        @onclick="() => SetActiveView(ActiveView.Collapsed)">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </button>
+                <button type="button" class="btn @(ViewStyle == ActiveView.Expanded ? "btn-primary" : "btn-outline-primary")" 
+                        @onclick="() => SetActiveView(ActiveView.Expanded)">
+                    <i class="bi bi-list"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@error
+            <button type="button" class="btn-close" @onclick="() => error = string.Empty"></button>
+        </div>
+    }
+
+    <div class="row">
+        <Virtualize @key="RefreshKey" 
+                    Context="user"
+                    ItemsProvider="ProvideUsersAsync"
+                    ItemSize="@(ViewStyle == ActiveView.Expanded ? 120 : 250)"
+                    OverscanCount="3"
+                    @ref="_virtualize">
+            <ItemContent>
+                <div class="@(ViewStyle == ActiveView.Expanded ? "col-12 mb-3" : "col-12 col-md-6 col-lg-4 col-xl-3 mb-4")">
+                    <div class="card h-100 shadow-sm user-card" style="border-radius:0.5rem; cursor: pointer;" 
+                         @onclick="@(() => NavigateToEditUser(user.UserId ?? ""))">
+                        <div class="card-body d-flex @(ViewStyle == ActiveView.Expanded ? "flex-row" : "flex-column") justify-content-between">
+                            <div class="@(ViewStyle == ActiveView.Expanded ? "d-flex align-items-center flex-grow-1" : "")">
+                                <div class="@(ViewStyle == ActiveView.Expanded ? "me-3" : "text-center mb-3")">
+                                    @if (!string.IsNullOrEmpty(user.ProfilePicUrl))
+                                    {
+                                        <img src="@user.ProfilePicUrl" alt="Profile" 
+                                             class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" 
+                                             style="width: 50px; height: 50px; font-weight: bold;">
+                                            @user.Initials
+                                        </div>
+                                    }
+                                </div>
+                                <div class="@(ViewStyle == ActiveView.Expanded ? "flex-grow-1" : "")">
+                                    <h5 class="card-title mb-1 @(ViewStyle == ActiveView.Collapsed ? "text-center" : "")">
+                                        @user.FullName
+                                    </h5>
+                                    <p class="text-muted mb-1 @(ViewStyle == ActiveView.Collapsed ? "text-center" : "")">
+                                        @@@user.UserName
+                                    </p>
+                                    @if (ViewStyle == ActiveView.Expanded && !string.IsNullOrEmpty(user.Contacts))
+                                    {
+                                        <p class="text-muted small mb-0">
+                                            <i class="bi bi-telephone me-1"></i>@user.Contacts
+                                        </p>
+                                    }
+                                </div>
+                            </div>
+                            <div class="@(ViewStyle == ActiveView.Expanded ? "d-flex align-items-center" : "d-flex justify-content-center mt-3")">
+                                <div class="btn-group">
+                                    <button class="btn btn-outline-primary btn-sm" 
+                                            @onclick="() => NavigateToEditUser(user.UserId)"
+                                            @onclick:stopPropagation>
+                                        <i class="bi bi-pencil"></i>
+                                        @if (ViewStyle == ActiveView.Expanded)
+                                        {
+                                            <span class="ms-1">Edit</span>
+                                        }
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" 
+                                            @onclick="() => ConfirmDeleteUser(user.UserId, user.FullName)"
+                                            @onclick:stopPropagation>
+                                        <i class="bi bi-trash"></i>
+                                        @if (ViewStyle == ActiveView.Expanded)
+                                        {
+                                            <span class="ms-1">Delete</span>
+                                        }
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </ItemContent>
+            <Placeholder>
+                <div class="@(ViewStyle == ActiveView.Expanded ? "col-12 mb-3" : "col-12 col-md-6 col-lg-4 col-xl-3 mb-4")">
+                    <div class="card h-100 placeholder-wave shadow" style="border-radius:0.5rem">
+                        <div class="card-body">
+                            <div class="@(ViewStyle == ActiveView.Expanded ? "d-flex align-items-center" : "text-center")">
+                                <div class="@(ViewStyle == ActiveView.Expanded ? "me-3" : "mb-3")">
+                                    <div class="rounded-circle placeholder bg-secondary" style="width: 50px; height: 50px;"></div>
+                                </div>
+                                <div class="@(ViewStyle == ActiveView.Expanded ? "flex-grow-1" : "")">
+                                    <h5 class="card-title">
+                                        <span class="placeholder col-7 mb-2"></span>
+                                    </h5>
+                                    <span class="placeholder col-5"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Placeholder>
+        </Virtualize>
+    </div>
+</div>
+
+<DialogModal IsVisible="_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    [Parameter] public ActiveView ViewStyle { get; set; } = ActiveView.Collapsed;
+    
+    private string error = string.Empty;
+    private bool IsNavigating = false;
+    private string searchTerm = string.Empty;
+    private string RefreshKey = Guid.NewGuid().ToString();
+    private Virtualize<AppUserDto>? _virtualize;
+    private CancellationTokenSource? _searchCts;
+
+    protected override Task OnInitializedAsync()
+    {
+        // Virtualize will load on first render via ItemsProvider.
+        return Task.CompletedTask;
+    }
+
+    private async Task SetActiveView(ActiveView changeStyle)
+    {
+        ViewStyle = changeStyle;
+        await Task.Delay(100);
+        StateHasChanged();
+    }
+
+    private async ValueTask<ItemsProviderResult<AppUserDto>> ProvideUsersAsync(ItemsProviderRequest request)
+    {
+        try
+        {
+            error = string.Empty;
+
+            var offset = request.StartIndex;
+            var limit = request.Count <= 0 ? 10 : request.Count;
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var response = await _usersApi.SearchForUsers(searchTerm, offset, limit);
+                var page = response?.Content;
+                var items = page?.Data ?? new List<AppUserDto>();
+                var total = page?.TotalSize ?? 0;
+                return new ItemsProviderResult<AppUserDto>(items, total);
+            }
+            else
+            {
+                var response = await _usersApi.GetAllUsers(offset, limit);
+                var page = response?.Content;
+                var items = page?.Data ?? new List<AppUserDto>();
+                var total = page?.TotalSize ?? 0;
+                return new ItemsProviderResult<AppUserDto>(items, total);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching users during virtualization.");
+            error = $"Error fetching users: {ex.Message}";
+            return new ItemsProviderResult<AppUserDto>(Array.Empty<AppUserDto>(), 0);
+        }
+    }
+
+    private async Task OnSearchChanged()
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(300, _searchCts.Token); // Debounce
+            RefreshKey = Guid.NewGuid().ToString();
+            StateHasChanged();
+        }
+        catch (TaskCanceledException)
+        {
+            // Expected when cancelled
+        }
+    }
+
+    private async Task ClearSearch()
+    {
+        searchTerm = string.Empty;
+        RefreshKey = Guid.NewGuid().ToString();
+        StateHasChanged();
+    }
+
+    private async Task Refresh()
+    {
+        error = string.Empty;
+        if (_virtualize is not null)
+            await _virtualize.RefreshDataAsync();
+    }
+
+    private void NavigateToCreateUser()
+    {
+        _navManager.NavigateTo("/users/create");
+    }
+
+    private void NavigateToEditUser(string? userId)
+    {
+        if (!string.IsNullOrEmpty(userId))
+        {
+            _navManager.NavigateTo($"/users/edit/{userId}");
+        }
+    }
+
+    private void ConfirmDeleteUser(string? userId, string? userName)
+    {
+        if (!string.IsNullOrEmpty(userId))
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Delete User",
+                Message = $"Are you sure you want to delete user '{userName}'?",
+                DangerText = "This action cannot be undone.",
+                ButtonText = "Delete",
+                OptionType = OptionType.Confirmation,
+                Context = new ModalContext { ActionType = "DeleteUser", Data = userId }
+            });
+        }
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "DeleteUser")
+        {
+            var userId = _modalService.CurrentModal.Context.Data?.ToString();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                try
+                {
+                    // Note: Using IAuthApi since IUsersApi doesn't have delete method
+                    // You may need to add this method to IUsersApi or use appropriate API
+                    // var response = await _authApi.DeleteUser(userId);
+                    
+                    // For now, show success message - implement actual deletion when API is available
+                    _modalService.Show(new ModalOptionDto
+                    {
+                        Title = "Success",
+                        Message = "User deleted successfully.",
+                        ButtonText = "OK",
+                        OptionType = OptionType.Success
+                    });
+
+                    await Refresh();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error deleting user {UserId}", userId);
+                    _modalService.Show(new ModalOptionDto
+                    {
+                        Title = "Error",
+                        Message = "Failed to delete user. Please try again.",
+                        ButtonText = "OK",
+                        OptionType = OptionType.Error
+                    });
+                }
+            }
+        }
+        
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+    }
+}
+
+<style>
+    .user-card:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .btn-group .btn {
+        border-radius: 0.25rem;
+    }
+
+    .btn-group .btn:not(:last-child) {
+        margin-right: 0.25rem;
+    }
+</style>

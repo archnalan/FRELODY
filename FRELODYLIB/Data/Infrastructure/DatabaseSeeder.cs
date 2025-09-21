@@ -1,8 +1,13 @@
-﻿using FRELODYAPP.Data.Infrastructure;
+﻿using DocumentFormat.OpenXml.InkML;
+using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Models;
+using FRELODYAPP.Models.SubModels;
+using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.ModelTypes;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -16,11 +21,13 @@ namespace FRELODYAPP.Data.Infrastructure
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<DatabaseSeeder> _logger;
+        private readonly IConfiguration _configuration;
 
-        public DatabaseSeeder(IServiceProvider serviceProvider, ILogger<DatabaseSeeder> logger)
+        public DatabaseSeeder(IServiceProvider serviceProvider, ILogger<DatabaseSeeder> logger, IConfiguration configuration)
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
+            _configuration = configuration;
         }
 
         public async Task SeedDataAsync()
@@ -29,6 +36,9 @@ namespace FRELODYAPP.Data.Infrastructure
             {
                 using var scope = _serviceProvider.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<SongDbContext>();
+                await CreateRolesAsync(scope,dbContext);
+                await SeedDefaultTenantAsync(dbContext);
+                await CreatePowerUserAsync(dbContext);
 
                 await SeedSDAHymnalSongBookAsync(dbContext);
                 var sdaHymnal = await dbContext.SongBooks.FirstAsync(sb => sb.Slug == "sda-hymnal");
@@ -50,6 +60,120 @@ namespace FRELODYAPP.Data.Infrastructure
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while seeding the database.");
+            }
+        }
+
+        private async Task CreateRolesAsync(IServiceScope scope, SongDbContext dbContext)
+        {
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+            foreach (var roleName in UserRoles.AllRoles)
+            {
+                if (!await roleManager.RoleExistsAsync(roleName))
+                {
+                    var role = new IdentityRole(roleName);
+                    var result = await roleManager.CreateAsync(role);
+                    if (result.Succeeded)
+                    {
+                        _logger.LogInformation($"Created role: {roleName}");
+                    }
+                    else
+                    {
+                        _logger.LogError($"Error creating role {roleName}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                    }
+                }
+            }
+        }
+
+        private async Task SeedDefaultTenantAsync(SongDbContext dbContext)
+        {
+            const string defaultTenantName = "FRELODY";
+
+            var existingTenant = await dbContext.Tenants
+                .FirstOrDefaultAsync(t => t.TenantName == defaultTenantName);
+
+            if (existingTenant != null)
+            {
+                _logger.LogInformation($"Default FRELODY tenant already exists with ID: {existingTenant.Id}");
+                return;
+            }
+            _logger.LogInformation("Seeding default FRELODY tenant...");
+
+            var defaultTenant = new Tenant
+            {
+                TenantName = defaultTenantName,
+                BusinessRegNumber = "FREL-001",
+                Address = "123 Music Avenue",
+                City = "Harmony City",
+                State = "Music State",
+                PostalCode = "12345",
+                Country = "United States",
+                PhoneNumber = "+1-555-FRELODY",
+                Email = "contact@frelody.com",
+                Website = "https://www.frelody.com",
+                Industry = "Music Technology",
+                DateCreated= DateTime.UtcNow
+            };
+
+            await dbContext.Tenants.AddAsync(defaultTenant);
+            await dbContext.SaveChangesAsync();
+
+            _logger.LogInformation("Default FRELODY tenant seeded successfully.");
+        }
+
+        private async Task CreatePowerUserAsync(SongDbContext dbContext)
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            var powerUserEmail = _configuration["UserSettings:UserEmail"];
+            var powerUserPassword = _configuration["UserSettings:UserPassword"];
+            var powerUserName = _configuration["UserSettings:UserName"];
+            if (string.IsNullOrWhiteSpace(powerUserEmail) || string.IsNullOrWhiteSpace(powerUserPassword))
+            {
+                _logger.LogWarning("Power user email or password is not configured.");
+                return;
+            }
+            var existingUser = await userManager.FindByEmailAsync(powerUserEmail);
+            if (existingUser != null)
+            {
+                _logger.LogInformation("Power user already exists.");
+                return;
+            }
+            var powerUser = new User
+            {
+                FirstName = "Super",
+                LastName = "Admin",
+                UserName = powerUserName,
+                Email = powerUserEmail,
+                EmailConfirmed = true,
+            };
+            var user = await dbContext.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == powerUser.Email);
+            if (user is null) user = await dbContext.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.UserName == powerUser.UserName);
+            if (user is not null)
+            {
+                _logger.LogInformation("Power user already exists in the database.");
+                return;
+            }
+            var result = await userManager.CreateAsync(powerUser, powerUserPassword);
+            if (result.Succeeded)
+            {
+                _logger.LogInformation("Power user created successfully.");
+                foreach (var roleName in UserRoles.AllRoles)
+                {
+                    if (await roleManager.RoleExistsAsync(roleName))
+                    {
+                        await userManager.AddToRoleAsync(powerUser, roleName);
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Role {roleName} does not exist. Cannot assign to power user.");
+                    }
+                }
+            }
+            else
+            {
+                _logger.LogError($"Error creating power user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
         }
 

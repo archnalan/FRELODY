@@ -15,7 +15,7 @@ namespace FRELODYAPP.Dtos.UserDtos
         [Required]
         public string FirstName { get; set; }
         [Required]
-        public string Lastname { get; set; }
+        public string LastName { get; set; }
 
         public string? PhoneNumber { get; set; }
 
@@ -25,6 +25,6 @@ namespace FRELODYAPP.Dtos.UserDtos
         public string? CoverPhotoUrl { get; set; }
 
         [NotMapped]
-        public List<string>? DefaultRoles { get; set; }
+        public List<string>? AssignedRoles { get; set; }
     }
 }

@@ -5,8 +5,7 @@ namespace FRELODYAPP.Dtos.UserDtos
 {
     public class UpdateUserProfile
     {
-        [Required]
-        public string Id { get; set; }
+        public string? Id { get; set; }
 
         [Required]
         [MinLength(4)]
@@ -16,7 +15,7 @@ namespace FRELODYAPP.Dtos.UserDtos
         [Required]
         public string UserName { get; set; }
 
-        public string PhoneNumber { get; set; }
+        public string? PhoneNumber { get; set; }
 
         [Required]
         public string FirstName { get; set; }
@@ -28,7 +27,7 @@ namespace FRELODYAPP.Dtos.UserDtos
         public string? CoverPhotoUrl { get; set; }
 
         [NotMapped]
-        public List<string>? DefaultRole { get; set; } 
+        public List<string>? AssignedRoles { get; set; } 
 
     }
 }

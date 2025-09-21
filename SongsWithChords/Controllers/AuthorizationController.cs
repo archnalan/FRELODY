@@ -12,9 +12,9 @@ namespace FRELODYAPIs.Controllers
     [ApiController]
     public class AuthorizationController : ControllerBase
     {
-        private readonly IAuthorizationDAL _authorizationDAL;
+        private readonly IAuthorizationService _authorizationDAL;
 
-        public AuthorizationController(IAuthorizationDAL authorizationDAL)
+        public AuthorizationController(IAuthorizationService authorizationDAL)
         {
             _authorizationDAL = authorizationDAL;
         }

@@ -22,10 +22,11 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Hosting;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using Mapster;
 
 namespace FRELODYAPP.Data
 {
-    public class AuthorizationDAL : IAuthorizationDAL
+    public class AuthorizationService : IAuthorizationService
     {
         private IConfiguration _config;
         private readonly SignInManager<User> _signInManager;
@@ -33,20 +34,19 @@ namespace FRELODYAPP.Data
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly SongDbContext _context;
         private readonly SmtpSenderService _emailSmtpService;
-        private readonly ILogger<AuthorizationDAL> _logger;
+        private readonly ILogger<AuthorizationService> _logger;
         private readonly ITenantProvider _tenantProvider;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly FileValidationService _fileValidationService;
         private readonly SecurityUtilityService _securityUtilityService;
         private readonly TokenService _tokenService;
-        private readonly IMapper _mapper;
 
-        public AuthorizationDAL(IConfiguration config, SongDbContext context,
+        public AuthorizationService(IConfiguration config, SongDbContext context,
             SignInManager<User> signInManager, UserManager<User> userManager,
             IWebHostEnvironment webHostEnvironment, SmtpSenderService emailSmtpService,
-            ILogger<AuthorizationDAL> logger, ITenantProvider tenantProvider,
-            IHttpContextAccessor httpContextAccessor, RoleManager<IdentityRole> roleManager, IMapper mapper,
+            ILogger<AuthorizationService> logger, ITenantProvider tenantProvider,
+            IHttpContextAccessor httpContextAccessor, RoleManager<IdentityRole> roleManager,
             FileValidationService fileValidationService, SecurityUtilityService securityUtilityService, TokenService tokenService)
         {
             _config = config;
@@ -59,7 +59,6 @@ namespace FRELODYAPP.Data
             _tenantProvider = tenantProvider;
             _httpContextAccessor = httpContextAccessor;
             _roleManager = roleManager;
-            _mapper = mapper;
             _fileValidationService = fileValidationService;
             _securityUtilityService = securityUtilityService;
             _tokenService = tokenService;
@@ -314,7 +313,7 @@ namespace FRELODYAPP.Data
 
                 var user = userResult.Data;
 
-                var tenantExists = await _context.Tenants.AnyAsync(x => x.TenantId == tenantId);
+                var tenantExists = await _context.Tenants.AnyAsync(x => x.Id == tenantId);
 
                 if (!tenantExists)
                     return ServiceResult<LoginResponseDto>.Failure(
@@ -360,7 +359,7 @@ namespace FRELODYAPP.Data
 
         public async Task<ServiceResult<CreateUserResponseDto>> CreateUser([Required] CreateUserDto createUserDto, string tenantId)
         {
-            var tenantExists = await _context.Tenants.AnyAsync(x => x.TenantId == tenantId);
+            var tenantExists = await _context.Tenants.AnyAsync(x => x.Id == tenantId);
 
             if (!tenantExists) return ServiceResult<CreateUserResponseDto>.Failure(new NotFoundException($"Tenant with ID:{tenantId} is Invalid"));
             //using  trnsaction scope
@@ -378,46 +377,57 @@ namespace FRELODYAPP.Data
                                     .Where(x => x.TenantId == tenantId)
                                     .AnyAsync(x => x.UserName == createUserDto.UserName);
 
-                if (!usernameExists)
+                if (usernameExists)
                     return ServiceResult<CreateUserResponseDto>.Failure(
                         new BadRequestException($"Username: {createUserDto.UserName} already taken."));
 
                 using (var scope = await _context.Database.BeginTransactionAsync())
                 {
-                    User newUser = _mapper.Map<User>(createUserDto);
-
-                    newUser.TenantId = tenantId;
-                    var result = await _userManager.CreateAsync(newUser, createUserDto.Password);
-                    if (result.Succeeded)
+                    try
                     {
-                        //add to role
-                        foreach (var roleName in createUserDto.DefaultRoles)
+                        User newUser = createUserDto.Adapt<User>();
+                        newUser.TenantId = tenantId;
+                        var result = await _userManager.CreateAsync(newUser, createUserDto.Password);
+                        if (result.Succeeded)
                         {
-
-                            var role = await AddUserToRoleAsync(newUser.Id, roleName);
-                            if (!role.IsSuccess)
+                            if(createUserDto.AssignedRoles != null)
                             {
-                                //failed to add one of the roles
-                                await scope.RollbackAsync();
-                                return ServiceResult<CreateUserResponseDto>.Failure(role.Error);
+                                foreach (var roleName in createUserDto.AssignedRoles)
+                                {
+
+                                    var role = await AddUserToRoleAsync(newUser.Id, roleName);
+                                    if (!role.IsSuccess)
+                                    {
+                                        //failed to add one of the roles
+                                        await scope.RollbackAsync();
+                                        return ServiceResult<CreateUserResponseDto>.Failure(role.Error);
+                                    }
+                                }
+                                await scope.CommitAsync();
+
+                                var tokens = await _tokenService.GenerateTokens(newUser, tenantId);
+                                var output = newUser.Adapt<CreateUserResponseDto>();
+                                //output. = tokens.Token; // Assuming CreateUserResponseDto has this property
+                                return ServiceResult<CreateUserResponseDto>.Success(output);
                             }
+                           
                         }
-                        await scope.CommitAsync();
 
-                        var tokens = await _tokenService.GenerateTokens(newUser, tenantId);
-                        var output = _mapper.Map<CreateUserResponseDto>(newUser);
-                        //output. = tokens.Token; // Assuming CreateUserResponseDto has this property
-                        return ServiceResult<CreateUserResponseDto>.Success(output);
+                        await scope.RollbackAsync();
+                        var outputErrors = new List<string>();
+                        foreach (var error in result.Errors)
+                        {
+                            outputErrors.Add(error.Description);
+                        }
+                        return ServiceResult<CreateUserResponseDto>.Failure(new BadRequestException(string.Join("\n", outputErrors)));
+
                     }
-
-                    await scope.RollbackAsync();
-                    var outputErrors = new List<string>();
-                    foreach (var error in result.Errors)
+                    catch (Exception ex)
                     {
-                        outputErrors.Add(error.Description);
+                        _logger.LogError("Error while creating user. {ex}", ex);
+                        return ServiceResult<CreateUserResponseDto>.Failure(new ServerErrorException("Error while creating user. Please try again later"));
                     }
-                    return ServiceResult<CreateUserResponseDto>.Failure(new BadRequestException(string.Join("\n", outputErrors)));
-
+                    
                 }
             }
         }
@@ -559,9 +569,9 @@ namespace FRELODYAPP.Data
                     var result = await _userManager.UpdateAsync(objFromDb);
                     if (result.Succeeded)
                     {
-                        if (updateUserProfile.DefaultRole is not null)
+                        if (updateUserProfile.AssignedRoles is not null)
                         {
-                            foreach (var roleName in updateUserProfile.DefaultRole)
+                            foreach (var roleName in updateUserProfile.AssignedRoles)
                             {
 
                                 var role = await AddUserToRoleAsync(objFromDb.Id, roleName);
@@ -573,7 +583,7 @@ namespace FRELODYAPP.Data
                                 }
                             }
                             await scope.CommitAsync();
-                            var output = _mapper.Map<CreateUserResponseDto>(objFromDb);
+                            var output = objFromDb.Adapt<CreateUserResponseDto>();
                             return ServiceResult<CreateUserResponseDto>.Success(output);
                         }
                     }
@@ -615,10 +625,10 @@ namespace FRELODYAPP.Data
             var baseLink = request != null ? $"{request?.Scheme}://{request?.Host.Value}/" : null;
             //var list = new List<CreatedPostOutDto>();
 
-            var userProfile = _mapper.Map<UpdateUserProfileOutDto>(user);
+            var userProfile = user.Adapt<UpdateUserProfileOutDto>();
 
             userProfile.ProfilePicUrl = !string.IsNullOrEmpty(user.ProfilePicUrl) ? baseLink + user.ProfilePicUrl : "https://www.seekpng.com/png/detail/143-1435868_headshot-silhouette-person-placeholder.png";
-            userProfile.CoverPicUrl = !string.IsNullOrEmpty(user.CoverPhotoUrl) ? baseLink + user.CoverPhotoUrl : "https://via.placeholder.com/728x500.png?text=No+Cover+Image";
+            userProfile.CoverPhotoUrl = !string.IsNullOrEmpty(user.CoverPhotoUrl) ? baseLink + user.CoverPhotoUrl : "https://via.placeholder.com/728x500.png?text=No+Cover+Image";
 
             return ServiceResult<UpdateUserProfileOutDto>.Success(userProfile);
         }

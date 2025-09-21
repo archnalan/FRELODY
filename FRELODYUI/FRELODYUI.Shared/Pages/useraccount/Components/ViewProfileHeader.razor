@@ -2,9 +2,9 @@
 <div class="card shadow-sm">
     <!-- Cover Photo Section -->
     <div class="position-relative" style="height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-        @if (!string.IsNullOrEmpty(UserProfile?.CoverPicUrl))
+        @if (!string.IsNullOrEmpty(UserProfile?.CoverPhotoUrl))
         {
-            <img src="@UserProfile.CoverPicUrl" alt="Cover Photo" class="w-100 h-100 object-fit-cover" />
+            <img src="@UserProfile.CoverPhotoUrl" alt="Cover Photo" class="w-100 h-100 object-fit-cover" />
         }
         
         <!-- Edit Button -->

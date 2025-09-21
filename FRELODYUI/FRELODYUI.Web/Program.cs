@@ -52,6 +52,10 @@ builder.Services.AddRefitClient<ISettingsApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 builder.Services.AddRefitClient<ISongPlayHistoryApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+builder.Services.AddRefitClient<IAuthApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+builder.Services.AddRefitClient<IUsersApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
 
 var app = builder.Build();
 

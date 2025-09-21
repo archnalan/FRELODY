@@ -47,9 +47,6 @@ namespace FRELODYAPP.Data.Infrastructure
             base.OnModelCreating(builder);
 
             // Configure global query filters for entities implementing IBaseEntity
-            builder.Entity<Tenant>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
-                    && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongCollection>().HasQueryFilter(x =>
                     ((x.TenantId == _tenantId || x.TenantId == null)
                     || (x.Access == Access.Public))
