@@ -38,7 +38,6 @@ namespace FRELODYAPP.Data.Infrastructure
                 var dbContext = scope.ServiceProvider.GetRequiredService<SongDbContext>();
                 await CreateRolesAsync(scope,dbContext);
                 await SeedDefaultTenantAsync(dbContext);
-                await CreatePowerUserAsync(dbContext);
 
                 await SeedSDAHymnalSongBookAsync(dbContext);
                 var sdaHymnal = await dbContext.SongBooks.FirstAsync(sb => sb.Slug == "sda-hymnal");
@@ -118,10 +117,11 @@ namespace FRELODYAPP.Data.Infrastructure
             await dbContext.Tenants.AddAsync(defaultTenant);
             await dbContext.SaveChangesAsync();
 
+            await CreatePowerUserAsync(dbContext, defaultTenant.Id);
             _logger.LogInformation("Default FRELODY tenant seeded successfully.");
         }
 
-        private async Task CreatePowerUserAsync(SongDbContext dbContext)
+        private async Task CreatePowerUserAsync(SongDbContext dbContext, string tenantId)
         {
             using var scope = _serviceProvider.CreateScope();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
@@ -147,6 +147,7 @@ namespace FRELODYAPP.Data.Infrastructure
                 UserName = powerUserName,
                 Email = powerUserEmail,
                 EmailConfirmed = true,
+                TenantId = tenantId
             };
             var user = await dbContext.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == powerUser.Email);
             if (user is null) user = await dbContext.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.UserName == powerUser.UserName);

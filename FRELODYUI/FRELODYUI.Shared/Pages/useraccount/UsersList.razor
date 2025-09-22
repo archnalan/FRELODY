@@ -5,49 +5,51 @@
 
 <PageTitle>Users Management</PageTitle>
 
-<div class="container-fluid">
+<div class="container-fluid bg-light vh-100" style="max-width:55rem;justify-self:center">
     <div class="row mb-4">
         <div class="col">
-            <h3>Users Management</h3>
+            <h3>User Management</h3>
             <p class="text-muted">Manage application users and their accounts</p>
         </div>
-        <div class="col-auto">
-            <button class="btn btn-primary" @onclick="NavigateToCreateUser">
-                <i class="bi bi-plus-circle me-2"></i>Add New User
-            </button>
-        </div>
     </div>
-
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <div class="input-group">
-                <span class="input-group-text">
+    <div class="rounded-3 bg-white shadow p-3 mb-2">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex w-50 position-relative me-3">
+                <input type="text"
+                       class="form-control h-12 ps-5 rounded-3"
+                       placeholder="Search users..."
+                       @bind-value="searchTerm"
+                       @bind-value:event="oninput"
+                       @bind-value:after="OnSearchChanged" />
+                <button type="button" class="btn btn-link position-absolute border-0 start-0 top-0 h-100">
                     <i class="bi bi-search"></i>
-                </span>
-                <input type="text" class="form-control" placeholder="Search users..." 
-                       @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchChanged" />
+                </button>
                 @if (!string.IsNullOrWhiteSpace(searchTerm))
                 {
-                    <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch">
+                    <button class="btn btn-link" type="button" @onclick="ClearSearch">
                         <i class="bi bi-x"></i>
                     </button>
                 }
             </div>
-        </div>
-        <div class="col-md-6 d-flex justify-content-end align-items-center">
-            <div class="btn-group" role="group">
-                <button type="button" class="btn @(ViewStyle == ActiveView.Collapsed ? "btn-primary" : "btn-outline-primary")" 
-                        @onclick="() => SetActiveView(ActiveView.Collapsed)">
-                    <i class="bi bi-grid-3x3-gap"></i>
-                </button>
-                <button type="button" class="btn @(ViewStyle == ActiveView.Expanded ? "btn-primary" : "btn-outline-primary")" 
-                        @onclick="() => SetActiveView(ActiveView.Expanded)">
-                    <i class="bi bi-list"></i>
+            <div class="col-md-6 d-flex justify-content-end align-items-center">
+                <button class="btn btn-outline-primary" @onclick="NavigateToCreateUser">
+                    <i class="bi bi-person-add me-2"></i>Add User
                 </button>
             </div>
         </div>
     </div>
-
+    <div class="d-flex align-items-center bg-white rounded rounded-3 gap-3 p-2 shadow" style="width:fit-content; justify-self:center">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn @(ViewStyle == ActiveView.Collapsed ? "btn-outline-primary" : "btn-outline-secondary")"
+                    @onclick="() => SetActiveView(ActiveView.Collapsed)">
+                <i class="bi bi-grid-3x3-gap"></i>
+            </button>
+            <button type="button" class="btn @(ViewStyle == ActiveView.Expanded ? "btn-outline-primary" : "btn-outline-secondary")"
+                    @onclick="() => SetActiveView(ActiveView.Expanded)">
+                <i class="bi bi-list"></i>
+            </button>
+        </div>
+    </div>
     @if (!string.IsNullOrEmpty(error))
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
