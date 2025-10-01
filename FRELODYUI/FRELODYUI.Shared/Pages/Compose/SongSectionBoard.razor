@@ -29,10 +29,12 @@
                  Focused="@(focusedRow == line)"
                  Segments="@Segments"
                  ActiveTab="@ActiveTab"
+                 AllParts="AllTabs"
                  EditingSegment="@editingSegment"
                  OnSegmentsUpdate="HandleSegmentsUpdate"
                  OnChordsUpdate="HandleChordsUpdate"
-                 OnEditingSegmentChanged="HandleEditingSegmentChanged" />
+                 OnEditingSegmentChanged="HandleEditingSegmentChanged"
+                 OnFocusLineRequest="HandleFocusLineRequested"/>
 
             @if (focusedRow == line)
             {
@@ -72,6 +74,7 @@
     [Parameter] public List<SegmentCreateDto>? Segments { get; set; } = new();
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
     [Parameter] public TabsComponent.TabsComponentItem? ActiveTab { get; set; } 
+    [Parameter] public List<TabsComponent.TabsComponentItem>? AllTabs { get; set; }
     private List<ChordDto> chords = new();
     private Dictionary<int, Row> lineRefs = new();
     private int? focusedRow = null;
@@ -84,6 +87,8 @@
     private int prevLinesCount;
     private int? prevFocusedRow;
     private IJSObjectReference? _module;
+    private async Task HandleFocusLineRequested(int line)
+        => await SetFocusedRow(line);
 
     protected override void OnInitialized()
     {
@@ -98,6 +103,9 @@
 
             UpdateLines();
             if (lines.Count > 0) focusedRow = lines[0];
+
+            _tabsManager.OnRemoveEmptyLine += HandleRemoveEmptyLineRequest;
+
             StateHasChanged();
         }
         catch (Exception ex)
@@ -153,6 +161,27 @@
                     .ToList();
         }
         PruneRowRefs();
+    }
+
+    private async Task HandleRemoveEmptyLineRequest(int sectionId, int lineNumber)
+    {
+        if (sectionId == SectionId)
+        {
+            RemoveEmptyLine(lineNumber);
+            await Task.CompletedTask;
+        }
+    }
+
+    public void RemoveEmptyLine(int lineNumber)
+    {
+        // Only remove if the line has no segments
+        var hasSegments = Segments?.Any(s => s.LineNumber == lineNumber) ?? false;
+        if (!hasSegments)
+        {
+            trackLines.Remove(lineNumber);
+            UpdateLines();
+            StateHasChanged();
+        }
     }
 
     private void PruneRowRefs()
@@ -359,6 +388,7 @@
     {
         try
         {
+            _tabsManager.OnRemoveEmptyLine -= HandleRemoveEmptyLineRequest;
             if (_module is not null)
             {
                 await _module.DisposeAsync();

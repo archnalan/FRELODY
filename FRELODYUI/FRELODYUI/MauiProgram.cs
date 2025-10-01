@@ -28,6 +28,7 @@ namespace FRELODYUI
             builder.Services.AddScoped<IModalService, ModalService>();
             builder.Services.AddScoped<IStorageService, MauiStorageService>();
             builder.Services.AddScoped<ChordLyricExtrator>();
+            builder.Services.AddScoped<TabManagementService>();
             builder.Services.AddScoped<GlobalAuthStateProvider>();
 
             var baseAddressApi = new Uri("https://localhost:7077");

@@ -26,6 +26,7 @@ builder.Services.AddScoped<IShareService, ShareService>();
 builder.Services.AddScoped<IModalService, ModalService>();
 builder.Services.AddScoped<IStorageService, WebStorageService>();
 builder.Services.AddScoped<ChordLyricExtrator>();
+builder.Services.AddScoped<TabManagementService>();
 builder.Services.AddScoped<GlobalAuthStateProvider>();
 
 var baseAddressApi = new Uri("https://localhost:7018");

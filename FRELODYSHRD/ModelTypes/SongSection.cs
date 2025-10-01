@@ -8,6 +8,7 @@ namespace FRELODYSHRD.ModelTypes
 {
     public enum SongSection
     {
+        unknown = 0,
         Intro,
         Verse,
         PreChorus,

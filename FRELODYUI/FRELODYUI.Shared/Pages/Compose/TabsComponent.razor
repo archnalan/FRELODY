@@ -107,7 +107,7 @@
     [Parameter] public EventCallback<List<TabsComponentItem>> OnTabSort { get; set; }
     private readonly Dictionary<int, ElementReference> _sectionNumberInputs = new();
 
-    private List<TabsComponentItem> Items { get; set; } = new();
+    public List<TabsComponentItem> Items { get; set; } = new();
     private string[] SongSectionNames { get; set; } = [];
     private int SelectedTab { get; set; } = 1;
     private int? tabIdToRemove = null;
@@ -490,7 +490,7 @@
         });       
     }
 
-    private void HandleAddTab()
+    public void HandleAddTab()
     {
         if (Items.Count >= ItemsCountLimit) return;
 

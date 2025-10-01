@@ -1,0 +1,157 @@
+﻿
+<div class="dropdown-menu show w-100"
+    style="position: absolute; top: 0; left: 100%; width: 200px; max-height: 320px; z-index:5">
+   <ul class="list-unstyled mb-0">
+        <li class="dropdown-item fw-semibold @(AllLines.Count > 1 ? "" : "disabled")"
+           style="cursor:pointer"
+           @onclick="() => ToggleSubmenu(LineAction.Move)"
+           @onclick:stopPropagation>
+           <i class="bi bi-arrows-expand me-2"></i> Move
+           <i class="bi @(currentSubmenu == LineAction.Move ? "bi-caret-right-fill" : "bi-caret-right") float-end"></i>
+       </li>
+       <li class="dropdown-item fw-semibold @(AllLines.Count > 1 ? "" : "disabled")"
+           style="cursor:pointer"
+           @onclick="() => ToggleSubmenu(LineAction.Switch)"
+           @onclick:stopPropagation>
+           <i class="bi bi-arrow-left-right me-2"></i> Switch 
+           <i class="bi @(currentSubmenu == LineAction.Switch ? "bi-caret-right-fill" : "bi-caret-right") float-end"></i>
+       </li>
+        <li class="dropdown-item fw-semibold"
+           style="cursor:pointer"
+           @onclick="() => ToggleSubmenu(LineAction.Relocate)"
+           @onclick:stopPropagation>
+           <i class="bi bi-box-arrow-right me-2"></i> Re-locate
+           <i class="bi @(currentSubmenu == LineAction.Relocate ? "bi-caret-right-fill" : "bi-caret-right") float-end"></i>
+       </li>
+   </ul>
+   @if (showDropdown)
+   {
+       <div class="dropdown-menu show p-0"
+            style="position:absolute; top:0; left:100%; width:200px; max-height:320px; overflow-y:auto; z-index:6">
+            @if (currentSubmenu == LineAction.Relocate && SongParts!=null)
+            {
+                @foreach(var part in SongParts)
+                {
+                    var isCurrent = part == ActiveSongPart;
+                    <div class="dropdown-item d-flex justify-content-between align-items-center @(isCurrent ? "disabled text-muted" : "")"
+                         style="cursor:@(isCurrent ? "not-allowed" : "pointer")"
+                         @onclick="@(isCurrent ? ()=>{} : () => {})"
+                         @onclick:stopPropagation>
+                         <span>@part.SectionName</span>
+                         @if (isCurrent)
+                         {
+                             <span class="badge bg-secondary">Current</span>
+                         }
+                     </div>
+                    
+                }                 
+                <div class="dropdown-item d-flex justify-content-between align-items-center border-top"
+                    style="cursor:pointer"
+                    @onclick="() => RelocateToNewSection()"
+                    @onclick:stopPropagation>
+                    <span><i class="bi bi-plus me-2"></i>Add New Section</span>
+                </div>
+            }
+           else if (currentSubmenu == LineAction.Move || currentSubmenu == LineAction.Switch)
+            {
+                 @foreach (var ln in AllLines)
+                 {
+                     var isCurrent = ln == CurrentLine;
+                     <div class="dropdown-item d-flex justify-content-between align-items-center @(isCurrent ? "disabled text-muted" : "")"
+                          style="cursor:@(isCurrent ? "not-allowed" : "pointer")"
+                          @onclick="@(isCurrent ? ()=>{} : () => ActionConfirmed(currentSubmenu, ln))"
+                           @onclick:stopPropagation>
+                          <span>Line @ln.ToString("00")</span>
+                          @if (isCurrent)
+                          {
+                              <span class="badge bg-secondary">Current</span>
+                          }
+                     </div>
+                 }
+            }
+         
+       </div>
+   }
+</div>
+<div style="z-index:0" class="modal-backdrop bg-transparent" @onclick="() => VisibleChanged.InvokeAsync(false)" @onclick:stopPropagation></div>
+
+@code {
+    [Parameter] public EventCallback<int> OnLineMove { get; set; }
+    [Parameter] public bool Visible {get; set; } 
+    [Parameter] public int CurrentLine { get; set; }
+    [Parameter] public List<int> AllLines { get; set; } = new();
+    [Parameter] public TabsComponent.TabsComponentItem? ActiveSongPart { get; set; }
+    [Parameter] public List<TabsComponent.TabsComponentItem>? SongParts { get; set; }
+    [Parameter] public EventCallback<LineActionDto> OnActionConfirmed { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [CascadingParameter] public SongBoard? SongBoardRef { get; set; }
+
+    private bool showDropdown = false;
+    private LineAction currentSubmenu = LineAction.None;
+
+    protected override Task OnInitializedAsync()
+    {
+        ToggleDropdown(false);
+        return base.OnInitializedAsync();
+    }  
+
+    private void LineMove(int targetLine)
+    {
+        OnLineMove.InvokeAsync(targetLine);
+        ToggleDropdown(false);
+    }
+
+    private void ToggleSubmenu(LineAction submenu)
+    {
+        if (currentSubmenu == submenu)
+        {
+            // toggle off
+            currentSubmenu = LineAction.None;
+            showDropdown = false;
+        }
+        else
+        {
+            currentSubmenu = submenu;
+            showDropdown = true;
+        }
+    }
+
+    private void ToggleDropdown(bool show)
+    {
+        if (!show)
+        {
+            currentSubmenu = LineAction.None;
+            showDropdown = false;
+        }
+        else
+        {
+            showDropdown = show;
+        }
+    }
+
+    private void ActionConfirmed(LineAction action, int targetLine)
+    {
+        OnActionConfirmed.InvokeAsync(
+            new LineActionDto 
+            { 
+                CurrentLine = CurrentLine,
+                TargetLine = targetLine,
+                Action = action, 
+            });
+        ToggleDropdown(false);
+    }
+
+    private async void RelocateToNewSection()
+    {
+        await _tabsManager.RelocateLine(
+           new RelocateLineActionDto 
+            { 
+                CurrentLine = CurrentLine,
+                TargetPart = null,
+                Action = LineAction.Relocate,
+                CreateNewPart = true
+            });
+        ToggleDropdown(false);
+    }
+
+}

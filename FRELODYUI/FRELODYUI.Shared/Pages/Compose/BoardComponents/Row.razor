@@ -5,9 +5,23 @@
      class="@($"w-100 position-relative d-flex flex-wrap gap-3 bg-white" + 
             $" {(Focused ? "border border-primary" : "border border-secondary")}")"
      style="@(Focused ? "padding:2.5rem" : "padding:1.75rem");border-radius:1rem; border-bottom-right-radius:0.5rem">
-    <span class="@($"position-absolute top-0 start-0 badge {(Focused ? "bg-primary mt-2 ms-2" : "mt-1 ms-3")}")">
+    <div class="@($"position-absolute top-0 start-0 badge {(Focused ? "bg-primary mt-2 ms-2" : "mt-1 ms-3")}")">
         Lyric Line @Line.ToString("00")
-    </span>
+        @if (Focused)
+        {
+            <i class="bi bi-chevron-down ms-2" @onclick="() => ToggleDropdown(!showDropdown)"></i>
+            @if (showDropdown)
+            {
+                <RowActions Visible="@showDropdown"
+                            CurrentLine="Line" 
+                            AllLines="lineNumbers"
+                            SongParts="AllParts"
+                            ActiveSongPart="ActiveTab"
+                            VisibleChanged="HandleVisbileChanged"
+                            OnActionConfirmed="HandleActionConfirmed"/>
+            }
+        }
+    </div>
 
     <SortableList Id="@($"sortable-segments-{Line}")"
                   Items="filteredSegments"
@@ -48,6 +62,8 @@
     [Parameter] public EventCallback<List<ChordDto>> OnChordsUpdate { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto?> OnEditingSegmentChanged { get; set; }
     [Parameter] public TabsComponent.TabsComponentItem? ActiveTab { get; set; }
+    [Parameter] public List<TabsComponent.TabsComponentItem>? AllParts { get; set; }
+    [Parameter] public EventCallback<int> OnFocusLineRequest { get; set; }
 
     private Dictionary<string, Segment> segmentRefs = new();
     private AddSegment addSegmentRef = default!;
@@ -57,7 +73,10 @@
     private ChordDto? editedChord;
     private List<SegmentCreateDto> filteredSegments =>
         Segments?.Where(s => s.LineNumber == Line).OrderBy(s => s.LyricOrder).ToList() ?? new();
+    private List<int> lineNumbers =>
+        Segments.Select(s => s.LineNumber).Distinct().OrderBy(l => l).ToList();
     string textBoxSize => Focused ? "min-height:5rem" : "min-height:4rem";
+    private bool showDropdown = false;
 
     protected override void OnParametersSet()
     {
@@ -208,4 +227,78 @@
             }          
         }     
     }
+
+    private void HandleActionConfirmed(LineActionDto lineArgs)
+    {
+        switch (lineArgs.Action)
+        {
+            case LineAction.Move:
+                MoveLine(lineArgs.CurrentLine, lineArgs.TargetLine);
+                break;
+            case LineAction.Switch:
+                SwitchLine(lineArgs.CurrentLine, lineArgs.TargetLine);
+                break;
+            case LineAction.Relocate:
+                //MoveLine(lineArgs.CurrentLine, lineArgs.TargetLine);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void MoveLine(int currentLine, int targetLine)
+    {
+        if (targetLine == Line) return;
+        var updated = Segments.ToList();
+
+        var movedSegments = updated.Where(s => s.LineNumber == currentLine).ToList();
+
+        if (targetLine > currentLine)
+        {
+            // Shift lines between (currentLine+1 ... targetLine) up by 1
+            foreach (var seg in updated.Where(s => s.LineNumber > currentLine && s.LineNumber <= targetLine))
+                seg.LineNumber--;
+        }
+        else
+        {
+            // Shift lines between (targetLine ... currentLine-1) down by 1
+            foreach (var seg in updated.Where(s => s.LineNumber >= targetLine && s.LineNumber < currentLine))
+                seg.LineNumber++;
+        }
+
+        foreach (var seg in movedSegments)
+            seg.LineNumber = targetLine;
+
+        OnSegmentsUpdate.InvokeAsync(updated);
+        OnFocusLineRequest.InvokeAsync(targetLine);
+    }
+
+    private void SwitchLine(int currentLine, int targetLine)
+    {
+        if (targetLine == Line) return;
+
+        var updated = Segments.ToList();
+
+        var currSegments = updated.Where(s => s.LineNumber == currentLine).ToList();
+        var targetSegments = updated.Where(s => s.LineNumber == targetLine).ToList();
+
+        foreach (var seg in currSegments) seg.LineNumber = targetLine;
+        foreach (var seg in targetSegments) seg.LineNumber = currentLine;
+
+        OnSegmentsUpdate.InvokeAsync(updated);
+        OnFocusLineRequest.InvokeAsync(targetLine);
+    }
+
+    private async void ToggleDropdown(bool show)
+    {
+        await ClosePrevFormAsync();
+        showDropdown = show;
+    }
+
+    private async void HandleVisbileChanged(bool visible)
+    {
+        showDropdown = visible;
+        await InvokeAsync(StateHasChanged);
+    }
+
 }

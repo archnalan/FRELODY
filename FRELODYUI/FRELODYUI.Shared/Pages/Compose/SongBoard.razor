@@ -1,5 +1,6 @@
 ﻿@page "/compose"
 @using Microsoft.AspNetCore.WebUtilities
+@implements IDisposable
 @inject ILogger<SongBoard> _logger
 
 <div class="w-100 d-flex flex-column justify-content-center"
@@ -77,7 +78,8 @@
 
         @if (initialPartsItems.Any())
         {
-            <TabsComponent InitialItems="initialPartsItems"
+            <TabsComponent @ref="TabsComponentRef"
+                           InitialItems="initialPartsItems"
                            ItemsCountLimit="MAX_SECTIONS"
                            OnTabAdd="HandleTabAdd"
                            RenderTab="RenderVerseTab"
@@ -112,12 +114,15 @@
     private CategoryDto? selectedCategory = null; 
     private SimpleSongCreateDto songData = new();
     private SongBookDropdown? songBookDropdownRef;
+    private TabsComponent? TabsComponentRef;
     private const int MAX_TITLE_LEN = 15;
     private bool isLoading = true;
+    private Dictionary<int, SongSectionBoard> sectionBoardRefs = new();
 
-    private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
+    private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard @ref="sectionBoardRefs[id]" SectionId="@id"
                   Segments="@AllPartsSegments.GetValueOrDefault(id, new List<SegmentCreateDto>())"
-                  ActiveTab="activeTabItem"
+                  ActiveTab="activeTabItem" 
+                  AllTabs="initialPartsItems"
                   OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />
     ;
     private string FormattedSongNumber
@@ -239,6 +244,7 @@
                     });
                 }
             }
+            _tabsManager.OnRelocateLine += HandleRelocateLineRequest;
         }
         catch (Exception ex)
         {
@@ -364,6 +370,10 @@
         if (!AllPartsSegments.ContainsKey(newTabId))
         {
             AllPartsSegments[newTabId] = new List<SegmentCreateDto>();
+            if(TabsComponentRef != null)
+            {
+                initialPartsItems = TabsComponentRef.Items; //syncing items data
+            }
         }
     }
 
@@ -428,6 +438,168 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task HandleRelocateLineRequest(RelocateLineActionDto relocateArgs)
+    {
+        // source part that contains the line to be moved
+        var sourcePartId = AllPartsSegments
+            .Where(kvp => kvp.Value.Any(s => s.LineNumber == relocateArgs.CurrentLine))
+            .Select(kvp => kvp.Key)
+            .FirstOrDefault();
+
+        if (sourcePartId == 0) return;
+
+        var sourceSegments = AllPartsSegments[sourcePartId]
+            .Where(s => s.LineNumber == relocateArgs.CurrentLine)
+            .ToList();
+
+        if (!sourceSegments.Any()) return;
+
+        if (relocateArgs.CreateNewPart)
+        {
+            if (TabsComponentRef != null)
+            {
+                if (TabsComponentRef.Items.Count >= MAX_SECTIONS)
+                {
+                    _modalService.Show(new ModalOptionDto
+                    {
+                        Title = "Maximum Sections Reached",
+                        Message = $"Cannot create new section. Maximum of {MAX_SECTIONS} sections allowed.",
+                        ButtonText = "OK",
+                        OptionType = OptionType.Warning
+                    });
+                    return;
+                }
+                try
+                {
+                    TabsComponentRef.HandleAddTab();
+
+                    var newTabId = TabsComponentRef.Items.Max(i => i.Id);
+                    var newTab = TabsComponentRef.Items.FirstOrDefault(item => item.Id == newTabId);
+
+                    if (newTab != null && AllPartsSegments.ContainsKey(newTabId))
+                    {
+                        AllPartsSegments[sourcePartId].RemoveAll(s => s.LineNumber == relocateArgs.CurrentLine);
+                        await _tabsManager.RemoveEmptyLine(sourcePartId, relocateArgs.CurrentLine);
+
+                        // Renumber remaining segments in source part
+                        var allRemainingSegments = AllPartsSegments[sourcePartId]
+                            .OrderBy(s => s.LineNumber)
+                            .ToList();
+
+                        for (int i = 0; i < allRemainingSegments.Count; i++)
+                        {
+                            allRemainingSegments[i].LineNumber = i + 1;
+                        }
+
+                        // Update segments for new part
+                        foreach (var segment in sourceSegments)
+                        {
+                            segment.PartNumber = newTab.SectionNumber;
+                            segment.PartName = newTab.SectionEnumValue;
+                            segment.LineNumber = 1; // Reset to line 1 in new part
+                        }
+
+                        // Replace the empty segments list with our relocated segments
+                        AllPartsSegments[newTabId] = sourceSegments;
+
+                        // Set the new tab as active
+                        activeTabItem = newTab;
+                    }
+                    else
+                    {
+                        _modalService.Show(new ModalOptionDto
+                        {
+                            Title = "Tab Creation Failed",
+                            Message = "Failed to create new section. Please try again.",
+                            ButtonText = "OK",
+                            OptionType = OptionType.Error
+                        });
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // FAILURE: Exception during tab creation, segments remain intact
+                    _logger.LogError(ex, "Error creating new tab during line relocation");
+                    _modalService.Show(new ModalOptionDto
+                    {
+                        Title = "Error",
+                        Message = "An error occurred while creating the new section.",
+                        ButtonText = "OK",
+                        OptionType = OptionType.Error
+                    });
+                    return;
+                }
+        }
+        }
+        else if (relocateArgs.TargetPart != null)
+        {
+            // Move to existing part
+            var targetPartId = relocateArgs.TargetPart.Id;
+            if (TabsComponentRef!=null && !TabsComponentRef.Items.Any(item => item.Id == targetPartId))
+            {
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Target Section Not Found",
+                    Message = "The target section no longer exists. Please try again.",
+                    ButtonText = "OK",
+                    OptionType = OptionType.Error
+                });
+                return;
+            }
+            try
+            {
+                if (!AllPartsSegments.ContainsKey(targetPartId))
+                {
+                    AllPartsSegments[targetPartId] = new List<SegmentCreateDto>();
+                }
+
+                // Find the next available line number in target part
+                var targetSegments = AllPartsSegments[targetPartId];
+                var maxLineInTarget = targetSegments.Any()
+                    ? targetSegments.Max(s => s.LineNumber)
+                    : 0;
+
+                // SUCCESS: Remove source segments
+                AllPartsSegments[sourcePartId].RemoveAll(s => s.LineNumber == relocateArgs.CurrentLine);
+                await _tabsManager.RemoveEmptyLine(sourcePartId, relocateArgs.CurrentLine);
+
+                // Renumber remaining segments in source part
+                var allRemainingSegments = AllPartsSegments[sourcePartId]
+                    .OrderBy(s => s.LineNumber)
+                    .ToList();
+
+                for (int i = 0; i < allRemainingSegments.Count; i++)
+                {
+                    allRemainingSegments[i].LineNumber = i + 1;
+                }
+
+                // Update segments for target part
+                foreach (var segment in sourceSegments)
+                {
+                    segment.PartNumber = relocateArgs.TargetPart.SectionNumber;
+                    segment.PartName = relocateArgs.TargetPart.SectionEnumValue;
+                    segment.LineNumber = maxLineInTarget + 1;
+                }
+
+                AllPartsSegments[targetPartId].AddRange(sourceSegments);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error moving segments to target part");
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = "An error occurred while moving the line to the target section.",
+                    ButtonText = "OK",
+                    OptionType = OptionType.Error
+                });
+                return;
+            }
+        }
+        StateHasChanged();
+    }
+
     private async void ChangeBookSelection()
     {
         selectedSongBook = null;
@@ -438,7 +610,7 @@
 
         if (songBookDropdownRef != null)
         {
-           await songBookDropdownRef.FocusInput();
+            await songBookDropdownRef.FocusInput();
         }
     }
 
@@ -452,12 +624,14 @@
         }
         await CloseModal();
     }
-
     private async Task CloseModal()
     {
-        await Task.Delay(100);
         _modalService.Close();
+        await Task.CompletedTask;
+    }
 
-        StateHasChanged();
+    public void Dispose()
+    {
+        _tabsManager.OnRelocateLine -= HandleRelocateLineRequest;
     }
 }
