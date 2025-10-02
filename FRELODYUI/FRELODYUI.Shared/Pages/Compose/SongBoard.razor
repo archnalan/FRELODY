@@ -108,8 +108,8 @@
     private int SongNumber = 1;   
     private Dictionary<int, List<SegmentCreateDto>> AllPartsSegments =
     new() { [1] = new List<SegmentCreateDto>() };
-    private List<TabsComponent.TabsComponentItem> initialPartsItems = new();
-    private TabsComponent.TabsComponentItem? activeTabItem;
+    private List<TabItem> initialPartsItems = new();
+    private TabItem? activeTabItem;
     private SongBookDto? selectedSongBook = null;
     private CategoryDto? selectedCategory = null; 
     private SimpleSongCreateDto songData = new();
@@ -117,12 +117,10 @@
     private TabsComponent? TabsComponentRef;
     private const int MAX_TITLE_LEN = 15;
     private bool isLoading = true;
-    private Dictionary<int, SongSectionBoard> sectionBoardRefs = new();
 
-    private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard @ref="sectionBoardRefs[id]" SectionId="@id"
+    private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
                   Segments="@AllPartsSegments.GetValueOrDefault(id, new List<SegmentCreateDto>())"
                   ActiveTab="activeTabItem" 
-                  AllTabs="initialPartsItems"
                   OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />
     ;
     private string FormattedSongNumber
@@ -150,9 +148,9 @@
             if (string.IsNullOrEmpty(SongId))
             {
                 // Initialize new song
-                initialPartsItems = new List<TabsComponent.TabsComponentItem>
+                initialPartsItems = new List<TabItem>
                 {
-                    new TabsComponent.TabsComponentItem
+                    new TabItem
                     {
                         Id = 1,
                         SectionName = nameof(SongSection.Verse),
@@ -180,7 +178,7 @@
                     var song = response.Content!;
                     SongTitle = song.Title;
                     SongNumber = song.SongNumber ?? 0;
-                    initialPartsItems = new List<TabsComponent.TabsComponentItem>();
+                    initialPartsItems = new List<TabItem>();
                     AllPartsSegments = new Dictionary<int, List<SegmentCreateDto>>();
 
                     // Process parts
@@ -208,7 +206,7 @@
 
                         AllPartsSegments[part.PartNumber] = verseSegments;
 
-                        initialPartsItems.Add(new TabsComponent.TabsComponentItem
+                        initialPartsItems.Add(new TabItem
                             {
                                 Id = part.PartNumber,
                                 SectionName = part.PartName.ToString() ?? nameof(SongSection.Verse),
@@ -345,7 +343,7 @@
         }
     }
 
-    private void HandleActiveTabInfoChanged(TabsComponent.TabsComponentItem tabItem)
+    private void HandleActiveTabInfoChanged(TabItem tabItem)
     {
         activeTabItem = tabItem;
 
@@ -373,11 +371,12 @@
             if(TabsComponentRef != null)
             {
                 initialPartsItems = TabsComponentRef.Items; //syncing items data
+                _tabsManager.TabItems = TabsComponentRef.Items; //syncing manager data
             }
         }
     }
 
-    private void HandleTabSort(List<TabsComponent.TabsComponentItem> sortedItems)
+    private void HandleTabSort(List<TabItem> sortedItems)
     {
         // Create new segments dictionary preserving the content but updating positions
         var newAllPartsSegments = new Dictionary<int, List<SegmentCreateDto>>();
@@ -460,13 +459,7 @@
             {
                 if (TabsComponentRef.Items.Count >= MAX_SECTIONS)
                 {
-                    _modalService.Show(new ModalOptionDto
-                    {
-                        Title = "Maximum Sections Reached",
-                        Message = $"Cannot create new section. Maximum of {MAX_SECTIONS} sections allowed.",
-                        ButtonText = "OK",
-                        OptionType = OptionType.Warning
-                    });
+                    ShowMaxSectionsError();
                     return;
                 }
                 try
@@ -478,18 +471,17 @@
 
                     if (newTab != null && AllPartsSegments.ContainsKey(newTabId))
                     {
+                        // Set the new tab as active FIRST
+                        TabsComponentRef.SetSelectedTab(newTab);
+                        activeTabItem = newTab;
+                        _tabsManager.ActiveTab = newTab;
+
+                        // Remove source segments BEFORE adding to new tab
                         AllPartsSegments[sourcePartId].RemoveAll(s => s.LineNumber == relocateArgs.CurrentLine);
                         await _tabsManager.RemoveEmptyLine(sourcePartId, relocateArgs.CurrentLine);
 
                         // Renumber remaining segments in source part
-                        var allRemainingSegments = AllPartsSegments[sourcePartId]
-                            .OrderBy(s => s.LineNumber)
-                            .ToList();
-
-                        for (int i = 0; i < allRemainingSegments.Count; i++)
-                        {
-                            allRemainingSegments[i].LineNumber = i + 1;
-                        }
+                        RenumberRemainingSegments(sourcePartId);
 
                         // Update segments for new part
                         foreach (var segment in sourceSegments)
@@ -499,52 +491,33 @@
                             segment.LineNumber = 1; // Reset to line 1 in new part
                         }
 
-                        // Replace the empty segments list with our relocated segments
-                        AllPartsSegments[newTabId] = sourceSegments;
+                        // Clear the new tab's empty segments (created by HandleAddTab)
+                        AllPartsSegments[newTabId].Clear();
 
-                        // Set the new tab as active
-                        activeTabItem = newTab;
+                        // Use the service to add line with content
+                        await _tabsManager.AddLineToSection(newTabId, 0, sourceSegments);
                     }
                     else
                     {
-                        _modalService.Show(new ModalOptionDto
-                        {
-                            Title = "Tab Creation Failed",
-                            Message = "Failed to create new section. Please try again.",
-                            ButtonText = "OK",
-                            OptionType = OptionType.Error
-                        });
+                        ShowError("Tab Creation Failed", "Failed to create new section. Please try again.");
                         return;
                     }
                 }
                 catch (Exception ex)
                 {
-                    // FAILURE: Exception during tab creation, segments remain intact
                     _logger.LogError(ex, "Error creating new tab during line relocation");
-                    _modalService.Show(new ModalOptionDto
-                    {
-                        Title = "Error",
-                        Message = "An error occurred while creating the new section.",
-                        ButtonText = "OK",
-                        OptionType = OptionType.Error
-                    });
+                    ShowError("Error", "An error occurred while creating the new section.");
                     return;
                 }
-        }
+            }
         }
         else if (relocateArgs.TargetPart != null)
         {
             // Move to existing part
             var targetPartId = relocateArgs.TargetPart.Id;
-            if (TabsComponentRef!=null && !TabsComponentRef.Items.Any(item => item.Id == targetPartId))
+            if (TabsComponentRef != null && !TabsComponentRef.Items.Any(item => item.Id == targetPartId))
             {
-                _modalService.Show(new ModalOptionDto
-                {
-                    Title = "Target Section Not Found",
-                    Message = "The target section no longer exists. Please try again.",
-                    ButtonText = "OK",
-                    OptionType = OptionType.Error
-                });
+                ShowError("Target Section Not Found", "The target section no longer exists. Please try again.");
                 return;
             }
             try
@@ -554,25 +527,30 @@
                     AllPartsSegments[targetPartId] = new List<SegmentCreateDto>();
                 }
 
+                // Set the target tab as active FIRST
+                if (TabsComponentRef != null)
+                {
+                    var targetTab = TabsComponentRef.Items.FirstOrDefault(item => item.Id == targetPartId);
+                    if (targetTab != null)
+                    {
+                        TabsComponentRef.SetSelectedTab(targetTab);
+                        activeTabItem = targetTab;
+                        _tabsManager.ActiveTab = targetTab;
+                    }
+                }
+
                 // Find the next available line number in target part
                 var targetSegments = AllPartsSegments[targetPartId];
                 var maxLineInTarget = targetSegments.Any()
                     ? targetSegments.Max(s => s.LineNumber)
                     : 0;
 
-                // SUCCESS: Remove source segments
+                // REMOVE source segments FIRST to avoid duplication
                 AllPartsSegments[sourcePartId].RemoveAll(s => s.LineNumber == relocateArgs.CurrentLine);
                 await _tabsManager.RemoveEmptyLine(sourcePartId, relocateArgs.CurrentLine);
 
                 // Renumber remaining segments in source part
-                var allRemainingSegments = AllPartsSegments[sourcePartId]
-                    .OrderBy(s => s.LineNumber)
-                    .ToList();
-
-                for (int i = 0; i < allRemainingSegments.Count; i++)
-                {
-                    allRemainingSegments[i].LineNumber = i + 1;
-                }
+                RenumberRemainingSegments(sourcePartId);
 
                 // Update segments for target part
                 foreach (var segment in sourceSegments)
@@ -582,22 +560,51 @@
                     segment.LineNumber = maxLineInTarget + 1;
                 }
 
-                AllPartsSegments[targetPartId].AddRange(sourceSegments);
+                // NOW add the line with content to target section
+                await _tabsManager.AddLineToSection(targetPartId, maxLineInTarget, sourceSegments);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error moving segments to target part");
-                _modalService.Show(new ModalOptionDto
-                {
-                    Title = "Error",
-                    Message = "An error occurred while moving the line to the target section.",
-                    ButtonText = "OK",
-                    OptionType = OptionType.Error
-                });
+                ShowError("Error", "An error occurred while moving the line to the target section.");
                 return;
             }
         }
         StateHasChanged();
+    }
+
+    private void RenumberRemainingSegments(int partId)
+    {
+        var allRemainingSegments = AllPartsSegments[partId]
+            .OrderBy(s => s.LineNumber)
+            .ToList();
+
+        for (int i = 0; i < allRemainingSegments.Count; i++)
+        {
+            allRemainingSegments[i].LineNumber = i + 1;
+        }
+    }
+
+    private void ShowMaxSectionsError()
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Maximum Sections Reached",
+            Message = $"Cannot create new section. Maximum of {MAX_SECTIONS} sections allowed.",
+            ButtonText = "OK",
+            OptionType = OptionType.Warning
+        });
+    }
+
+    private void ShowError(string title, string message)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = title,
+            Message = message,
+            ButtonText = "OK",
+            OptionType = OptionType.Error
+        });
     }
 
     private async void ChangeBookSelection()
@@ -624,6 +631,7 @@
         }
         await CloseModal();
     }
+
     private async Task CloseModal()
     {
         _modalService.Close();

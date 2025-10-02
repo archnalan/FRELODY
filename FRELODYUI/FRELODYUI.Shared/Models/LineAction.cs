@@ -21,7 +21,7 @@ namespace FRELODYUI.Shared.Models
     public class RelocateLineActionDto
     {
         public int CurrentLine { get; set; }
-        public TabsComponent.TabsComponentItem? TargetPart { get; set; }
+        public TabItem? TargetPart { get; set; }
         public LineAction Action { get; set; }
         public bool CreateNewPart { get; set; }
     }

@@ -28,8 +28,6 @@
                  Line="@line"
                  Focused="@(focusedRow == line)"
                  Segments="@Segments"
-                 ActiveTab="@ActiveTab"
-                 AllParts="AllTabs"
                  EditingSegment="@editingSegment"
                  OnSegmentsUpdate="HandleSegmentsUpdate"
                  OnChordsUpdate="HandleChordsUpdate"
@@ -59,7 +57,7 @@
     @if (lines.Count > 0)
     {
         <div class="text-muted small text-end">
-            Verse @SectionId • Lines: @lines.Count • Segments: @Segments.Count
+            Verse @SectionId • Lines: @lines.Count • Segments: @Segments?.Count
         </div>
     }
 </div>
@@ -73,8 +71,7 @@
     [Parameter] public int SectionId { get; set; }
     [Parameter] public List<SegmentCreateDto>? Segments { get; set; } = new();
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
-    [Parameter] public TabsComponent.TabsComponentItem? ActiveTab { get; set; } 
-    [Parameter] public List<TabsComponent.TabsComponentItem>? AllTabs { get; set; }
+    [Parameter] public TabItem? ActiveTab { get; set; } 
     private List<ChordDto> chords = new();
     private Dictionary<int, Row> lineRefs = new();
     private int? focusedRow = null;
@@ -94,6 +91,9 @@
     {
         try
         {
+            if(Segments == null)
+                Segments = new List<SegmentCreateDto>();
+
             trackLines = Segments
             .Where(s => s.PartName == SongSection.Verse 
                 && s.PartNumber == SectionId)
@@ -105,7 +105,7 @@
             if (lines.Count > 0) focusedRow = lines[0];
 
             _tabsManager.OnRemoveEmptyLine += HandleRemoveEmptyLineRequest;
-
+            _tabsManager.OnAddLineToSection += HandleAddLineToSection;
             StateHasChanged();
         }
         catch (Exception ex)
@@ -172,6 +172,14 @@
         }
     }
 
+    private async Task HandleAddLineToSection(int sectionId, int afterLine, List<SegmentCreateDto>? segments = null)
+    {
+        if (sectionId == SectionId)
+        {
+            await AddLine(afterLine, segments);
+        }        
+    }
+
     public void RemoveEmptyLine(int lineNumber)
     {
         // Only remove if the line has no segments
@@ -230,7 +238,7 @@
         StateHasChanged(); // ensure remove button renders before init in next render pass
     }
 
-    private async Task AddLine(int afterLine)
+    public async Task AddLine(int afterLine, List<SegmentCreateDto>? segmentsToAdd = null)
     {
         try
         {
@@ -239,19 +247,36 @@
                 await prev.ClosePrevFormAsync();
 
             var lineIndex = lines.IndexOf(afterLine);
-            int tempLineId = -1 * (trackLines.Count + 1); 
-            var newSegmentId = Guid.NewGuid().ToString();
+            int tempLineId = -1 * (trackLines.Count + 1);
 
-            var newSegment = new SegmentCreateDto
+            var newSegments = new List<SegmentCreateDto>();
+
+            // Add provided segments first (if any)
+            if (segmentsToAdd != null && segmentsToAdd.Count > 0)
+            {
+                foreach (var segment in segmentsToAdd)
+                {
+                    segment.LineNumber = tempLineId;
+                    segment.PartNumber = ActiveTab != null ? ActiveTab.SectionNumber : SectionId;
+                    segment.PartName = ActiveTab != null ? ActiveTab.SectionEnumValue : SongSection.Verse;
+                    newSegments.Add(segment);
+                }
+            }
+
+            // Anew empty segment at the end for editing
+            var newSegmentId = Guid.NewGuid().ToString();
+            var emptySegment = new SegmentCreateDto
             {
                 Id = newSegmentId,
                 Lyric = "",
                 LineNumber = tempLineId,
-                PartNumber = ActiveTab != null ? ActiveTab.SectionNumber : 1,
+                PartNumber = ActiveTab != null ? ActiveTab.SectionNumber : SectionId,
                 PartName = ActiveTab != null ? ActiveTab.SectionEnumValue : SongSection.Verse,
-                LyricOrder = 1
+                LyricOrder = newSegments.Count + 1 // Position after any provided segments
             };
-            Segments?.Add(newSegment);
+            newSegments.Add(emptySegment);
+
+            Segments?.AddRange(newSegments);
 
             if (lineIndex >= 0 && lineIndex < trackLines.Count - 1)
                 trackLines.Insert(lineIndex + 1, tempLineId);
@@ -259,7 +284,8 @@
                 trackLines.Add(tempLineId);
 
             RenumberLines();
-            editingSegment = newSegment;
+
+            editingSegment = emptySegment;
 
             if (lineIndex >= 0 && lineIndex + 1 < lines.Count)
                 focusedRow = lines[lineIndex + 1];
@@ -271,6 +297,61 @@
         catch (Exception ex)
         {
             _logger.LogError("Error adding line: {Error}", ex);
+        }
+    }
+
+    public async Task AddLineWithContent(int afterLine, List<SegmentCreateDto>? segmentsToAdd)
+    {
+        try
+        {
+            var prev = TryGetRowRef(afterLine);
+            if (prev is not null)
+                await prev.ClosePrevFormAsync();
+
+            var lineIndex = lines.IndexOf(afterLine);
+            int newLineNumber = lines.Count > 0 ? lines.Max() + 1 : 1;
+
+            foreach (var segment in segmentsToAdd)
+            {
+                segment.LineNumber = newLineNumber;
+                segment.PartNumber = ActiveTab != null ? ActiveTab.SectionNumber : SectionId;
+                segment.PartName = ActiveTab != null ? ActiveTab.SectionEnumValue : SongSection.Verse;
+                // Keep existing Id, Lyric, ChordId, ChordName, LyricOrder, ChordAlignment
+            }
+
+            // Add the segments to the current segments list
+            if (Segments != null)
+            {
+                Segments.AddRange(segmentsToAdd);
+            }
+            else
+            {
+                Segments = segmentsToAdd.ToList();
+            }
+
+            // Add the new line to trackLines
+            trackLines.Add(newLineNumber);
+
+            // Update lines and UI
+            UpdateLines();
+
+            // Set focus to the new line
+            focusedRow = newLineNumber;
+
+            // Set the first segment as editing if it exists
+            if (segmentsToAdd.Any())
+            {
+                editingSegment = segmentsToAdd.First();
+            }
+
+            // Notify parent of the update
+            HandleSegmentsUpdate(Segments);
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error adding line with content: {Error}", ex);
         }
     }
 
@@ -389,6 +470,7 @@
         try
         {
             _tabsManager.OnRemoveEmptyLine -= HandleRemoveEmptyLineRequest;
+            _tabsManager.OnAddLineToSection -= HandleAddLineToSection;
             if (_module is not null)
             {
                 await _module.DisposeAsync();

@@ -35,9 +35,9 @@
                     var isCurrent = part == ActiveSongPart;
                     <div class="dropdown-item d-flex justify-content-between align-items-center @(isCurrent ? "disabled text-muted" : "")"
                          style="cursor:@(isCurrent ? "not-allowed" : "pointer")"
-                         @onclick="@(isCurrent ? ()=>{} : () => {})"
+                         @onclick="@(isCurrent ? ()=>{} : () => RelocateToNewSection(part))"
                          @onclick:stopPropagation>
-                         <span>@part.SectionName</span>
+                         <span>@part.SectionName @part.SectionNumber.ToString("00")</span>
                          @if (isCurrent)
                          {
                              <span class="badge bg-secondary">Current</span>
@@ -80,12 +80,11 @@
     [Parameter] public bool Visible {get; set; } 
     [Parameter] public int CurrentLine { get; set; }
     [Parameter] public List<int> AllLines { get; set; } = new();
-    [Parameter] public TabsComponent.TabsComponentItem? ActiveSongPart { get; set; }
-    [Parameter] public List<TabsComponent.TabsComponentItem>? SongParts { get; set; }
     [Parameter] public EventCallback<LineActionDto> OnActionConfirmed { get; set; }
     [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
-    [CascadingParameter] public SongBoard? SongBoardRef { get; set; }
 
+    private TabItem? ActiveSongPart { get; set; }
+    private List<TabItem>? SongParts { get; set; }
     private bool showDropdown = false;
     private LineAction currentSubmenu = LineAction.None;
 
@@ -93,7 +92,16 @@
     {
         ToggleDropdown(false);
         return base.OnInitializedAsync();
-    }  
+    } 
+    protected override void OnParametersSet()
+    {
+        if (ActiveSongPart != _tabsManager.ActiveTab)
+        {
+            ActiveSongPart = _tabsManager.ActiveTab;
+            SongParts = _tabsManager.TabItems;
+        }
+        base.OnParametersSet();
+    }
 
     private void LineMove(int targetLine)
     {
@@ -141,15 +149,15 @@
         ToggleDropdown(false);
     }
 
-    private async void RelocateToNewSection()
+    private async void RelocateToNewSection(TabItem? targetTab = null)
     {
         await _tabsManager.RelocateLine(
            new RelocateLineActionDto 
             { 
                 CurrentLine = CurrentLine,
-                TargetPart = null,
+                TargetPart = targetTab,
                 Action = LineAction.Relocate,
-                CreateNewPart = true
+                CreateNewPart = targetTab == null
             });
         ToggleDropdown(false);
     }

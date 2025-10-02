@@ -99,15 +99,15 @@
 }
 
 @code {
-    [Parameter] public List<TabsComponentItem>? InitialItems { get; set; }
+    [Parameter] public List<TabItem>? InitialItems { get; set; }
     [Parameter] public int ItemsCountLimit { get; set; }
     [Parameter] public EventCallback<int> OnTabAdd { get; set; }
     [Parameter] public Func<int, RenderFragment>? RenderTab { get; set; }
-    [Parameter] public EventCallback<TabsComponentItem> ActiveTabInfoChanged { get; set; }
-    [Parameter] public EventCallback<List<TabsComponentItem>> OnTabSort { get; set; }
+    [Parameter] public EventCallback<TabItem> ActiveTabInfoChanged { get; set; }
+    [Parameter] public EventCallback<List<TabItem>> OnTabSort { get; set; }
     private readonly Dictionary<int, ElementReference> _sectionNumberInputs = new();
 
-    public List<TabsComponentItem> Items { get; set; } = new();
+    public List<TabItem> Items { get; set; } = new();
     private string[] SongSectionNames { get; set; } = [];
     private int SelectedTab { get; set; } = 1;
     private int? tabIdToRemove = null;
@@ -124,7 +124,7 @@
     };
     private bool SectionAllowsNumbering(string sectionName) => !SingleInstanceSections.Contains(sectionName);
 
-    private void SetSelectedTab(TabsComponentItem active)
+    public void SetSelectedTab(TabItem active)
     {
         if (SelectedTab != active.Id)
         {
@@ -134,6 +134,7 @@
                 ActiveTabInfoChanged.InvokeAsync(active);
             }
         }
+        _tabsManager.ActiveTab = active;
     }
 
     private string GetTabClass(int id) =>
@@ -212,10 +213,12 @@
         
         // Force UI refresh
         _sortableListKey++;
+        _tabsManager.TabItems = Items;
+        _tabsManager.ActiveTab = Items.FirstOrDefault(i => i.Id == SelectedTab);
         StateHasChanged();
     }
 
-    private List<TabsComponentItem> GetOrderedItems() =>
+    private List<TabItem> GetOrderedItems() =>
         Items.OrderBy(item => Array.IndexOf(SongSectionNames, item.SectionName))
              .ThenBy(item => item.SectionNumber)
              .ToList();
@@ -228,7 +231,7 @@
         if (InitialItems != null)
         {
             // Preserve parent-provided Ids; only compute DisplayOrder locally.
-            Items = InitialItems.Select((item, i) => new TabsComponentItem
+            Items = InitialItems.Select((item, i) => new TabItem
             {
                 Id = item.Id,
                 SectionName = item.SectionName,
@@ -238,6 +241,8 @@
             }).ToList();
         }
         Items = Items.OrderBy(x => x.DisplayOrder).ToList();
+        _tabsManager.TabItems = Items;
+        _tabsManager.ActiveTab = Items.FirstOrDefault(i => i.Id == SelectedTab);
         await base.OnInitializedAsync();
     }
 
@@ -307,7 +312,7 @@
         return takenNumbers.Count + 1;
     }
 
-    private void SwapTabPositions(TabsComponentItem sourceTab, TabsComponentItem targetTab)
+    private void SwapTabPositions(TabItem sourceTab, TabItem targetTab)
     {
         // Swap only the display order to maintain user's visual arrangement
         (sourceTab.DisplayOrder, targetTab.DisplayOrder) = (targetTab.DisplayOrder, sourceTab.DisplayOrder);
@@ -316,7 +321,7 @@
         Items = Items.OrderBy(item => item.DisplayOrder).ToList();
     }
 
-    private async Task ReorderAndInsertTab(TabsComponentItem tab, int newSectionNumber)
+    private async Task ReorderAndInsertTab(TabItem tab, int newSectionNumber)
     {
         var oldNumber = tab.SectionNumber;
         var sameSection = Items
@@ -404,7 +409,7 @@
 
         // Ensure the edited tab remains selected
         SelectedTab = tabId;
-
+        _tabsManager.ActiveTab = tab;
         if (ActiveTabInfoChanged.HasDelegate)
         {
             await ActiveTabInfoChanged.InvokeAsync(tab);
@@ -433,7 +438,7 @@
 
             tab.SectionNumber = 1; //minimum valid section number
             SelectedTab = tabId;
-
+            _tabsManager.ActiveTab = tab;
             if (ActiveTabInfoChanged.HasDelegate)
             {
                 await ActiveTabInfoChanged.InvokeAsync(tab);
@@ -464,7 +469,7 @@
 
         // Ensure the edited tab remains selected
         SelectedTab = tabId;
-
+        _tabsManager.ActiveTab = tab;
         if (ActiveTabInfoChanged.HasDelegate)
         {
             await ActiveTabInfoChanged.InvokeAsync(tab);
@@ -509,7 +514,7 @@
         // Get the next display order to maintain sequence
         var maxDisplayOrder = Items.Any() ? Items.Max(i => i.DisplayOrder) : 0;
 
-        var newTab = new TabsComponentItem
+        var newTab = new TabItem
         {
             Id = newId,
             SectionName = defaultSectionName,
@@ -520,6 +525,8 @@
 
         Items.Add(newTab);
         SelectedTab = newId;
+        _tabsManager.TabItems = Items;
+        _tabsManager.ActiveTab = newTab;
         OnTabAdd.InvokeAsync(newId);
     }
 
@@ -551,6 +558,7 @@
                 if (SelectedTab == tabIdToRemove.Value && Items.Count > 0)
                 {
                     SelectedTab = Items[0].Id;
+                    _tabsManager.ActiveTab = Items[0];
                 }
             }
             tabIdToRemove = null;
@@ -582,6 +590,7 @@
 
         _modalService.Close();
     }
+
     private async Task FocusElementAsync(int tabId)
     {
         if (_sectionNumberInputs.TryGetValue(tabId, out var elementRef))
@@ -598,7 +607,7 @@
         }
     }
 
-    private async Task HideNumberInputFromSection(TabsComponentItem item)
+    private async Task HideNumberInputFromSection(TabItem item)
     {
         _modalService.Show(new ModalOptionDto
         {
@@ -615,15 +624,5 @@
         await Task.CompletedTask;
     }
 
-    public class TabsComponentItem
-    {
-        public int Id { get; set; }
-        public string SectionName { get; set; } = nameof(SongSection.Verse); // Default to Verse
-        public int SectionNumber { get; set; }
-        public int DisplayOrder { get; set; } 
-        public RenderFragment Content { get; set; } = default!;
-
-        public SongSection SectionEnumValue => Enum.Parse<SongSection>(SectionName);
-    }
 }
 

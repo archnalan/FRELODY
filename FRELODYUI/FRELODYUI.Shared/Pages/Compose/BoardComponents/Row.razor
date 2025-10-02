@@ -15,8 +15,6 @@
                 <RowActions Visible="@showDropdown"
                             CurrentLine="Line" 
                             AllLines="lineNumbers"
-                            SongParts="AllParts"
-                            ActiveSongPart="ActiveTab"
                             VisibleChanged="HandleVisbileChanged"
                             OnActionConfirmed="HandleActionConfirmed"/>
             }
@@ -61,10 +59,9 @@
     [Parameter] public EventCallback<List<SegmentCreateDto>> OnSegmentsUpdate { get; set; }
     [Parameter] public EventCallback<List<ChordDto>> OnChordsUpdate { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto?> OnEditingSegmentChanged { get; set; }
-    [Parameter] public TabsComponent.TabsComponentItem? ActiveTab { get; set; }
-    [Parameter] public List<TabsComponent.TabsComponentItem>? AllParts { get; set; }
     [Parameter] public EventCallback<int> OnFocusLineRequest { get; set; }
 
+    private TabItem? ActiveTab { get; set; }
     private Dictionary<string, Segment> segmentRefs = new();
     private AddSegment addSegmentRef = default!;
     private bool addFormOpen = false;
