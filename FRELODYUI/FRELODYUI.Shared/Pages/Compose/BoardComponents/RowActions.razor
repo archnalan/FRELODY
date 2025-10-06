@@ -154,6 +154,7 @@
         await _tabsManager.RelocateLine(
            new RelocateLineActionDto 
             { 
+                CurrentSectionId = ActiveSongPart?.Id ?? 0,
                 CurrentLine = CurrentLine,
                 TargetPart = targetTab,
                 Action = LineAction.Relocate,

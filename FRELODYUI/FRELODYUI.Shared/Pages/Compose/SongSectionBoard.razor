@@ -176,7 +176,12 @@
     {
         if (sectionId == SectionId)
         {
-            await AddLine(afterLine, segments);
+            bool lineAdded = false;
+            if (!lineAdded)
+            {
+                await AddLine(afterLine, segments);
+                lineAdded = true;
+            }
         }        
     }
 

@@ -142,6 +142,43 @@
             ? "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded rounded-3 border border-primary bg-white text-primary shadow cursor-pointer fw-bold"
             : "d-inline-flex py-2 ps-2 pe-1 align-items-center cursor-pointer hover-light fw-bold text-primary";
 
+    private List<TabItem> GetOrderedItems() =>
+        Items.OrderBy(item => Array.IndexOf(SongSectionNames, item.SectionName))
+             .ThenBy(item => item.SectionNumber)
+             .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Extract enum values once during initialization
+        SongSectionNames = Enum.GetNames(typeof(SongSection));
+
+        if (InitialItems != null)
+        {
+            // Preserve parent-provided Ids; only compute DisplayOrder locally.
+            Items = InitialItems.Select((item, i) => new TabItem
+            {
+                Id = item.Id,
+                SectionName = item.SectionName,
+                SectionNumber = item.SectionNumber,
+                Content = item.Content,
+                DisplayOrder = i + 1
+            }).ToList();
+        }
+        Items = Items.OrderBy(x => x.DisplayOrder).ToList();
+        _tabsManager.TabItems = Items;
+        _tabsManager.ActiveTab = Items.FirstOrDefault(i => i.Id == SelectedTab);
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var module = await JsRt.InvokeAsync<IJSObjectReference>("import", "./_content/FRELODYUI.Shared/Pages/Compose/TabsComponent.razor.js");
+            //await module.InvokeAsync<string>("init", Id, Group, Pull, Put, Sort, Handle, Filter, selfReference);
+        }
+    }
+
     private void SortTabs((int oldIndex, int newIndex) indices)
     {
         var (oldIndex, newIndex) = indices;
@@ -183,7 +220,7 @@
                 sortedGroup[i].SectionNumber = i + 1;
             }
         }
-               
+
         // Maintain the previously selected tab instead of automatically selecting the moved tab
         // Only change selection if the currently selected tab doesn't exist anymore
         if (Items.Any(item => item.Id == currentlySelectedTab))
@@ -210,49 +247,12 @@
         {
             OnTabSort.InvokeAsync(Items);
         }
-        
+
         // Force UI refresh
         _sortableListKey++;
         _tabsManager.TabItems = Items;
         _tabsManager.ActiveTab = Items.FirstOrDefault(i => i.Id == SelectedTab);
         StateHasChanged();
-    }
-
-    private List<TabItem> GetOrderedItems() =>
-        Items.OrderBy(item => Array.IndexOf(SongSectionNames, item.SectionName))
-             .ThenBy(item => item.SectionNumber)
-             .ToList();
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Extract enum values once during initialization
-        SongSectionNames = Enum.GetNames(typeof(SongSection));
-
-        if (InitialItems != null)
-        {
-            // Preserve parent-provided Ids; only compute DisplayOrder locally.
-            Items = InitialItems.Select((item, i) => new TabItem
-            {
-                Id = item.Id,
-                SectionName = item.SectionName,
-                SectionNumber = item.SectionNumber,
-                Content = item.Content,
-                DisplayOrder = i + 1
-            }).ToList();
-        }
-        Items = Items.OrderBy(x => x.DisplayOrder).ToList();
-        _tabsManager.TabItems = Items;
-        _tabsManager.ActiveTab = Items.FirstOrDefault(i => i.Id == SelectedTab);
-        await base.OnInitializedAsync();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            var module = await JsRt.InvokeAsync<IJSObjectReference>("import", "./_content/FRELODYUI.Shared/Pages/Compose/TabsComponent.razor.js");
-            //await module.InvokeAsync<string>("init", Id, Group, Pull, Put, Sort, Handle, Filter, selfReference);
-        }
     }
 
     private bool IsSectionCombinationTaken(string sectionName, int sectionNumber, int excludeId = 0)
@@ -622,6 +622,12 @@
             }
         });
         await Task.CompletedTask;
+    }
+
+    private void SyncTabManager()
+    {
+        _tabsManager.TabItems = Items;
+        _tabsManager.ActiveTab = Items.FirstOrDefault(i => i.Id == SelectedTab);
     }
 
 }

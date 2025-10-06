@@ -440,18 +440,23 @@
     private async Task HandleRelocateLineRequest(RelocateLineActionDto relocateArgs)
     {
         // source part that contains the line to be moved
-        var sourcePartId = AllPartsSegments
-            .Where(kvp => kvp.Value.Any(s => s.LineNumber == relocateArgs.CurrentLine))
-            .Select(kvp => kvp.Key)
-            .FirstOrDefault();
+        var sourcePartId = relocateArgs.CurrentSectionId;
 
-        if (sourcePartId == 0) return;
+        if (sourcePartId == 0 || !AllPartsSegments.ContainsKey(sourcePartId))
+        {
+            ShowError("Source Section Error", "Could not determine the source section. Please try again.");
+            return;
+        }
 
         var sourceSegments = AllPartsSegments[sourcePartId]
             .Where(s => s.LineNumber == relocateArgs.CurrentLine)
             .ToList();
 
-        if (!sourceSegments.Any()) return;
+        if (!sourceSegments.Any())
+        {
+            ShowError("No Segments Found", "No segments found on the specified line to relocate.");
+            return;
+        }
 
         if (relocateArgs.CreateNewPart)
         {
@@ -465,7 +470,8 @@
                 try
                 {
                     TabsComponentRef.HandleAddTab();
-
+                    StateHasChanged();
+                    await Task.Delay(50);
                     var newTabId = TabsComponentRef.Items.Max(i => i.Id);
                     var newTab = TabsComponentRef.Items.FirstOrDefault(item => item.Id == newTabId);
 
@@ -562,6 +568,19 @@
 
                 // NOW add the line with content to target section
                 await _tabsManager.AddLineToSection(targetPartId, maxLineInTarget, sourceSegments);
+                if (AllPartsSegments[sourcePartId].Count == 0 && sourcePartId != targetPartId)
+                {
+                    // Remove the empty tab
+                    TabsComponentRef?.Items.RemoveAll(item => item.Id == sourcePartId);
+                    AllPartsSegments.Remove(sourcePartId);
+
+                    // Update TabsManager and initial items
+                    if (TabsComponentRef != null)
+                    {
+                        initialPartsItems = TabsComponentRef.Items;
+                        _tabsManager.TabItems = TabsComponentRef.Items;
+                    }
+                }
             }
             catch (Exception ex)
             {
