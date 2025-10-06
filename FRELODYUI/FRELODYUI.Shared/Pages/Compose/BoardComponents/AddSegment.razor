@@ -20,7 +20,7 @@
             <div tabindex="@(_baseTabIndex + 5)"
                  class="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-white"
                  style="display:flex; justify-content:center; align-items:center; width:1.5rem;height:1.5rem"
-                 @onclick="CloseForm">
+                 @onclick="()=>CloseForm()">
                 <i class="bi bi-x text-danger"></i>
             </div>
             <button type="submit" tabindex="@(_baseTabIndex + 4)" 
@@ -78,14 +78,14 @@ else
         {
             if (FormOpen)
             {
-                await lyricInput.FocusAsync();
-            }           
+                await JsRt.InvokeVoidAsync("focusInputAndSetCursorToEnd", lyricInput);
+            }
         }
         if (shouldFocusInput && FormOpen)
         {
             shouldFocusInput = false;
-            await lyricInput.FocusAsync();
-
+            await JsRt.InvokeVoidAsync("focusInputAndSetCursorToEnd", lyricInput);
+        
             _baseTabIndex = await JsRt.InvokeAsync<int>("getTabIndexOrDefault", lyricInput);
             StateHasChanged();
         }
@@ -102,7 +102,7 @@ else
         _ = FormOpenChanged.InvokeAsync(FormOpen);
     }
 
-    public async Task CloseForm()
+    public async Task CloseForm(bool? addNext = false)
     {
         if (OnCancel.HasDelegate)
         {
@@ -113,7 +113,7 @@ else
         SelectedChord = cleared;
         await SelectedChordChanged.InvokeAsync(cleared);
         FormOpen = false;
-        await FormOpenChanged.InvokeAsync(_newSegment.AddNextSegment);
+        await FormOpenChanged.InvokeAsync(addNext ?? false);
     }
 
     private async Task HandleSubmit()
@@ -140,7 +140,7 @@ else
         SelectedChord = cleared;
         await SelectedChordChanged.InvokeAsync(cleared);
 
-        await CloseForm();
+        await CloseForm(_newSegment.AddNextSegment);
     } 
 
     private Task HandleChordSelected(ChordDto chord)

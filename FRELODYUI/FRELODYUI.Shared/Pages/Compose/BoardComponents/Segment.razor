@@ -113,7 +113,7 @@
             Alignment.Center => Alignment.Right,
             _ => Content.ChordAlignment
         };
-        
+
         await OnSave.InvokeAsync(Content);
         StateHasChanged();
     }
@@ -127,7 +127,7 @@
             Alignment.Center => Alignment.Left,
             _ => Content.ChordAlignment
         };
-        
+
         await OnSave.InvokeAsync(Content);
         StateHasChanged();
     }
@@ -144,6 +144,11 @@
         {
             if (SegmentRemoved.HasDelegate)
                 SegmentRemoved.InvokeAsync(Content);
+        }
+        else
+        {
+            if(OnCancel.HasDelegate)
+                OnCancel.InvokeAsync();
         }
     }
 

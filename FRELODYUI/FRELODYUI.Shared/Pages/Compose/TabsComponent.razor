@@ -105,6 +105,7 @@
     [Parameter] public Func<int, RenderFragment>? RenderTab { get; set; }
     [Parameter] public EventCallback<TabItem> ActiveTabInfoChanged { get; set; }
     [Parameter] public EventCallback<List<TabItem>> OnTabSort { get; set; }
+    [Parameter] public EventCallback<int> OnTabRemoved { get; set; }
     private readonly Dictionary<int, ElementReference> _sectionNumberInputs = new();
 
     public List<TabItem> Items { get; set; } = new();
@@ -555,11 +556,13 @@
             {
                 Items.RemoveAll(item => item.Id == tabIdToRemove.Value);
                 _sectionNumberInputs.Remove(tabIdToRemove.Value);
+                _tabsManager.TabItems = Items;
                 if (SelectedTab == tabIdToRemove.Value && Items.Count > 0)
                 {
                     SelectedTab = Items[0].Id;
                     _tabsManager.ActiveTab = Items[0];
                 }
+                OnTabRemoved.InvokeAsync(tabIdToRemove.Value);
             }
             tabIdToRemove = null;
         }

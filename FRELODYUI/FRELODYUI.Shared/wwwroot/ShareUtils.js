@@ -55,3 +55,21 @@ window.closeDropdownsOnClickOutside = function (dotNetReference) {
         });
     });
 };
+
+window.focusInputAndSetCursorToEnd = function (element) {
+    if (element && element.focus) {
+        element.focus();
+        // Set cursor position to end of text
+        if (element.setSelectionRange) {
+            const length = element.value.length;
+            element.setSelectionRange(length, length);
+        } else if (element.createTextRange) {
+            // Fallback for older browsers
+            const range = element.createTextRange();
+            range.collapse(true);
+            range.moveEnd('character', element.value.length);
+            range.moveStart('character', element.value.length);
+            range.select();
+        }
+    }
+};

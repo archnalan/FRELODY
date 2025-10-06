@@ -84,6 +84,7 @@
                            OnTabAdd="HandleTabAdd"
                            RenderTab="RenderVerseTab"
                            OnTabSort="HandleTabSort"
+                           OnTabRemoved="HandleTabRemove"
                            ActiveTabInfoChanged ="HandleActiveTabInfoChanged"/>
         }
         else
@@ -360,7 +361,7 @@
 
     private void HandleVerseUpdate(int sectionId, List<SegmentCreateDto> segments)
     {
-        AllPartsSegments[sectionId] = segments;
+        AllPartsSegments[sectionId] = segments; 
     }
 
     private void HandleTabAdd(int newTabId)
@@ -469,27 +470,26 @@
                 }
                 try
                 {
+                    // Step 1: Remove and renumber BEFORE creating new tab
+                    AllPartsSegments[sourcePartId].RemoveAll(s => s.LineNumber == relocateArgs.CurrentLine);
+                    await _tabsManager.RemoveEmptyLine(sourcePartId, relocateArgs.CurrentLine);
+                    RenumberRemainingSegments(sourcePartId);
+
+                    // Step 2: Force UI update for source part
+                    StateHasChanged();
+                    await Task.Delay(100); // Give UI time to process the changes
+
+                    // Step 3: Create new tab
                     TabsComponentRef.HandleAddTab();
                     StateHasChanged();
                     await Task.Delay(50);
+
                     var newTabId = TabsComponentRef.Items.Max(i => i.Id);
                     var newTab = TabsComponentRef.Items.FirstOrDefault(item => item.Id == newTabId);
 
                     if (newTab != null && AllPartsSegments.ContainsKey(newTabId))
                     {
-                        // Set the new tab as active FIRST
-                        TabsComponentRef.SetSelectedTab(newTab);
-                        activeTabItem = newTab;
-                        _tabsManager.ActiveTab = newTab;
-
-                        // Remove source segments BEFORE adding to new tab
-                        AllPartsSegments[sourcePartId].RemoveAll(s => s.LineNumber == relocateArgs.CurrentLine);
-                        await _tabsManager.RemoveEmptyLine(sourcePartId, relocateArgs.CurrentLine);
-
-                        // Renumber remaining segments in source part
-                        RenumberRemainingSegments(sourcePartId);
-
-                        // Update segments for new part
+                        // Step 4: Prepare segments for new part
                         foreach (var segment in sourceSegments)
                         {
                             segment.PartNumber = newTab.SectionNumber;
@@ -497,11 +497,14 @@
                             segment.LineNumber = 1; // Reset to line 1 in new part
                         }
 
-                        // Clear the new tab's empty segments (created by HandleAddTab)
+                        // Step 5: Clear and add to new tab
                         AllPartsSegments[newTabId].Clear();
-
-                        // Use the service to add line with content
                         await _tabsManager.AddLineToSection(newTabId, 0, sourceSegments);
+
+                        // Step 6: Switch to new tab ONLY AFTER all operations complete
+                        TabsComponentRef.SetSelectedTab(newTab);
+                        activeTabItem = newTab;
+                        _tabsManager.ActiveTab = newTab;
                     }
                     else
                     {
@@ -557,7 +560,8 @@
 
                 // Renumber remaining segments in source part
                 RenumberRemainingSegments(sourcePartId);
-
+                StateHasChanged();
+                await Task.Delay(50);
                 // Update segments for target part
                 foreach (var segment in sourceSegments)
                 {
@@ -590,6 +594,20 @@
             }
         }
         StateHasChanged();
+    }
+
+    private async Task HandleTabRemove(int tabId)
+    {
+        if (AllPartsSegments.ContainsKey(tabId))
+        {
+            AllPartsSegments.Remove(tabId);
+            if (TabsComponentRef != null)
+            {
+                initialPartsItems = TabsComponentRef.Items; //syncing items data
+                _tabsManager.TabItems = TabsComponentRef.Items; //syncing manager data
+            }
+            await InvokeAsync(StateHasChanged);
+        }        
     }
 
     private void RenumberRemainingSegments(int partId)

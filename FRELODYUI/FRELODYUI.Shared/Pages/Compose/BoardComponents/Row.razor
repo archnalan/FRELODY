@@ -45,7 +45,8 @@
                         @bind-FormOpen="addFormOpen"
                         OnSegmentAdded="HandleSegmentAdded"
                         TextBoxSize="@textBoxSize"
-                        FocusedLine="Focused" 
+                        FocusedLine="Focused"
+                        OnCancel="HandleCancel"
                         ClosePrevForm="ClosePrevFormAsync" />
         </ActionItemTemplate>
     </SortableList>
@@ -127,10 +128,7 @@
 
     private async void HandleDoubleClick(SegmentCreateDto segment)
     {
-        if (editSegment != null)
-        {
-            HandleSave(segment);
-        }
+        await ClosePrevFormAsync();
         if (!string.IsNullOrEmpty(segment.ChordId)
             && !string.IsNullOrEmpty(segment.Id)
             && segmentRefs.ContainsKey(segment.Id))
