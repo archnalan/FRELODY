@@ -33,10 +33,12 @@
                          Content="segment"
                          Editing="@(EditingSegment?.Id == segment.Id)"
                          FocusedLine="Focused"
+                         ShowAlignment="@(activeAlignmentSegmentId == segment.Id)"
                          TextBoxSize="@textBoxSize"
                          OnSave="HandleSave"
                          OnCancel="HandleCancel"
                          OnDragStart="HandleDragStart" 
+                         OnAlignmentToggle="HandleAlignmentToggle"
                          SegmentRemoved="HandleSegmentRemoved" />
             </div>
         </SortableItemTemplate>
@@ -69,6 +71,7 @@
     private SegmentCreateDto? editSegment;
     private SegmentCreateDto? editedSegment;
     private ChordDto? editedChord;
+    private string? activeAlignmentSegmentId = null; 
     private List<SegmentCreateDto> filteredSegments =>
         Segments?.Where(s => s.LineNumber == Line).OrderBy(s => s.LyricOrder).ToList() ?? new();
     private List<int> lineNumbers =>
@@ -83,6 +86,30 @@
             editSegment = EditingSegment;
             editedSegment = editSegment;
         }
+
+        // Reset alignment controls when row loses focus
+        if (!Focused)
+        {
+            activeAlignmentSegmentId = null;
+        }
+    }
+
+    private void HandleAlignmentToggle((string segmentId, bool show)e)
+    {
+        if (e.show)
+        {
+            // Show alignment for this segment, hide for all others
+            activeAlignmentSegmentId = e.segmentId;
+        }
+        else
+        {
+            // Hide alignment if this is the currently active segment
+            if (activeAlignmentSegmentId == e.segmentId)
+            {
+                activeAlignmentSegmentId = null;
+            }
+        }
+        StateHasChanged();
     }
 
     private void SortSegments((int oldIndex, int newIndex) indices)
@@ -111,6 +138,8 @@
 
     private async Task HandleDragStart(SegmentCreateDto segment)
     {
+        // Hide alignment controls when dragging starts
+        activeAlignmentSegmentId = null;
         await JsRt.InvokeVoidAsync("setDragData", "segmentId", segment.Id);
     }
 
@@ -128,6 +157,9 @@
 
     private async void HandleDoubleClick(SegmentCreateDto segment)
     {
+        // Hide alignment controls when entering edit mode
+        activeAlignmentSegmentId = null;
+        
         await ClosePrevFormAsync();
         if (!string.IsNullOrEmpty(segment.ChordId)
             && !string.IsNullOrEmpty(segment.Id)
@@ -177,6 +209,9 @@
 
     public async Task ClosePrevFormAsync()
     {
+        // Hide alignment controls when closing forms
+        activeAlignmentSegmentId = null;
+        
         if (addSegmentRef != null && addSegmentRef.FormOpen)
         {
             await addSegmentRef.SubmitAndExitAsync();
@@ -217,6 +252,12 @@
         {
             if (!string.IsNullOrEmpty(segment.Id))
             {
+                // Hide alignment if this segment was showing it
+                if (activeAlignmentSegmentId == segment.Id)
+                {
+                    activeAlignmentSegmentId = null;
+                }
+                
                 Segments.RemoveAll(s => s.Id == segment.Id);
                 OnSegmentsUpdate.InvokeAsync(Segments);
             }          
@@ -286,6 +327,8 @@
 
     private async void ToggleDropdown(bool show)
     {
+        // Hide alignment controls when dropdown is toggled
+        activeAlignmentSegmentId = null;
         await ClosePrevFormAsync();
         showDropdown = show;
     }
@@ -295,5 +338,4 @@
         showDropdown = visible;
         await InvokeAsync(StateHasChanged);
     }
-
 }

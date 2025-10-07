@@ -20,7 +20,7 @@
             <div class="d-flex align-items-center position-relative @GetChordAlignmentClass()">
                 @if (!string.IsNullOrEmpty(ChordName))
                 {
-                    @if (ShowAlign)
+                    @if (ShowAlignment)
                     {
                         @* Left unindent icon - show when center or right aligned *@
                         @if (Content.ChordAlignment == Alignment.Center || Content.ChordAlignment == Alignment.Right)
@@ -34,10 +34,10 @@
                     
                     @* Chord name with dynamic alignment *@
                     <h6 class="fw-bolder text-white align-self-center m-0" 
-                       @onclick="()=> ShowAlign = !ShowAlign"
+                       @onclick="HandleChordClick"
                        style="cursor: pointer;">@ChordName</h6>
 
-                    @if (ShowAlign)
+                    @if (ShowAlignment)
                     {
                         @* Right indent icon - show when left or center aligned *@
                         @if (Content.ChordAlignment == Alignment.Left || Content.ChordAlignment == Alignment.Center)
@@ -60,17 +60,18 @@
     [Parameter] public SegmentCreateDto Content { get; set; } = default!;
     [Parameter] public bool Editing { get; set; }
     [Parameter] public bool FocusedLine { get; set; }
+    [Parameter] public bool ShowAlignment { get; set; } // Now controlled by parent
     [Parameter] public string TextBoxSize { get; set; } = "width:8rem;"; 
     [Parameter] public EventCallback<SegmentCreateDto> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto> OnDragStart { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto> SegmentRemoved { get; set; }
+    [Parameter] public EventCallback<(string segmentId, bool show)> OnAlignmentToggle { get; set; }
 
     private ChordDto selectedChord = new();
     private string ChordName = string.Empty;
     private bool isInitialized = false;
     private AddSegment addSegmentRef = default!;
-    private bool ShowAlign = false; 
     private string? previousContentId = null;
 
     protected override void OnParametersSet()
@@ -82,6 +83,7 @@
             previousContentId = Content?.Id;
         }
     }
+
     protected async override void OnAfterRender(bool firstRender)
     {
         if (firstRender && !isInitialized)
@@ -89,6 +91,7 @@
             await InitializeChordStateAsync();
         }
     }
+
     private void InitializeChordState()
     {
         if (Content != null && !string.IsNullOrEmpty(Content.Id))
@@ -127,6 +130,15 @@
 
             isInitialized = true;
             StateHasChanged();
+        }
+    }
+
+    private void HandleChordClick()
+    {
+        // Toggle alignment controls through parent
+        if (OnAlignmentToggle.HasDelegate && !string.IsNullOrEmpty(Content.Id))
+        {
+            OnAlignmentToggle.InvokeAsync((Content.Id, !ShowAlignment));
         }
     }
 
