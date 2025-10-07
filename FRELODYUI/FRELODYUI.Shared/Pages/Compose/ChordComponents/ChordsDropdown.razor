@@ -186,6 +186,13 @@
                 });
                 return;
             }
+            newChord = new ChordDto
+                {
+                    Id = response.Content?.Id ?? "",
+                    ChordName = response.Content?.ChordName ?? "",
+                    ChordType = response.Content?.ChordType,
+                    Difficulty = response.Content?.Difficulty,
+                };
             AvailableChords.Add(newChord);
         }
 
