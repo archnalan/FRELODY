@@ -19,51 +19,53 @@
                                 <i class="bi bi-grip-vertical"></i>
                             </div>
                             <div class="@GetTabClass(item.Id)" @onclick="() => SetSelectedTab(item)">
-                                <div class="d-inline-flex align-items-center">
-                                    <select class="form-select form-select-sm border-secondary bg-light fw-normal p-1"
-                                            style="min-width:5.5rem"
-                                            value="@item.SectionName"
-                                            @onmousedown:preventDefault="SelectedTab != item.Id"
-                                            @onchange="@((ChangeEventArgs e) => HandleSectionChanged(item.Id, e.Value?.ToString()))">
-                                        @foreach (var sectionName in SongSectionNames)
-                                        {
-                                            <option value="@sectionName" disabled="@IsSectionDisabled(sectionName, item.Id)" >
-                                                @((sectionName.Length > NAME_MAX_LEN ? sectionName.Substring(0, NAME_MAX_LEN) + "..." : sectionName))
-                                            </option>
-                                        }
-                                    </select>
-                                    @if (SectionAllowsNumbering(item.SectionName))
+                            <div class="d-inline-flex align-items-center">
+                                <select class="form-select form-select-sm border-secondary bg-light fw-normal p-1"
+                                        style="min-width:5.5rem"
+                                        value="@item.SectionName"
+                                        @onmousedown:preventDefault="SelectedTab != item.Id"
+                                        @onchange="@((ChangeEventArgs e) => HandleSectionChanged(item.Id, e.Value?.ToString()))">
+                                    @foreach (var sectionName in SongSectionNames)
                                     {
-                                        <div class="position-relative">
-                                            <input @ref="_sectionNumberInputs[item.Id]"
-                                                   id="section-number-@item.Id"
-                                                   class="form-control form-control-sm ms-1"
-                                                   type="number"
-                                                   style="width:3rem;"
-                                                   min="0"
-                                                   value="@(item.SectionNumber == 0 ? "" : item.SectionNumber.ToString())"
-                                                   @onchange="@(e => HandleSectionNumberChanged(item.Id, e))"
-                                                   @onmousedown:preventDefault="SelectedTab != item.Id" />
-                                            @if (ShowInputHide)
-                                            {
-                                                <span class="d-flex align-items-center justify-content-center position-absolute top-0 start-50 translate-middle badge rounded-circle bg-danger text-center"
-                                                    style="width:1.25rem; height:1.25rem" @onclick="()=>HideNumberInputFromSection(item)"
-                                                    @onmousedown:preventDefault="SelectedTab != item.Id">
-                                                    <i class="bi bi-x"></i>
-                                                </span>                                                
-                                            }
-                                        </div>                                       
+                                        <option value="@sectionName"
+                                                disabled="@(IsSectionDisabled(sectionName, item.Id))"
+                                                class="@(sectionName == nameof(SongSection.unknown) ? "d-none" : "")">
+                                            @((sectionName.Length > NAME_MAX_LEN ? sectionName.Substring(0, NAME_MAX_LEN) + "..." : sectionName))
+                                        </option>
                                     }
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <button class="btn btn-sm btn-outline-light rounded-circle text-primary text-decoration-none m-1"
-                                            @onclick="() => HandleTabRemove(item)"
-                                        @onclick:stopPropagation="true"
-                                            title="Remove section">
-                                        <i class="bi bi-x text-danger"></i>
-                                    </button>
-                                </div>
+                                </select>
+                                @if (SectionAllowsNumbering(item.SectionName))
+                                {
+                                    <div class="position-relative">
+                                        <input @ref="_sectionNumberInputs[item.Id]"
+                                               id="section-number-@item.Id"
+                                               class="form-control form-control-sm ms-1"
+                                               type="number"
+                                               style="width:3rem;"
+                                               min="0"
+                                               value="@(item.SectionNumber == 0 ? "" : item.SectionNumber.ToString())"
+                                               @onchange="@(e => HandleSectionNumberChanged(item.Id, e))"
+                                               @onmousedown:preventDefault="SelectedTab != item.Id" />
+                                        @if (ShowInputHide)
+                                        {
+                                            <span class="d-flex align-items-center justify-content-center position-absolute top-0 start-50 translate-middle badge rounded-circle bg-danger text-center"
+                                                  style="width:1.25rem; height:1.25rem" @onclick="() => HideNumberInputFromSection(item)"
+                                                  @onmousedown:preventDefault="SelectedTab != item.Id">
+                                                <i class="bi bi-x"></i>
+                                            </span>
+                                        }
+                                    </div>
+                                }
                             </div>
+                            <div class="d-flex align-items-center">
+                                <button class="btn btn-sm btn-outline-light rounded-circle text-primary text-decoration-none m-1"
+                                        @onclick="() => HandleTabRemove(item)"
+                                        @onclick:stopPropagation="true"
+                                        title="Remove section">
+                                    <i class="bi bi-x text-danger"></i>
+                                </button>
+                            </div>
+                        </div>
                         </div>
                     </SortableItemTemplate>
                <ActionItemTemplate>
