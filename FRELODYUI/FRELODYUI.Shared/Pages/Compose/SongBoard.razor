@@ -470,16 +470,22 @@
                 }
                 try
                 {
-                    // Step 1: Remove and renumber BEFORE creating new tab
+                    // Step 1: Remove segments from source BEFORE any other operations
                     AllPartsSegments[sourcePartId].RemoveAll(s => s.LineNumber == relocateArgs.CurrentLine);
-                    await _tabsManager.RemoveEmptyLine(sourcePartId, relocateArgs.CurrentLine);
+
+                    // Step 2: Renumber remaining segments and trigger UI update
                     RenumberRemainingSegments(sourcePartId);
 
-                    // Step 2: Force UI update for source part
-                    StateHasChanged();
-                    await Task.Delay(100); // Give UI time to process the changes
+                    // Step 3: Check if source section is now empty BEFORE creating new section
+                    var shouldRemoveSourceSection = AllPartsSegments[sourcePartId].Count == 0 &&
+                                                    TabsComponentRef.Items.Count > 1; // Don't remove if it's the only section
 
-                    // Step 3: Create new tab
+                    // Step 4: Remove empty line tracking and force immediate UI refresh
+                    await _tabsManager.RemoveEmptyLine(sourcePartId, relocateArgs.CurrentLine);
+                    StateHasChanged();
+                    await Task.Delay(50);
+
+                    // Step 5: Create new tab
                     TabsComponentRef.HandleAddTab();
                     StateHasChanged();
                     await Task.Delay(50);
@@ -489,7 +495,7 @@
 
                     if (newTab != null && AllPartsSegments.ContainsKey(newTabId))
                     {
-                        // Step 4: Prepare segments for new part
+                        // Step 6: Prepare segments for new part
                         foreach (var segment in sourceSegments)
                         {
                             segment.PartNumber = newTab.SectionNumber;
@@ -497,14 +503,23 @@
                             segment.LineNumber = 1; // Reset to line 1 in new part
                         }
 
-                        // Step 5: Clear and add to new tab
+                        // Step 7: Clear and add to new tab
                         AllPartsSegments[newTabId].Clear();
                         await _tabsManager.AddLineToSection(newTabId, 0, sourceSegments);
 
-                        // Step 6: Switch to new tab ONLY AFTER all operations complete
+                        // Step 8: Remove empty source section if needed
+                        if (shouldRemoveSourceSection)
+                        {
+                            await RemoveEmptySection(sourcePartId);
+                        }
+
+                        // Step 9: Switch to new tab and force final refresh
                         TabsComponentRef.SetSelectedTab(newTab);
                         activeTabItem = newTab;
                         _tabsManager.ActiveTab = newTab;
+
+                        // Step 10: Force complete UI refresh
+                        StateHasChanged();
                     }
                     else
                     {
@@ -556,12 +571,20 @@
 
                 // REMOVE source segments FIRST to avoid duplication
                 AllPartsSegments[sourcePartId].RemoveAll(s => s.LineNumber == relocateArgs.CurrentLine);
-                await _tabsManager.RemoveEmptyLine(sourcePartId, relocateArgs.CurrentLine);
 
-                // Renumber remaining segments in source part
+                // Renumber remaining segments in source part IMMEDIATELY
                 RenumberRemainingSegments(sourcePartId);
+
+                // Check if source section should be removed
+                var shouldRemoveSourceSection = AllPartsSegments[sourcePartId].Count == 0 &&
+                                                sourcePartId != targetPartId &&
+                                                TabsComponentRef.Items.Count > 1; // Don't remove if it's the only section
+
+                // Remove empty line tracking and force UI update
+                await _tabsManager.RemoveEmptyLine(sourcePartId, relocateArgs.CurrentLine);
                 StateHasChanged();
-                await Task.Delay(50);
+                await Task.Delay(100);
+
                 // Update segments for target part
                 foreach (var segment in sourceSegments)
                 {
@@ -572,18 +595,11 @@
 
                 // NOW add the line with content to target section
                 await _tabsManager.AddLineToSection(targetPartId, maxLineInTarget, sourceSegments);
-                if (AllPartsSegments[sourcePartId].Count == 0 && sourcePartId != targetPartId)
-                {
-                    // Remove the empty tab
-                    TabsComponentRef?.Items.RemoveAll(item => item.Id == sourcePartId);
-                    AllPartsSegments.Remove(sourcePartId);
 
-                    // Update TabsManager and initial items
-                    if (TabsComponentRef != null)
-                    {
-                        initialPartsItems = TabsComponentRef.Items;
-                        _tabsManager.TabItems = TabsComponentRef.Items;
-                    }
+                // Remove empty source section if needed
+                if (shouldRemoveSourceSection)
+                {
+                    await RemoveEmptySection(sourcePartId);
                 }
             }
             catch (Exception ex)
@@ -593,7 +609,87 @@
                 return;
             }
         }
+
+        // Final state refresh to ensure all UI components are updated
         StateHasChanged();
+    }
+
+    private void RenumberRemainingSegments(int partId)
+    {
+        if (!AllPartsSegments.ContainsKey(partId))
+            return;
+
+        var allRemainingSegments = AllPartsSegments[partId]
+            .OrderBy(s => s.LineNumber)
+            .ThenBy(s => s.LyricOrder)
+            .ToList();
+
+        // Group by line number and renumber both lines and lyric order
+        var groupedByLine = allRemainingSegments
+            .GroupBy(s => s.LineNumber)
+            .OrderBy(g => g.Key)
+            .ToList();
+
+        int newLineNumber = 1;
+        foreach (var lineGroup in groupedByLine)
+        {
+            var segmentsInLine = lineGroup.OrderBy(s => s.LyricOrder).ToList();
+
+            for (int i = 0; i < segmentsInLine.Count; i++)
+            {
+                segmentsInLine[i].LineNumber = newLineNumber;
+                segmentsInLine[i].LyricOrder = i + 1; // Ensure proper lyric ordering within the line
+            }
+
+            newLineNumber++;
+        }
+
+        // Update the collection to maintain proper ordering
+        AllPartsSegments[partId] = allRemainingSegments;
+    }
+
+    private async Task RemoveEmptySection(int sectionId)
+    {
+        try
+        {
+            if (TabsComponentRef != null)
+            {
+                // Find the section to remove
+                var sectionToRemove = TabsComponentRef.Items.FirstOrDefault(item => item.Id == sectionId);
+                if (sectionToRemove != null)
+                {
+                    _logger.LogInformation("Removing empty section: {SectionName} {SectionNumber}",
+                        sectionToRemove.SectionName, sectionToRemove.SectionNumber);
+
+                    // Remove from TabsComponent
+                    TabsComponentRef.Items.RemoveAll(item => item.Id == sectionId);
+
+                    // Remove from AllPartsSegments
+                    AllPartsSegments.Remove(sectionId);
+
+                    // Update TabsManager and initial items
+                    initialPartsItems = TabsComponentRef.Items;
+                    _tabsManager.TabItems = TabsComponentRef.Items;
+
+                    // If the active tab was removed, switch to the first available tab
+                    if (activeTabItem?.Id == sectionId && TabsComponentRef.Items.Any())
+                    {
+                        var newActiveTab = TabsComponentRef.Items.First();
+                        TabsComponentRef.SetSelectedTab(newActiveTab);
+                        activeTabItem = newActiveTab;
+                        _tabsManager.ActiveTab = newActiveTab;
+                    }
+
+                    // Force UI refresh
+                    StateHasChanged();
+                    await Task.Delay(50); // Small delay to ensure UI processes the change
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing empty section {SectionId}", sectionId);
+        }
     }
 
     private async Task HandleTabRemove(int tabId)
@@ -608,18 +704,6 @@
             }
             await InvokeAsync(StateHasChanged);
         }        
-    }
-
-    private void RenumberRemainingSegments(int partId)
-    {
-        var allRemainingSegments = AllPartsSegments[partId]
-            .OrderBy(s => s.LineNumber)
-            .ToList();
-
-        for (int i = 0; i < allRemainingSegments.Count; i++)
-        {
-            allRemainingSegments[i].LineNumber = i + 1;
-        }
     }
 
     private void ShowMaxSectionsError()

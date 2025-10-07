@@ -290,7 +290,7 @@
         showDropdown = show;
     }
 
-    private async void HandleVisbileChanged(bool visible)
+    public async void HandleVisbileChanged(bool visible)
     {
         showDropdown = visible;
         await InvokeAsync(StateHasChanged);

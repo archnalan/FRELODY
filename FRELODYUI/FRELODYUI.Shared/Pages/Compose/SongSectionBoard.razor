@@ -146,23 +146,46 @@
         }
     }
 
+    public void RemoveEmptyLine(int lineNumber)
+    {
+        bool wasTracked = trackLines.Remove(lineNumber);
+
+        var hasSegments = Segments?.Any(s => s.LineNumber == lineNumber) ?? false;
+
+        if (wasTracked || !hasSegments)
+        {
+            UpdateLines();
+
+            if (focusedRow == lineNumber)
+            {
+                focusedRow = lines.Count > 0 ? lines[0] : null;
+            }
+
+            StateHasChanged();
+        }
+    }
+
     private void UpdateLines()
     {
         var segmentLines = Segments?
                         .Select(s => s.LineNumber)
                         .Distinct()
-                        .ToList();
-        if (segmentLines != null)
-        {
-            lines = segmentLines
-                    .Union(trackLines)
-                    .Distinct()
-                    .OrderBy(l => l)
-                    .ToList();
-        }
+                        .ToList() ?? new List<int>();
+
+        var validTrackLines = trackLines
+            .Where(tl => Segments?.Any(s => s.LineNumber == tl) == true)
+            .ToList();
+
+        lines = segmentLines
+                .Union(validTrackLines)
+                .Distinct()
+                .OrderBy(l => l)
+                .ToList();
+
+        trackLines = validTrackLines;
+
         PruneRowRefs();
     }
-
     private async Task HandleRemoveEmptyLineRequest(int sectionId, int lineNumber)
     {
         if (sectionId == SectionId)
@@ -183,18 +206,6 @@
                 lineAdded = true;
             }
         }        
-    }
-
-    public void RemoveEmptyLine(int lineNumber)
-    {
-        // Only remove if the line has no segments
-        var hasSegments = Segments?.Any(s => s.LineNumber == lineNumber) ?? false;
-        if (!hasSegments)
-        {
-            trackLines.Remove(lineNumber);
-            UpdateLines();
-            StateHasChanged();
-        }
     }
 
     private void PruneRowRefs()
@@ -238,6 +249,9 @@
             var prev = TryGetRowRef(focusedRow.Value);
             if (prev is not null)
                 await prev.ClosePrevFormAsync();
+            var curr = TryGetRowRef(line);
+            if (curr is not null)
+                curr.HandleVisbileChanged(false);//close dropdown if open
         }
         focusedRow = line;
         StateHasChanged(); // ensure remove button renders before init in next render pass

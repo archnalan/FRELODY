@@ -70,25 +70,63 @@
     private string ChordName = string.Empty;
     private bool isInitialized = false;
     private AddSegment addSegmentRef = default!;
-    private bool ShowAlign = false;
+    private bool ShowAlign = false; 
+    private string? previousContentId = null;
 
+    protected override void OnParametersSet()
+    {
+        // Check if Content has changed (indicating a potential line switch)
+        if (previousContentId != Content?.Id || !isInitialized)
+        {
+            InitializeChordState();
+            previousContentId = Content?.Id;
+        }
+    }
     protected async override void OnAfterRender(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && !isInitialized)
         {
-            if (!isInitialized)
+            await InitializeChordStateAsync();
+        }
+    }
+    private void InitializeChordState()
+    {
+        if (Content != null && !string.IsNullOrEmpty(Content.Id))
+        {
+            ChordName = Content.ChordName ?? string.Empty;
+
+            // If we have a ChordId but no ChordName, we need to fetch it
+            if (string.IsNullOrEmpty(ChordName) && !string.IsNullOrEmpty(Content.ChordId))
             {
-                if (!string.IsNullOrEmpty(Content.Id))
-                {
-                    ChordName = Content.ChordName ?? string.Empty;
-                    if (string.IsNullOrEmpty(ChordName) && !string.IsNullOrEmpty(Content.ChordId))
-                    {
-                        selectedChord = await GetChord(Content.ChordId);
-                    }
-                }
+                _ = InitializeChordStateAsync();
+            }
+            else
+            {
                 isInitialized = true;
                 StateHasChanged();
             }
+        }
+    }
+
+    private async Task InitializeChordStateAsync()
+    {
+        if (Content != null && !string.IsNullOrEmpty(Content.Id))
+        {
+            ChordName = Content.ChordName ?? string.Empty;
+
+            if (string.IsNullOrEmpty(ChordName) && !string.IsNullOrEmpty(Content.ChordId))
+            {
+                selectedChord = await GetChord(Content.ChordId);
+                if (selectedChord != null && !string.IsNullOrEmpty(selectedChord.ChordName))
+                {
+                    ChordName = selectedChord.ChordName;
+                    // Update the Content to ensure consistency
+                    Content.ChordName = ChordName;
+                }
+            }
+
+            isInitialized = true;
+            StateHasChanged();
         }
     }
 
