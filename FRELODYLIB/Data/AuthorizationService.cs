@@ -1,28 +1,29 @@
-﻿using AutoMapper;
-using Google.Apis.Auth;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.VisualStudio.Web.CodeGeneration.DotNet;
-using Newtonsoft.Json;
-using FRELODYAPP.Data.Infrastructure;
+﻿using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Dtos.AuthDtos;
 using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Dtos.UserDtos;
 using FRELODYAPP.Extensions;
+using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
+using FRELODYLIB.ServiceHandler.ResultModels;
+using Google.Apis.Auth;
+using Mapster;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.VisualStudio.Web.CodeGeneration.DotNet;
+using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.Extensions.Hosting;
-using FRELODYLIB.ServiceHandler.ResultModels;
-using Mapster;
 
 namespace FRELODYAPP.Data
 {
@@ -372,45 +373,50 @@ namespace FRELODYAPP.Data
 
             //submethod to allow breakpoint hitting in an arrow function
             async Task<ServiceResult<CreateUserResponseDto>> CreateUserWithRoleAsync([Required] CreateUserDto createUserDto)
-            {
-                var usernameExists = await _context.Users
-                                    .Where(x => x.TenantId == tenantId)
-                                    .AnyAsync(x => x.UserName == createUserDto.UserName);
+            {                
 
-                if (usernameExists)
-                    return ServiceResult<CreateUserResponseDto>.Failure(
-                        new BadRequestException($"Username: {createUserDto.UserName} already taken."));
-
-                using (var scope = await _context.Database.BeginTransactionAsync())
+                using (var scope = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable))
                 {
                     try
                     {
+                        //var usernameExists = await _context.Users
+                        //    .Where(x => x.TenantId == tenantId)
+                        //    .AnyAsync(x => x.UserName == createUserDto.UserName);
+                        var usernameExists = await _userManager.FindByNameAsync(createUserDto.UserName) != null;
+
+                        if (usernameExists)
+                        {
+                            await HandleUserNameConflict(createUserDto,tenantId);
+                        }
+
                         User newUser = createUserDto.Adapt<User>();
                         newUser.TenantId = tenantId;
                         var result = await _userManager.CreateAsync(newUser, createUserDto.Password);
                         if (result.Succeeded)
                         {
-                            if(createUserDto.AssignedRoles != null)
+                            if(createUserDto.AssignedRoles == null)
                             {
-                                foreach (var roleName in createUserDto.AssignedRoles)
-                                {
-
-                                    var role = await AddUserToRoleAsync(newUser.Id, roleName);
-                                    if (!role.IsSuccess)
-                                    {
-                                        //failed to add one of the roles
-                                        await scope.RollbackAsync();
-                                        return ServiceResult<CreateUserResponseDto>.Failure(role.Error);
-                                    }
-                                }
-                                await scope.CommitAsync();
-
-                                var tokens = await _tokenService.GenerateTokens(newUser, tenantId);
-                                var output = newUser.Adapt<CreateUserResponseDto>();
-                                //output. = tokens.Token; // Assuming CreateUserResponseDto has this property
-                                return ServiceResult<CreateUserResponseDto>.Success(output);
+                                createUserDto.AssignedRoles = new List<string> { "User" };
                             }
-                           
+                            foreach (var roleName in createUserDto.AssignedRoles)
+                            {
+
+                                var role = await AddUserToRoleAsync(newUser.Id, roleName);
+                                if (!role.IsSuccess)
+                                {
+                                    //failed to add one of the roles
+                                    await scope.RollbackAsync();
+                                    return ServiceResult<CreateUserResponseDto>.Failure(role.Error);
+                                }
+                            }
+                            await scope.CommitAsync();
+
+                            var tokens = await _tokenService.GenerateTokens(newUser, tenantId);
+                            var output = newUser.Adapt<CreateUserResponseDto>();
+                            output.AssignedRoles = createUserDto.AssignedRoles;
+                            //output. = tokens.Token; // Assuming CreateUserResponseDto has this property
+                            return ServiceResult<CreateUserResponseDto>.Success(output);
+
                         }
 
                         await scope.RollbackAsync();
@@ -424,12 +430,59 @@ namespace FRELODYAPP.Data
                     }
                     catch (Exception ex)
                     {
+                        if (IsDuplicateUsernameException(ex))
+                        {
+                           return await HandleUserNameConflict(createUserDto, tenantId);
+                        }
                         _logger.LogError("Error while creating user. {ex}", ex);
                         return ServiceResult<CreateUserResponseDto>.Failure(new ServerErrorException("Error while creating user. Please try again later"));
                     }
                     
                 }
             }
+        }
+        private bool IsDuplicateUsernameException(Exception ex)
+        {
+            var sqlException = ex.InnerException as SqlException;
+            if (sqlException != null)
+            {
+                // 2601 is for duplicate key in a unique index
+                if (sqlException.Number == 2601)
+                {
+                    // Check if the error message contains the index name 'UserNameIndex'
+                    if (sqlException.Message.Contains("UserNameIndex"))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private async Task<ServiceResult<CreateUserResponseDto>> HandleUserNameConflict(CreateUserDto createUserDto, string tenantId = "")
+        {
+
+            var suggestions = await GenerateUsernameSuggestions(
+                createUserDto.UserName,
+                createUserDto.Email,
+                createUserDto.PhoneNumber ?? "",
+                tenantId);
+
+            var response = new CreateUserResponseDto
+            {
+                UserName = createUserDto.UserName,
+                Email = createUserDto.Email,
+                PhoneNumber = createUserDto.PhoneNumber,
+                FirstName = createUserDto.FirstName,
+                LastName = createUserDto.LastName,
+            };
+
+            var suggestionText = suggestions.Any()
+                ? $"Try: {string.Join(", ", suggestions)}"
+                : "Please try a different username.";
+
+            return ServiceResult<CreateUserResponseDto>.Failure(
+                new BadRequestException($"Username: {createUserDto.UserName} already taken. {suggestionText}"));
         }
 
         public async Task<ServiceResult<string>> ResetPassword(ResetPasswordDto resetPasswordDto)
@@ -633,25 +686,72 @@ namespace FRELODYAPP.Data
             return ServiceResult<UpdateUserProfileOutDto>.Success(userProfile);
         }
 
+        private async Task<List<string>> GenerateUsernameSuggestions(string baseUsername, string email = null, string phoneNumber = null, string tenantId = null)
+        {
+            var suggestions = new List<string>();
 
-        //private async Task<string> GenerateUserName(string oldUserName)
-        //{
-        //    int random = 1;
-        //    string newUsername = oldUserName + random.ToString();
+            // Extract suggestions from email
+            if (!string.IsNullOrEmpty(email))
+            {
+                var emailPart = email.Split('@')[0];
+                if (!string.IsNullOrEmpty(emailPart) && emailPart != baseUsername)
+                {
+                    suggestions.Add(emailPart);
+                }
+            }
 
-        //    while (await _userManager.FindByNameAsync(newUsername) != null)
-        //    {
-        //        random++;
-        //        newUsername = oldUserName + random.ToString();
-        //        //prevent  infinte loop
-        //        if (random > 100)
-        //        {
-        //            break;
-        //        }
+            // Extract suggestions from phone number (last 3 digits)
+            if (!string.IsNullOrEmpty(phoneNumber))
+            {
+                var normalizedPhone = _securityUtilityService.NormalizePhoneNumber(phoneNumber);
+                if (normalizedPhone.Length >= 3)
+                {
+                    var phoneSuffix = normalizedPhone.Substring(normalizedPhone.Length - 3);
+                    var phoneBasedUsername = baseUsername + phoneSuffix;
+                    if (!suggestions.Contains(phoneBasedUsername))
+                    {
+                        suggestions.Add(phoneBasedUsername);
+                    }
+                }
+            }
 
-        //    }
-        //    return newUsername;
-        //}
+            // Generate random number suggestions
+            var random = new Random();
+            var randomSuffixes = new HashSet<int>();
+
+            // Generate unique random numbers
+            while (randomSuffixes.Count < 3)
+            {
+                randomSuffixes.Add(random.Next(100, 999));
+            }
+
+            foreach (var suffix in randomSuffixes)
+            {
+                var randomUsername = baseUsername + suffix;
+                if (!suggestions.Contains(randomUsername))
+                {
+                    suggestions.Add(randomUsername);
+                }
+            }
+
+            // Filter out suggestions that already exist in database
+            var availableSuggestions = new List<string>();
+            foreach (var suggestion in suggestions)
+            {
+                var exists = await _context.Users
+                    .Where(x => string.IsNullOrEmpty(tenantId) || x.TenantId == tenantId)
+                    .AnyAsync(x => x.UserName == suggestion);
+
+                if (!exists)
+                {
+                    availableSuggestions.Add(suggestion);
+                }
+            }
+
+            // Return top 3 suggestions
+            return availableSuggestions.Take(3).ToList();
+        }
+
         public async Task<ServiceResult<string>> AddUserToRoleAsync(string userId, string roleName)
         {
             try

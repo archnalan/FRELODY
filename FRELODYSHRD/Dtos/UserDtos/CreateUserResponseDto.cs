@@ -17,7 +17,7 @@
         public string? AboutMe { get; set; }
         public string? ProfilePicUrl { get; set; }
         public string? CoverPhotoUrl { get; set; }
-        public List<string>? DefaultRoles { get; set; }
+        public List<string>? AssignedRoles { get; set; }
 
     }
 }

@@ -14,6 +14,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using Mapster;
 
 namespace FRELODYAPP.Data
 {
@@ -22,20 +23,17 @@ namespace FRELODYAPP.Data
         private readonly IConfiguration _config;
         private readonly UserManager<User> _userManager;
         private readonly SongDbContext _context;
-        private readonly IMapper _mapper;
         private readonly ILogger<TokenService> _logger;
 
         public TokenService(
             IConfiguration config,
             UserManager<User> userManager,
             SongDbContext context,
-            IMapper mapper,
             ILogger<TokenService> logger)
         {
             _config = config;
             _userManager = userManager;
             _context = context;
-            _mapper = mapper;
             _logger = logger;
         }
 
@@ -48,7 +46,7 @@ namespace FRELODYAPP.Data
 
             var claims = new List<Claim>
             {
-                new Claim("user", JsonConvert.SerializeObject(_mapper.Map<UserClaimsDto>(user)))
+                new Claim("user", JsonConvert.SerializeObject(user.Adapt<UserClaimsDto>()))
             };
 
             foreach (var role in roles)

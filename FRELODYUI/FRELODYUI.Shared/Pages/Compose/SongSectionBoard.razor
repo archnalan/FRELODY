@@ -11,14 +11,14 @@
     }
 
     <div class="d-flex align-items-center w-100 mb-3">
-        <div class="@($"flex-grow-1 h-0 border border-dashed ms-3 {(lines.Count > 0 ? "border-secondary opacity-50" : "border-primary")}")"></div>
+        <div class="@($"flex-grow-1 h-0 border border-dashed ms-3 {(lines.Count > 0 ? "bg-secondary opacity-50" : "border-primary")}")"></div>
         <button class="@($"btn btn-sm {(lines.Count > 0 ? "btn-outline-secondary" : "btn-outline-primary")}")"
                 disabled="@(lines.Count > 0)"
                 @onclick="async () => await AddLine(0)">
             <i class="bi bi-plus"></i>
             <span class="small">New Line</span>
         </button>
-        <div class="@($"flex-grow-1 h-0 border border-dashed me-3 {(lines.Count > 0 ? "border-secondary opacity-50" : "border-primary")}")"></div>
+        <div class="@($"flex-grow-1 h-0 border border-dashed me-3 {(lines.Count > 0 ? "bg-secondary opacity-50" : "border-primary")}")"></div>
     </div>
 
     @foreach (var line in lines)

@@ -89,8 +89,8 @@
         }
         else
         {
-            <div class="alert alert-warning">
-                No sections found. Click '+' to add a new section.
+            <div class="alert alert-warning mt-2">
+                No sections found. Click to <span class="btn-link" style="cursor:pointer" @onclick="InitializeNewContent">add a new section</span>
             </div>
         }
     }
@@ -148,28 +148,7 @@
             }
             if (string.IsNullOrEmpty(SongId))
             {
-                // Initialize new song
-                initialPartsItems = new List<TabItem>
-                {
-                    new TabItem
-                    {
-                        Id = 1,
-                        SectionName = nameof(SongSection.Verse),
-                        SectionNumber = 1,
-                        Content = builder =>
-                        {
-                            builder.OpenComponent<SongSectionBoard>(0);
-                            builder.AddAttribute(1, "SectionId", 1);
-                            builder.AddAttribute(2, "OnSegmentsUpdate",
-                                EventCallback.Factory.Create<List<SegmentCreateDto>>(
-                                    this, segments => HandleVerseUpdate(1, segments)));
-                            builder.AddAttribute(3, "Segments", AllPartsSegments[1]);
-                            builder.AddAttribute(4, "ActiveTab", activeTabItem);
-                            builder.CloseComponent();
-                        }
-                    }
-                };
-                AllPartsSegments[1] = new List<SegmentCreateDto>();
+                InitializeNewContent();
             }
             else
             {
@@ -267,6 +246,32 @@
             StateHasChanged();
         }
 
+    }
+
+    private void InitializeNewContent()
+    {
+        // Initialize new song
+        initialPartsItems = new List<TabItem>
+                {
+                    new TabItem
+                    {
+                        Id = 1,
+                        SectionName = nameof(SongSection.Verse),
+                        SectionNumber = 1,
+                        Content = builder =>
+                        {
+                            builder.OpenComponent<SongSectionBoard>(0);
+                            builder.AddAttribute(1, "SectionId", 1);
+                            builder.AddAttribute(2, "OnSegmentsUpdate",
+                                EventCallback.Factory.Create<List<SegmentCreateDto>>(
+                                    this, segments => HandleVerseUpdate(1, segments)));
+                            builder.AddAttribute(3, "Segments", AllPartsSegments[1]);
+                            builder.AddAttribute(4, "ActiveTab", activeTabItem);
+                            builder.CloseComponent();
+                        }
+                    }
+                };
+        AllPartsSegments[1] = new List<SegmentCreateDto>();
     }
 
     private async Task HandleSongSave()

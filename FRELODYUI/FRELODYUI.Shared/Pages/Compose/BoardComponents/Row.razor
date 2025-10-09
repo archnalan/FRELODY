@@ -5,7 +5,7 @@
      class="@($"w-100 position-relative d-flex flex-wrap gap-3 bg-white" + 
             $" {(Focused ? "border border-primary" : "border border-secondary")}")"
      style="@(Focused ? "padding:2.5rem" : "padding:1.75rem");border-radius:1rem; border-bottom-right-radius:0.5rem">
-    <div class="@($"position-absolute top-0 start-0 badge {(Focused ? "bg-primary mt-2 ms-2" : "mt-1 ms-3")}")">
+    <div class="@($"position-absolute top-0 start-0 badge badge-sm {(Focused ? "bg-primary mt-2 ms-2" : "border-secondary opacity-50 mt-1 ms-2")}")">
         Lyric Line @Line.ToString("00")
         @if (Focused)
         {
