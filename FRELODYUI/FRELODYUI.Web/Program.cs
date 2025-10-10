@@ -6,18 +6,21 @@ using FRELODYUI.Shared.Services;
 using FRELODYUI.Web.Client.Services;
 using FRELODYUI.Web.Components;
 using FRELODYUI.Web.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Refit;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
+builder.Services.AddAuthenticationCore();
+builder.Services.AddAuthorizationCore();
+
 builder.Services.AddBlazoredLocalStorage();
-// Add device-specific services used by the FRELODYUI.Shared project
+
 builder.Services.AddSingleton<IFormFactor, FRELODYUI.Web.Client.Services.FormFactor>();
 builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
 builder.Services.AddScoped<IPrintService, WebPrintService>();
@@ -28,7 +31,8 @@ builder.Services.AddScoped<IStorageService, WebStorageService>();
 builder.Services.AddScoped<ChordLyricExtrator>();
 builder.Services.AddScoped<TabManagementService>();
 builder.Services.AddScoped<GlobalAuthStateProvider>();
-
+builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
+                provider.GetRequiredService<GlobalAuthStateProvider>());
 var baseAddressApi = new Uri("https://localhost:7018");
 
 builder.Services.AddRefitClient<ISongsApi>()

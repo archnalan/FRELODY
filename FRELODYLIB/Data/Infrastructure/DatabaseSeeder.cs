@@ -137,6 +137,11 @@ namespace FRELODYAPP.Data.Infrastructure
             var existingUser = await userManager.FindByEmailAsync(powerUserEmail);
             if (existingUser != null)
             {
+                if(existingUser.TenantId != tenantId)
+                {
+                    existingUser.TenantId = tenantId;
+                    await userManager.UpdateAsync(existingUser);
+                }               
                 _logger.LogInformation("Power user already exists.");
                 return;
             }

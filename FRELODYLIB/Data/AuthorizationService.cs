@@ -881,14 +881,18 @@ namespace FRELODYAPP.Data
 
         private async Task<User> Authenticate(UserLogin userLogin)
         {
-            var user = await _userManager.FindByEmailAsync(userLogin.Email);
+            var user = await _context.Users.IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(u => u.Email == userLogin.Email);
             if (user == null)
             {
-                user = await _userManager.FindByNameAsync(userLogin.Email);
-                if (user == null && _securityUtilityService.NormalizePhoneNumber(userLogin.Email).Length > 5)
+                user = await _context.Users.IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(u => u.UserName == userLogin.Email);
+                
+                if(user == null && _securityUtilityService.NormalizePhoneNumber(userLogin.Email).Length > 5)
                 {
-                    user = _context.Users
-                        .FirstOrDefault(x => _securityUtilityService.NormalizePhoneNumber(x.PhoneNumber) == _securityUtilityService.NormalizePhoneNumber(userLogin.Email));
+                    var normalizedPhone = _securityUtilityService.NormalizePhoneNumber(userLogin.Email);
+                    user = await _context.Users.IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(x => _securityUtilityService.NormalizePhoneNumber(x.PhoneNumber ?? "") == normalizedPhone);
                 }
             }
 

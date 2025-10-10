@@ -86,6 +86,16 @@
     private bool isProcessing = false;
     private InputFile fileInputRef =default!;
 
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user is already authenticated
+        var authState = await _globalAuth.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated ==false)
+        {
+            _navManager.NavigateTo("/login");
+        }
+    }
+
     private void ProcessPastedText()
     {
         if (string.IsNullOrWhiteSpace(pastedText)) return;

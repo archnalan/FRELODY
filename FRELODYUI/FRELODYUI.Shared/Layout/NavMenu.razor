@@ -1,5 +1,4 @@
-﻿
-<div class="top-row ps-3 navbar navbar-dark">
+﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">FRELODY</a>
     </div>
@@ -9,55 +8,84 @@
 
 <div class="nav-scrollable">
     <nav class="h-100 d-flex flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-card-list-nav-menu" aria-hidden="true"></span> Dashboard
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link align-items-center" href="/songs-library" Match="NavLinkMatch.Prefix">
-                <span class="bi bi-collection-play-fill-nav-menu" aria-hidden="true"></span> library
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="compose" Match="NavLinkMatch.Prefix">
-                <span class="bi bi-pencil-square-nav-menu" aria-hidden="true"></span> compose
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/chords" Match="NavLinkMatch.Prefix">
-                <span class="bi bi-music-note-list-nav-menu" aria-hidden="true"></span> chords
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/users" Match="NavLinkMatch.Prefix">
-                <span class="bi bi-people-nav-menu" aria-hidden="true"></span> Accounts
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 dropdown dropup mt-auto">
-            <button class="nav-link dropdown-toggle w-100 text-start d-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false">
-                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
-                    <span class="text-white fw-bold" style="font-size: 0.7rem;">JD</span>
+        <CascadingAuthenticationState>
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        <span class="bi bi-card-list-nav-menu" aria-hidden="true"></span> Dashboard
+                    </NavLink>
                 </div>
-                Account
-            </button>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="/user-profile">
-                    <i class="bi bi-person me-2"></i>View Profile
-                </a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="#">
-                    <i class="bi bi-palette me-2"></i>Theme
-                </a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="#">
-                    <i class="bi bi-box-arrow-right me-2"></i>Log out
-                </a></li>
-            </ul>
-        </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link align-items-center" href="/songs-library" Match="NavLinkMatch.Prefix">
+                        <span class="bi bi-collection-play-fill-nav-menu" aria-hidden="true"></span> Library
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="compose" Match="NavLinkMatch.Prefix">
+                        <span class="bi bi-pencil-square-nav-menu" aria-hidden="true"></span> Compose
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/chords" Match="NavLinkMatch.Prefix">
+                        <span class="bi bi-music-note-list-nav-menu" aria-hidden="true"></span> Chords
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/users" Match="NavLinkMatch.Prefix">
+                        <span class="bi bi-people-nav-menu" aria-hidden="true"></span> Accounts
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3 dropdown dropup mt-auto">
+                    <button class="nav-link dropdown-toggle w-100 text-start d-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+                            <span class="text-white fw-bold" style="font-size: 0.7rem;">
+                                @(context.User.FindFirst("FirstName")?.Value?.FirstOrDefault())@(context.User.FindFirst("LastName")?.Value?.FirstOrDefault())
+                                </span>
+                        </div>
+                        Account
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/user-profile">
+                            <i class="bi bi-person me-2"></i>View Profile
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#">
+                            <i class="bi bi-palette me-2"></i>Theme
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item text-danger border-0 bg-transparent w-100 text-start" @onclick="LogoutUser">
+                            <i class="bi bi-box-arrow-right me-2"></i>Log out
+                        </button></li>
+                    </ul>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3 mt-auto">
+                    <NavLink class="nav-link" href="/login">
+                        <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> Login
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/register">
+                        <span class="bi bi-person-plus-nav-menu" aria-hidden="true"></span> Register
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+        </CascadingAuthenticationState>
     </nav>
 </div>
+
+@code {
+    private async Task LogoutUser()
+    {
+        await _globalAuth.MarkUserAsLoggedOutAsync();
+        _navManager.NavigateTo("/login", replace: true);
+    }
+}
+
 <script>
     //Replacing onclick="document.querySelector('.navbar-toggler').click()"
     document.addEventListener('click', e => {

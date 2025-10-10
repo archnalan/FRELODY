@@ -29,7 +29,14 @@
 @using FRELODYAPP.Interfaces
 @using FRELODYSHRD.Dtos.EditDtos
 @using FRELODYAPP.Dtos.UserDtos
+@using FRELODYAPP.Dtos.AuthDtos
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
 
+@inject IAuthApi _authApi
+@inject GlobalAuthStateProvider _globalAuth
+@inject NavigationManager _navManager
 @inject ChordLyricExtrator _extractor
 @inject NavigationManager _navManager
 @inject ISongsApi _songsApi

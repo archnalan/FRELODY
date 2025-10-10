@@ -3,6 +3,7 @@ using FRELODYSHRD.Interfaces;
 using FRELODYUI.Services;
 using FRELODYUI.Shared.RefitApis;
 using FRELODYUI.Shared.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using Refit;
 
@@ -20,6 +21,8 @@ namespace FRELODYUI
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 });
 
+            builder.Services.AddAuthenticationCore();
+            builder.Services.AddAuthorizationCore();
             builder.Services.AddSingleton<IFormFactor, FormFactor>();
             builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
             builder.Services.AddSingleton<IPrintService, MauiPrintService>();
@@ -30,7 +33,8 @@ namespace FRELODYUI
             builder.Services.AddScoped<ChordLyricExtrator>();
             builder.Services.AddScoped<TabManagementService>();
             builder.Services.AddScoped<GlobalAuthStateProvider>();
-
+            builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
+                provider.GetRequiredService<GlobalAuthStateProvider>());
             var baseAddressApi = new Uri("https://localhost:7077");
 
             builder.Services.AddRefitClient<ISongsApi>()
