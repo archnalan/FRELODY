@@ -17,45 +17,63 @@ builder.Services.AddAuthenticationCore();
 builder.Services.AddAuthorizationCore();
 
 builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddTransient<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<ISongsApi>()
-    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<ISongBooksApi>()
-    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<IChordsApi>()
-    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<IChordChartsApi>()
-    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<ISongCollectionsApi>()
-    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<ICategoriesApi>()
-    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<IShareApi>()
-               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<ISongSectionsApi>()
-               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<IFeedbackApi>()
-               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<ISettingsApi>()
-               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<ISongPlayHistoryApi>()
-                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<IAuthApi>()
-                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<IUsersApi>()
-                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi);
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddRefitClient<ITenantsApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 // Add device-specific services used by the FRELODYUI.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();

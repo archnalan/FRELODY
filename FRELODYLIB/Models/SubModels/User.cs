@@ -28,7 +28,11 @@ namespace FRELODYAPP.Models.SubModels
 
         public DateTime? DateModified { get; set; }
 
+        public bool IsSystemUser { get; set; }
+
         public bool? IsDeleted { get; set; }
+
+        public bool? IsActive { get; set; }
 
         public string? CreatedBy { get; set; }
 

@@ -23,10 +23,76 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             _logger = logger;
         }
 
+        #region Get UserProfile 
+        public async Task<ServiceResult<UpdateUserProfileOutDto>> GetUserProfile(string userId)
+        {
+            try
+            {
+                var user = await _context.Users.AsNoTracking()
+                    .Where(u => u.Id == userId)
+                    .Select(x => new UpdateUserProfileOutDto
+                    {
+                        Id = x.Id,
+                        FirstName = x.FirstName,
+                        LastName = x.LastName,
+                        AboutMe = x.AboutMe,
+                        Address = x.Address,
+                        CoverPhotoUrl = x.CoverPhotoUrl,
+                        Email = x.Email,
+                        PhoneNumber = x.PhoneNumber,
+                        ProfilePicUrl = x.ProfilePicUrl,
+                        UserName = x.UserName
+                    })
+                    .FirstOrDefaultAsync();
+                if (user == null)
+                {
+                    return ServiceResult<UpdateUserProfileOutDto>.Failure(new Exception("User not found."));
+                }
+                return ServiceResult<UpdateUserProfileOutDto>.Success(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error while retrieving user profile: {ex}", ex);
+                return ServiceResult<UpdateUserProfileOutDto>.Failure(new Exception("Could not retrieve user profile."));
+            }
+        }
+        #endregion
+
+        #region Edit User Profile
+        public async Task<ServiceResult<UpdateUserProfileOutDto>> EditUserProfile(UpdateUserProfileOutDto dto)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(dto.Id);
+                if (user == null)
+                {
+                    return ServiceResult<UpdateUserProfileOutDto>.Failure(new Exception("User not found."));
+                }
+                user.FirstName = dto.FirstName;
+                user.LastName = dto.LastName;
+                user.Address = dto.Address;
+                user.AboutMe = dto.AboutMe;
+                user.PhoneNumber = dto.PhoneNumber;
+                user.ProfilePicUrl = dto.ProfilePicUrl;
+                user.CoverPhotoUrl = dto.CoverPhotoUrl;
+                _context.Users.Update(user);
+                await _context.SaveChangesAsync();
+                dto.UserName = user.UserName;
+                dto.Email = user.Email;
+                return ServiceResult<UpdateUserProfileOutDto>.Success(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error while editing user profile: {ex}", ex);
+                return ServiceResult<UpdateUserProfileOutDto>.Failure(new Exception("Could not edit user profile."));
+            }
+        }
+        #endregion
+
         #region Search Users for combo boxes
         public async Task<ServiceResult<PaginationDetails<ComboBoxDto>>> SearchUsersForComboBoxes(string keywords, int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken)
         {
-            IQueryable<User> query = _context.Users;
+            IQueryable<User> query = _context.Users.Where(u => u.IsSystemUser != true);
             try
             {
                 if (!string.IsNullOrEmpty(keywords))
@@ -64,7 +130,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         {
             try
             {
-                var query = _context.Users.AsNoTracking();
+                var query = _context.Users.AsNoTracking().Where(u => u.IsSystemUser != true);
                 if (!string.IsNullOrEmpty(keywords))
                 {
                     query = query.Where(c =>
@@ -102,7 +168,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #region Get All Users
         public async Task<ServiceResult<PaginationDetails<AppUserDto>>> GetAllUsers(int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken)
         {
-            IQueryable<User> query = _context.Users;
+            IQueryable<User> query = _context.Users.Where(u => u.IsSystemUser != true);
             try
             {
                 var result = await query.AsNoTracking().Select(x => new AppUserDto
@@ -131,7 +197,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #region Search For Users
         public async Task<ServiceResult<PaginationDetails<AppUserDto>>> SearchForUsers(string keywords, int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken)
         {
-            IQueryable<User> query = _context.Users;
+            IQueryable<User> query = _context.Users.Where(u=> u.IsSystemUser != true);
             try
             {
                 if (!string.IsNullOrEmpty(keywords))
@@ -166,6 +232,35 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError("Error while searching Users: {ex}", ex);
                 return ServiceResult<PaginationDetails<AppUserDto>>.Failure(new Exception(ex.Message));
+            }
+        }
+        #endregion
+
+        #region Disable User
+        public async Task<ServiceResult<bool>> DisableUser(string userId)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return ServiceResult<bool>.Failure(new Exception("User not found."));
+                }
+
+                if (user.IsSystemUser)
+                {
+                    return ServiceResult<bool>.Failure(new Exception("Cannot disable a system user."));
+                }
+
+                user.IsActive = false;
+                _context.Users.Update(user);
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error while disabling user: {ex}", ex);
+                return ServiceResult<bool>.Failure(new Exception("Could not disable user."));
             }
         }
         #endregion

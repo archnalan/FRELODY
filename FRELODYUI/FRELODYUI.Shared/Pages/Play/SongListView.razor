@@ -137,10 +137,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        viewMode = ViewMode.All;
-        activeView = ActiveView.Expanded;
-        await SetViewMode(viewMode);
-        await SetActiveView(activeView);
+        var modeResult = _storageService.GetItemAsync<ViewMode>("ViewMode");
+        if (modeResult.IsCompleted)
+        {
+            viewMode = modeResult.Result;
+            await SetViewMode(viewMode);
+        }
+        var activeResult = _storageService.GetItemAsync<ActiveView>("ActiveView");
+        if (activeResult.IsCompleted)
+        {
+            activeView = activeResult.Result;
+            await SetActiveView(activeView);
+        }
         await LoadData();
     }
 

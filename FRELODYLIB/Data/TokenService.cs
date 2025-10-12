@@ -43,7 +43,8 @@ namespace FRELODYAPP.Data
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var roles = await _userManager.GetRolesAsync(user);
-
+            var userClaimsDto = user.Adapt<UserClaimsDto>();
+            userClaimsDto.TenantId = tenantId ?? user.TenantId;
             var claims = new List<Claim>
             {
                 new Claim("user", JsonConvert.SerializeObject(user.Adapt<UserClaimsDto>()))
@@ -54,8 +55,10 @@ namespace FRELODYAPP.Data
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            claims.Add(new Claim("TenantId", tenantId.ToString()));
-
+            if (!string.IsNullOrEmpty(tenantId))
+            {
+                claims.Add(new Claim("TenantId", tenantId));
+            }
             // Get token expiration from config
             int tokenExpiryDays = _config.GetValue<int>("Jwt:TokenExpirationDays", 7);
             var expiryTime = DateTime.Now.AddDays(tokenExpiryDays);

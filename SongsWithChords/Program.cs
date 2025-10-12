@@ -31,14 +31,14 @@ builder.Services.AddDbContext<SongDbContext>(options =>
 	options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddScoped<ITenantProvider, TenantProvider>();
-
 builder.Services.AddDatabaseSeeder();
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddHttpContextAccessor();
 
+builder.Services.AddTransient<ITenantProvider, TenantProvider>();
+builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<ISongCollectionService,SongCollectionService>();
 builder.Services.AddScoped<ISongBookService,SongBookService>();
 builder.Services.AddScoped<ICategoryService,CategoryService>();
@@ -48,13 +48,13 @@ builder.Services.AddScoped<IChordService, ChordService>();
 builder.Services.AddScoped<ILyricSegment, LyricSegmentService>();
 builder.Services.AddScoped<ILyricLineService, LyricLineService>();
 builder.Services.AddScoped<ISongPartService, SongPartService>();
-builder.Services.AddScoped<ITenantProvider, TenantProvider>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<ISongPlayHistoryService, SongPlayHistoryService>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<SmtpSenderService>();
 builder.Services.AddScoped<FileValidationService>();
 builder.Services.AddScoped<SecurityUtilityService>();
@@ -169,10 +169,6 @@ builder.Services.AddControllers()
 
 builder.Services.AddLogging();
 //builder.Services.AddScoped<TextFileUploadService>();
-builder.Services.AddControllers().AddJsonOptions(options =>
-{
-	options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-});
 
 builder.Services.AddCors(options =>
 					options.AddPolicy("AllowAll", builder => 

@@ -96,6 +96,10 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<SongPlayHistory>().HasQueryFilter(x =>
                    (x.TenantId == _tenantId || x.TenantId == null)
                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<User>().HasQueryFilter(x =>
+                    (x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null)
+                    && (x.IsActive == true || x.IsActive == null));
 
             // Configure Song and its children
             builder.Entity<Song>()

@@ -19,6 +19,30 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(UpdateUserProfileOutDto), 200)]
+        public async Task<IActionResult> GetUserProfile([FromQuery] string userId)
+        {
+            var result = await _userService.GetUserProfile(userId);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
+            return Ok(result.Data);
+        }
+
+        [HttpPut]
+        [ProducesResponseType(typeof(UpdateUserProfileOutDto), 200)]
+        public async Task<IActionResult> EditUserProfile([FromBody] UpdateUserProfileOutDto updateUserProfileInDto)
+        {
+            var result = await _userService.EditUserProfile(updateUserProfileInDto);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
+            return Ok(result.Data);
+        }
+
+        [HttpGet]
         [ProducesResponseType(typeof(PaginationDetails<ComboBoxDto>), 200)]
         public async Task<IActionResult> SearchUsersForComboBoxes(
             [FromQuery] string? keywords = null,
@@ -97,6 +121,18 @@ namespace FRELODYAPIs.Controllers
                 return StatusCode(result.StatusCode, result.Error);
             }
 
+            return Ok(result.Data);
+        }
+
+        [HttpPost]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> DisableUser([FromQuery] string userId)
+        {
+            var result = await _userService.DisableUser(userId);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
             return Ok(result.Data);
         }
     }

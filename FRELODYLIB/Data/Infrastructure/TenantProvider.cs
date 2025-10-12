@@ -33,10 +33,30 @@ namespace FRELODYAPP.Data.Infrastructure
                 if (identity != null)
                 {
                     var userClaims = identity.Claims;
-                    var tenantIdString = userClaims.FirstOrDefault(x => x.Type.Equals("tenantId", StringComparison.OrdinalIgnoreCase))?.Value;
+                    var tenantIdString = userClaims.FirstOrDefault(x =>
+                     x.Type.Equals("TenantId", StringComparison.OrdinalIgnoreCase) ||
+                     x.Type.Equals("tenantId", StringComparison.OrdinalIgnoreCase) ||
+                     x.Type.Equals("tenant_id", StringComparison.OrdinalIgnoreCase))?.Value;
 
                     if (string.IsNullOrEmpty(tenantIdString))
                     {
+                        var userDetails = userClaims.FirstOrDefault(x => x.Type.Equals("user", StringComparison.OrdinalIgnoreCase))?.Value;
+                        if (!string.IsNullOrEmpty(userDetails))
+                        {
+                            try
+                            {
+                                var userClaimsDto = JsonSerializer.Deserialize<UserClaimsDto>(userDetails);
+                                if (!string.IsNullOrEmpty(userClaimsDto?.TenantId))
+                                {
+                                    return userClaimsDto.TenantId;
+                                }
+                            }
+                            catch (JsonException ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to deserialize user claims to get TenantId");
+                            }
+                        }
+
                         _logger.LogWarning("TenantId is missing in the claims.");
                         return string.Empty;
                     }

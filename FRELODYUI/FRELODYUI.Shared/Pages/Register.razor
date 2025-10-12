@@ -1,0 +1,319 @@
+@page "/register"
+@inject ILogger<Register> _logger
+@inject NavigationManager _navManager
+
+<PageTitle>Register - FRELODY</PageTitle>
+
+<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-11 col-sm-8 col-md-6 col-lg-5 col-xl-4">
+                <!-- Register Card -->
+                <div class="card shadow-lg border-0" style="border-radius: 1rem;">
+                    <div class="card-body p-4 p-sm-5">
+                        <!-- Header -->
+                        <div class="text-center mb-4">
+                            <div class="mb-3">
+                                <i class="bi bi-music-note-beamed fs-1 text-primary"></i>
+                            </div>
+                            <h2 class="fw-bold text-dark mb-2">Join FRELODY</h2>
+                            <p class="text-muted mb-0">@(isPersonalMode ? "Create your personal account" : "Create your tenant account")</p>
+                        </div>
+
+                        <!-- Mode Toggle -->
+                        <div class="d-flex justify-content-center mb-4">
+                            <button type="button" 
+                                    class="btn @(isPersonalMode ? "btn-outline-primary" : "btn-primary") me-2" 
+                                    @onclick="() => SetMode(false)">
+                                Company
+                            </button>
+                            <button type="button" 
+                                    class="btn @(isPersonalMode ? "btn-primary" : "btn-outline-primary")" 
+                                    @onclick="() => SetMode(true)">
+                                Personal
+                            </button>
+                        </div>
+
+                        <!-- Register Form -->
+                        <EditForm Model="@registerModel" OnValidSubmit="@HandleRegister" FormName="registerForm">
+                            <DataAnnotationsValidator />
+
+                            @if (!string.IsNullOrEmpty(errorMessage))
+                            {
+                                <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    <div>@errorMessage</div>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(successMessage))
+                            {
+                                <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
+                                    <i class="bi bi-check-circle-fill me-2"></i>
+                                    <div>@successMessage</div>
+                                </div>
+                            }
+
+                            @if (isPersonalMode)
+                            {
+                                <!-- User Full Name Field -->
+                                <div class="mb-3">
+                                    <label class="form-label text-dark fw-medium">Full Name</label>
+                                    <InputText @bind-Value="registerModel.UserFullName" 
+                                              class="form-control bg-light" 
+                                              placeholder="Enter your full name" />
+                                    <ValidationMessage For="@(() => registerModel.UserFullName)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- User Email Field -->
+                                <div class="mb-3">
+                                    <label class="form-label text-dark fw-medium">Email</label>
+                                    <InputText @bind-Value="registerModel.UserEmail" 
+                                              type="email"
+                                              class="form-control bg-light" 
+                                              placeholder="Enter your email" />
+                                    <ValidationMessage For="@(() => registerModel.UserEmail)" class="text-danger small mt-1" />
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- Tenant Name Field -->
+                                <div class="mb-3">
+                                    <label class="form-label text-dark fw-medium">Company Name</label>
+                                    <InputText @bind-Value="registerModel.TenantName" 
+                                              class="form-control bg-light" 
+                                              placeholder="Enter your company name" />
+                                    <ValidationMessage For="@(() => registerModel.TenantName)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Email Field -->
+                                <div class="mb-3">
+                                    <label class="form-label text-dark fw-medium">Email</label>
+                                    <InputText @bind-Value="registerModel.Email" 
+                                              type="email"
+                                              class="form-control bg-light" 
+                                              placeholder="Enter company email" />
+                                    <ValidationMessage For="@(() => registerModel.Email)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Address Field -->
+                                <div class="mb-3">
+                                    <label class="form-label text-dark fw-medium">Address</label>
+                                    <InputText @bind-Value="registerModel.Address" 
+                                              class="form-control bg-light" 
+                                              placeholder="Enter your address" />
+                                    <ValidationMessage For="@(() => registerModel.Address)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- City Field -->
+                                <div class="mb-3">
+                                    <label class="form-label text-dark fw-medium">City</label>
+                                    <InputText @bind-Value="registerModel.City" 
+                                              class="form-control bg-light" 
+                                              placeholder="Enter your city" />
+                                    <ValidationMessage For="@(() => registerModel.City)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Country Field -->
+                                <div class="mb-3">
+                                    <label class="form-label text-dark fw-medium">Country</label>
+                                    <InputText @bind-Value="registerModel.Country" 
+                                              class="form-control bg-light" 
+                                              placeholder="Enter your country" />
+                                    <ValidationMessage For="@(() => registerModel.Country)" class="text-danger small mt-1" />
+                                </div>
+                            }
+
+                            <!-- Password Field -->
+                            <div class="mb-3">
+                                <label class="form-label text-dark fw-medium">Password</label>
+                                <div class="input-group">
+                                    <InputText @bind-Value="password" 
+                                              type="@(showPassword ? "text" : "password")"
+                                              class="form-control border-end-0 bg-light" 
+                                              placeholder="Enter your password" />
+                                    <button type="button" 
+                                            class="btn btn-outline-secondary border-start-0 bg-light"
+                                            @onclick="TogglePasswordVisibility">
+                                        <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                                    </button>
+                                </div>
+                                <ValidationMessage For="@(() => password)" class="text-danger small mt-1" />
+                            </div>
+
+                            <!-- Confirm Password Field -->
+                            <div class="mb-4">
+                                <label class="form-label text-dark fw-medium">Confirm Password</label>
+                                <div class="input-group">
+                                    <InputText @bind-Value="confirmPassword" 
+                                              type="@(showConfirmPassword ? "text" : "password")"
+                                              class="form-control border-end-0 bg-light" 
+                                              placeholder="Confirm your password" />
+                                    <button type="button" 
+                                            class="btn btn-outline-secondary border-start-0 bg-light"
+                                            @onclick="ToggleConfirmPasswordVisibility">
+                                        <i class="bi @(showConfirmPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                                    </button>
+                                </div>
+                                <ValidationMessage For="@(() => confirmPassword)" class="text-danger small mt-1" />
+                            </div>
+
+                            <!-- Register Button -->
+                            <button type="submit" 
+                                    class="btn btn-primary w-100 py-2 fw-medium" 
+                                    style="border-radius: 0.5rem;"
+                                    disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    <span>Creating account...</span>
+                                }
+                                else
+                                {
+                                    <span>Create Account</span>
+                                }
+                            </button>
+                        </EditForm>
+
+                        <!-- Sign In Link -->
+                        <div class="text-center mt-4">
+                            <span class="text-muted small">Already have an account? </span>
+                            <button type="button" 
+                                    class="btn btn-link p-0 text-decoration-none small fw-medium"
+                                    @onclick="()=>NavigateToLogin()">
+                                Sign in
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private TenantCreateDto registerModel = new();
+    private string password = "";
+    private string confirmPassword = "";
+    private bool isLoading = false;
+    private bool showPassword = false;
+    private bool showConfirmPassword = false;
+    private bool isPersonalMode = false;
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    private async Task HandleRegister()
+    {
+        try
+        {
+            ClearMessages();
+            isLoading = true;
+            StateHasChanged();
+
+            if (password != confirmPassword)
+            {
+                errorMessage = "Passwords do not match.";
+                return;
+            }
+
+            var response = await _tenantsApi.CreateTenant(registerModel, password);
+            
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                _logger.LogInformation("Tenant registered successfully");
+                successMessage = "Registration successful! You can now log in.";
+                StateHasChanged();
+                
+                await Task.Delay(2000); // Brief delay to show success message
+                var userEmail = isPersonalMode ? registerModel.UserEmail : registerModel.Email;
+                NavigateToLogin(userEmail);
+            }
+            else
+            {
+                errorMessage = GetErrorMessage(response);
+                _logger.LogWarning("Registration failed: {Error}", errorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred. Please try again.";
+            _logger.LogError(ex, "Registration error");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SetMode(bool personal)
+    {
+        isPersonalMode = personal;
+        // Reset model when switching modes
+        registerModel = new TenantCreateDto();
+        StateHasChanged();
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
+    }
+
+    private void ToggleConfirmPasswordVisibility()
+    {
+        showConfirmPassword = !showConfirmPassword;
+    }
+
+    private void NavigateToLogin(string? email = null)
+    {
+        if (!string.IsNullOrEmpty(email))
+        {
+            _navManager.NavigateTo($"/login?email={Uri.EscapeDataString(email)}");
+        }
+        else
+        {
+            _navManager.NavigateTo("/login");
+        }
+    }
+
+    private void ClearMessages()
+    {
+        errorMessage = "";
+        successMessage = "";
+    }
+
+    private string GetErrorMessage<T>(Refit.IApiResponse<T> response)
+    {
+        try
+        {
+            return _apiResponseHandler.GetApiErrorMessage(response);
+        }
+        catch
+        {
+            return "An error occurred. Please try again.";
+        }
+    }
+}
+
+<style>
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .card {
+        backdrop-filter: blur(10px);
+        background-color: rgba(255, 255, 255, 0.95);
+    }
+</style>

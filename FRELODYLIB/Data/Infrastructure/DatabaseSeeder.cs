@@ -117,11 +117,11 @@ namespace FRELODYAPP.Data.Infrastructure
             await dbContext.Tenants.AddAsync(defaultTenant);
             await dbContext.SaveChangesAsync();
 
-            await CreatePowerUserAsync(dbContext, defaultTenant.Id);
+            await CreatePowerUserAsync(dbContext);
             _logger.LogInformation("Default FRELODY tenant seeded successfully.");
         }
 
-        private async Task CreatePowerUserAsync(SongDbContext dbContext, string tenantId)
+        private async Task CreatePowerUserAsync(SongDbContext dbContext)
         {
             using var scope = _serviceProvider.CreateScope();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
@@ -136,12 +136,7 @@ namespace FRELODYAPP.Data.Infrastructure
             }
             var existingUser = await userManager.FindByEmailAsync(powerUserEmail);
             if (existingUser != null)
-            {
-                if(existingUser.TenantId != tenantId)
-                {
-                    existingUser.TenantId = tenantId;
-                    await userManager.UpdateAsync(existingUser);
-                }               
+            {              
                 _logger.LogInformation("Power user already exists.");
                 return;
             }
@@ -152,7 +147,7 @@ namespace FRELODYAPP.Data.Infrastructure
                 UserName = powerUserName,
                 Email = powerUserEmail,
                 EmailConfirmed = true,
-                TenantId = tenantId
+                IsSystemUser= true
             };
             var user = await dbContext.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == powerUser.Email);
             if (user is null) user = await dbContext.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.UserName == powerUser.UserName);

@@ -90,6 +90,7 @@
     {
         // Check if user is already authenticated
         var authState = await _globalAuth.GetAuthenticationStateAsync();
+        var user = _globalAuth.GetAuthenticatedUserAsync();
         if (authState.User.Identity?.IsAuthenticated ==false)
         {
             _navManager.NavigateTo("/login");

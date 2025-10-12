@@ -26,5 +26,6 @@ namespace FRELODYAPP.Dtos.UserDtos
 
         [NotMapped]
         public List<string>? AssignedRoles { get; set; }
+        public bool IsSystemUser { get; set; } = false;
     }
 }

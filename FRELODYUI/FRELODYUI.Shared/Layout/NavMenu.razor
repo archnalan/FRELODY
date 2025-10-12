@@ -31,29 +31,38 @@
                         <span class="bi bi-music-note-list-nav-menu" aria-hidden="true"></span> Chords
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/users" Match="NavLinkMatch.Prefix">
-                        <span class="bi bi-people-nav-menu" aria-hidden="true"></span> Accounts
-                    </NavLink>
-                </div>
-
+                @{
+                    var firstName = context.User.FindFirst("FirstName")?.Value;
+                    var lastName = context.User.FindFirst("LastName")?.Value;
+                    var fullName = firstName + " " + lastName;
+                    var displayName = fullName.Length > 10 ? fullName.Substring(0, 10) + "..." : fullName;
+                }
                 <div class="nav-item px-3 dropdown dropup mt-auto">
                     <button class="nav-link dropdown-toggle w-100 text-start d-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false">
                         <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
                             <span class="text-white fw-bold" style="font-size: 0.7rem;">
-                                @(context.User.FindFirst("FirstName")?.Value?.FirstOrDefault())@(context.User.FindFirst("LastName")?.Value?.FirstOrDefault())
+                                    @(firstName?.FirstOrDefault())@(lastName?.FirstOrDefault())
                                 </span>
-                        </div>
-                        Account
+                        </div>                           
+                            @displayName
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="/user-profile">
-                            <i class="bi bi-person me-2"></i>View Profile
-                        </a></li>
+                        <li>
+                            <a class="dropdown-item" href="/user-profile/@(context.User.FindFirst("UserId")?.Value)">
+                                <i class="bi bi-person me-2"></i>View Profile
+                            </a>
+                        </li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#">
-                            <i class="bi bi-palette me-2"></i>Theme
-                        </a></li>
+                        <li>
+                            <a class="dropdown-item" href="/users">
+                                <span class="bi bi-people" aria-hidden="true"></span> Accounts
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li class="form-check form-switch mx-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="switchCheckChecked" checked>
+                            <label class="form-check-label" for="switchCheckChecked">Theme</label>
+                        </li>
                         <li><hr class="dropdown-divider"></li>
                         <li><button class="dropdown-item text-danger border-0 bg-transparent w-100 text-start" @onclick="LogoutUser">
                             <i class="bi bi-box-arrow-right me-2"></i>Log out
@@ -78,7 +87,7 @@
     </nav>
 </div>
 
-@code {
+@code {   
     private async Task LogoutUser()
     {
         await _globalAuth.MarkUserAsLoggedOutAsync();

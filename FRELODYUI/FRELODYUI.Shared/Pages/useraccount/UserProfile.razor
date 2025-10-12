@@ -126,7 +126,7 @@
     // User data
     private UpdateUserProfileOutDto userProfile = new();
     private SettingDto userSettings = new();
-    
+
     // Library data
     private List<ComboBoxDto> favoriteSongs = new();
     private List<SongPlayHistoryDto> recentPlays = new();
@@ -164,20 +164,41 @@
         try
         {
             isLoading = true;
-            
-            // For now, simulate loading user profile
-            // In real implementation, you would call your user API
-            userProfile = new UpdateUserProfileOutDto
+            if (!string.IsNullOrEmpty(userId))
             {
-                Id = userId ?? "current-user",
-                FirstName = "John",
-                LastName = "Doe",
-                UserName = "johndoe",
-                AboutMe = "Music enthusiast and songwriter",
-                ProfilePicUrl = "",
-                CoverPhotoUrl = "",
-                TotalSongs = 42
-            };
+                var response = await _usersApi.GetUserProfile(userId);
+                
+                if (response.IsSuccessStatusCode && response.Content != null)
+                {
+                    userProfile = response.Content;
+                }
+                else
+                {
+                    var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                    _modalService.Show(new ModalOptionDto
+                    {
+                        Title = "Error",
+                        Message = $"Failed to load user profile: {errorMessage}",
+                        ButtonText = "OK",
+                        OptionType = OptionType.Error,
+                        Context = new ModalContext { ActionType = "Error" }
+                    });
+                }              
+            }
+            else
+            {
+                userProfile = new UpdateUserProfileOutDto
+                {
+                    Id = userId ?? "current-user",
+                    FirstName = "John",
+                    LastName = "Doe",
+                    UserName = "johndoe",
+                    AboutMe = "Music enthusiast and songwriter",
+                    ProfilePicUrl = "",
+                    CoverPhotoUrl = "",
+                    TotalSongs = 42
+                };
+            }
 
             await LoadUserSettings();
         }

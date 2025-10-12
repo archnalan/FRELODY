@@ -1,0 +1,182 @@
+@page "/admin/tenants"
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@inject ILogger<TenantsList> _logger
+@inject ITenantsApi _tenantsApi
+
+<PageTitle>Tenant Management</PageTitle>
+
+<div class="container-fluid bg-light vh-100" style="max-width:55rem;justify-self:center">
+    <div class="row mb-4">
+        <div class="col">
+            <h3>Tenant Management</h3>
+            <p class="text-muted">Manage application tenants</p>
+        </div>
+    </div>
+    <div class="rounded-3 bg-white shadow p-3 mb-2">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex w-50 position-relative me-3">
+                <input type="text"
+                       class="form-control h-12 ps-5 rounded-3"
+                       placeholder="Search tenants..."
+                       @bind-value="searchTerm"
+                       @bind-value:event="oninput"
+                       @bind-value:after="OnSearchChanged" />
+                <button type="button" class="btn btn-link position-absolute border-0 start-0 top-0 h-100">
+                    <i class="bi bi-search"></i>
+                </button>
+                @if (!string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    <button class="btn btn-link" type="button" @onclick="ClearSearch">
+                        <i class="bi bi-x"></i>
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@error
+            <button type="button" class="btn-close" @onclick="() => error = string.Empty"></button>
+        </div>
+    }
+
+    <div class="row">
+        <Virtualize @key="RefreshKey" 
+                    Context="tenant"
+                    ItemsProvider="ProvideTenantsAsync"
+                    ItemSize="120"
+                    OverscanCount="3"
+                    @ref="_virtualize">
+            <ItemContent>
+                <div class="col-12 mb-3">
+                    <div class="card h-100 shadow-sm tenant-card" style="border-radius:0.5rem; cursor: pointer;">
+                        <div class="card-body d-flex flex-column justify-content-between">
+                            <div>
+                                <h5 class="card-title mb-1">@tenant.TenantName</h5>
+                                <p class="text-muted mb-1">@tenant.Email</p>
+                                @if (!string.IsNullOrEmpty(tenant.Address))
+                                {
+                                    <p class="text-muted small mb-1">
+                                        <i class="bi bi-geo-alt me-1"></i>@tenant.Address, @tenant.City, @tenant.Country
+                                    </p>
+                                }
+                                <p class="text-muted small mb-0">
+                                    <i class="bi bi-calendar me-1"></i>Created: @tenant.DateCreated?.ToString("MMM dd, yyyy")
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </ItemContent>
+            <Placeholder>
+                <div class="col-12 mb-3">
+                    <div class="card h-100 placeholder-wave shadow" style="border-radius:0.5rem">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <span class="placeholder col-7 mb-2"></span>
+                            </h5>
+                            <span class="placeholder col-5 mb-2"></span>
+                            <span class="placeholder col-6"></span>
+                        </div>
+                    </div>
+                </div>
+            </Placeholder>
+        </Virtualize>
+    </div>
+</div>
+
+@code {
+    private string error = string.Empty;
+    private string searchTerm = string.Empty;
+    private string RefreshKey = Guid.NewGuid().ToString();
+    private Virtualize<TenantDto>? _virtualize;
+    private CancellationTokenSource? _searchCts;
+
+    protected override Task OnInitializedAsync()
+    {
+        // Virtualize will load on first render via ItemsProvider.
+        return Task.CompletedTask;
+    }
+
+    private async ValueTask<ItemsProviderResult<TenantDto>> ProvideTenantsAsync(ItemsProviderRequest request)
+    {
+        try
+        {
+            error = string.Empty;
+
+            var offset = request.StartIndex;
+            var limit = request.Count <= 0 ? 10 : request.Count;
+
+            // For simplicity, no search implemented in API, so get all and filter client-side if needed
+            var response = await _tenantsApi.GetAllTenants(offset, limit);
+            var page = response?.Content;
+            var items = page?.Data ?? new List<TenantDto>();
+            var total = page?.TotalSize ?? 0;
+
+            // Client-side search if searchTerm is set
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                items = items.Where(t => 
+                    t.TenantName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    (t.Email?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (t.Address?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (t.City?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (t.Country?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+                ).ToList();
+            }
+
+            return new ItemsProviderResult<TenantDto>(items, total);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching tenants during virtualization.");
+            error = $"Error fetching tenants: {ex.Message}";
+            return new ItemsProviderResult<TenantDto>(Array.Empty<TenantDto>(), 0);
+        }
+    }
+
+    private async Task OnSearchChanged()
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(300, _searchCts.Token); // Debounce
+            RefreshKey = Guid.NewGuid().ToString();
+            StateHasChanged();
+        }
+        catch (TaskCanceledException)
+        {
+            // Expected when cancelled
+        }
+    }
+
+    private async Task ClearSearch()
+    {
+        searchTerm = string.Empty;
+        RefreshKey = Guid.NewGuid().ToString();
+        StateHasChanged();
+    }
+
+    private async Task Refresh()
+    {
+        error = string.Empty;
+        if (_virtualize is not null)
+            await _virtualize.RefreshDataAsync();
+    }
+
+    public void Dispose()
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+    }
+}
+
+<style>
+    .tenant-card:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s ease-in-out;
+    }
+</style>

@@ -369,6 +369,27 @@ namespace FRELODYUI.Shared.Services
                     c.Type != ClaimTypes.Role);
                 claims.AddRange(otherClaims);
 
+                var userClaim = claimsIn.FirstOrDefault(c => c.Type == "user");
+                if (userClaim != null)
+                {
+                    try
+                    {
+                        var userDto = JsonSerializer.Deserialize<UserClaimsDto>(userClaim.Value);
+                        if (userDto != null)
+                        {
+                            claims.Add(new Claim("FirstName", userDto.FirstName ?? ""));
+                            claims.Add(new Claim("LastName", userDto.LastName ?? ""));
+                            claims.Add(new Claim("UserId", userDto.Id ?? ""));
+                            claims.Add(new Claim("Email", userDto.Email ?? ""));
+                            claims.Add(new Claim("UserName", userDto.UserName ?? ""));
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to deserialize user claim");
+                    }
+                }
+
                 return ServiceResult<ClaimsIdentity>.Success(new ClaimsIdentity(claims, AuthenticationType));
             }
             catch (Exception ex)

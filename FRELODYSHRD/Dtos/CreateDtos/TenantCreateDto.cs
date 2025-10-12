@@ -9,5 +9,7 @@ namespace FRELODYSHRD.Dtos.CreateDtos
         public string? City { get; set; }
         public string? Country { get; set; }
         public string? Email { get; set; }
+        public string? UserFullName { get; set; }
+        public string? UserEmail { get; set; }
     }
 }

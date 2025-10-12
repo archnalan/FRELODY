@@ -147,7 +147,16 @@
 
     protected override Task OnInitializedAsync()
     {
-        // Virtualize will load on first render via ItemsProvider.
+        var modeResult = _storageService.GetItemAsync<ViewMode>("ViewMode");
+        if (modeResult.IsCompleted)
+        {
+            viewMode = modeResult.Result;
+        }
+        var activeResult = _storageService.GetItemAsync<ActiveView>("ActiveView");
+        if (activeResult.IsCompleted)
+        {
+            activeView = activeResult.Result;
+        }
         return Task.CompletedTask;
     }
 
@@ -162,6 +171,7 @@
                 await songListViewRef.SetViewMode(mode);
                 await songListViewRef.SetActiveView(activeView);
             }
+           await _storageService.SetItemAsync("ViewMode", mode);
         }
     }
 
@@ -179,7 +189,9 @@
             {
                 await songListRef.SetActiveView(view);
                 //await songListRef.SetViewMode(viewMode);
+
             }
+            await _storageService.SetItemAsync("ActiveView", view);
         }
     }
 

@@ -8,6 +8,12 @@ namespace FRELODYUI.Shared.RefitApis
 {
     public interface IUsersApi
     {
+        [Get("/api/users/get-user-profile")]
+        Task<IApiResponse<UpdateUserProfileOutDto>> GetUserProfile([Query] string userId);
+
+        [Put("/api/users/edit-user-profile")]
+        Task<IApiResponse<UpdateUserProfileOutDto>> EditUserProfile([Body] UpdateUserProfileOutDto updateUserProfileInDto);
+
         [Get("/api/users/search-users-for-combo-boxes")]
         Task<IApiResponse<PaginationDetails<ComboBoxDto>>> SearchUsersForComboBoxes(
             [Query] string? keywords = null,
@@ -42,5 +48,8 @@ namespace FRELODYUI.Shared.RefitApis
             [Query] string sortByColumn = "FirstName",
             [Query] bool sortAscending = true,
             CancellationToken cancellationToken = default);
+
+        [Post("/api/users/disable-user")]
+        Task<IApiResponse<bool>> DisableUser([Query] string userId);
     }
 }
