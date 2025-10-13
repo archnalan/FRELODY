@@ -14,7 +14,5 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<PaginationDetails<SongResult>>> GetPaginatedSongs(int offset, int limit, string? songName = null, int? songNumber = null, string? categoryName = null, string? songBookId = null, List<string>? curatorIds = null, string? orderByColumn = null, CancellationToken cancellationToken = default);
         Task<ServiceResult<SongCollectionDto>> GetSongCollectionByIdAsync(string id);
         Task<ServiceResult<SongCollectionDto>> UpdateSongCollectionAsync(string id, SongCollectionDto updatedCollection);
-
-
     }
 }

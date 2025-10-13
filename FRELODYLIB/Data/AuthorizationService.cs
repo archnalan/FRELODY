@@ -6,6 +6,7 @@ using FRELODYAPP.Extensions;
 using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Dtos.UserDtos;
 using Google.Apis.Auth;
 using Mapster;
 using Microsoft.AspNetCore.Hosting;
@@ -267,7 +268,7 @@ namespace FRELODYAPP.Data
                 }
                 else
                 {
-                    if (user.TenantId == null) return ServiceResult<LoginResponseDto>.Failure(
+                    if (user.TenantId == null && user.UserType != UserType.SuperAdmin) return ServiceResult<LoginResponseDto>.Failure(
                         new BadRequestException($"Invalid Tenant. contact {_config["ApplicationInfo:SupportEmail"]} for support"));
 
                     var token = await _tokenService.GenerateTokens(user, user.TenantId);

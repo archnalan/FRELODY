@@ -11,7 +11,7 @@ namespace FRELODYSHRD.Dtos
     {
         public string SongId { get; set; } = default!;
         public string UserId { get; set; } = default!;
-        public DateTime PlayedAt { get; set; }
+        public DateTimeOffset PlayedAt { get; set; } = DateTimeOffset.UtcNow;
         public string? PlaySource { get; set; }
         public string? SessionId { get; set; }
 

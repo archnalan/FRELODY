@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using FRELODYAPP.Models.SubModels;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Dtos.UserDtos;
 
 namespace FRELODYAPIs.Areas.Admin.LogicData
 {
@@ -74,12 +75,12 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                     user = new User
                     {
-                        FirstName = "Super",
-                        LastName = "Admin",
+                        FirstName = "Power",
+                        LastName = "User",
                         UserName = dto.Email,
                         Email = dto.Email,
                         EmailConfirmed = true,
-                        IsSystemUser = true,
+                        UserType = UserType.Admin,
                         TenantId = tenant.Id
                     };
                 }

@@ -19,6 +19,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<bool>> SetSongRating(string songId, decimal rating);
         Task<ServiceResult<CanRateDto>> CanUserRateSong(string songId);
         Task<ServiceResult<bool>> DeleteSong(string songId);
-        Task<ServiceResult<List<ComboBoxDto>>> GetFavoriteSongs(string? userId = null);
+        Task<ServiceResult<PaginationDetails<ComboBoxDto>>> GetFavoriteSongs(string? userId = null, int? offset = 0, int? limit = 10);
+        Task<ServiceResult<bool>> IsSongFavorited(string songId,string? userId = null);
     }
 }

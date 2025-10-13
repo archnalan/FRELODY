@@ -18,13 +18,17 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 {
     public class SongCollectionService : ISongCollectionService
     {
+        private readonly string _userId;
         private readonly SongDbContext _context;
+        private readonly ITenantProvider _tenantProvider;
         private readonly ILogger<SongCollectionService> _logger;
 
-        public SongCollectionService(SongDbContext context, ILogger<SongCollectionService> logger)
+        public SongCollectionService(SongDbContext context, ILogger<SongCollectionService> logger, ITenantProvider tenantProvider)
         {
             _context = context;
             _logger = logger;
+            _tenantProvider = tenantProvider;
+            _userId = _tenantProvider.GetUserId();
         }
 
         #region Get all song collections
@@ -210,11 +214,14 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         sb.Description AS SongBookDescription,
                         c.Id AS CategoryId,
                         c.CategorySlug,
-                        s.IsFavorite
+                        CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite  -- Cast to BIT for proper bool mapping
                     FROM Songs s
                     LEFT JOIN Categories c ON s.CategoryId = c.Id
                     LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
                     LEFT JOIN SongCollections sc ON sb.CollectionId = sc.Id
+                    LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                        AND suf.UserId = @UserId
+                        AND suf.IsDeleted = 0  -- soft delete check
                     WHERE 
                         (@SongName IS NULL OR s.Title LIKE '%' + @SongName + '%')
                         AND (@SongNumber IS NULL OR s.SongNumber = @SongNumber)
@@ -237,6 +244,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     new SqlParameter("@CuratorIds", curatorIds != null && curatorIds.Count > 0 
                         ? JsonSerializer.Serialize(curatorIds) 
                         : (object)DBNull.Value),
+                    new SqlParameter("@UserId", _userId ?? (object)DBNull.Value),
                 };
 
                 var rawResults = await _context.Database

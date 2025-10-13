@@ -24,31 +24,43 @@ namespace FRELODYUI.Shared.Services
         {
             try
             {
-                var sessionModel = (await _localStorage.GetItemAsync<LoginResponseDto>("sessionState"));
+                var sessionModel = await _localStorage.GetItemAsync<LoginResponseDto>("sessionState");
 
-                // Add Authorization header
                 if (!string.IsNullOrEmpty(sessionModel?.Token))
                 {
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionModel.Token);
                 }
 
-                // Add Tenant ID header
-                if (!string.IsNullOrEmpty(sessionModel?.TenantId))
+                var tenantId = sessionModel?.TenantId;
+
+                // Only add TenantId header if it has a value
+                if (!string.IsNullOrEmpty(tenantId))
                 {
-                    if (request.Headers.TryGetValues("TenantId", out _))
+                    if (request.Headers.Contains("TenantId"))
                     {
                         request.Headers.Remove("TenantId");
                     }
-                    request.Headers.Add("TenantId", sessionModel.TenantId);
+                    request.Headers.Add("TenantId", tenantId);
+                }
+                else
+                {
+                    if (request.Headers.Contains("TenantId"))
+                    {
+                        request.Headers.Remove("TenantId");
+                    }
                 }
 
-                // Call the inner handler (continue the request)
+                // Add UserType header if available
+                if (sessionModel?.UserType != null)
+                {
+                    if (request.Headers.Contains("UserType"))
+                    {
+                        request.Headers.Remove("UserType");
+                    }
+                    request.Headers.Add("UserType", sessionModel.UserType.ToString());
+                }
+
                 return await base.SendAsync(request, cancellationToken);
-            }
-            catch (TimeoutException ex)
-            {
-                _logger.LogError("Request timed out: {ex}", ex);
-                throw new TimeoutException("The request has timed out. Please try again later.", ex);
             }
             catch (Exception ex)
             {

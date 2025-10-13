@@ -18,7 +18,7 @@ namespace FRELODYAPIs.Controllers
                                  .Cast<SongSection>()
                                  .Select(e => new ComboBoxDto
                                  {
-                                     Id = (int)e,
+                                     ValueId = (int)e,
                                      ValueText = e.ToString(),
                                      IdString = e.ToString()
                                  })
@@ -35,7 +35,7 @@ namespace FRELODYAPIs.Controllers
                                  .Cast<ChordDifficulty>()
                                  .Select(e => new ComboBoxDto
                                  {
-                                     Id = (int)e,
+                                     ValueId = (int)e,
                                      ValueText = e.ToString(),
                                      IdString = e.ToString()
                                  })
@@ -51,7 +51,7 @@ namespace FRELODYAPIs.Controllers
                                  .Cast<ChordType>()
                                  .Select(e => new ComboBoxDto
                                  {
-                                     Id = (int)e,
+                                     ValueId = (int)e,
                                      ValueText = e.ToString(),
                                      IdString = e.ToString()
                                  })
@@ -67,7 +67,7 @@ namespace FRELODYAPIs.Controllers
                                  .Cast<PlayLevel>()
                                  .Select(e => new ComboBoxDto
                                  {
-                                     Id = (int)e,
+                                     ValueId = (int)e,
                                      ValueText = e.ToString(),
                                      IdString = e.ToString()
                                  })
@@ -83,7 +83,7 @@ namespace FRELODYAPIs.Controllers
                                  .Cast<FeedbackStatus>()
                                  .Select(e => new ComboBoxDto
                                  {
-                                     Id = (int)e,
+                                     ValueId = (int)e,
                                      ValueText = e.ToString(),
                                      IdString = e.ToString()
                                  })

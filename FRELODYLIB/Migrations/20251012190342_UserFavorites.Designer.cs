@@ -4,6 +4,7 @@ using FRELODYAPP.Data.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FRELODYLIB.Migrations
 {
     [DbContext(typeof(SongDbContext))]
-    partial class SongDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251012190342_UserFavorites")]
+    partial class UserFavorites
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -787,6 +790,9 @@ namespace FRELODYLIB.Migrations
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSystemUser")
+                        .HasColumnType("bit");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -832,9 +838,6 @@ namespace FRELODYLIB.Migrations
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("UserType")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -1316,7 +1319,7 @@ namespace FRELODYLIB.Migrations
                     b.ToTable("SongPlayHistories");
                 });
 
-            modelBuilder.Entity("FRELODYLIB.Models.SongUserFavorite", b =>
+            modelBuilder.Entity("FRELODYLIB.Models.UserSongFavorite", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -1381,7 +1384,7 @@ namespace FRELODYLIB.Migrations
                         .IsUnique()
                         .HasFilter("[TenantId] IS NOT NULL");
 
-                    b.ToTable("SongUserFavorites");
+                    b.ToTable("UserSongFavorites");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -1736,7 +1739,7 @@ namespace FRELODYLIB.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("FRELODYLIB.Models.SongUserFavorite", b =>
+            modelBuilder.Entity("FRELODYLIB.Models.UserSongFavorite", b =>
                 {
                     b.HasOne("FRELODYAPP.Models.Song", "Song")
                         .WithMany()

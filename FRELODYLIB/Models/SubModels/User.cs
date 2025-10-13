@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using FRELODYSHRD.Dtos.UserDtos;
+using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -28,7 +29,7 @@ namespace FRELODYAPP.Models.SubModels
 
         public DateTime? DateModified { get; set; }
 
-        public bool IsSystemUser { get; set; }
+        public UserType? UserType { get; set; }
 
         public bool? IsDeleted { get; set; }
 
@@ -40,4 +41,5 @@ namespace FRELODYAPP.Models.SubModels
 
         public string? TenantId { get; set; }
     }
+
 }

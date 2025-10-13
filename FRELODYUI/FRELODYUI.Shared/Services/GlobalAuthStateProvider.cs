@@ -382,6 +382,10 @@ namespace FRELODYUI.Shared.Services
                             claims.Add(new Claim("UserId", userDto.Id ?? ""));
                             claims.Add(new Claim("Email", userDto.Email ?? ""));
                             claims.Add(new Claim("UserName", userDto.UserName ?? ""));
+                            if (userDto.UserType != null)
+                            {
+                                claims.Add(new Claim("UserType", userDto.UserType.ToString()!));
+                            }
                         }
                     }
                     catch (JsonException ex)

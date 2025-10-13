@@ -4,6 +4,7 @@ using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
 using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.UserDtos;
 using FRELODYSHRD.ModelTypes;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -147,7 +148,7 @@ namespace FRELODYAPP.Data.Infrastructure
                 UserName = powerUserName,
                 Email = powerUserEmail,
                 EmailConfirmed = true,
-                IsSystemUser= true
+                UserType= UserType.SuperAdmin,
             };
             var user = await dbContext.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == powerUser.Email);
             if (user is null) user = await dbContext.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.UserName == powerUser.UserName);

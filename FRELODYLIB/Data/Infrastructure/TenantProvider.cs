@@ -11,6 +11,7 @@ namespace FRELODYAPP.Data.Infrastructure
         string GetUserId();
         string GetTenantId();
         UserClaimsDto GetCurrentUser();
+        bool IsSuperAdmin(string? userId = null);
     }
 
     public class TenantProvider : ITenantProvider
@@ -33,6 +34,18 @@ namespace FRELODYAPP.Data.Infrastructure
                 if (identity != null)
                 {
                     var userClaims = identity.Claims;
+
+                    _logger.LogDebug("Claims in request: {claims}",
+                    string.Join(", ", userClaims.Select(c => $"{c.Type}={c.Value}")));
+
+                    var userTypeClaim = userClaims.FirstOrDefault(c => 
+                    c.Type.Equals("UserType", StringComparison.OrdinalIgnoreCase))?.Value;
+
+                    if (userTypeClaim == "SuperAdmin")
+                    {
+                        return null;
+                    }
+
                     var tenantIdString = userClaims.FirstOrDefault(x =>
                      x.Type.Equals("TenantId", StringComparison.OrdinalIgnoreCase) ||
                      x.Type.Equals("tenantId", StringComparison.OrdinalIgnoreCase) ||
@@ -107,6 +120,34 @@ namespace FRELODYAPP.Data.Infrastructure
             {
                 _logger.LogError(ex, "Error occurred while getting current user.");
                 return null;
+            }
+        }
+
+        public bool IsSuperAdmin(string? userId = null)
+        {
+            try
+            {
+                var identity = _httpContextAccessor.HttpContext?.User?.Identity as ClaimsIdentity;
+                if (identity != null)
+                {
+                    var userClaims = identity.Claims;
+                    var userTypeClaim = userClaims.FirstOrDefault(c => c.Type.Equals("UserType", StringComparison.OrdinalIgnoreCase))?.Value;
+                    if (userTypeClaim == "SuperAdmin")
+                    {
+                        if (!string.IsNullOrEmpty(userId))
+                        {
+                            var currentUserId = GetUserId();
+                            return string.Equals(currentUserId, userId, StringComparison.OrdinalIgnoreCase);
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while checking SuperAdmin status.");
+                return false;
             }
         }
     }

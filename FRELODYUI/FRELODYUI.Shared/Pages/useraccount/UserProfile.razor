@@ -167,10 +167,16 @@
             if (!string.IsNullOrEmpty(userId))
             {
                 var response = await _usersApi.GetUserProfile(userId);
-                
+
                 if (response.IsSuccessStatusCode && response.Content != null)
                 {
                     userProfile = response.Content;
+                    var userName = userProfile.UserName ?? "";
+                    if (userName.Contains('@'))
+                    {
+                        userName = userName.Split('@')[0];
+                    }
+                    userProfile.UserName = userName;
                 }
                 else
                 {
@@ -219,7 +225,7 @@
         {
             isLoadingSettings = true;
             var response = await _settingsApi.GetUserSettings(userId);
-            
+
             if (response.IsSuccessStatusCode && response.Content != null)
             {
                 userSettings = response.Content;
@@ -266,10 +272,10 @@
         {
             isLoadingLibrary = true;
             var response = await _songsApi.GetFavoriteSongs();
-            
+
             if (response.IsSuccessStatusCode && response.Content != null)
             {
-                favoriteSongs = response.Content.ToList();
+                favoriteSongs = response.Content.Data!;
             }
         }
         catch (Exception ex)
@@ -287,7 +293,7 @@
         try
         {
             var response = await _playHistoryApi.GetRecentPlays(userId, 10);
-            
+
             if (response.IsSuccessStatusCode && response.Content != null)
             {
                 recentPlays = response.Content;
@@ -304,7 +310,7 @@
         try
         {
             var response = await _songCollectionsApi.GetAllSongCollections();
-            
+
             if (response.IsSuccessStatusCode && response.Content != null)
             {
                 collections = response.Content;
@@ -334,25 +340,43 @@
         StateHasChanged();
     }
 
-    private async Task HandleProfileSave(UpdateUserProfile updatedProfile)
+    private async Task HandleProfileSave(EditUserProfile editProfile)
     {
         try
         {
             isSubmittingProfile = true;
-            
+
             // Call user API to update profile
-            // var response = await _userApi.UpdateUserProfile(updatedProfile);
-            
-            // Simulate API call for now
-            await Task.Delay(1000);
-            
-            // Update local profile data
-            userProfile.FirstName = updatedProfile.FirstName;
-            userProfile.LastName = updatedProfile.LastName;
-            userProfile.AboutMe = updatedProfile.AboutMe;
-            userProfile.Address = updatedProfile.Address;
-            userProfile.ProfilePicUrl = updatedProfile.ProfilePicUrl ?? "";
-            userProfile.CoverPhotoUrl = updatedProfile.CoverPhotoUrl ?? "";
+            var response = await _usersApi.EditUserProfile(editProfile);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title="Error",
+                    SubTitle="Could not complete profile Edit",
+                    Message= message,                    
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext { ActionType = "EditUserProfile", Data = editProfile }
+                });
+                return;
+            }
+            else
+            {
+                var updatedProfile = response.Content;
+                if(updatedProfile!= null)
+                {
+                    // Update local profile data
+                    userProfile.FirstName = updatedProfile.FirstName;
+                    userProfile.LastName = updatedProfile.LastName;
+                    userProfile.AboutMe = updatedProfile.AboutMe;
+                    userProfile.Address = updatedProfile.Address;
+                    userProfile.ProfilePicUrl = updatedProfile.ProfilePicUrl ?? "";
+                    userProfile.CoverPhotoUrl = updatedProfile.CoverPhotoUrl ?? "";
+                    userProfile.PhoneNumber = updatedProfile.PhoneNumber;
+                }                
+            }
 
             isEditingProfile = false;
             

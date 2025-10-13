@@ -41,8 +41,6 @@ namespace FRELODYAPP.Models
 
         public string? CategoryId { get; set; }
 
-		public bool? IsFavorite { get; set; }
-
         [Range(0, 5)]
         [Column(TypeName = "decimal(3,2)")]
         public decimal? Rating { get; set; }

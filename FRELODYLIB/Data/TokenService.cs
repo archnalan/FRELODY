@@ -47,7 +47,8 @@ namespace FRELODYAPP.Data
             userClaimsDto.TenantId = tenantId ?? user.TenantId;
             var claims = new List<Claim>
             {
-                new Claim("user", JsonConvert.SerializeObject(user.Adapt<UserClaimsDto>()))
+                new Claim("user", 
+                JsonConvert.SerializeObject(userClaimsDto))
             };
 
             foreach (var role in roles)
@@ -55,9 +56,11 @@ namespace FRELODYAPP.Data
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            if (!string.IsNullOrEmpty(tenantId))
+            claims.Add(new Claim("TenantId", userClaimsDto.TenantId ?? string.Empty));
+
+            if (user.UserType != null)
             {
-                claims.Add(new Claim("TenantId", tenantId));
+                claims.Add(new Claim("UserType", user.UserType.ToString()!));
             }
             // Get token expiration from config
             int tokenExpiryDays = _config.GetValue<int>("Jwt:TokenExpirationDays", 7);

@@ -55,7 +55,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     Data = page.Data?
                         .Select(s => new ComboBoxDto
                         {
-                            Id = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
+                            ValueId = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
                             ValueText = s.Title,
                             IdString = s.Id
                         })
@@ -112,7 +112,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     Data = page.Data?
                         .Select(s => new ComboBoxDto
                         {
-                            Id = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
+                            ValueId = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
                             ValueText = s.Title,
                             IdString = s.Id
                         })
@@ -581,20 +581,34 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     return ServiceResult<bool>.Failure(
                         new BadRequestException("Song ID is required."));
                 }
-                var song = await _context.Songs
-                    .FirstOrDefaultAsync(s => s.Id == songId);
+                var song = await _context.Songs.FirstOrDefaultAsync(s => s.Id == songId);
+                if (song == null)
+                    return ServiceResult<bool>.Failure(new NotFoundException("Song not found."));
 
-                if (song == null) return ServiceResult<bool>.Failure(
-                    new NotFoundException("Song not found."));
+                var existing = await _context.SongUserFavorites
+                    .FirstOrDefaultAsync(f => f.SongId == songId && f.UserId == _userId);
 
-                song.IsFavorite = favorite;
-                song.ModifiedBy = _userId;
+                if (existing != null)
+                {
+                    // Remove favorite
+                    _context.SongUserFavorites.Remove(existing);
+                }
+                else
+                {
+                    // Add favorite
+                    _context.SongUserFavorites.Add(new SongUserFavorite
+                    {
+                        SongId = songId,
+                        UserId = _userId,
+                        FavoritedAt = DateTimeOffset.UtcNow
+                    });
+                }
                 await _context.SaveChangesAsync();
                 return ServiceResult<bool>.Success(true);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in MarkSongAsFavorite");
+                _logger.LogError(ex, "Error in MarkSongAsFavorite {SongId}", songId);
                 return ServiceResult<bool>.Failure(ex);
             }
         }
@@ -741,31 +755,55 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #endregion
 
         #region Get Favorite Songs
-        public async Task<ServiceResult<List<ComboBoxDto>>> GetFavoriteSongs(string? userId = null)
+        public async Task<ServiceResult<PaginationDetails<ComboBoxDto>>> GetFavoriteSongs(string? userId = null, int? offset= 0, int? limit = 10)
         {
             try
             {
                 userId ??= _userId;
-                var songs = await _context.Songs
-                    .Where(s => s.IsFavorite == true 
-                        && (string.IsNullOrEmpty(userId) || 
-                        s.CreatedBy == userId ||
-                        s.ModifiedBy == userId))
-                    .OrderBy(s => s.SongNumber)
-                    .ThenByDescending(s => s.Rating ?? 0)
+                if (string.IsNullOrEmpty(userId))
+                    return ServiceResult<PaginationDetails<ComboBoxDto>>.Failure(new BadRequestException("User must be authenticated."));
+                
+                offset = Math.Max(0, offset ?? 0);
+                limit = Math.Min(limit ?? 0, 100);
+                var songs = await _context.SongUserFavorites
+                    .Where(f => f.UserId == _userId)
+                    .Include(f => f.Song)
+                    .OrderByDescending(f => f.FavoritedAt)
                     .Select(s => new ComboBoxDto
                     {
-                        Id = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
-                        ValueText = s.Title,
-                        IdString = s.Id
+                        Id = s.Id,
+                        IdString = s.Id,
+                        ValueId = s.Song!.SongNumber.HasValue && s.Song.SongNumber.Value > 0 ? s.Song.SongNumber.Value : 0,
+                        ValueText = s.Song.Title,
                     })
-                    .ToListAsync();
-                return ServiceResult<List<ComboBoxDto>>.Success(songs);
+                    .ToPaginatedResultAsync(offset.Value, limit.Value);
+
+                return ServiceResult<PaginationDetails<ComboBoxDto>>.Success(songs);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in GetFavoriteSongs");
-                return ServiceResult<List<ComboBoxDto>>.Failure(ex);
+                return ServiceResult<PaginationDetails<ComboBoxDto>>.Failure(ex);
+            }
+        }
+
+        public async Task<ServiceResult<bool>> IsSongFavorited(string songId, string? userId = null)
+        {
+            try
+            {
+                userId ??= _userId;
+                if (string.IsNullOrEmpty(songId) || string.IsNullOrEmpty(_userId))
+                    return ServiceResult<bool>.Success(false);
+
+                var isFavorited = await _context.SongUserFavorites
+                    .AnyAsync(f => f.SongId == songId && f.UserId == _userId);
+
+                return ServiceResult<bool>.Success(isFavorited);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking if song {SongId} is favorited", songId);
+                return ServiceResult<bool>.Failure(ex);
             }
         }
         #endregion

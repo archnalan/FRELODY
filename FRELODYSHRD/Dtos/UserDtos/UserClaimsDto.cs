@@ -1,4 +1,6 @@
-﻿namespace FRELODYAPP.Dtos.UserDtos
+﻿using FRELODYSHRD.Dtos.UserDtos;
+
+namespace FRELODYAPP.Dtos.UserDtos
 {
     public class UserClaimsDto
     {
@@ -14,7 +16,7 @@
         public string? Initials => 
             (string.IsNullOrEmpty(FirstName) ? "" : FirstName[0].ToString()) +
             (string.IsNullOrEmpty(LastName) ? "" : LastName[0].ToString());
-
+        public UserType? UserType { get; set; }
         public UserClaimsDto()
         {
 

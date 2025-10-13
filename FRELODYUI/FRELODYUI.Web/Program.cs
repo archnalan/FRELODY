@@ -34,6 +34,7 @@ builder.Services.AddScoped<TabManagementService>();
 builder.Services.AddScoped<GlobalAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
                 provider.GetRequiredService<GlobalAuthStateProvider>());
+builder.Services.AddSingleton<ITimeHelper, TimeHelper>();
 var baseAddressApi = new Uri("https://localhost:7018");
 
 builder.Services.AddRefitClient<ISongsApi>()

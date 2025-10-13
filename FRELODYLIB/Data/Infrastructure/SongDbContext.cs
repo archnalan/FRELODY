@@ -17,6 +17,7 @@ namespace FRELODYAPP.Data.Infrastructure
         private readonly ITenantProvider _tenantProvider;
         private readonly string _tenantId;
         private readonly string _userId;
+        private readonly bool _isSuperAdmin;
 
         public SongDbContext(DbContextOptions<SongDbContext> options, ITenantProvider tenantProvider)
             : base(options)
@@ -24,6 +25,7 @@ namespace FRELODYAPP.Data.Infrastructure
             _tenantProvider = tenantProvider;
             _userId = _tenantProvider.GetUserId();
             _tenantId = _tenantProvider.GetTenantId();
+            _isSuperAdmin = _tenantProvider.IsSuperAdmin();
         }
         public DbSet<Tenant> Tenants { get; set; }
         public DbSet<SongCollection> SongCollections { get; set; }
@@ -42,62 +44,56 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
         public DbSet<ShareLink> ShareLinks { get; set; }
         public DbSet<SongPlayHistory> SongPlayHistories { get; set; }
+        public DbSet<SongUserFavorite> SongUserFavorites { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
             // Configure global query filters for entities implementing IBaseEntity
             builder.Entity<SongCollection>().HasQueryFilter(x =>
-                    ((x.TenantId == _tenantId || x.TenantId == null)
-                    || (x.Access == Access.Public))
-                    && (x.IsDeleted == false || x.IsDeleted == null));
+                   (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+                   && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongBook>().HasQueryFilter(x =>
-                    ((x.TenantId == _tenantId || x.TenantId == null)
-                    || (x.Access == Access.Public))
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Category>().HasQueryFilter(x =>
-                     ((x.TenantId == _tenantId || x.TenantId == null)
-                    || (x.Access == Access.Public))
+                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Song>().HasQueryFilter(x =>
-                    ((x.TenantId == _tenantId || x.TenantId == null)
-                    || (x.Access == Access.Public))&&
-                    (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<SongPart>().HasQueryFilter(x => 
-                    ((x.TenantId == _tenantId || x.TenantId == null) 
-                    || (x.Access == Access.Public)) 
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<SongPart>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongUserRating>().HasQueryFilter(x =>
-                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<LyricLine>().HasQueryFilter(x =>
-                     ((x.TenantId == _tenantId || x.TenantId == null)
-                    || (x.Access == Access.Public))
+                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<LyricSegment>().HasQueryFilter(x =>
-                    ((x.TenantId == _tenantId || x.TenantId == null)
-                    || (x.Access == Access.Public))
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Setting>().HasQueryFilter(x =>
-                    (x.TenantId == _tenantId || x.TenantId == null)
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Chord>().HasQueryFilter(x => 
                     x.IsDeleted == false || x.IsDeleted == null);
             builder.Entity<ChordChart>().HasQueryFilter(x =>
                    x.IsDeleted == false || x.IsDeleted == null);
             builder.Entity<UserFeedback>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Page>().HasQueryFilter(x => 
-                    (x.TenantId == _tenantId || x.TenantId == null) 
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null) 
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<ShareLink>().HasQueryFilter(x => 
                     x.IsActive != false);
             builder.Entity<SongPlayHistory>().HasQueryFilter(x =>
-                   (x.TenantId == _tenantId || x.TenantId == null)
+                   (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                    && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<User>().HasQueryFilter(x =>
-                    (x.TenantId == _tenantId || x.TenantId == null)
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                     && (x.IsDeleted == false || x.IsDeleted == null)
                     && (x.IsActive == true || x.IsActive == null));
 
@@ -173,6 +169,20 @@ namespace FRELODYAPP.Data.Infrastructure
                 b.HasIndex(h => h.PlaySource);
             });
 
+            builder.Entity<SongUserFavorite>(b =>
+            {
+                b.HasOne(f => f.Song)
+                 .WithMany()
+                 .HasForeignKey(f => f.SongId)
+                 .OnDelete(DeleteBehavior.Cascade);
+                b.HasOne(f => f.User)
+                 .WithMany()
+                 .HasForeignKey(f => f.UserId)
+                 .OnDelete(DeleteBehavior.Cascade);
+                b.HasIndex(f => new { f.SongId, f.UserId }).IsUnique();
+                b.HasIndex(f => f.FavoritedAt);
+            });
+
             // Configure Chord properties to be stored as strings
             builder.Entity<Chord>()
                 .Property(c => c.Difficulty)
@@ -236,7 +246,8 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<User>(b =>
             {
                 b.HasIndex(u => u.TenantId);
-                b.HasQueryFilter(u => u.TenantId == _tenantId);
+                b.Property(e => e.UserType)
+                .HasConversion<string>();
             });
 
             builder.Entity<SongUserRating>(b =>
@@ -312,7 +323,10 @@ namespace FRELODYAPP.Data.Infrastructure
                     entity.Entity.DateCreated = DateTime.UtcNow;
                     entity.Entity.DateModified = DateTime.UtcNow;
                     entity.Entity.ModifiedBy = _userId;
-                    entity.Entity.TenantId = entity.Entity.TenantId;
+                    if (string.IsNullOrEmpty(entity.Entity.TenantId) && !_isSuperAdmin)
+                    {
+                        entity.Entity.TenantId = _tenantId;
+                    }
                     entity.Entity.CreatedBy = _userId;
                 }
                 else if (entity.State == EntityState.Modified)

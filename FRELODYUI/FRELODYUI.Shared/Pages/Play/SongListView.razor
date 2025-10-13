@@ -189,6 +189,11 @@
 
                 OrganizeIntoSongBooks(songs);
             }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(result);
+                _logger.LogError("Error loading songs: {Error}", errorMessage);
+            }
         }
         catch (Exception ex)
         {

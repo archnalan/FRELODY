@@ -8,6 +8,7 @@ using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYSHRD.Dtos.UserDtos;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 
 namespace FRELODYAPIs.Areas.Admin.LogicData
@@ -59,7 +60,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #endregion
 
         #region Edit User Profile
-        public async Task<ServiceResult<UpdateUserProfileOutDto>> EditUserProfile(UpdateUserProfileOutDto dto)
+        public async Task<ServiceResult<UpdateUserProfileOutDto>> EditUserProfile(EditUserProfile dto)
         {
             try
             {
@@ -77,9 +78,9 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 user.CoverPhotoUrl = dto.CoverPhotoUrl;
                 _context.Users.Update(user);
                 await _context.SaveChangesAsync();
-                dto.UserName = user.UserName;
-                dto.Email = user.Email;
-                return ServiceResult<UpdateUserProfileOutDto>.Success(dto);
+
+                var outDto = dto.Adapt<UpdateUserProfileOutDto>();
+                return ServiceResult<UpdateUserProfileOutDto>.Success(outDto);
             }
             catch (Exception ex)
             {
@@ -92,7 +93,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #region Search Users for combo boxes
         public async Task<ServiceResult<PaginationDetails<ComboBoxDto>>> SearchUsersForComboBoxes(string keywords, int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken)
         {
-            IQueryable<User> query = _context.Users.Where(u => u.IsSystemUser != true);
+            IQueryable<User> query = _context.Users.Where(u => u.UserType != UserType.SuperAdmin || u.UserType!=UserType.TenantAdmin);
+                                        
             try
             {
                 if (!string.IsNullOrEmpty(keywords))
@@ -110,7 +112,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 var result = await query.AsNoTracking().Select(x => new ComboBoxDto
                 {
-                    Id = 0, // Assuming ComboBoxDto.Id is int and not used for users
+                    ValueId = 0, // Assuming ComboBoxDto.Id is int and not used for users
                     IdString = x.Id,
                     ValueText = $"{x.FirstName} {x.LastName}"
                 }).ToPaginatedResultAsync(offSet, limit, cancellationToken, sortByColumn, sortAscending);
@@ -130,7 +132,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         {
             try
             {
-                var query = _context.Users.AsNoTracking().Where(u => u.IsSystemUser != true);
+                var query = _context.Users.AsNoTracking().Where(u => u.UserType != UserType.SuperAdmin || u.UserType != UserType.TenantAdmin);
                 if (!string.IsNullOrEmpty(keywords))
                 {
                     query = query.Where(c =>
@@ -168,7 +170,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #region Get All Users
         public async Task<ServiceResult<PaginationDetails<AppUserDto>>> GetAllUsers(int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken)
         {
-            IQueryable<User> query = _context.Users.Where(u => u.IsSystemUser != true);
+            IQueryable<User> query = _context.Users.Where(u => u.UserType != UserType.SuperAdmin || u.UserType != UserType.TenantAdmin);
             try
             {
                 var result = await query.AsNoTracking().Select(x => new AppUserDto
@@ -197,7 +199,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #region Search For Users
         public async Task<ServiceResult<PaginationDetails<AppUserDto>>> SearchForUsers(string keywords, int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken)
         {
-            IQueryable<User> query = _context.Users.Where(u=> u.IsSystemUser != true);
+            IQueryable<User> query = _context.Users.Where(u=> u.UserType != UserType.SuperAdmin || u.UserType != UserType.TenantAdmin);
             try
             {
                 if (!string.IsNullOrEmpty(keywords))
@@ -247,7 +249,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     return ServiceResult<bool>.Failure(new Exception("User not found."));
                 }
 
-                if (user.IsSystemUser)
+                if (user.UserType == UserType.SuperAdmin || user.UserType != UserType.TenantAdmin)
                 {
                     return ServiceResult<bool>.Failure(new Exception("Cannot disable a system user."));
                 }

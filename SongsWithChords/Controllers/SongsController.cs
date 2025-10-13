@@ -123,10 +123,20 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(List<ComboBoxDto>), 200)]
-        public async Task<IActionResult> GetFavoriteSongs([FromQuery]string? userId = null)
+        [ProducesResponseType(typeof(PaginationDetails<ComboBoxDto>), 200)]
+        public async Task<IActionResult> GetFavoriteSongs([FromQuery]string? userId = null, [FromQuery] int? offset = 0, [FromQuery] int? limit = 10)
         {
-            var result = await _songService.GetFavoriteSongs(userId);
+            var result = await _songService.GetFavoriteSongs(userId, offset, limit);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            return Ok(result.Data);
+        }
+
+        [HttpGet]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> IsSongFavorited([FromQuery] string songId, [FromQuery]string? userId = null)
+        {
+            var result = await _songService.IsSongFavorited(songId, userId);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { message = result.Error.Message });
             return Ok(result.Data);

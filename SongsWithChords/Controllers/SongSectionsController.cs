@@ -18,7 +18,7 @@ namespace FRELODYAPIs.Controllers
                 .Cast<SongSection>()
                 .Select((section, idx) => new ComboBoxDto
                 {
-                    Id = idx,
+                    ValueId = idx,
                     ValueText = section.ToString(),
                     IdString = section.ToString()
                 })

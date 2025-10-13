@@ -87,5 +87,6 @@ builder.Services.AddScoped<ChordLyricExtrator>();
 builder.Services.AddScoped<TabManagementService>();
 builder.Services.AddScoped<GlobalAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
-                provider.GetRequiredService<GlobalAuthStateProvider>()); 
+                provider.GetRequiredService<GlobalAuthStateProvider>());
+builder.Services.AddSingleton<ITimeHelper, TimeHelper>();
 await builder.Build().RunAsync();
