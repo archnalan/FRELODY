@@ -12,7 +12,7 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<string>> AddUserToRole([Body] AddUserToRoleDto userRoleDto);
 
         [Post("/api/authorization/create-user")]
-        Task<IApiResponse<CreateUserResponseDto>> CreateUser([Body] CreateUserDto createUserDto, [Query] string tenantId);
+        Task<IApiResponse<CreateUserResponseDto>> CreateUser([Body] CreateUserDto createUserDto);
 
         [Post("/api/authorization/external-login-callback")]
         Task<IApiResponse<LoginResponseDto>> ExternalLoginCallback([Body] ExternalLoginDto externalLogin);

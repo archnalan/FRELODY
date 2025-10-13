@@ -15,7 +15,7 @@
         public string? CoverPhotoUrl { get; set; }
         public int TotalSongs { get; set; }
         public List<string>? AssignedRoles { get; set; }
-
+        public string? TenantId { get; set; }
         public UpdateUserProfileOutDto()
         {
 

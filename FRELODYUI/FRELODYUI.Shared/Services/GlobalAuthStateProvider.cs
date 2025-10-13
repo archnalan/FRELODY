@@ -6,6 +6,7 @@ using System.Text.Json;
 using FRELODYAPP.Dtos.AuthDtos;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYAPP.Dtos.UserDtos;
+using FRELODYSHRD.Dtos.UserDtos;
 
 namespace FRELODYUI.Shared.Services
 {
@@ -182,6 +183,29 @@ namespace FRELODYUI.Shared.Services
 
         #region Private Helper Methods
 
+        public async Task<UserClaimsDto?> GetLoggedInUserAsync()
+        {
+            var authState = await GetAuthenticationStateAsync();
+            var user = authState.User;
+            if (user.Identity != null && user.Identity.IsAuthenticated)
+            {
+                var userClaimsDto = new UserClaimsDto
+                {
+                    Id = user.FindFirst("UserId")?.Value,
+                    FirstName = user.FindFirst("FirstName")?.Value,
+                    LastName = user.FindFirst("LastName")?.Value,
+                    Email = user.FindFirst("Email")?.Value,
+                    UserName = user.FindFirst("UserName")?.Value,
+                    UserType = Enum.TryParse(user.FindFirst("UserType")?.Value, out UserType userType) ? userType : null,
+                    Roles = user.Claims
+                                .Where(c => c.Type == ClaimTypes.Role)
+                                .Select(c => c.Value)
+                                .ToList()
+                };
+                return userClaimsDto;
+            }
+            return null;
+        }
         private async Task<ServiceResult<LoginResponseDto>> GetSessionFromStorageAsync()
         {
             try

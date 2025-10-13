@@ -33,9 +33,9 @@ namespace FRELODYAPIs.Controllers
 
         [HttpPost]
         [ProducesResponseType(typeof(CreateUserResponseDto), 200)]
-        public async Task<IActionResult> CreateUser([FromBody] CreateUserDto CreateUserDto, [FromQuery]string TenantId)
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserDto createUserDto)
         {
-            var result = await _authorizationDAL.CreateUser(CreateUserDto, TenantId);
+            var result = await _authorizationDAL.CreateUser(createUserDto);
             if (!result.IsSuccess)
             {
                 return StatusCode(result.StatusCode, result.Error);

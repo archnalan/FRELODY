@@ -6,198 +6,318 @@
 
 <PageTitle>@(IsEditMode ? "Edit User" : "Create User")</PageTitle>
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-lg-8 mx-auto">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">
-                            <i class="bi bi-person me-2"></i>
-                            @(IsEditMode ? "Edit User" : "Create New User")
-                        </h4>
-                        <button class="btn btn-outline-light btn-sm" @onclick="NavigateBack">
-                            <i class="bi bi-arrow-left me-1"></i>Back to Users
-                        </button>
+<div class="w-100 d-flex justify-content-center mx-auto p-4 bg-light min-vh-100">
+    <div class="w-100" style="max-width: 55rem;">
+        <!-- Header -->
+        <div class="d-flex align-items-center mb-4">
+            <button class="btn btn-link text-decoration-none p-0 me-3" @onclick="NavigateBack">
+                <i class="bi bi-arrow-left fs-3 text-primary"></i>
+            </button>
+            <div>
+                <h3 class="mb-0">@(IsEditMode ? "Edit User Profile" : "Create New User")</h3>
+                <p class="text-muted mb-0">@(IsEditMode ? "Update user information and settings" : "Add a new user to the system")</p>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>@error
+                <button type="button" class="btn-close" @onclick="() => error = string.Empty"></button>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi bi-check-circle me-2"></i>@successMessage
+                <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+            </div>
+        }
+
+        <!-- Profile Information Form -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0 text-primary">
+                    <i class="bi bi-person-circle me-2"></i>Profile Information
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <EditForm Model="profileModel" OnValidSubmit="HandleProfileSubmit">
+                    <DataAnnotationsValidator />
+                    
+                    @if (IsEditMode && !string.IsNullOrEmpty(profileModel.Id))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-muted small">USER ID</label>
+                            <input type="text" class="form-control bg-light" value="@profileModel.Id" readonly />
+                        </div>
+                    }
+
+                    <!-- Organization (SuperAdmin only) -->
+                    @if (currentUser != null && currentUser.UserType == UserType.SuperAdmin)
+                    {
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-building me-1"></i>Organization
+                            </label>
+                            <select class="form-select" @bind="profileModel.TenantId">
+                                <option value="">Select a company</option>
+                                @foreach (var tenant in tenants)
+                                {
+                                    <option value="@tenant.Id">@tenant.TenantName</option>
+                                }
+                            </select>
+                        </div>
+                    }
+
+                    <!-- Basic Information -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="firstName" class="form-label fw-semibold">
+                                First Name <span class="text-danger">*</span>
+                            </label>
+                            <InputText id="firstName" @bind-Value="profileModel.FirstName" class="form-control" placeholder="Enter first name" />
+                            <ValidationMessage For="@(() => profileModel.FirstName)" class="text-danger small" />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="lastName" class="form-label fw-semibold">
+                                Last Name <span class="text-danger">*</span>
+                            </label>
+                            <InputText id="lastName" @bind-Value="profileModel.LastName" class="form-control" placeholder="Enter last name" />
+                            <ValidationMessage For="@(() => profileModel.LastName)" class="text-danger small" />
+                        </div>
                     </div>
-                </div>
 
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(error))
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <i class="bi bi-exclamation-triangle me-2"></i>@error
-                            <button type="button" class="btn-close" @onclick="() => error = string.Empty"></button>
-                        </div>
-                    }
-
-                    @if (!string.IsNullOrEmpty(successMessage))
-                    {
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <i class="bi bi-check-circle me-2"></i>@successMessage
-                            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
-                        </div>
-                    }
-
-                    <EditForm Model="userModel" OnValidSubmit="HandleSubmit">
-                        <DataAnnotationsValidator />
-                        
-                        @if (IsEditMode && !string.IsNullOrEmpty(userModel.Id))
-                        {
-                            <div class="mb-3">
-                                <label class="form-label">User ID</label>
-                                <input type="text" class="form-control" value="@userModel.Id" readonly />
-                            </div>
-                        }
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="firstName" class="form-label">First Name *</label>
-                                    <InputText id="firstName" @bind-Value="userModel.FirstName" class="form-control" />
-                                    <ValidationMessage For="@(() => userModel.FirstName)" />
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="lastName" class="form-label">Last Name *</label>
-                                    <InputText id="lastName" @bind-Value="userModel.LastName" class="form-control" />
-                                    <ValidationMessage For="@(() => userModel.LastName)" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">Email *</label>
-                                    <InputText id="email" @bind-Value="userModel.Email" class="form-control" type="email" />
-                                    <ValidationMessage For="@(() => userModel.Email)" />
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="userName" class="form-label">Username *</label>
-                                    <InputText id="userName" @bind-Value="userModel.UserName" class="form-control" />
-                                    <ValidationMessage For="@(() => userModel.UserName)" />
-                                </div>
-                            </div>
-                        </div>
-
-                        @if (!IsEditMode || showPasswordFields)
-                        {
+                    <!-- Account Credentials -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="email" class="form-label fw-semibold">
+                                <i class="bi bi-envelope me-1"></i>Email <span class="text-danger">*</span>
+                            </label>
+                            <InputText id="email" @bind-Value="profileModel.Email" class="form-control" type="email" placeholder="user@example.com" disabled="@IsEditMode" />
+                            <ValidationMessage For="@(() => profileModel.Email)" class="text-danger small" />
                             @if (IsEditMode)
                             {
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="changePassword" 
-                                               @bind="showPasswordFields" />
-                                        <label class="form-check-label" for="changePassword">
-                                            Change Password
+                                <small class="text-muted">Email cannot be changed</small>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <label for="userName" class="form-label fw-semibold">
+                                <i class="bi bi-person me-1"></i>Username <span class="text-danger">*</span>
+                            </label>
+                            <InputText id="userName" @bind-Value="profileModel.UserName" class="form-control" placeholder="username" />
+                            <ValidationMessage For="@(() => profileModel.UserName)" class="text-danger small" />
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="phoneNumber" class="form-label fw-semibold">
+                                <i class="bi bi-telephone me-1"></i>Phone Number
+                            </label>
+                            <InputText id="phoneNumber" @bind-Value="profileModel.PhoneNumber" class="form-control" placeholder="+1 (555) 000-0000" />
+                            <ValidationMessage For="@(() => profileModel.PhoneNumber)" class="text-danger small" />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="profession" class="form-label fw-semibold">
+                                <i class="bi bi-briefcase me-1"></i>Profession
+                            </label>
+                            <InputText id="profession" @bind-Value="profileModel.Profession" class="form-control" placeholder="e.g., Software Developer" />
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="address" class="form-label fw-semibold">
+                            <i class="bi bi-geo-alt me-1"></i>Address
+                        </label>
+                        <InputText id="address" @bind-Value="profileModel.Address" class="form-control" placeholder="Street address, city, state, ZIP" />
+                        <ValidationMessage For="@(() => profileModel.Address)" class="text-danger small" />
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="aboutMe" class="form-label fw-semibold">
+                            <i class="bi bi-info-circle me-1"></i>About Me
+                        </label>
+                        <InputTextArea id="aboutMe" @bind-Value="profileModel.AboutMe" class="form-control" rows="4" placeholder="Tell us about yourself..." />
+                        <ValidationMessage For="@(() => profileModel.AboutMe)" class="text-danger small" />
+                    </div>
+
+                    <!-- Roles Section -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-shield-check me-1"></i>Assigned Roles
+                        </label>
+                        <div class="row g-2">
+                            @foreach (var role in availableRoles)
+                            {
+                                <div class="col-md-4">
+                                    <div class="form-check p-3 border rounded hover-shadow">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="role_@role"
+                                               checked="@(profileModel.AssignedRoles?.Contains(role) == true)"
+                                               @onchange="@((ChangeEventArgs e) => ToggleRole(role, (bool)e.Value!))" />
+                                        <label class="form-check-label w-100" for="role_@role">
+                                            @role
                                         </label>
                                     </div>
                                 </div>
                             }
-
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="password" class="form-label">Password *</label>
-                                        <InputText id="password" @bind-Value="userModel.Password" class="form-control" type="password" />
-                                        <ValidationMessage For="@(() => userModel.Password)" />
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="confirmPassword" class="form-label">Confirm Password *</label>
-                                        <InputText id="confirmPassword" @bind-Value="confirmPassword" class="form-control" type="password" />
-                                        @if (!string.IsNullOrEmpty(passwordMismatchError))
-                                        {
-                                            <div class="text-danger small">@passwordMismatchError</div>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        }
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="phoneNumber" class="form-label">Phone Number</label>
-                                    <InputText id="phoneNumber" @bind-Value="userModel.PhoneNumber" class="form-control" />
-                                    <ValidationMessage For="@(() => userModel.PhoneNumber)" />
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="address" class="form-label">Address</label>
-                                    <InputText id="address" @bind-Value="userModel.Address" class="form-control" />
-                                    <ValidationMessage For="@(() => userModel.Address)" />
-                                </div>
-                            </div>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label for="aboutMe" class="form-label">About Me</label>
-                            <InputTextArea id="aboutMe" @bind-Value="userModel.AboutMe" class="form-control" rows="3" />
-                            <ValidationMessage For="@(() => userModel.AboutMe)" />
-                        </div>
+                    <ValidationSummary class="text-danger" />
 
-                        <div class="row">
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="button" class="btn btn-outline-secondary px-4" @onclick="NavigateBack" disabled="@isSubmittingProfile">
+                            <i class="bi bi-x-circle me-1"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary px-4" disabled="@isSubmittingProfile">
+                            @if (isSubmittingProfile)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-@(isSubmittingProfile ? "" : (IsEditMode ? "save" : "plus-circle")) me-1"></i>
+                            @(IsEditMode ? "Update Profile" : "Create User")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+
+        <!-- Password Section (Create Mode or Separate Update) -->
+        @if (!IsEditMode)
+        {
+            <!-- Password for New User -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0 text-primary">
+                        <i class="bi bi-key me-2"></i>Set Password
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <EditForm Model="passwordModel" OnValidSubmit="HandlePasswordSubmit">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="row g-3">
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="profilePicUrl" class="form-label">Profile Picture URL</label>
-                                    <InputText id="profilePicUrl" @bind-Value="userModel.ProfilePicUrl" class="form-control" />
-                                    <ValidationMessage For="@(() => userModel.ProfilePicUrl)" />
+                                <label for="password" class="form-label fw-semibold">
+                                    Password <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <InputText id="password" @bind-Value="passwordModel.Password" 
+                                               class="form-control" 
+                                               type="@(showPassword ? "text" : "password")" 
+                                               placeholder="Enter password" />
+                                    <button class="btn btn-outline-secondary" type="button" @onclick="TogglePasswordVisibility">
+                                        <i class="bi bi-@(showPassword ? "eye-slash" : "eye")"></i>
+                                    </button>
                                 </div>
+                                <ValidationMessage For="@(() => passwordModel.Password)" class="text-danger small" />
+                                <small class="text-muted">Minimum 4 characters</small>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="coverPhotoUrl" class="form-label">Cover Photo URL</label>
-                                    <InputText id="coverPhotoUrl" @bind-Value="userModel.CoverPhotoUrl" class="form-control" />
-                                    <ValidationMessage For="@(() => userModel.CoverPhotoUrl)" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label">Default Roles</label>
-                            <div class="row">
-                                @foreach (var role in availableRoles)
+                                <label for="confirmPassword" class="form-label fw-semibold">
+                                    Confirm Password <span class="text-danger">*</span>
+                                </label>
+                                <InputText id="confirmPassword" @bind-Value="confirmPassword" 
+                                           class="form-control" 
+                                           type="@(showPassword ? "text" : "password")" 
+                                           placeholder="Re-enter password" />
+                                @if (!string.IsNullOrEmpty(passwordMismatchError))
                                 {
-                                    <div class="col-md-4 mb-2">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" 
-                                                   id="role_@role"
-                                                   checked="@(userModel.AssignedRoles?.Contains(role) == true)"
-                                                   @onchange="@((ChangeEventArgs e) => ToggleRole(role, (bool)e.Value!))" />
-                                            <label class="form-check-label" for="role_@role">
-                                                @role
-                                            </label>
-                                        </div>
-                                    </div>
+                                    <div class="text-danger small mt-1">@passwordMismatchError</div>
                                 }
                             </div>
-                        </div>
-
-                        <ValidationSummary />
-
-                        <div class="d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-outline-secondary" @onclick="NavigateBack" disabled="@isSubmitting">
-                                Cancel
-                            </button>
-                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
-                                @if (isSubmitting)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                }
-                                @(IsEditMode ? "Update User" : "Create User")
-                            </button>
                         </div>
                     </EditForm>
                 </div>
             </div>
-        </div>
+        }
+        else
+        {
+            <!-- Change Password Section (Edit Mode) -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-primary">
+                        <i class="bi bi-shield-lock me-2"></i>Change Password
+                    </h5>
+                    @if (!showPasswordFields)
+                    {
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => showPasswordFields = true">
+                            <i class="bi bi-key me-1"></i>Change Password
+                        </button>
+                    }
+                </div>
+                @if (showPasswordFields)
+                {
+                    <div class="card-body p-4">
+                        <EditForm Model="passwordChangeModel" OnValidSubmit="HandlePasswordChange">
+                            <DataAnnotationsValidator />
+                            
+                            <div class="mb-3">
+                                <label for="currentPassword" class="form-label fw-semibold">
+                                    Current Password <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <InputText id="currentPassword" @bind-Value="passwordChangeModel.OldPassword" 
+                                               class="form-control" 
+                                               type="@(showPassword ? "text" : "password")" 
+                                               placeholder="Enter current password" />
+                                    <button class="btn btn-outline-secondary" type="button" @onclick="TogglePasswordVisibility">
+                                        <i class="bi bi-@(showPassword ? "eye-slash" : "eye")"></i>
+                                    </button>
+                                </div>
+                                <ValidationMessage For="@(() => passwordChangeModel.OldPassword)" class="text-danger small" />
+                            </div>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label for="newPassword" class="form-label fw-semibold">
+                                        New Password <span class="text-danger">*</span>
+                                    </label>
+                                    <InputText id="newPassword" @bind-Value="passwordChangeModel.Password" 
+                                               class="form-control" 
+                                               type="@(showPassword ? "text" : "password")" 
+                                               placeholder="Enter new password" />
+                                    <ValidationMessage For="@(() => passwordChangeModel.Password)" class="text-danger small" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="confirmNewPassword" class="form-label fw-semibold">
+                                        Confirm New Password <span class="text-danger">*</span>
+                                    </label>
+                                    <InputText id="confirmNewPassword" @bind-Value="confirmNewPassword" 
+                                               class="form-control" 
+                                               type="@(showPassword ? "text" : "password")" 
+                                               placeholder="Re-enter new password" />
+                                    @if (!string.IsNullOrEmpty(passwordMismatchError))
+                                    {
+                                        <div class="text-danger small mt-1">@passwordMismatchError</div>
+                                    }
+                                </div>
+                            </div>
+
+                            <ValidationSummary class="text-danger mb-3" />
+
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn btn-outline-secondary" @onclick="CancelPasswordChange" disabled="@isChangingPassword">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn btn-primary" disabled="@isChangingPassword">
+                                    @if (isChangingPassword)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    <i class="bi bi-shield-check me-1"></i>
+                                    Update Password
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                }
+            </div>
+        }
     </div>
 </div>
 
@@ -205,18 +325,28 @@
     [Parameter] public string? UserId { get; set; }
 
     private bool IsEditMode => !string.IsNullOrEmpty(UserId);
-    private bool isSubmitting = false;
+    private bool isSubmittingProfile = false;
+    private bool isChangingPassword = false;
     private bool showPasswordFields = false;
+    private bool showPassword = false;
     private string error = string.Empty;
     private string successMessage = string.Empty;
     private string confirmPassword = string.Empty;
+    private string confirmNewPassword = string.Empty;
     private string passwordMismatchError = string.Empty;
 
-    private UpdateUserProfile userModel = new();
-    private List<string> availableRoles = new() { "User", "Admin", "Moderator", "Editor" };
+    private UpdateUserProfile profileModel = new();
+    private CreatePasswordModel passwordModel = new();
+    private ResetPasswordDto passwordChangeModel = new();
+    private List<string> availableRoles = new(UserRoles.AllRoles);
+    private List<TenantDto> tenants = new();
+    private UserClaimsDto? currentUser = new();
 
     protected override async Task OnInitializedAsync()
     {
+        currentUser = await _globalAuth.GetLoggedInUserAsync();
+        await LoadTenants();
+        
         if (IsEditMode)
         {
             await LoadUser();
@@ -224,10 +354,11 @@
         else
         {
             // Initialize with default values for new user
-            userModel = new UpdateUserProfile
+            profileModel = new UpdateUserProfile
             {
                 AssignedRoles = new List<string> { "User" }
             };
+            passwordModel = new CreatePasswordModel();
         }
     }
 
@@ -244,25 +375,30 @@
         try
         {
             error = string.Empty;
-            var response = await _authApi.GetUserProfile(UserId);
-            
+            var response = await _usersApi.GetUserProfile(UserId);
+
             if (response.IsSuccessStatusCode && response.Content != null)
             {
                 var userProfile = response.Content;
-                userModel = new UpdateUserProfile
+                profileModel = new UpdateUserProfile
                 {
                     Id = userProfile.Id,
                     FirstName = userProfile.FirstName,
                     LastName = userProfile.LastName,
-                    Email = userProfile.Email,
-                    UserName = userProfile.UserName,
                     PhoneNumber = userProfile.PhoneNumber,
                     Address = userProfile.Address,
                     AboutMe = userProfile.AboutMe,
+                    Profession = userProfile.Profession,
                     ProfilePicUrl = userProfile.ProfilePicUrl,
                     CoverPhotoUrl = userProfile.CoverPhotoUrl,
                     AssignedRoles = userProfile.AssignedRoles ?? new(),
-                    Password = string.Empty // Don't populate password for security
+                    TenantId = userProfile.TenantId
+                };
+                
+                // Initialize password change model with user email
+                passwordChangeModel = new ResetPasswordDto
+                {
+                    EmailAddress = userProfile.Email ?? string.Empty
                 };
             }
             else
@@ -277,35 +413,42 @@
         }
     }
 
-    private async Task HandleSubmit()
+    private async Task LoadTenants()
+    {
+        try
+        {
+            var response = await _tenantsApi.GetAllTenants(0, 100);
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                tenants = response.Content.Data!;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to load tenants {Error}", _apiResponseHandler.GetApiErrorMessage(response));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading tenants");
+        }
+    }
+
+    private async Task HandleProfileSubmit()
     {
         try
         {
             error = string.Empty;
-            passwordMismatchError = string.Empty;
-            isSubmitting = true;
-
-            // Validate password confirmation
-            if ((!IsEditMode || showPasswordFields) && userModel.Password != confirmPassword)
-            {
-                passwordMismatchError = "Passwords do not match.";
-                return;
-            }
+            isSubmittingProfile = true;
 
             if (IsEditMode)
             {
-                // Only include password if it's being changed
-                if (!showPasswordFields)
-                {
-                    userModel.Password = string.Empty;
-                }
-
-                var response = await _authApi.UpdateUser(userModel);
+                // Update existing user profile
+                var response = await _usersApi.EditUserProfile(profileModel);
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    successMessage = "User updated successfully!";
-                    await Task.Delay(2000);
+                    successMessage = "Profile updated successfully!";
+                    await Task.Delay(1500);
                     NavigateBack();
                 }
                 else
@@ -315,31 +458,42 @@
             }
             else
             {
-                // Create new user
+                // Validate password for new user
+                if (string.IsNullOrEmpty(passwordModel.Password))
+                {
+                    error = "Password is required for new users.";
+                    return;
+                }
+
+                if (passwordModel.Password != confirmPassword)
+                {
+                    passwordMismatchError = "Passwords do not match.";
+                    return;
+                }
+
+                // Create new user with password
                 var createUserDto = new CreateUserDto
                 {
-                    FirstName = userModel.FirstName,
-                    LastName = userModel.LastName,
-                    Email = userModel.Email,
-                    UserName = userModel.UserName,
-                    Password = userModel.Password,
-                    PhoneNumber = userModel.PhoneNumber,
-                    Address = userModel.Address,
-                    AboutMe = userModel.AboutMe,
-                    ProfilePicUrl = userModel.ProfilePicUrl,
-                    CoverPhotoUrl = userModel.CoverPhotoUrl,
-                    AssignedRoles = userModel.AssignedRoles
+                    FirstName = profileModel.FirstName,
+                    LastName = profileModel.LastName,
+                    Email = profileModel.Email ?? string.Empty,
+                    UserName = profileModel.UserName ?? string.Empty,
+                    Password = passwordModel.Password,
+                    PhoneNumber = profileModel.PhoneNumber,
+                    Address = profileModel.Address,
+                    AboutMe = profileModel.AboutMe,
+                    ProfilePicUrl = profileModel.ProfilePicUrl,
+                    CoverPhotoUrl = profileModel.CoverPhotoUrl,
+                    AssignedRoles = profileModel.AssignedRoles,
+                    TenantId = profileModel.TenantId
                 };
-
-                // Note: The CreateUser method requires a tenantId parameter
-                // You may need to get this from your application context
-                var tenantId = "381917e2-f0fc-434a-b2c9-fac5ec251814"; // Replace with actual tenant ID logic
-                var response = await _authApi.CreateUser(createUserDto, tenantId);
+                
+                var response = await _authApi.CreateUser(createUserDto);
                 
                 if (response.IsSuccessStatusCode)
                 {
                     successMessage = "User created successfully!";
-                    await Task.Delay(2000);
+                    await Task.Delay(1500);
                     NavigateBack();
                 }
                 else
@@ -350,35 +504,104 @@
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saving user");
-            error = "An error occurred while saving the user.";
+            _logger.LogError(ex, "Error saving user profile");
+            error = "An error occurred while saving the profile.";
         }
         finally
         {
-            isSubmitting = false;
+            isSubmittingProfile = false;
             StateHasChanged();
         }
     }
 
+    private async Task HandlePasswordSubmit()
+    {
+        // This is handled in HandleProfileSubmit for new users
+        await Task.CompletedTask;
+    }
+
+    private async Task HandlePasswordChange()
+    {
+        try
+        {
+            error = string.Empty;
+            passwordMismatchError = string.Empty;
+            isChangingPassword = true;
+
+            // Validate password confirmation
+            if (passwordChangeModel.Password != confirmNewPassword)
+            {
+                passwordMismatchError = "New passwords do not match.";
+                return;
+            }
+
+            var response = await _authApi.ResetPassword(passwordChangeModel);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Password changed successfully!";
+                showPasswordFields = false;
+                passwordChangeModel = new ResetPasswordDto { EmailAddress = passwordChangeModel.EmailAddress };
+                confirmNewPassword = string.Empty;
+            }
+            else
+            {
+                error = _apiResponseHandler.GetApiErrorMessage(response);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error changing password for user {UserId}", UserId);
+            error = "An error occurred while changing the password.";
+        }
+        finally
+        {
+            isChangingPassword = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CancelPasswordChange()
+    {
+        showPasswordFields = false;
+        passwordChangeModel = new ResetPasswordDto { EmailAddress = passwordChangeModel.EmailAddress };
+        confirmNewPassword = string.Empty;
+        passwordMismatchError = string.Empty;
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
+    }
+
     private void ToggleRole(string role, bool isSelected)
     {
-        userModel.AssignedRoles ??= new List<string>();
+        profileModel.AssignedRoles ??= new List<string>();
         
         if (isSelected)
         {
-            if (!userModel.AssignedRoles.Contains(role))
+            if (!profileModel.AssignedRoles.Contains(role))
             {
-                userModel.AssignedRoles.Add(role);
+                profileModel.AssignedRoles.Add(role);
             }
         }
         else
         {
-            userModel.AssignedRoles.Remove(role);
+            profileModel.AssignedRoles.Remove(role);
         }
     }
 
-    private void NavigateBack()
+    private async void NavigateBack()
     {
-        _navManager.NavigateTo("/users");
+        await JsRt.InvokeVoidAsync("goBack");
+    }
+
+    // Helper class for password creation
+    public class CreatePasswordModel
+    {
+        [Required]
+        [MinLength(4, ErrorMessage = "Password must be at least 4 characters")]
+        public string Password { get; set; } = string.Empty;
     }
 }
+

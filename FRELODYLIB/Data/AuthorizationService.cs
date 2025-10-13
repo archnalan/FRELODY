@@ -43,6 +43,7 @@ namespace FRELODYAPP.Data
         private readonly FileValidationService _fileValidationService;
         private readonly SecurityUtilityService _securityUtilityService;
         private readonly TokenService _tokenService;
+        private readonly string? _tenantId;
 
         public AuthorizationService(IConfiguration config, SongDbContext context,
             SignInManager<User> signInManager, UserManager<User> userManager,
@@ -64,6 +65,7 @@ namespace FRELODYAPP.Data
             _fileValidationService = fileValidationService;
             _securityUtilityService = securityUtilityService;
             _tokenService = tokenService;
+            _tenantId = _tenantProvider.GetTenantId();
         }
 
         public async Task<ServiceResult<string>> InitiatePasswordReset(string emailAddress)
@@ -359,13 +361,8 @@ namespace FRELODYAPP.Data
             return ServiceResult<LoginResponseDto>.Success(token);
         }
 
-        public async Task<ServiceResult<CreateUserResponseDto>> CreateUser([Required] CreateUserDto createUserDto, string tenantId)
+        public async Task<ServiceResult<CreateUserResponseDto>> CreateUser([Required] CreateUserDto createUserDto)
         {
-            var tenantExists = await _context.Tenants.AnyAsync(x => x.Id == tenantId);
-
-            if (!tenantExists) return ServiceResult<CreateUserResponseDto>.Failure(new NotFoundException($"Tenant with ID:{tenantId} is Invalid"));
-            //using  trnsaction scope
-
             var strategy = _context.Database.CreateExecutionStrategy();
             return await strategy.ExecuteAsync(async () =>
             {
@@ -387,11 +384,10 @@ namespace FRELODYAPP.Data
 
                         if (usernameExists)
                         {
-                            await HandleUserNameConflict(createUserDto,tenantId);
+                            await HandleUserNameConflict(createUserDto,_tenantId);
                         }
 
                         User newUser = createUserDto.Adapt<User>();
-                        newUser.TenantId = tenantId;
                         var result = await _userManager.CreateAsync(newUser, createUserDto.Password);
                         if (result.Succeeded)
                         {
@@ -412,7 +408,7 @@ namespace FRELODYAPP.Data
                             }
                             await scope.CommitAsync();
 
-                            var tokens = await _tokenService.GenerateTokens(newUser, tenantId);
+                            var tokens = await _tokenService.GenerateTokens(newUser, _tenantId);
                             var output = newUser.Adapt<CreateUserResponseDto>();
                             output.AssignedRoles = createUserDto.AssignedRoles;
                             //output. = tokens.Token; // Assuming CreateUserResponseDto has this property
@@ -433,7 +429,7 @@ namespace FRELODYAPP.Data
                     {
                         if (IsDuplicateUsernameException(ex))
                         {
-                           return await HandleUserNameConflict(createUserDto, tenantId);
+                           return await HandleUserNameConflict(createUserDto, _tenantId);
                         }
                         _logger.LogError("Error while creating user. {ex}", ex);
                         return ServiceResult<CreateUserResponseDto>.Failure(new ServerErrorException("Error while creating user. Please try again later"));
@@ -460,14 +456,14 @@ namespace FRELODYAPP.Data
             return false;
         }
 
-        private async Task<ServiceResult<CreateUserResponseDto>> HandleUserNameConflict(CreateUserDto createUserDto, string tenantId = "")
+        private async Task<ServiceResult<CreateUserResponseDto>> HandleUserNameConflict(CreateUserDto createUserDto, string? tenantId = "")
         {
 
             var suggestions = await GenerateUsernameSuggestions(
                 createUserDto.UserName,
                 createUserDto.Email,
                 createUserDto.PhoneNumber ?? "",
-                tenantId);
+                tenantId ?? "");
 
             var response = new CreateUserResponseDto
             {
@@ -687,7 +683,7 @@ namespace FRELODYAPP.Data
             return ServiceResult<UpdateUserProfileOutDto>.Success(userProfile);
         }
 
-        private async Task<List<string>> GenerateUsernameSuggestions(string baseUsername, string email = null, string phoneNumber = null, string tenantId = null)
+        private async Task<List<string>> GenerateUsernameSuggestions(string baseUsername, string email = null, string phoneNumber = null, string? tenantId = null)
         {
             var suggestions = new List<string>();
 

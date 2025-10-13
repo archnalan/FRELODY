@@ -42,7 +42,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         Email = x.Email,
                         PhoneNumber = x.PhoneNumber,
                         ProfilePicUrl = x.ProfilePicUrl,
-                        UserName = x.UserName
+                        UserName = x.UserName,
+                        TenantId = x.TenantId
                     })
                     .FirstOrDefaultAsync();
                 if (user == null)
@@ -76,6 +77,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 user.PhoneNumber = dto.PhoneNumber;
                 user.ProfilePicUrl = dto.ProfilePicUrl;
                 user.CoverPhotoUrl = dto.CoverPhotoUrl;
+                user.TenantId = dto.TenantId;
                 _context.Users.Update(user);
                 await _context.SaveChangesAsync();
 
@@ -183,7 +185,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     Aboutme = x.AboutMe,
                     Contacts = x.Contact,
                     ProfilePicUrl = x.ProfilePicUrl,
-                    CoverPhotoUrl = x.CoverPhotoUrl
+                    CoverPhotoUrl = x.CoverPhotoUrl,
+                    TenantId = x.TenantId,
                 }).ToPaginatedResultAsync(offSet, limit, cancellationToken, sortByColumn, sortAscending);
 
                 return ServiceResult<PaginationDetails<AppUserDto>>.Success(result);
@@ -225,7 +228,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     Aboutme = x.AboutMe,
                     Contacts = x.Contact,
                     ProfilePicUrl = x.ProfilePicUrl,
-                    CoverPhotoUrl = x.CoverPhotoUrl
+                    CoverPhotoUrl = x.CoverPhotoUrl,
+                    TenantId = x.TenantId
                 }).ToPaginatedResultAsync(offSet, limit, cancellationToken, sortByColumn, sortAscending);
 
                 return ServiceResult<PaginationDetails<AppUserDto>>.Success(result);

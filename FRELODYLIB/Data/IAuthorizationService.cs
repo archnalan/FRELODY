@@ -9,7 +9,7 @@ namespace FRELODYAPP.Data
     public interface IAuthorizationService
     {
         Task<ServiceResult<string>> AddUserToRoleAsync(string userId, string roleName);
-        Task<ServiceResult<CreateUserResponseDto>> CreateUser([Required] CreateUserDto createUserDto, string tenantId);
+        Task<ServiceResult<CreateUserResponseDto>> CreateUser([Required] CreateUserDto createUserDto);
         Task<ServiceResult<LoginResponseDto>> ExternalLoginCallback(string code, string tenantId);
         Task<ServiceResult<UpdateUserProfileOutDto>> GetUserProfile(string id = null, string userName = null);
         Task<ServiceResult<List<ComboBoxDto>>> GetUsersForComboBoxes();
