@@ -33,6 +33,7 @@ namespace FRELODYUI
             builder.Services.AddScoped<IStorageService, MauiStorageService>();
             builder.Services.AddScoped<ChordLyricExtrator>();
             builder.Services.AddScoped<TabManagementService>();
+            builder.Services.AddScoped<HeroDataService>();
             builder.Services.AddScoped<GlobalAuthStateProvider>();
             builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
                 provider.GetRequiredService<GlobalAuthStateProvider>());
@@ -92,6 +93,10 @@ namespace FRELODYUI
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
             builder.Services.AddRefitClient<ITenantsApi>()
+                            .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                            .AddHttpMessageHandler<AuthHeaderHandler>();
+
+            builder.Services.AddRefitClient<IChatsApi>()
                             .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                             .AddHttpMessageHandler<AuthHeaderHandler>();
 

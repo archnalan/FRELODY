@@ -31,6 +31,7 @@ builder.Services.AddScoped<IModalService, ModalService>();
 builder.Services.AddScoped<IStorageService, WebStorageService>();
 builder.Services.AddScoped<ChordLyricExtrator>();
 builder.Services.AddScoped<TabManagementService>();
+builder.Services.AddScoped<HeroDataService>();
 builder.Services.AddScoped<GlobalAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
                 provider.GetRequiredService<GlobalAuthStateProvider>());
@@ -93,6 +94,9 @@ builder.Services.AddRefitClient<ITenantsApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddRefitClient<IChatsApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
 
 var app = builder.Build();
 

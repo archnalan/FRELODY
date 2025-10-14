@@ -55,6 +55,7 @@ builder.Services.AddScoped<ISongPlayHistoryService, SongPlayHistoryService>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<SmtpSenderService>();
 builder.Services.AddScoped<FileValidationService>();
 builder.Services.AddScoped<SecurityUtilityService>();

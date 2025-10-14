@@ -43,6 +43,8 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<Setting> Settings { get; set; }
         public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
         public DbSet<ShareLink> ShareLinks { get; set; }
+        public DbSet<ChatSession> ChatSessions { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<SongPlayHistory> SongPlayHistories { get; set; }
         public DbSet<SongUserFavorite> SongUserFavorites { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
@@ -96,6 +98,12 @@ namespace FRELODYAPP.Data.Infrastructure
                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                     && (x.IsDeleted == false || x.IsDeleted == null)
                     && (x.IsActive == true || x.IsActive == null));
+            builder.Entity<ChatMessage>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<ChatSession>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
 
             // Configure Song and its children
             builder.Entity<Song>()
@@ -263,6 +271,18 @@ namespace FRELODYAPP.Data.Infrastructure
                  .IsRequired(false)
                  .OnDelete(DeleteBehavior.Restrict); 
             });
+
+            builder.Entity<ChatMessage>(b =>
+            {
+                b.HasOne<ChatSession>()
+                 .WithMany(cs => cs.Messages)
+                 .HasForeignKey(cm => cm.ChatSessionId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<ChatSession>()
+                .Property(e => e.Status)
+                .HasConversion<string>();
 
             foreach (var entityType in builder.Model.GetEntityTypes())
             {

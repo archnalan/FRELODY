@@ -1,0 +1,228 @@
+﻿@inherits LayoutComponentBase
+
+<div class="landing-container d-flex flex-column vh-100">
+    <!-- Header -->
+    <header class="landing-header sticky-top bg-body border-bottom shadow-sm">
+        <nav class="navbar navbar-expand-lg navbar-light px-3 px-lg-4">
+            <div class="container-fluid">
+                <!-- Brand -->
+                <a class="navbar-brand fw-bold fs-4" href="/">
+                    <span class="text-primary">FRE</span><span class="text-secondary">LODY</span>
+                </a>
+
+                <!-- Mobile Toggle -->
+                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#navbarContent" aria-controls="navbarContent" 
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Navbar Content -->
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <!-- Search Bar (Desktop) -->
+                    <div class="d-none d-lg-flex flex-grow-1 mx-4">
+                        <div class="input-group" style="max-width: 500px;">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control border-start-0 ps-0" 
+                                   placeholder="Search songs..."
+                                   @bind-value="searchQuery"
+                                   @bind-value:event="oninput"
+                                   @bind-value:after="OnSearchInput" />
+                        </div>
+                    </div>
+
+                    <!-- Right Side Actions -->
+                    <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
+                        <!-- Theme Toggle -->
+                        <button class="btn btn-link text-decoration-none p-2" 
+                                @onclick="ToggleTheme"
+                                title="Toggle theme">
+                            @if (isDarkTheme)
+                            {
+                                <i class="bi bi-sun fs-5"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-moon fs-5"></i>
+                            }
+                        </button>
+
+                        <!-- Sign In Button -->
+                        <button class="btn btn-outline-primary px-4" @onclick="NavigateToLogin">
+                            Sign In
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Mobile Search -->
+        <div class="d-lg-none px-3 pb-3">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="bi bi-search text-muted"></i>
+                </span>
+                <input type="text" 
+                       class="form-control border-start-0 ps-0" 
+                       placeholder="Search songs..."
+                       @bind-value="searchQuery"
+                       @bind-value:event="oninput"
+                       @bind-value:after="OnSearchInput" />
+            </div>
+        </div>
+    </header>
+
+    <!-- Body Content (Scrollable) -->
+    <main class="landing-body flex-grow-1 overflow-auto bg-body">
+        <GlobalErrorBoundary @ref="errorBoundaryRef">
+            <ChildContent>
+                @Body
+            </ChildContent>
+            <ErrorContent Context="ex">
+                @{
+                    var errorId = GenerateErrorId();
+                    var details = GetErrorDetails(ex);
+                }
+                <ErrorDialog Visible="true"
+                             Title="@details.Title"
+                             Message="@details.Message"
+                             ErrorId="@errorId"
+                             CanRetry="@details.CanRetry"
+                             Exception="@ex"
+                             OnRetry="RecoverPage"
+                             OnReload="HardReload" />
+            </ErrorContent>
+        </GlobalErrorBoundary>
+    </main>
+
+    <!-- Footer -->
+    <footer class="landing-footer bg-body border-top py-4">
+        <div class="container-fluid px-4">
+            <div class="row gy-3">
+                <!-- Brand & Description -->
+                <div class="col-12 col-md-4">
+                    <h5 class="fw-bold mb-2">
+                        <span class="text-primary">FRE</span><span class="text-secondary">LODY</span>
+                    </h5>
+                    <p class="text-muted small mb-0">
+                        Your modern hymnal companion. Explore, play, and share songs with ease.
+                    </p>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="col-6 col-md-4">
+                    <h6 class="fw-semibold mb-2">Quick Links</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-1">
+                            <a href="/" class="text-decoration-none text-muted">Home</a>
+                        </li>
+                        <li class="mb-1">
+                            <a href="/about" class="text-decoration-none text-muted">About</a>
+                        </li>
+                        <li class="mb-1">
+                            <a href="/contact" class="text-decoration-none text-muted">Contact</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Social & Legal -->
+                <div class="col-6 col-md-4">
+                    <h6 class="fw-semibold mb-2">Connect</h6>
+                    <div class="d-flex gap-3 mb-3">
+                        <a href="#" class="text-muted" title="Facebook">
+                            <i class="bi bi-facebook fs-5"></i>
+                        </a>
+                        <a href="#" class="text-muted" title="Twitter">
+                            <i class="bi bi-twitter fs-5"></i>
+                        </a>
+                        <a href="#" class="text-muted" title="Instagram">
+                            <i class="bi bi-instagram fs-5"></i>
+                        </a>
+                    </div>
+                    <p class="text-muted small mb-0">
+                        &copy; @DateTime.Now.Year FRELODY. All rights reserved.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Chat Bubble -->
+    <FRELODYUI.Shared.Components.ChatBubble />
+</div>
+
+@code {
+    private GlobalErrorBoundary errorBoundaryRef = default!;
+    private string searchQuery = string.Empty;
+    private bool isDarkTheme = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load theme preference
+        var theme = await _storageService.GetItemAsync<string>("Theme");
+        isDarkTheme = theme == "dark";
+        
+        if (isDarkTheme)
+        {
+            await ApplyTheme("dark");
+        }
+    }
+
+    private async Task OnSearchInput()
+    {
+        await _heroDataService.UpdateSearchQuery(searchQuery);
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDarkTheme = !isDarkTheme;
+        var theme = isDarkTheme ? "dark" : "light";
+        await ApplyTheme(theme);
+        await _storageService.SetItemAsync("Theme", theme);
+    }
+
+    private async Task ApplyTheme(string theme)
+    {
+        await JsRt.InvokeVoidAsync("eval", 
+            $"document.documentElement.setAttribute('data-bs-theme', '{theme}')");
+    }
+
+    private void NavigateToLogin()
+    {
+        _navManager.NavigateTo("/login");
+    }
+
+    private void RecoverPage()
+    {
+        errorBoundaryRef?.Recover();
+    }
+
+    private async Task HardReload()
+    {
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+        Application.Current.Quit();
+        await Task.CompletedTask;
+#else
+        await JsRt.InvokeVoidAsync("location.reload");
+#endif
+    }
+
+    private (string Title, string Message, bool CanRetry) GetErrorDetails(Exception ex) =>
+        ex switch
+        {
+            HttpRequestException => ("Network Error", "Unable to reach the server.", true),
+            TimeoutException => ("Timeout", "The request took too long.", true),
+            TaskCanceledException => ("Request Cancelled", "The request was cancelled.", true),
+            UnauthorizedAccessException => ("Access Denied", "You are not authorized.", false),
+            ArgumentNullException => ("Missing Input", "A required field was not provided.", true),
+            ArgumentException => ("Invalid Input", "Please verify your input.", true),
+            InvalidOperationException => ("Operation Failed", "Cannot complete the operation now.", true),
+            _ => ("Unexpected Error", "Something went wrong.", true)
+        };
+
+    private string GenerateErrorId() =>
+        $"ERR-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+}

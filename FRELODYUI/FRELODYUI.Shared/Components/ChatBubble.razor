@@ -1,0 +1,182 @@
+@using FRELODYSHRD.Dtos.ChatDtos
+
+<div class="chat-bubble-container @(isOpen ? "open" : "")">
+    @if (!isOpen)
+    {
+        <!-- Closed State - Floating Button -->
+        <button class="chat-bubble-button btn btn-primary rounded-circle shadow-lg" 
+                @onclick="OpenChat"
+                title="Chat with us">
+            <i class="bi bi-chat-dots fs-4"></i>
+            @if (unreadCount > 0)
+            {
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    @unreadCount
+                </span>
+            }
+        </button>
+    }
+    else
+    {
+        <!-- Open State - Chat Window -->
+        <div class="chat-window card shadow-lg border-0">
+            <!-- Header -->
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-chat-dots"></i>
+                    <span class="fw-semibold">Chat with us</span>
+                </div>
+                <button class="btn btn-link text-white p-0" @onclick="CloseChat">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="card-body chat-messages overflow-auto" @ref="messagesContainer">
+                @if (messages.Any())
+                {
+                    foreach (var message in messages)
+                    {
+                        <div class="message @(message.IsFromAdmin ? "admin" : "user") mb-3">
+                            <div class="message-bubble p-2 rounded">
+                                <p class="mb-1 small">@message.Message</p>
+                                <span class="text-muted" style="font-size: 0.7rem;">
+                                    @message.SentAt?.ToString("h:mm tt")
+                                </span>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-chat-left-text fs-1 mb-2"></i>
+                        <p class="small">Start a conversation</p>
+                    </div>
+                }
+
+                @if (isTyping)
+                {
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                }
+            </div>
+
+            <!-- Input Area -->
+            <div class="card-footer bg-light border-0">
+                <div class="input-group">
+                    <input type="text" 
+                           class="form-control border-0" 
+                           placeholder="Type a message..."
+                           @bind="messageInput"
+                           @onkeydown="HandleKeyDown"
+                           disabled="@isSending" />
+                    <button class="btn btn-primary" 
+                            @onclick="SendMessage"
+                            disabled="@(string.IsNullOrWhiteSpace(messageInput) || isSending)">
+                        @if (isSending)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-send"></i>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool isOpen = false;
+    private bool isSending = false;
+    private bool isTyping = false;
+    private string messageInput = string.Empty;
+    private string? sessionId;
+    private int unreadCount = 0;
+    private List<ChatMessageDto> messages = new();
+    private ElementReference messagesContainer;
+
+    private async Task OpenChat()
+    {
+        isOpen = true;
+        
+        if (string.IsNullOrEmpty(sessionId))
+        {
+            await InitializeSession();
+        }
+        
+        StateHasChanged();
+    }
+
+    private void CloseChat()
+    {
+        isOpen = false;
+        StateHasChanged();
+    }
+
+    private async Task InitializeSession()
+    {
+        try
+        {
+            var response = await _chatsApi.CreateAnonymousChatSession();
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                sessionId = response.Content.Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing chat session: {ex.Message}");
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(messageInput) || string.IsNullOrEmpty(sessionId))
+            return;
+
+        isSending = true;
+        var message = messageInput.Trim();
+        messageInput = string.Empty;
+
+        try
+        {
+            var response = await _chatsApi.SendMessage(sessionId, message, false);
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                messages.Add(response.Content);
+                await ScrollToBottom();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending message: {ex.Message}");
+            messageInput = message; // Restore message on error
+        }
+        finally
+        {
+            isSending = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        await JsRt.InvokeVoidAsync("eval", 
+            $"document.querySelector('.chat-messages').scrollTop = document.querySelector('.chat-messages').scrollHeight");
+    }
+}

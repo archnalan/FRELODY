@@ -1,0 +1,215 @@
+﻿@page "/song/import"
+@using FRELODYUI.Shared.Services
+@inject IFormFactor FormFactor
+
+<PageTitle>Song Library</PageTitle>
+<div class="container-fluid bg-light vh-100" style="max-width:55rem;justify-self:center">
+    <h3 class="mb-4">Song With Chords App</h3>
+
+    <div class="position-relative px-5 mb-3">
+        <textarea @bind="pastedText"
+                  class="position-relative form-control"
+                  style="border-radius:1rem;"
+                  placeholder="Paste or Import Song Lyrics..."
+                  rows="3"
+                  disabled="@isProcessing">   
+    </textarea>
+        <span class="btn position-absolute top-50 start-0 translate-middle-y ps-2 text-secondary" disabled="@isProcessing" @onclick="OpenFileUpload">
+            <i class="bi bi-plus-circle fs-2"></i>
+        </span>
+        <span class="btn position-absolute top-50 end-0 translate-middle-y ps-2 text-secondary" disabled="@isProcessing" @onclick="ProcessPastedText">
+            <i class="bi bi-arrow-up-circle-fill fs-2"></i>
+        </span>
+    </div>
+
+    <InputFile @ref="fileInputRef" OnChange="HandleFileSelected" class="d-none" accept=".pdf,.docx,.txt" />
+
+    @if (Song != null)
+    {
+        <div class="song-container p-3">
+            <div class="d-flex justify-content-center align-items-center">
+                <h3 class="fw-bold text-center m-0 me-3">
+                    @Song.SongNumber - @Song.Title
+                </h3>
+                <button class="btn btn-outline-primary" @onclick="CustomizeSong">
+                    <i class="bi bi-pencil-square"></i>
+                    Customize
+                </button>
+            </div>
+
+            @if (Song.SongLyrics != null)
+            {
+                @foreach (var lineGroup in Song.SongLyrics
+                        .GroupBy(s => s.LineNumber)
+                        .OrderBy(g => g.Key))
+                {
+                    <div class="d-flex flex-row flex-wrap mb-2">
+                        @foreach (var seg in lineGroup.OrderBy(s => s.LyricOrder))
+                        {
+                            <div class="d-flex flex-column justify-content-between gap-1 py-2 me-2">
+                                <div class="d-flex @GetChordAlignmentClass(seg)">
+                                    <button class="btn btn-outline-primary border-0">
+                                        <span class="fw-bold">@seg.ChordName</span>
+                                    </button>
+                                </div>
+                                <div>
+                                    <button class="btn btn-outline-secondary">
+                                        @seg.Lyric
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+
+        </div>
+    }
+    else
+    {
+        <p>No song loaded.</p>
+    }
+</div>
+
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    private string factor => FormFactor.GetFormFactor();
+    private string platform => FormFactor.GetPlatform();
+    private SimpleSongCreateDto? Song;
+    private string pastedText = "";
+    private bool isProcessing = false;
+    private InputFile fileInputRef =default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user is already authenticated
+        var authState = await _globalAuth.GetAuthenticationStateAsync();
+        var user = _globalAuth.GetAuthenticatedUserAsync();
+        if (authState.User.Identity?.IsAuthenticated ==false)
+        {
+            _navManager.NavigateTo("/login");
+        }
+    }
+
+    private void ProcessPastedText()
+    {
+        if (string.IsNullOrWhiteSpace(pastedText)) return;
+
+        isProcessing = true;
+        StateHasChanged();
+
+        Song = _extractor.ExtractFromRawText(pastedText);
+
+        isProcessing = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        isProcessing = true;
+        StateHasChanged();
+
+        var path = Path.Combine(Path.GetTempPath(), file.Name);
+
+        using (var stream = file.OpenReadStream())
+        using (var fs = new FileStream(path, FileMode.Create))
+        {
+            await stream.CopyToAsync(fs);
+        }
+
+        if (file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            Song = _extractor.ExtractSong(path);
+        }
+        else if (file.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+        {
+            var raw = File.ReadAllText(path);
+            Song = _extractor.ExtractFromRawText(raw);
+        }
+        else if (file.Name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase))
+        {
+            var raw = _extractor.ExtractTextFromDocx(path);
+            Song = _extractor.ExtractFromRawText(raw);
+        }
+        else
+        {
+            // Handle unsupported format, e.g., show modal error
+        }
+
+        isProcessing = false;
+        StateHasChanged();
+    }
+
+    private async Task OpenFileUpload()
+    {
+        await JsRt.InvokeVoidAsync("clickElement", fileInputRef);
+    }
+
+    private string GetChordAlignmentClass(SegmentCreateDto seg)
+    {
+        return seg.ChordAlignment switch
+        {
+            Alignment.Center => "justify-content-center",
+            Alignment.Right => "justify-content-end",
+            _ => "justify-content-start"
+        };
+    }
+
+    private async void CustomizeSong()
+    {
+        string? songId = null;
+        if (Song != null)
+        {
+            songId = Guid.NewGuid().ToString();
+
+            var response = await _songsApi.CreateSong(Song);
+            if (response.IsSuccessStatusCode)
+            {
+                var createdSong = response.Content!;
+                songId = createdSong.Id;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error Creating Song",
+                    Message = errorMessage,
+                    Context = new ModalContext { ActionType = "CreateSongError", Data = Song },
+                    ButtonText = "OK",
+                    SubTitle = "",
+                    OptionType = OptionType.Error,
+                });
+            }
+        }
+        // store Song in some shared SongStateService for retrieval
+        // SongStateService.CurrentSong = Song;
+
+        _navManager.NavigateTo($"/compose?songId={songId}");
+    }
+
+    private async Task ConfirmModal()
+    {
+        // handle specific contexts awaiting confirmation
+        if (_modalService.CurrentModal.Context?.ActionType == "")
+        {
+
+        }
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+
+        StateHasChanged();
+    }
+}

@@ -5,32 +5,35 @@
 
 <div class="container-fluid bg-light vh-100" style="max-width:55rem;justify-self:center">
     <div class="container bg-light text-center mt-3" >
-        <div class="position-sticky text-center top-0 bg-light" style="z-index:5">
-            <h3 class="m-3">Song Library</h3>
-            <div class="rounded-3 bg-white shadow p-3 mb-2" style="min-width:15rem">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex w-50 position-relative me-3">
-                        <input type="text"
-                               class="form-control h-12 ps-5 rounded-3"
-                               placeholder="Search..."
-                               @bind-value="searchQuery"
-                               @bind-value:event="oninput"
-                               @bind-value:after="OnSearchInput" />
-                        <button class="btn btn-link position-absolute border-0 start-0 top-0 h-100">
-                            <i class="bi bi-search"></i>
+        @if (ShowSearch)
+        {
+            <div class= "position-sticky text-center top-0 bg-light" style = "z-index:5" >
+                <h3 class="m-3">Song Library</h3>
+                <div class="rounded-3 bg-white shadow p-3 mb-2" style="min-width:15rem">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex w-50 position-relative me-3">
+                            <input type="text"
+                                   class="form-control h-12 ps-5 rounded-3"
+                                   placeholder="Search..."
+                                   @bind-value="searchQuery"
+                                   @bind-value:event="oninput"
+                                   @bind-value:after="()=>OnSearchInput()" />
+                            <button class="btn btn-link position-absolute border-0 start-0 top-0 h-100">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                        <button type="button" 
+                                class="btn btn-outline-primary"
+                                data-bs-toggle="tooltip"
+                                title="Add a Song"
+                                @onclick="AddSong">
+                            <span class="me-2 d-none d-md-inline">Add Song</span> 
+                            <i class="bi bi-file-earmark-plus"></i>
                         </button>
                     </div>
-                    <button type="button" 
-                            class="btn btn-outline-primary"
-                            data-bs-toggle="tooltip"
-                            title="Add a Song"
-                            @onclick="AddSong">
-                        <span class="me-2 d-none d-md-inline">Add Song</span> 
-                        <i class="bi bi-file-earmark-plus"></i>
-                    </button>
                 </div>
-            </div>
-        </div>
+            </div> 
+        }
 
         <div class="d-flex justify-content-center align-items-center my-3">
             <div class="d-flex align-items-center bg-white me-5 rounded rounded-3 gap-3 p-2 shadow">
@@ -127,6 +130,7 @@
              OnConfirmModal="ConfirmModal" />
 
 @code {
+    [Parameter] public bool ShowSearch { get; set; } = true;
     private string error = string.Empty;
     private bool IsNavigating = false;
 
@@ -147,6 +151,8 @@
 
     protected override Task OnInitializedAsync()
     {
+        _heroDataService.OnSearchChanged += HandleSearchChanged;
+
         var modeResult = _storageService.GetItemAsync<ViewMode>("ViewMode");
         if (modeResult.IsCompleted)
         {
@@ -171,7 +177,7 @@
                 await songListViewRef.SetViewMode(mode);
                 await songListViewRef.SetActiveView(activeView);
             }
-           await _storageService.SetItemAsync("ViewMode", mode);
+            await _storageService.SetItemAsync("ViewMode", mode);
         }
     }
 
@@ -200,7 +206,7 @@
         return theme == "dark" ? "border-top border-2 border-dark" : "border-top border-light";
     }
 
-    private async Task OnSearchInput()
+    private async Task OnSearchInput(string? keywords = null, bool? isExternal = null)
     {
         // restart debounce window
         _debounceCts?.Cancel();
@@ -211,8 +217,14 @@
         try
         {
             await Task.Delay(SearchDebounceMs, cts.Token);
-
-            _searchTerm = (searchQuery ?? string.Empty).Trim();
+            if (isExternal == true)
+            {
+                _searchTerm = (keywords ?? string.Empty).Trim();
+            }
+            else
+            {
+                _searchTerm = (searchQuery ?? string.Empty).Trim();
+            }           
 
             if (songListViewRef != null) 
                 await songListViewRef.SearchTermChanged(_searchTerm);
@@ -256,8 +268,14 @@
         StateHasChanged();
     }
 
+    private async Task HandleSearchChanged(string searchTerm)
+    {
+        await OnSearchInput(searchTerm,true);
+    }
+
     public void Dispose()
     {
+        _heroDataService.OnSearchChanged -= HandleSearchChanged;
         _debounceCts?.Cancel();
         _debounceCts?.Dispose();
     }

@@ -1,6 +1,15 @@
-﻿<Router AppAssembly="typeof(Layout.MainLayout).Assembly">
+﻿@using FRELODYUI.Shared.Pages
+
+<Router AppAssembly="typeof(Layout.MainLayout).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        @if (routeData.PageType == typeof(Home))
+        {
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(LandingLayout)" />
+        }
+        else
+        {
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        }
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
     <NotFound>
