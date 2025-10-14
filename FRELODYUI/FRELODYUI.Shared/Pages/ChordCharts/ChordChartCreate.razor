@@ -8,7 +8,7 @@
 @inject ILogger<ChordChartCreate> _logger
 @implements IDisposable
 
-<div class="container-fluid bg-light vh-100 d-flex justify-content-center overflow-y-scroll bg-secondary position-relative">
+<div class="container-fluid bg-body vh-100 d-flex justify-content-center overflow-y-scroll bg-secondary position-relative">
     <div class="@GetInnerContainerClass()" style="height:fit-content">
         <div class="ms-2">
             <button class="btn btn-outline-primary" @onclick="GoBack">
@@ -245,7 +245,7 @@
 
     private string GetInnerContainerClass()
     {
-        var baseClass = "w-75 mb-5 border bg-light px-5 pt-3 pb-4 rounded-3 mt-3 shadow";
+        var baseClass = "w-75 mb-5 border bg-body px-5 pt-3 pb-4 rounded-3 mt-3 shadow";
         return Theme == "dark" ? baseClass + " text-light bg-dark" : baseClass + " text-dark";
     }
 

@@ -1,8 +1,8 @@
 ﻿@inject ILogger<TabsComponent> _logger
 
-<div class="bg-light d-flex justify-content-center align-items-center py-4">
+<div class="bg-body d-flex justify-content-center align-items-center py-4">
     <div class="d-flex flex-column w-100">
-        <div class="p-2 border border-secondary rounded rounded-3 bg-light">
+        <div class="p-2 border border-secondary rounded rounded-3 bg-body">
             
             <SortableList @key="_sortableListKey" 
                           Id="sortable-tabs"
@@ -10,7 +10,7 @@
                           Items="Items"
                           OnUpdate="@SortTabs"
                           Context="item"
-                          Class="p-2 border rounded rounded-3 flex-wrap d-flex  gap-2 fw-bold text-primary bg-light">
+                          Class="p-2 border rounded rounded-3 flex-wrap d-flex  gap-2 fw-bold text-primary bg-body">
                <SortableItemTemplate>
                     <div @key="@($"tab-{item.Id}-{item.DisplayOrder}")" class="d-flex align-items-center gap-2" style="transition: transform 0.2s ease-in-out;">
                             <div class="drag-handle d-flex align-items-center justify-content-center text-muted"
@@ -20,7 +20,7 @@
                             </div>
                             <div class="@GetTabClass(item.Id)" @onclick="() => SetSelectedTab(item)">
                             <div class="d-inline-flex align-items-center">
-                                <select class="form-select form-select-sm border-secondary bg-light fw-normal p-1"
+                                <select class="form-select form-select-sm border-secondary bg-body fw-normal p-1"
                                         style="min-width:5.5rem"
                                         value="@item.SectionName"
                                         @onmousedown:preventDefault="SelectedTab != item.Id"
@@ -81,7 +81,7 @@
             </SortableList>            
         </div>
 
-        <div class="bg-light p-3 border border-secondary rounded mt-4">
+        <div class="bg-body p-3 border border-secondary rounded mt-4">
             @foreach (var item in Items)
             {
                 <div @key="@($"content-{item.Id}-{item.DisplayOrder}")" class="@(SelectedTab == item.Id ? "" : "d-none")">
@@ -142,7 +142,7 @@
 
     private string GetTabClass(int id) =>
         SelectedTab == id
-            ? "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded rounded-3 border border-primary bg-white text-primary shadow cursor-pointer fw-bold"
+            ? "d-inline-flex py-2 ps-2 pe-1 align-items-center rounded rounded-3 border border-primary bg-light text-primary shadow cursor-pointer fw-bold"
             : "d-inline-flex py-2 ps-2 pe-1 align-items-center cursor-pointer hover-light fw-bold text-primary";
 
     private List<TabItem> GetOrderedItems() =>

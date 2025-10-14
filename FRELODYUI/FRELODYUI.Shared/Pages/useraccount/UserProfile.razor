@@ -10,7 +10,7 @@
 @inject ILogger<UserProfile> _logger
 @implements IDisposable
 
-<div class="container-fluid bg-light vh-100 overflow-y-scroll position-relative">
+<div class="container-fluid bg-body vh-100 overflow-y-scroll position-relative">
     <div class="@GetInnerContainerClass()" style="min-height: 100vh;">
         
         @if (isLoading)
@@ -156,7 +156,7 @@
     private string GetInnerContainerClass()
     {
         var baseClass = "container py-4";
-        return theme == "dark" ? baseClass + " text-light bg-dark" : baseClass + " text-dark bg-light";
+        return theme == "dark" ? baseClass + " text-light bg-dark" : baseClass + " text-dark bg-body";
     }
 
     private async Task LoadUserProfile()

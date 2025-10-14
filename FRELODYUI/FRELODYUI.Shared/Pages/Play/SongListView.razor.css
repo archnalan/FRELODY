@@ -22,9 +22,10 @@
     transition: background-color 0.3s ease;
 }
 
-.category-header:hover {
-    background-color: #f0f0f0;
-}
+    .category-header:hover {
+        background-color: var(--bs-gray-100);
+        color: var(--bs-gray-700);
+    }
 
 .songs-list {
     overflow: hidden;

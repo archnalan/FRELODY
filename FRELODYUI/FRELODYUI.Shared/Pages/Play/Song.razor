@@ -1,10 +1,8 @@
-﻿@page "/songs/{SongId}"
-@using FRELODYSHRD.Dtos.SubDtos
-@layout LandingLayout
+﻿@using FRELODYSHRD.Dtos.SubDtos
 @inject ILogger<Song> _logger
 @implements IDisposable
 
-<div class="w-100 d-flex justify-content-center mx-auto p-6 bg-light ">
+<div class="w-100 d-flex justify-content-center mx-auto p-6 bg-body ">
     @if (isLoading)
     {
         <div class="mt-4 text-center">

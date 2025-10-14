@@ -1,68 +1,84 @@
-﻿@inherits LayoutComponentBase
+﻿@using static FRELODYUI.Shared.Pages.Common.SearchModal
+@inherits LayoutComponentBase
 
 <div class="landing-container d-flex flex-column vh-100">
     <!-- Header -->
     <header class="landing-header sticky-top bg-body border-bottom shadow-sm">
-        <nav class="navbar navbar-expand-lg navbar-light px-3 px-lg-4">
-            <div class="container-fluid">
-                <!-- Brand -->
-                <a class="navbar-brand fw-bold fs-4" href="/">
-                    <span class="text-primary">FRE</span><span class="text-secondary">LODY</span>
-                </a>
+            <nav class="navbar navbar-expand-lg bg-dark px-3 px-lg-5" data-bs-theme="light">
+                <div class="container-fluid">
+                    <!-- Brand -->
+                    <a class="navbar-brand fw-bold fs-4" href="/">
+                        <span class="text-white me-1">FRE</span><span class="text-warning">LODY</span>
+                    </a>
 
-                <!-- Mobile Toggle -->
-                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" 
-                        data-bs-target="#navbarContent" aria-controls="navbarContent" 
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                    <!-- Mobile Toggle -->
+                    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" 
+                            data-bs-target="#navbarContent" aria-controls="navbarContent" 
+                            aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
 
-                <!-- Navbar Content -->
-                <div class="collapse navbar-collapse" id="navbarContent">
-                    <!-- Search Bar (Desktop) -->
-                    <div class="d-none d-lg-flex flex-grow-1 mx-4">
-                        <div class="input-group" style="max-width: 500px;">
-                            <span class="input-group-text bg-white border-end-0">
-                                <i class="bi bi-search text-muted"></i>
+                    <!-- Navbar Content -->
+                    <div class="collapse navbar-collapse" id="navbarContent">
+                        <!-- Search Bar (Desktop) -->
+                       @*  <div class="d-none d-lg-flex justify-content-center flex-grow-1 mx-4">
+                            <div class="input-group" style="max-width: 500px;">
+                                <span class="input-group-text border-end-0">
+                                    <i class="bi bi-search text-muted"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control border-start-0 ps-0" 
+                                       placeholder="Search songs..."
+                                       @bind-value="searchQuery"
+                                       @bind-value:event="oninput"
+                                       @bind-value:after="OnSearchInput" />
+                            </div>
+                        </div> *@
+                        <div class="d-none d-lg-flex justify-content-center flex-grow-1 mx-4">
+                            <div class="search-trigger" @onclick="OpenSearchModal">
+                                <div class="input-group" style="max-width: 500px; cursor: pointer;">
+                                    <span class="input-group-text border-end-0 bg-light">
+                                        <i class="bi bi-search text-muted"></i>
+                                    </span>
+                                    <input type="text"
+                                           class="form-control border-start-0 ps-0 bg-light"
+                                           placeholder="Search songs..."
+                                           readonly />
+                                    <span class="input-group-text bg-light">
+                                        <kbd class="small">Ctrl+K</kbd>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Right Side Actions -->
+                        <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
+                            <!-- Theme Toggle -->
+                            <span class="btn btn-link text-decoration-none p-2" 
+                                    @onclick="ToggleTheme"
+                                    title="Toggle theme">
+                                @if (isDarkTheme)
+                                {
+                                    <i class="bi bi-sun-fill fs-5"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-moon-fill fs-5"></i>
+                                }
                             </span>
-                            <input type="text" 
-                                   class="form-control border-start-0 ps-0" 
-                                   placeholder="Search songs..."
-                                   @bind-value="searchQuery"
-                                   @bind-value:event="oninput"
-                                   @bind-value:after="OnSearchInput" />
+
+                            <!-- Sign In Button -->
+                            <button class="btn btn-secondary px-4" @onclick="NavigateToLogin">
+                                Sign In
+                            </button>
                         </div>
                     </div>
-
-                    <!-- Right Side Actions -->
-                    <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
-                        <!-- Theme Toggle -->
-                        <button class="btn btn-link text-decoration-none p-2" 
-                                @onclick="ToggleTheme"
-                                title="Toggle theme">
-                            @if (isDarkTheme)
-                            {
-                                <i class="bi bi-sun fs-5"></i>
-                            }
-                            else
-                            {
-                                <i class="bi bi-moon fs-5"></i>
-                            }
-                        </button>
-
-                        <!-- Sign In Button -->
-                        <button class="btn btn-outline-primary px-4" @onclick="NavigateToLogin">
-                            Sign In
-                        </button>
-                    </div>
                 </div>
-            </div>
-        </nav>
+            </nav>
 
         <!-- Mobile Search -->
         <div class="d-lg-none px-3 pb-3">
             <div class="input-group">
-                <span class="input-group-text bg-white border-end-0">
+                <span class="input-group-text bg-body border-end-0">
                     <i class="bi bi-search text-muted"></i>
                 </span>
                 <input type="text" 
@@ -99,50 +115,17 @@
     </main>
 
     <!-- Footer -->
-    <footer class="landing-footer bg-body border-top py-4">
+    <footer class="landing-footer bg-dark border-top py-2">
         <div class="container-fluid px-4">
-            <div class="row gy-3">
+            <div class="row gy-2">
                 <!-- Brand & Description -->
-                <div class="col-12 col-md-4">
-                    <h5 class="fw-bold mb-2">
-                        <span class="text-primary">FRE</span><span class="text-secondary">LODY</span>
-                    </h5>
-                    <p class="text-muted small mb-0">
-                        Your modern hymnal companion. Explore, play, and share songs with ease.
+                <div class="col-12 col-md-6">
+                    <p class="text-white-50 text-center small mb-0 d-none d-md-block">
+                        Your ultimate music companion. Explore, play, and share songs with ease.
                     </p>
                 </div>
-
-                <!-- Quick Links -->
-                <div class="col-6 col-md-4">
-                    <h6 class="fw-semibold mb-2">Quick Links</h6>
-                    <ul class="list-unstyled small">
-                        <li class="mb-1">
-                            <a href="/" class="text-decoration-none text-muted">Home</a>
-                        </li>
-                        <li class="mb-1">
-                            <a href="/about" class="text-decoration-none text-muted">About</a>
-                        </li>
-                        <li class="mb-1">
-                            <a href="/contact" class="text-decoration-none text-muted">Contact</a>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Social & Legal -->
-                <div class="col-6 col-md-4">
-                    <h6 class="fw-semibold mb-2">Connect</h6>
-                    <div class="d-flex gap-3 mb-3">
-                        <a href="#" class="text-muted" title="Facebook">
-                            <i class="bi bi-facebook fs-5"></i>
-                        </a>
-                        <a href="#" class="text-muted" title="Twitter">
-                            <i class="bi bi-twitter fs-5"></i>
-                        </a>
-                        <a href="#" class="text-muted" title="Instagram">
-                            <i class="bi bi-instagram fs-5"></i>
-                        </a>
-                    </div>
-                    <p class="text-muted small mb-0">
+                <div class="col-12 col-md-6 ">
+                    <p class="text-white-50 text-center small mb-0">
                         &copy; @DateTime.Now.Year FRELODY. All rights reserved.
                     </p>
                 </div>
@@ -153,24 +136,45 @@
     <!-- Chat Bubble -->
     <FRELODYUI.Shared.Components.ChatBubble />
 </div>
-
+<SearchModal @ref="searchModalRef"
+             OnSearch="HandleSearch"
+             OnResultSelected="HandleResultSelected" />
 @code {
     private GlobalErrorBoundary errorBoundaryRef = default!;
     private string searchQuery = string.Empty;
     private bool isDarkTheme = false;
+    private SearchModal? searchModalRef = default!;
 
     protected override async Task OnInitializedAsync()
     {
         // Load theme preference
         var theme = await _storageService.GetItemAsync<string>("Theme");
         isDarkTheme = theme == "dark";
-        
+
         if (isDarkTheme)
         {
             await ApplyTheme("dark");
         }
     }
 
+    private async Task HandleSearch()
+    {
+        await OnSearchInput();
+    }
+
+    private async Task HandleResultSelected(SearchResult searchResult)
+    {
+        //_navManager.NavigateTo($"/song/{songId}");
+        //await Task.CompletedTask;
+    }
+
+    private async Task OpenSearchModal()
+    {
+        if (searchModalRef != null)
+        {
+            await searchModalRef.Open();
+        }
+    }
     private async Task OnSearchInput()
     {
         await _heroDataService.UpdateSearchQuery(searchQuery);

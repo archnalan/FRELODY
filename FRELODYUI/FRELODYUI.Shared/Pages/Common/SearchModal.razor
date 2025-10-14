@@ -1,0 +1,303 @@
+﻿@using Microsoft.AspNetCore.Components.Web
+@inject IJSRuntime JSRuntime
+
+<div class="search-modal @(IsOpen ? "search-modal--open" : "")" @onclick="OnBackdropClick">
+    <div class="search-modal__content" @onclick:stopPropagation="true">
+        <!-- Search Header -->
+        <div class="search-modal__header">
+            <div class="search-input-wrapper">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text"
+                       class="search-input"
+                       placeholder="Search songs, artists, albums..."
+                       @bind="SearchQuery"
+                       @bind:event="oninput"
+                       @onkeydown="HandleKeyDown"
+                       @ref="searchInputRef" />
+                @if (!string.IsNullOrEmpty(SearchQuery))
+                {
+                    <button class="clear-search" @onclick="ClearSearch" @onclick:stopPropagation="true">
+                        <i class="bi bi-x"></i>
+                    </button>
+                }
+            </div>
+            <button class="close-button" @onclick="Close" @onclick:stopPropagation="true">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <!-- Search Body -->
+        <div class="search-modal__body">
+            @if (IsLoading)
+            {
+                <div class="search-loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (string.IsNullOrEmpty(SearchQuery))
+            {
+                <!-- Recent Searches -->
+                <div class="recent-searches">
+                    <h6 class="section-title">Recent Searches</h6>
+                    @if (RecentSearches.Any())
+                    {
+                        <div class="recent-searches-list">
+                            @foreach (var search in RecentSearches.Take(5))
+                            {
+                                <div class="recent-search-item" @onclick="() => SelectRecentSearch(search)">
+                                    <i class="bi bi-clock"></i>
+                                    <span>@search</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <i class="bi bi-search empty-icon"></i>
+                            <p class="empty-text">No recent searches</p>
+                        </div>
+                    }
+                </div>
+            }
+            else if (SearchResults.Any())
+            {
+                <!-- Search Results -->
+                <div class="search-results">
+                    <h6 class="section-title">Search Results</h6>
+                    <div class="results-list">
+                        @foreach (var result in SearchResults)
+                        {
+                            <div class="result-item @(result == SelectedResult ? "result-item--selected" : "")"
+                                 @onclick="() => SelectResult(result)"
+                                 @onmouseenter="() => SetSelectedResult(result)">
+                                <div class="result-content">
+                                    <div class="result-title">@result.Title</div>
+                                    <div class="result-subtitle">@result.Artist • @result.Album</div>
+                                </div>
+                                <div class="result-actions">
+                                    <span class="result-duration">@result.Duration</span>
+                                    <i class="bi bi-play-circle play-icon"></i>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <!-- No Results -->
+                <div class="empty-state">
+                    <i class="bi bi-search empty-icon"></i>
+                    <p class="empty-text">No results found for "@SearchQuery"</p>
+                    <p class="empty-subtext">Try different keywords or check spelling</p>
+                </div>
+            }
+        </div>
+
+        <!-- Search Footer -->
+        <div class="search-modal__footer">
+            <div class="footer-actions">
+                <div class="keyboard-shortcuts">
+                    <span class="shortcut-item">
+                        <kbd>↑↓</kbd> Navigate
+                    </span>
+                    <span class="shortcut-item">
+                        <kbd>Enter</kbd> Select
+                    </span>
+                    <span class="shortcut-item">
+                        <kbd>Esc</kbd> Close
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnSearch { get; set; }
+    [Parameter] public EventCallback<SearchResult> OnResultSelected { get; set; }
+
+    private ElementReference searchInputRef;
+    private bool IsOpen { get; set; }
+    private string SearchQuery { get; set; } = string.Empty;
+    private bool IsLoading { get; set; }
+    private List<SearchResult> SearchResults { get; set; } = new();
+    private SearchResult? SelectedResult { get; set; }
+    private List<string> RecentSearches { get; set; } = new();
+    private CancellationTokenSource? _debounceCts;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                window.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                        e.preventDefault();
+                        document.querySelector('button[onclick*=""OpenSearchModal""]')?.click();
+                    }
+                });
+            ");
+        }
+    }
+
+    public async Task Open()
+    {
+        IsOpen = true;
+        SearchQuery = string.Empty;
+        SearchResults.Clear();
+        SelectedResult = null;
+        await LoadRecentSearches();
+        StateHasChanged();
+
+        await Task.Delay(50);
+        await searchInputRef.FocusAsync();
+    }
+
+    public void Close()
+    {
+        IsOpen = false;
+        SearchQuery = string.Empty;
+        SearchResults.Clear();
+        SelectedResult = null;
+        StateHasChanged();
+    }
+
+    private async Task LoadRecentSearches()
+    {
+        // Load from local storage or API
+        RecentSearches = new List<string> { "Classic Rock", "Jazz", "Pop Hits" };
+    }
+
+    private async Task HandleSearchInput()
+    {
+        _debounceCts?.Cancel();
+        _debounceCts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(300, _debounceCts.Token);
+
+            if (string.IsNullOrWhiteSpace(SearchQuery))
+            {
+                SearchResults.Clear();
+                SelectedResult = null;
+                StateHasChanged();
+                return;
+            }
+
+            IsLoading = true;
+            StateHasChanged();
+
+            await OnSearch.InvokeAsync(SearchQuery);
+
+            IsLoading = false;
+            StateHasChanged();
+        }
+        catch (TaskCanceledException)
+        {
+            // Search was cancelled by new input
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Escape":
+                Close();
+                break;
+            case "ArrowDown":
+                await SelectNextResult();
+                break;
+            case "ArrowUp":
+                await SelectPreviousResult();
+                break;
+            case "Enter":
+                if (SelectedResult != null)
+                {
+                    await SelectResult(SelectedResult);
+                }
+                break;
+        }
+    }
+
+    private async Task SelectNextResult()
+    {
+        if (!SearchResults.Any()) return;
+
+        var currentIndex = SelectedResult != null ? SearchResults.IndexOf(SelectedResult) : -1;
+        var nextIndex = currentIndex < SearchResults.Count - 1 ? currentIndex + 1 : 0;
+        SelectedResult = SearchResults[nextIndex];
+        StateHasChanged();
+    }
+
+    private async Task SelectPreviousResult()
+    {
+        if (!SearchResults.Any()) return;
+
+        var currentIndex = SelectedResult != null ? SearchResults.IndexOf(SelectedResult) : -1;
+        var prevIndex = currentIndex > 0 ? currentIndex - 1 : SearchResults.Count - 1;
+        SelectedResult = SearchResults[prevIndex];
+        StateHasChanged();
+    }
+
+    private async Task SelectResult(SearchResult result)
+    {
+        await OnResultSelected.InvokeAsync(result);
+        AddToRecentSearches(SearchQuery);
+        Close();
+    }
+
+    private async Task SelectRecentSearch(string searchTerm)
+    {
+        SearchQuery = searchTerm;
+        await HandleSearchInput();
+    }
+
+    private void SetSelectedResult(SearchResult result)
+    {
+        SelectedResult = result;
+        StateHasChanged();
+    }
+
+    private void ClearSearch()
+    {
+        SearchQuery = string.Empty;
+        SearchResults.Clear();
+        SelectedResult = null;
+        StateHasChanged();
+    }
+
+    private void OnBackdropClick()
+    {
+        Close();
+    }
+
+    private void AddToRecentSearches(string searchTerm)
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            RecentSearches.Remove(searchTerm);
+            RecentSearches.Insert(0, searchTerm);
+
+            if (RecentSearches.Count > 10)
+            {
+                RecentSearches = RecentSearches.Take(10).ToList();
+            }
+        }
+    }
+
+    public class SearchResult
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Artist { get; set; } = string.Empty;
+        public string Album { get; set; } = string.Empty;
+        public string Duration { get; set; } = string.Empty;
+        public string ImageUrl { get; set; } = string.Empty;
+    }
+}

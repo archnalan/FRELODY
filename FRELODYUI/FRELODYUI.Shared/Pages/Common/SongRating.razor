@@ -12,7 +12,7 @@ else
     @* Summary *@
     @if (ShowSummary && ratingInfo is not null && ratingInfo.TotalRatings > 0 && ratingInfo.AggregateRating.HasValue)
     {
-        <div class="text-center mb-2">
+        <div class="text-center">
             @for (int i = 1; i <= 5; i++)
             {
                 var value = i;
@@ -41,7 +41,7 @@ else
         @if (hasUserRated)
         {
             @* Read-only state: User has already rated *@
-            <div class="border-top bg-light p-3 text-center">
+            <div class="border-top bg-body p-3 text-center">
                 <div class="mb-2 text-success">
                     <i class="bi bi-check-circle-fill me-1"></i>
                     Thank you for rating this song!
@@ -76,7 +76,7 @@ else
         else if (canRate)
         {
             @* Interactive rating state *@
-            <div class="border-top bg-light p-3 text-center">
+            <div class="border-top bg-body p-3 text-center">
                 <div class="mb-1 text-muted">
                     @(string.IsNullOrEmpty(ratingInfo?.Reason) ? "Rate this song" : ratingInfo!.Reason)
                 </div>

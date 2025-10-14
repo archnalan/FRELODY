@@ -3,6 +3,7 @@
     public class HeroDataService
     {
         private string _searchQuery = string.Empty;
+        private bool IsFromLanding;
 
         public event Func<string, Task>? OnSearchChanged;
 
@@ -26,6 +27,13 @@
             {
                 await OnSearchChanged(query);
             }
+        }
+
+        public bool GetRenderOrigin() => IsFromLanding;
+
+        public void SetRenderOrigin(bool isFromLanding)
+        {
+            IsFromLanding = isFromLanding;
         }
     }
 }

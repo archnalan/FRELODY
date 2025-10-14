@@ -67,18 +67,25 @@
                                                 <span class="fw-bold me-2">@song.SongNumber.</span>
                                                 <span>@song.Title</span>
                                             </div>
-                                            <span @onclick="() => ToggleFavorite(song)"
-                                                  class="favorite-icon"
-                                                  @onclick:stopPropagation>
-                                                @if (song.IsFavorite.HasValue && song.IsFavorite.Value)
+                                            @*Aggregate rating summary*@
+                                            <div class="d-flex align-items-center gap-4">
+                                                <SongRating SongId="@song.Id" ShowSummary="true" ShowPanel="false" />
+                                                @if (!string.IsNullOrEmpty(currentUserId))
                                                 {
-                                                    <i class="bi bi-heart-fill text-primary"></i>
-                                                }
-                                                else
-                                                {
-                                                    <i class="bi bi-heart text-primary"></i>
-                                                }
-                                            </span>
+                                                    <span @onclick="() => ToggleFavorite(song)"
+                                                          class="favorite-icon"
+                                                          @onclick:stopPropagation>
+                                                        @if (song.IsFavorite.HasValue && song.IsFavorite.Value)
+                                                        {
+                                                            <i class="bi bi-heart-fill text-danger"></i>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-heart text-danger"></i>
+                                                        }
+                                                    </span>
+                                                }                                               
+                                            </div>
                                         </div>
                                     }
                                 </div>
@@ -126,6 +133,8 @@
 
 @code {
     private string SearchQuery { get; set; } = string.Empty;
+    private bool IsFromLanding { get; set; } = false;
+    private string? currentUserId;
 
     private ViewMode viewMode = ViewMode.All; 
     private ActiveView activeView = ActiveView.Expanded;
@@ -137,6 +146,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var user = await _globalAuth.GetAuthenticatedUserAsync();
+        if (user.IsSuccess)
+        {
+            currentUserId = user.Data.Id;
+        }
         var modeResult = _storageService.GetItemAsync<ViewMode>("ViewMode");
         if (modeResult.IsCompleted)
         {
@@ -150,6 +164,7 @@
             await SetActiveView(activeView);
         }
         await LoadData();
+        IsFromLanding = _heroDataService.GetRenderOrigin();
     }
 
     public async Task SearchTermChanged(string searchTerm)
@@ -383,7 +398,14 @@
                    _logger.LogWarning(ex, "Failed to log song play from list for song {SongId}", songId);
                }
            });
-            _navManager.NavigateTo($"/songs/{songId}");
+            if (IsFromLanding)
+            {
+                _navManager.NavigateTo($"/songs/{songId}/landing");
+            }
+            else
+            {
+                _navManager.NavigateTo($"/songs/{songId}");
+            }
         }
         catch (Exception ex)
         {

@@ -4,7 +4,7 @@
 
 <PageTitle>Register - FRELODY</PageTitle>
 
-<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+<div class="min-vh-100 d-flex align-items-center justify-content-center bg-body">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-11 col-sm-8 col-md-6 col-lg-5 col-xl-4">
@@ -60,7 +60,7 @@
                                 <div class="mb-3">
                                     <label class="form-label text-dark fw-medium">Full Name</label>
                                     <InputText @bind-Value="registerModel.UserFullName" 
-                                              class="form-control bg-light" 
+                                              class="form-control bg-body" 
                                               placeholder="Enter your full name" />
                                     <ValidationMessage For="@(() => registerModel.UserFullName)" class="text-danger small mt-1" />
                                 </div>
@@ -70,7 +70,7 @@
                                     <label class="form-label text-dark fw-medium">Email</label>
                                     <InputText @bind-Value="registerModel.UserEmail" 
                                               type="email"
-                                              class="form-control bg-light" 
+                                              class="form-control bg-body" 
                                               placeholder="Enter your email" />
                                     <ValidationMessage For="@(() => registerModel.UserEmail)" class="text-danger small mt-1" />
                                 </div>
@@ -81,7 +81,7 @@
                                 <div class="mb-3">
                                     <label class="form-label text-dark fw-medium">Company Name</label>
                                     <InputText @bind-Value="registerModel.TenantName" 
-                                              class="form-control bg-light" 
+                                              class="form-control bg-body" 
                                               placeholder="Enter your company name" />
                                     <ValidationMessage For="@(() => registerModel.TenantName)" class="text-danger small mt-1" />
                                 </div>
@@ -91,7 +91,7 @@
                                     <label class="form-label text-dark fw-medium">Email</label>
                                     <InputText @bind-Value="registerModel.Email" 
                                               type="email"
-                                              class="form-control bg-light" 
+                                              class="form-control bg-body" 
                                               placeholder="Enter company email" />
                                     <ValidationMessage For="@(() => registerModel.Email)" class="text-danger small mt-1" />
                                 </div>
@@ -100,7 +100,7 @@
                                 <div class="mb-3">
                                     <label class="form-label text-dark fw-medium">Address</label>
                                     <InputText @bind-Value="registerModel.Address" 
-                                              class="form-control bg-light" 
+                                              class="form-control bg-body" 
                                               placeholder="Enter your address" />
                                     <ValidationMessage For="@(() => registerModel.Address)" class="text-danger small mt-1" />
                                 </div>
@@ -109,7 +109,7 @@
                                 <div class="mb-3">
                                     <label class="form-label text-dark fw-medium">City</label>
                                     <InputText @bind-Value="registerModel.City" 
-                                              class="form-control bg-light" 
+                                              class="form-control bg-body" 
                                               placeholder="Enter your city" />
                                     <ValidationMessage For="@(() => registerModel.City)" class="text-danger small mt-1" />
                                 </div>
@@ -118,7 +118,7 @@
                                 <div class="mb-3">
                                     <label class="form-label text-dark fw-medium">Country</label>
                                     <InputText @bind-Value="registerModel.Country" 
-                                              class="form-control bg-light" 
+                                              class="form-control bg-body" 
                                               placeholder="Enter your country" />
                                     <ValidationMessage For="@(() => registerModel.Country)" class="text-danger small mt-1" />
                                 </div>
@@ -130,10 +130,10 @@
                                 <div class="input-group">
                                     <InputText @bind-Value="password" 
                                               type="@(showPassword ? "text" : "password")"
-                                              class="form-control border-end-0 bg-light" 
+                                              class="form-control border-end-0 bg-body" 
                                               placeholder="Enter your password" />
                                     <button type="button" 
-                                            class="btn btn-outline-secondary border-start-0 bg-light"
+                                            class="btn btn-outline-secondary border-start-0 bg-body"
                                             @onclick="TogglePasswordVisibility">
                                         <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
                                     </button>
@@ -147,10 +147,10 @@
                                 <div class="input-group">
                                     <InputText @bind-Value="confirmPassword" 
                                               type="@(showConfirmPassword ? "text" : "password")"
-                                              class="form-control border-end-0 bg-light" 
+                                              class="form-control border-end-0 bg-body" 
                                               placeholder="Confirm your password" />
                                     <button type="button" 
-                                            class="btn btn-outline-secondary border-start-0 bg-light"
+                                            class="btn btn-outline-secondary border-start-0 bg-body"
                                             @onclick="ToggleConfirmPasswordVisibility">
                                         <i class="bi @(showConfirmPassword ? "bi-eye-slash" : "bi-eye")"></i>
                                     </button>

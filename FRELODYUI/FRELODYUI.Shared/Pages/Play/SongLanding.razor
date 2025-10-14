@@ -1,0 +1,8 @@
+﻿@page "/songs/{SongId}/landing"
+@layout LandingLayout
+
+<Song SongId="@SongId"/>
+
+@code {
+    [Parameter] public string SongId { get; set; } = string.Empty;
+}

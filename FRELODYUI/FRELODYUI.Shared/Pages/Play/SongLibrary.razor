@@ -3,13 +3,13 @@
 @inject ILogger<SongLibrary> _logger
 @implements IDisposable
 
-<div class="container-fluid bg-light vh-100" style="max-width:55rem;justify-self:center">
-    <div class="container bg-light text-center mt-3" >
+<div class="container-fluid bg-body vh-100" style="max-width:55rem;justify-self:center">
+    <div class="container bg-body text-center mt-3" >
         @if (ShowSearch)
         {
-            <div class= "position-sticky text-center top-0 bg-light" style = "z-index:5" >
+            <div class= "position-sticky text-center top-0 bg-body" style = "z-index:5" >
                 <h3 class="m-3">Song Library</h3>
-                <div class="rounded-3 bg-white shadow p-3 mb-2" style="min-width:15rem">
+                <div class="rounded-3 bg-dark shadow p-3 mb-2" style="min-width:15rem">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex w-50 position-relative me-3">
                             <input type="text"
@@ -36,7 +36,7 @@
         }
 
         <div class="d-flex justify-content-center align-items-center my-3">
-            <div class="d-flex align-items-center bg-white me-5 rounded rounded-3 gap-3 p-2 shadow">
+            <div class="d-flex align-items-center bg-light border me-5 rounded rounded-3 gap-3 p-2 shadow">
                 <button class="btn @(viewMode == ViewMode.All ? "btn-outline-primary" : "btn-outline-secondary")"
                         data-bs-toggle="tooltip"
                         title="View All Songs"
@@ -77,8 +77,8 @@
                     }
                 </button>
             </div>
-            <div class="d-flex align-items-center bg-white rounded rounded-3 gap-3 p-2 shadow">
-                <button class="btn @(activeView == ActiveView.Expanded ? "btn-outline-primary" : "btn-outline-secondary")" 
+            <div class="d-flex align-items-center bg-light border rounded rounded-3 gap-3 p-2 shadow">
+                <button class="btn @(activeView == ActiveView.Expanded ? "btn-outline-primary" : "btn-outline-secondary")"
                         data-bs-toggle="tooltip"
                         title="Expanded View"
                         @onclick="() => SetActiveView(ActiveView.Expanded)" style="width:3.5rem">
@@ -91,7 +91,7 @@
                         <i class="bi bi-list-task"></i>
                     }
                 </button>
-                <button class="btn @(activeView == ActiveView.Collapsed ? "btn-outline-primary" : "btn-outline-secondary")" 
+                <button class="btn @(activeView == ActiveView.Collapsed ? "btn-outline-primary" : "btn-outline-secondary")"
                         data-bs-toggle="tooltip"
                         title="Collapsed View"
                         @onclick="() => SetActiveView(ActiveView.Collapsed)" style="width:3.5rem">
@@ -151,8 +151,6 @@
 
     protected override Task OnInitializedAsync()
     {
-        _heroDataService.OnSearchChanged += HandleSearchChanged;
-
         var modeResult = _storageService.GetItemAsync<ViewMode>("ViewMode");
         if (modeResult.IsCompleted)
         {
@@ -163,6 +161,14 @@
         {
             activeView = activeResult.Result;
         }
+
+        if (ShowSearch) 
+            _heroDataService.SetRenderOrigin(false);
+        else
+            _heroDataService.SetRenderOrigin(true);
+
+        _heroDataService.OnSearchChanged += HandleSearchChanged;
+
         return Task.CompletedTask;
     }
 

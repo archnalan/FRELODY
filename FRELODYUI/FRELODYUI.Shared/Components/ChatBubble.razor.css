@@ -1,7 +1,7 @@
 .chat-bubble-container {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 3.5rem;
+    right: 1.5rem;
     z-index: 1050;
 }
 
