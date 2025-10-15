@@ -1,25 +1,16 @@
 @page "/login"
-@* @attribute [Authorize(policy ="AllowAnonymous")] *@
+@layout LandingLayout
 @inject ILogger<Login> _logger
 
 <PageTitle>Login - FRELODY</PageTitle>
 
-<div class="min-vh-100 d-flex align-items-center justify-content-center bg-body">
+<div class="h-100 d-flex align-items-center justify-content-center bg-body">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-11 col-sm-8 col-md-6 col-lg-5 col-xl-4">
                 <!-- Login Card -->
                 <div class="card shadow-lg border-0" style="border-radius: 1rem;">
-                    <div class="card-body p-4 p-sm-5">
-                        <!-- Header -->
-                        <div class="text-center mb-4">
-                            <div class="mb-3">
-                                <i class="bi bi-music-note-beamed fs-1 text-primary"></i>
-                            </div>
-                            <h2 class="fw-bold text-dark mb-2">Welcome to FRELODY</h2>
-                            <p class="text-muted mb-0">Sign in to your account</p>
-                        </div>
-
+                    <div class="card-body p-4 p-sm-5">                       
                         <!-- Login Form -->
                         <EditForm Model="@loginModel" OnValidSubmit="@HandleLogin" FormName="loginForm">
                             <DataAnnotationsValidator />
@@ -43,15 +34,15 @@
                             <!-- Email/Username Field -->
                             <div class="mb-3">
                                 <label class="form-label text-dark fw-medium">Email or Username</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-body border-end-0">
-                                        <i class="bi bi-person text-muted"></i>
-                                    </span>
-                                    <InputText @bind-Value="loginModel.Email" 
-                                              class="form-control border-start-0 bg-body" 
-                                              placeholder="Enter your email or username"
-                                              disabled="@isLoading" 
-                                              autocomplete="off"/>
+                                <div class="email-input-wrapper">
+                                    <i class="bi bi-person text-muted email-icon"></i>
+                                    <input type="text" 
+                                           @bind-Value="loginModel.Email"
+                                           @bind-Value:event="oninput"
+                                           class="email-input"
+                                           placeholder="Enter your email or username"
+                                           disabled="@isLoading" 
+                                           autocomplete="off"/>
                                 </div>
                                 <ValidationMessage For="@(() => loginModel.Email)" class="text-danger small mt-1" />
                             </div>
@@ -59,17 +50,16 @@
                             <!-- Password Field -->
                             <div class="mb-3">
                                 <label class="form-label text-dark fw-medium">Password</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-body border-end-0">
-                                        <i class="bi bi-lock text-muted"></i>
-                                    </span>
-                                    <InputText @bind-Value="loginModel.Password" 
-                                              type="@(showPassword ? "text" : "password")"
-                                              class="form-control border-start-0 border-end-0 bg-body" 
-                                              placeholder="Enter your password"
-                                              disabled="@isLoading" />
+                                <div class="password-input-wrapper">
+                                    <i class="bi bi-lock text-muted password-icon"></i>
+                                    <input  type="@(showPassword ? "text" : "password")"
+                                            @bind-Value="loginModel.Password"
+                                            @bind-Value:event="oninput"
+                                            class="password-input"
+                                            placeholder="Enter your password"
+                                            disabled="@isLoading" />
                                     <button type="button" 
-                                            class="btn btn-outline-secondary border-start-0 bg-body"
+                                            class="btn btn-outline-secondary password-toggle bg-body"
                                             @onclick="TogglePasswordVisibility"
                                             disabled="@isLoading">
                                         <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
@@ -197,7 +187,7 @@
                                 {
                                     <span class="spinner-border spinner-border-sm me-1"></span>
                                 }
-                                Send Reset Link
+                                Get Link
                             </button>
                         </div>
                     </EditForm>
@@ -209,16 +199,16 @@
 
 @code {
     [Parameter] public string? ReturnUrl { get; set; }
-    
+
     private UserLogin loginModel = new();
     private PasswordResetModel resetPasswordModel = new();
-    
+
     private bool isLoading = false;
     private bool isResettingPassword = false;
     private bool showPassword = false;
     private bool rememberMe = false;
     private bool showForgotPasswordModal = false;
-    
+
     private string errorMessage = "";
     private string successMessage = "";
     private string resetErrorMessage = "";
@@ -230,7 +220,8 @@
         var authState = await _globalAuth.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            NavigateToReturnUrl();
+            _navManager.NavigateTo("/");
+            //NavigateToReturnUrl();
         }
     }
 

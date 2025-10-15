@@ -36,16 +36,14 @@
                         </div> *@
                         <div class="d-none d-lg-flex justify-content-center flex-grow-1 mx-4">
                             <div class="search-trigger" @onclick="OpenSearchModal">
-                                <div class="input-group" style="max-width: 500px; cursor: pointer;">
-                                    <span class="input-group-text border-end-0 bg-light">
-                                        <i class="bi bi-search text-muted"></i>
-                                    </span>
+                                <div class="trigger-input-wrapper" style="max-width: 500px; cursor: pointer;">
+                                    <i class="bi bi-search text-muted trigger-icon"></i>
                                     <input type="text"
-                                           class="form-control border-start-0 ps-0 bg-light"
+                                           class="trigger-input"
                                            placeholder="Search songs..."
                                            readonly />
-                                    <span class="input-group-text bg-light">
-                                        <kbd class="small">Ctrl+K</kbd>
+                                <span class="trigger-kbd">
+                                        <kbd class="small p-1">Ctrl+K</kbd>
                                     </span>
                                 </div>
                             </div>
@@ -66,10 +64,64 @@
                                 }
                             </span>
 
-                            <!-- Sign In Button -->
-                            <button class="btn btn-secondary px-4" @onclick="NavigateToLogin">
-                                Sign In
-                            </button>
+                            <!-- User Profile or Sign In -->
+                            <CascadingAuthenticationState>
+                                <AuthorizeView>
+                                    <Authorized>
+                                        @{
+                                            var firstName = context.User.FindFirst("FirstName")?.Value;
+                                            var lastName = context.User.FindFirst("LastName")?.Value;
+                                            var userId = context.User.FindFirst("UserId")?.Value;
+                                            var fullName = $"{firstName} {lastName}";
+                                            var displayName = fullName.Length > 15 ? fullName.Substring(0, 15) + "..." : fullName;
+                                        }
+                                        <div class="dropdown">
+                                            <button class="btn btn-secondary dropdown-toggle d-flex align-items-center" 
+                                                    type="button" 
+                                                    data-bs-toggle="dropdown" 
+                                                    aria-expanded="false">
+                                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                                                     style="width: 32px; height: 32px;">
+                                                    <span class="text-primary fw-bold" style="font-size: 0.875rem;">
+                                                        @(firstName?.FirstOrDefault())@(lastName?.FirstOrDefault())
+                                                    </span>
+                                                </div>
+                                                <span class="d-none d-md-inline">@displayName</span>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li>
+                                                    <a class="dropdown-item" href="/user-profile/@userId">
+                                                        <i class="bi bi-person me-2"></i>View Profile
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item" href="/dashboard">
+                                                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="/songs-library">
+                                                        <i class="bi bi-collection-play me-2"></i>Library
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <button class="dropdown-item text-danger" @onclick="LogoutUser">
+                                                        <i class="bi bi-box-arrow-right me-2"></i>Log out
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </Authorized>
+                                    <NotAuthorized>
+                                        <!-- Sign In Button -->
+                                        <button class="btn btn-secondary px-4" @onclick="NavigateToLogin">
+                                            Sign In
+                                        </button>
+                                    </NotAuthorized>
+                                </AuthorizeView>
+                            </CascadingAuthenticationState>
                         </div>
                     </div>
                 </div>
@@ -77,12 +129,10 @@
 
         <!-- Mobile Search -->
         <div class="d-lg-none px-3 pb-3">
-            <div class="input-group">
-                <span class="input-group-text border-end-0">
-                    <i class="bi bi-search text-muted"></i>
-                </span>
+            <div class="trigger-input-wrapper" style="cursor: pointer;">
+                <i class="bi bi-search text-muted trigger-icon"></i>
                 <input type="text" 
-                       class="form-control border-start-0 ps-0" 
+                       class="trigger-input"
                        placeholder="Search songs..."
                        @bind-value="searchQuery"
                        @bind-value:event="oninput"
@@ -92,7 +142,7 @@
     </header>
 
     <!-- Body Content (Scrollable) -->
-    <main class="landing-body flex-grow-1 overflow-auto">
+    <main class="position-relative landing-body flex-grow-1 overflow-auto">
         <GlobalErrorBoundary @ref="errorBoundaryRef">
             <ChildContent>
                 @Body
@@ -197,6 +247,12 @@
     private void NavigateToLogin()
     {
         _navManager.NavigateTo("/login");
+    }
+
+    private async Task LogoutUser()
+    {
+        await _globalAuth.MarkUserAsLoggedOutAsync();
+        _navManager.NavigateTo("/login", replace: true);
     }
 
     private void RecoverPage()

@@ -9,7 +9,7 @@
             OverscanCount="3"
             @ref="_virtualize">
     <ItemContent>
-        <div class="@(ViewStyle == ActiveView.Expanded ? "col-12 mb-4" : "col-12 col-md-6 col-lg-4 col-xl-3 mb-4")" 
+        <div class="@(ViewStyle == ActiveView.Expanded ? "col-12 mb-4" : "col-12 col-md-6 col-lg-4 mb-4")" 
                 @onclick="@(() => OnSongDisplay(song.IdString ?? ""))" style="cursor:pointer">
             <div class="card h-100 shadow-sm" style="border-radius:0.5rem">
                 <div class="card-body d-flex flex-column justify-content-between">
@@ -18,32 +18,35 @@
                             <span>@song.ValueId.</span><!--Holds song number-->
                             <span class="ms-2">@song.ValueText</span>
                         </h5>
-                        <!--close icon-->
-                        <span class="cursor-pointer text-muted ms-2" 
-                            @onclick="() => RemoveSong(song.IdString)"
-                            @onclick:stopPropagation>
-                            <i class="bi bi-x"></i>
-                        </span>
 
+                        <span class="cursor-pointer text-muted ms-2"
+                              @onclick="() => ShareLink(song.IdString)"
+                              @onclick:stopPropagation
+                              disabled="@isGeneratingLink">
+                            <i class="bi bi-upload"></i>
+                        </span>
+                      
                     </div>
                     <div>
-                        <span class="font-weight-light text-muted">@song.IdString</span>
+                        <span class="font-weight-light text-muted">By @(song.ValueSubText ?? "unknown")</span>
                     </div>
-                    <div class="d-flex justify-content-end mt-3">
+                    <div class="d-flex flex-column flex-md-row justify-content-end mt-3 gap-2">
                         <SongRating SongId="@song.IdString" ShowSummary="true" ShowPanel="false" />
-                        <button class="btn btn-outline-primary btn-sm me-2" 
-                                @onclick="() => NavigateToDetails(song.IdString)"
-                                @onclick:stopPropagation>
-                            <i class="bi bi-list"></i>
-                        </button>
-                        <button class="btn btn-primary btn-sm" @onclick="@(() => OnSongDisplay(song.IdString))"><i class="bi bi-play-fill"></i></button>
+                        <div class="d-flex justify-content-center gap-2">
+                            <button class="btn btn-outline-primary btn-sm"
+                                    @onclick="() => NavigateToDetails(song.IdString)"
+                                    @onclick:stopPropagation>
+                                <i class="bi bi-list"></i>
+                            </button>
+                            <button class="btn btn-primary btn-sm" @onclick="@(() => OnSongDisplay(song.IdString))"><i class="bi bi-play-fill"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </ItemContent>
     <Placeholder>
-        <div class="@(ViewStyle == ActiveView.Expanded ? "col-12 mb-4" : "col-12 col-md-6 col-lg-4 col-xl-3 mb-4")">
+        <div class="@(ViewStyle == ActiveView.Expanded ? "col-12 mb-4" : "col-12 col-md-6 col-lg-4 mb-4")">
             <div class="card h-100 placeholder-wave shadow" style="border-radius:0.5rem">
                 <div class="card-body">
                     <h5 class="card-title">
@@ -60,6 +63,21 @@
     </Placeholder>
 </Virtualize>
 
+@if (showSuccessMessage)
+{
+    <div class="position-absolute top-0 translate-middle-x mt-2" style="max-width:500px; z-index: 2000;">
+        <div class="toast align-items-center show" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    @successMessage
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" @onclick="() => showSuccessMessage = false" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+}
+
 <DialogModal IsVisible="_modalService.IsModalVisible"
              Modal="@_modalService.CurrentModal"
              OnCloseModal="CloseModal"
@@ -75,6 +93,10 @@
     private string RefreshKey = Guid.NewGuid().ToString();
 
     private Virtualize<ComboBoxDto>? _virtualize;
+    private bool isGeneratingLink = false;
+    private bool isLoading = false;
+    private bool showSuccessMessage = false;
+    private string successMessage = string.Empty;
 
     protected override Task OnInitializedAsync()
     {
@@ -208,6 +230,68 @@
             StateHasChanged();
         }
     }
+    private async Task ShareLink(string songId)
+    {
+        isGeneratingLink = true;
+        StateHasChanged();
+
+        try
+        {
+            var shareLink = await _shareService.GenerateShareLinkAsync(songId);
+            if (shareLink != null)
+            {
+                await _clipboardService.CopyToClipboardAsync(shareLink.ShareUrl);
+                await ShowSuccessMessage("Share link copied to clipboard!");
+            }
+            else
+            {
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Share Link Error",
+                    Message = "Failed to generate share link. Please try again later.",
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        ActionType = "GenerateShareLink",
+                        Data = "Share link generation failed for song ID: " + songId
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating share link for song {SongId}", songId);
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "An error occurred while generating the share link.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "GenerateShareLink",
+                    Data = ex.Message
+                }
+            });
+        }
+        finally
+        {
+            isGeneratingLink = false;
+            StateHasChanged();
+        }
+    }
+    private async Task ShowSuccessMessage(string message)
+    {
+        successMessage = message;
+        showSuccessMessage = true;
+        StateHasChanged();
+
+        // Auto-hide after 3 seconds
+        await Task.Delay(3000);
+        showSuccessMessage = false;
+        StateHasChanged();
+    }
 
     private async Task ConfirmModal()
     {
@@ -244,4 +328,5 @@
         _modalService.Close();
         StateHasChanged();
     }
+
 }

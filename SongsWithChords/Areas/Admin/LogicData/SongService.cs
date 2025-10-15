@@ -57,7 +57,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         {
                             ValueId = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
                             ValueText = s.Title,
-                            IdString = s.Id
+                            IdString = s.Id,
+                            ValueSubText = s.WrittenBy,
                         })
                         .ToList()
                 };
@@ -114,7 +115,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         {
                             ValueId = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
                             ValueText = s.Title,
-                            IdString = s.Id
+                            IdString = s.Id,
+                            ValueSubText = s.WrittenBy,
                         })
                         .ToList()
                 };
@@ -775,6 +777,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         IdString = s.Id,
                         ValueId = s.Song!.SongNumber.HasValue && s.Song.SongNumber.Value > 0 ? s.Song.SongNumber.Value : 0,
                         ValueText = s.Song.Title,
+                        ValueSubText = s.Song.WrittenBy,
                     })
                     .ToPaginatedResultAsync(offset.Value, limit.Value);
 
