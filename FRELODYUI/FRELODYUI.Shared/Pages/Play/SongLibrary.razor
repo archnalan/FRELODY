@@ -3,13 +3,13 @@
 @inject ILogger<SongLibrary> _logger
 @implements IDisposable
 
-<div class="container-fluid bg-body vh-100" style="max-width:55rem;justify-self:center">
-    <div class="container bg-body text-center mt-3" >
+<div class="container-fluid vh-100" style="max-width:55rem;justify-self:center">
+    <div class="container text-center mt-3" >
         @if (ShowSearch)
         {
-            <div class= "position-sticky text-center top-0 bg-body" style = "z-index:5" >
+            <div class= "position-sticky text-center top-0" style = "z-index:5" >
                 <h3 class="m-3">Song Library</h3>
-                <div class="rounded-3 bg-dark shadow p-3 mb-2" style="min-width:15rem">
+                <div class="rounded-3 bg-light border shadow p-3 mb-2" style="min-width:15rem">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex w-50 position-relative me-3">
                             <input type="text"

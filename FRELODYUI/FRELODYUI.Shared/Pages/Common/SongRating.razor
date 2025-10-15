@@ -1,14 +1,9 @@
 @using FRELODYSHRD.Dtos.SubDtos
 @inject ILogger<SongRating> _logger
 
-@if (isLoading)
+@if (!isLoading)
 {
-    <div class="text-center my-2">
-        <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
-    </div>
-}
-else
-{
+
     @* Summary *@
     @if (ShowSummary && ratingInfo is not null && ratingInfo.TotalRatings > 0 && ratingInfo.AggregateRating.HasValue)
     {
@@ -46,7 +41,7 @@ else
                     <i class="bi bi-check-circle-fill me-1"></i>
                     Thank you for rating this song!
                 </div>
-                
+
                 <div class="mb-1 text-muted small">Your rating:</div>
                 <div class="d-flex justify-content-center my-2">
                     @for (int i = 1; i <= 5; i++)
@@ -133,6 +128,17 @@ else
             </div>
         }
     }
+  
+}
+else
+{
+    <div class="text-center">
+        @for (int i = 1; i <= 5; i++)
+        {
+            <i class="bi bi-star text-muted"></i>
+        }
+        <div class="spinner-border text-primary spinner-border-sm ms-2" role="status"></div>
+    </div>
 }
 
 @code {

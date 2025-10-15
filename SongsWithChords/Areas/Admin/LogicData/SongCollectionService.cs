@@ -262,5 +262,371 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
         #endregion
+
+        #region Enhanced Song Search with Multi-Table Support
+        public async Task<ServiceResult<PaginationDetails<SearchSongResult>>> EnhancedSongSearch(
+            int offset,
+            int limit,
+            string searchTerm,
+            string? orderByColumn = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    return ServiceResult<PaginationDetails<SearchSongResult>>.Failure(
+                        new BadRequestException("Search term cannot be empty."));
+                }
+
+                limit = limit <= 0 ? 10 : limit;
+                offset = offset < 0 ? 0 : offset;
+
+                var searchPattern = $"%{searchTerm}%";
+                var searchWords = searchTerm.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var hasMultipleWords = searchWords.Length > 1;
+
+                // word-by-word search
+                var firstWordPattern = hasMultipleWords ? $"%{searchWords[0]}%" : null;
+                var secondWordPattern = hasMultipleWords && searchWords.Length > 1 ? $"%{searchWords[1]}%" : null;
+                var sql = @"
+            WITH SearchResults AS (
+                -- Title matches (highest priority)
+                SELECT 
+                    s.Id,
+                    s.Title,
+                    s.SongNumber,
+                    s.Slug,
+                    s.SongPlayLevel,
+                    s.WrittenDateRange,
+                    s.WrittenBy,
+                    s.History,
+                    c.Name AS CategoryName,
+                    sb.Title AS SongBookTitle,
+                    sb.Slug AS SongBookSlug,
+                    sb.Id AS SongBookId,
+                    sb.Description AS SongBookDescription,
+                    c.Id AS CategoryId,
+                    c.CategorySlug,
+                    sc.Title AS CollectionTitle,
+                    sc.Curator AS CollectionCurator,
+                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
+                    100 AS RelevanceScore,
+                    'title' AS MatchType,
+                    s.Title AS MatchSnippet
+                FROM Songs s
+                LEFT JOIN Categories c ON s.CategoryId = c.Id
+                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                LEFT JOIN SongCollections sc ON sb.CollectionId = sc.Id
+                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                    AND suf.UserId = @UserId
+                    AND suf.IsDeleted = 0
+                WHERE s.Title LIKE @SearchPattern
+
+                UNION ALL
+
+                -- Enhanced Lyric matches with aggregated lines
+                SELECT DISTINCT
+                    s.Id,
+                    s.Title,
+                    s.SongNumber,
+                    s.Slug,
+                    s.SongPlayLevel,
+                    s.WrittenDateRange,
+                    s.WrittenBy,
+                    s.History,
+                    c.Name AS CategoryName,
+                    sb.Title AS SongBookTitle,
+                    sb.Slug AS SongBookSlug,
+                    sb.Id AS SongBookId,
+                    sb.Description AS SongBookDescription,
+                    c.Id AS CategoryId,
+                    c.CategorySlug,
+                    sc.Title AS CollectionTitle,
+                    sc.Curator AS CollectionCurator,
+                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
+                    CASE 
+                        WHEN aggregated_line.AggregatedLyrics LIKE @SearchPattern THEN 90
+                        ELSE 85
+                    END AS RelevanceScore,
+                    'lyrics' AS MatchType,
+                    CONCAT(
+                        CASE 
+                            WHEN CHARINDEX(@SearchTerm, aggregated_line.AggregatedLyrics) > 30 
+                            THEN '...' 
+                            ELSE ''
+                        END,
+                        SUBSTRING(
+                            aggregated_line.AggregatedLyrics,
+                            CASE 
+                                WHEN CHARINDEX(@SearchTerm, aggregated_line.AggregatedLyrics) > 30 
+                                THEN CHARINDEX(@SearchTerm, aggregated_line.AggregatedLyrics) - 30 
+                                ELSE 1 
+                            END,
+                            80
+                        )
+                    ) AS MatchSnippet
+                FROM Songs s
+                INNER JOIN SongParts sp ON s.Id = sp.SongId
+                INNER JOIN LyricLines ll ON sp.Id = ll.PartId
+                INNER JOIN (
+                    SELECT 
+                        ls.LyricLineId,
+                        STRING_AGG(ls.Lyric, ' ') WITHIN GROUP (ORDER BY ls.LyricOrder) AS AggregatedLyrics
+                    FROM LyricSegments ls
+                    GROUP BY ls.LyricLineId
+                ) aggregated_line ON ll.Id = aggregated_line.LyricLineId
+                LEFT JOIN Categories c ON s.CategoryId = c.Id
+                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                LEFT JOIN SongCollections sc ON sb.CollectionId = sc.Id
+                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                    AND suf.UserId = @UserId
+                    AND suf.IsDeleted = 0
+                WHERE aggregated_line.AggregatedLyrics LIKE @SearchPattern
+
+                UNION ALL
+
+                -- Category name matches (medium priority)
+                SELECT 
+                    s.Id,
+                    s.Title,
+                    s.SongNumber,
+                    s.Slug,
+                    s.SongPlayLevel,
+                    s.WrittenDateRange,
+                    s.WrittenBy,
+                    s.History,
+                    c.Name AS CategoryName,
+                    sb.Title AS SongBookTitle,
+                    sb.Slug AS SongBookSlug,
+                    sb.Id AS SongBookId,
+                    sb.Description AS SongBookDescription,
+                    c.Id AS CategoryId,
+                    c.CategorySlug,
+                    sc.Title AS CollectionTitle,
+                    sc.Curator AS CollectionCurator,
+                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
+                    80 AS RelevanceScore,
+                    'category' AS MatchType,
+                    c.Name AS MatchSnippet
+                FROM Songs s
+                LEFT JOIN Categories c ON s.CategoryId = c.Id
+                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                LEFT JOIN SongCollections sc ON sb.CollectionId = sc.Id
+                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                    AND suf.UserId = @UserId
+                    AND suf.IsDeleted = 0
+                WHERE c.Name LIKE @SearchPattern
+
+                UNION ALL
+
+                -- SongBook title matches (medium priority)
+                SELECT 
+                    s.Id,
+                    s.Title,
+                    s.SongNumber,
+                    s.Slug,
+                    s.SongPlayLevel,
+                    s.WrittenDateRange,
+                    s.WrittenBy,
+                    s.History,
+                    c.Name AS CategoryName,
+                    sb.Title AS SongBookTitle,
+                    sb.Slug AS SongBookSlug,
+                    sb.Id AS SongBookId,
+                    sb.Description AS SongBookDescription,
+                    c.Id AS CategoryId,
+                    c.CategorySlug,
+                    sc.Title AS CollectionTitle,
+                    sc.Curator AS CollectionCurator,
+                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
+                    70 AS RelevanceScore,
+                    'book' AS MatchType,
+                    sb.Title AS MatchSnippet
+                FROM Songs s
+                LEFT JOIN Categories c ON s.CategoryId = c.Id
+                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                LEFT JOIN SongCollections sc ON sb.CollectionId = sc.Id
+                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                    AND suf.UserId = @UserId
+                    AND suf.IsDeleted = 0
+                WHERE sb.Title LIKE @SearchPattern
+
+                UNION ALL
+
+                -- Collection title matches (low priority)
+                SELECT 
+                    s.Id,
+                    s.Title,
+                    s.SongNumber,
+                    s.Slug,
+                    s.SongPlayLevel,
+                    s.WrittenDateRange,
+                    s.WrittenBy,
+                    s.History,
+                    c.Name AS CategoryName,
+                    sb.Title AS SongBookTitle,
+                    sb.Slug AS SongBookSlug,
+                    sb.Id AS SongBookId,
+                    sb.Description AS SongBookDescription,
+                    c.Id AS CategoryId,
+                    c.CategorySlug,
+                    sc.Title AS CollectionTitle,
+                    sc.Curator AS CollectionCurator,
+                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
+                    60 AS RelevanceScore,
+                    'collection' AS MatchType,
+                    sc.Title AS MatchSnippet
+                FROM Songs s
+                LEFT JOIN Categories c ON s.CategoryId = c.Id
+                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                LEFT JOIN SongCollections sc ON sb.CollectionId = sc.Id
+                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                    AND suf.UserId = @UserId
+                    AND suf.IsDeleted = 0
+                WHERE sc.Title LIKE @SearchPattern
+
+                UNION ALL
+
+                -- Author/Writer matches (lowest priority)
+                SELECT 
+                    s.Id,
+                    s.Title,
+                    s.SongNumber,
+                    s.Slug,
+                    s.SongPlayLevel,
+                    s.WrittenDateRange,
+                    s.WrittenBy,
+                    s.History,
+                    c.Name AS CategoryName,
+                    sb.Title AS SongBookTitle,
+                    sb.Slug AS SongBookSlug,
+                    sb.Id AS SongBookId,
+                    sb.Description AS SongBookDescription,
+                    c.Id AS CategoryId,
+                    c.CategorySlug,
+                    sc.Title AS CollectionTitle,
+                    sc.Curator AS CollectionCurator,
+                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
+                    50 AS RelevanceScore,
+                    'author' AS MatchType,
+                    COALESCE(s.WrittenBy, sb.Author) AS MatchSnippet
+                FROM Songs s
+                LEFT JOIN Categories c ON s.CategoryId = c.Id
+                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                LEFT JOIN SongCollections sc ON sb.CollectionId = sc.Id
+                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                    AND suf.UserId = @UserId
+                    AND suf.IsDeleted = 0
+                WHERE (s.WrittenBy LIKE @SearchPattern OR sb.Author LIKE @SearchPattern)
+              ),
+            RankedResults AS (
+                SELECT *,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY Id 
+                           ORDER BY RelevanceScore DESC
+                       ) as MatchRank
+                FROM SearchResults
+            )
+            SELECT 
+                Id, Title, SongNumber, Slug, SongPlayLevel, WrittenDateRange, 
+                WrittenBy, History, CategoryName, SongBookTitle, SongBookSlug, 
+                SongBookId, SongBookDescription, CategoryId, CategorySlug, 
+                IsFavorite, RelevanceScore, MatchType, MatchSnippet,
+                CollectionTitle, CollectionCurator
+            FROM RankedResults
+            WHERE MatchRank = 1
+            ORDER BY RelevanceScore DESC, Title ASC
+            OFFSET @Offset ROWS 
+            FETCH NEXT @Limit ROWS ONLY";
+
+                var parameters = new List<SqlParameter>
+            {
+                new SqlParameter("@Offset", offset),
+                new SqlParameter("@Limit", limit),
+                new SqlParameter("@SearchPattern", searchPattern),
+                new SqlParameter("@SearchTerm", searchTerm),
+                new SqlParameter("@UserId", _userId ?? (object)DBNull.Value),
+                new SqlParameter("@HasMultipleWords", hasMultipleWords),
+            };
+
+                // Add word patterns if we have multiple words
+                if (hasMultipleWords)
+                {
+                    parameters.Add(new SqlParameter("@FirstWordPattern", firstWordPattern));
+                    if (!string.IsNullOrEmpty(secondWordPattern))
+                    {
+                        parameters.Add(new SqlParameter("@SecondWordPattern", secondWordPattern));
+                    }
+                }
+                else
+                {
+                    parameters.Add(new SqlParameter("@FirstWordPattern", DBNull.Value));
+                    parameters.Add(new SqlParameter("@SecondWordPattern", DBNull.Value));
+                }
+
+                // Get the results
+                var results = await _context.Database
+                    .SqlQueryRaw<SearchSongResult>(sql, parameters.ToArray())
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
+                // Get total count for pagination
+                var countSql = @"
+            SELECT COUNT(DISTINCT Combined.Id) AS Value
+            FROM (
+                SELECT s.Id FROM Songs s WHERE s.Title LIKE @SearchPattern
+                UNION
+                SELECT DISTINCT s.Id FROM Songs s
+                INNER JOIN SongParts sp ON s.Id = sp.SongId
+                INNER JOIN LyricLines ll ON sp.Id = ll.PartId
+                INNER JOIN LyricSegments ls ON ll.Id = ls.LyricLineId
+                WHERE ls.Lyric LIKE @SearchPattern
+                UNION
+                SELECT s.Id FROM Songs s
+                LEFT JOIN Categories c ON s.CategoryId = c.Id
+                WHERE c.Name LIKE @SearchPattern
+                UNION
+                SELECT s.Id FROM Songs s
+                LEFT JOIN Categories c ON s.CategoryId = c.Id
+                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                WHERE sb.Title LIKE @SearchPattern
+                UNION
+                SELECT s.Id FROM Songs s
+                LEFT JOIN Categories c ON s.CategoryId = c.Id
+                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                LEFT JOIN SongCollections sc ON sb.CollectionId = sc.Id
+                WHERE sc.Title LIKE @SearchPattern
+                UNION
+                SELECT s.Id FROM Songs s
+                LEFT JOIN Categories c ON s.CategoryId = c.Id
+                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                WHERE s.WrittenBy LIKE @SearchPattern OR sb.Author LIKE @SearchPattern
+            ) AS Combined";
+
+                var totalCount = await _context.Database
+                    .SqlQueryRaw<int>(countSql,
+                        new SqlParameter("@SearchPattern", searchPattern))
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                var paginatedResult = new PaginationDetails<SearchSongResult>
+                {
+                    OffSet = offset,
+                    Limit = limit,
+                    TotalSize = totalCount,
+                    HasMore = (offset + limit) < totalCount,
+                    Data = results
+                };
+
+                return ServiceResult<PaginationDetails<SearchSongResult>>.Success(paginatedResult);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error in song search: {Error}", ex);
+                return ServiceResult<PaginationDetails<SearchSongResult>>.Failure(
+                    new ServerErrorException("An error occurred while searching songs."));
+            }
+        }
+        #endregion
     }
 }

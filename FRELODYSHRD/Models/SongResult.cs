@@ -39,4 +39,18 @@ namespace FRELODYAPIs.Areas.Admin.ViewModels
 
         public bool? IsFavorite { get; set; }
     }
+
+    public class SearchSongResult: SongResult
+    {
+        public int RelevanceScore { get; set; }
+        public string MatchType { get; set; } // "title", "lyrics", "category", "book", "collection", "author", "publisher"
+        public string MatchSnippet { get; set; } // Text snippet showing the match
+        public string? CollectionTitle { get; set; }
+        public string? CollectionCurator { get; set; }
+
+        // For display in UI
+        public string DisplayText => $"{Title}" +
+            (SongNumber.HasValue ? $" (#{SongNumber})" : "") +
+            (!string.IsNullOrEmpty(MatchSnippet) ? $" - {MatchSnippet}" : "");
+    }
 }

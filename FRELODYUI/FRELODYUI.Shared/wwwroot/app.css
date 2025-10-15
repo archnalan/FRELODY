@@ -2,6 +2,96 @@ html, body {
     font-family: 'Kanit','Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+/* Theme-sensitive CSS Variables */
+:root, [data-bs-theme="light"] {
+    /* Modal Colors */
+    --modal-overlay-bg: rgba(0, 0, 0, 0.5);
+    --modal-overlay-blur: 4px;
+    --modal-header-bg: #f9fafb;
+    --modal-content-bg: #ffffff;
+    --modal-content-color: #000000;
+    --modal-border-color: #e5e7eb;
+    --modal-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    
+    /* Input Colors */
+    --input-bg: #ffffff;
+    --input-border: #e5e7eb;
+    --input-border-focus: #3b82f6;
+    --input-color: #000000;
+    --input-placeholder: #6b7280;
+    
+    /* Text Colors */
+    --text-primary: #374151;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    
+    /* Background Colors */
+    --bg-hover: #f3f4f6;
+    --bg-hover-secondary: rgba(255, 255, 255, 0.1);
+    --bg-active: #3b82f6;
+    --bg-footer: #f9fafb;
+    
+    /* Border Colors */
+    --border-light: #e5e7eb;
+    --border-medium: #d1d5db;
+    
+    /* Button Colors */
+    --btn-bg: #f3f4f6;
+    --btn-color: #374151;
+    --btn-hover-bg: #e5e7eb;
+    
+    /* Card Colors */
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --card-backdrop-filter: blur(10px);
+    
+    /* Gradient Colors */
+    --gradient-primary-start: #667eea;
+    --gradient-primary-end: #764ba2;
+    --gradient-primary-hover-start: #5a6fd8;
+    --gradient-primary-hover-end: #6a4190;
+}
+
+[data-bs-theme="dark"] {
+    /* Modal Colors */
+    --modal-overlay-bg: rgba(0, 0, 0, 0.7);
+    --modal-overlay-blur: 4px;
+    --modal-header-bg: #111827;
+    --modal-content-bg: #1f2937;
+    --modal-content-color: #ffffff;
+    --modal-border-color: #374151;
+    --modal-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    /* Input Colors */
+    --input-bg: #374151;
+    --input-border: #4b5563;
+    --input-border-focus: #3b82f6;
+    --input-color: #ffffff;
+    --input-placeholder: #9ca3af;
+    /* Text Colors */
+    --text-primary: #f3f4f6;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
+    /* Background Colors */
+    --bg-hover: #374151;
+    --bg-hover-secondary: rgba(255, 255, 255, 0.1);
+    --bg-active: #3b82f6;
+    --bg-footer: #111827;
+    /* Border Colors */
+    --border-light: #374151;
+    --border-medium: #4b5563;
+    /* Button Colors */
+    --btn-bg: #4b5563;
+    --btn-color: #f3f4f6;
+    --btn-hover-bg: #6b7280;
+    /* Card Colors */
+    --card-bg: rgba(31, 41, 55, 0.95);
+    --card-backdrop-filter: blur(10px);
+    /* Gradient Colors */
+    --gradient-primary-start: #667eea;
+    --gradient-primary-end: #764ba2;
+    --gradient-primary-hover-start: #5a6fd8;
+    --gradient-primary-hover-end: #6a4190;
+}
+
 /*a, .btn-link {
     color: #006bb7;
 }

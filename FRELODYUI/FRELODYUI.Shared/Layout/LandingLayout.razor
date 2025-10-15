@@ -3,12 +3,12 @@
 
 <div class="landing-container d-flex flex-column vh-100">
     <!-- Header -->
-    <header class="landing-header sticky-top bg-body border-bottom shadow-sm">
-            <nav class="navbar navbar-expand-lg bg-dark px-3 px-lg-5" data-bs-theme="light">
+    <header class="landing-header bg-primary sticky-top border-bottom shadow-sm">
+            <nav class="navbar navbar-expand-lg px-3 px-lg-5" data-bs-theme="light">
                 <div class="container-fluid">
                     <!-- Brand -->
                     <a class="navbar-brand fw-bold fs-4" href="/">
-                        <span class="text-white me-1">FRE</span><span class="text-warning">LODY</span>
+                        <span class="text-secondary me-1">FRE</span><span class="text-warning">LODY</span>
                     </a>
 
                     <!-- Mobile Toggle -->
@@ -78,7 +78,7 @@
         <!-- Mobile Search -->
         <div class="d-lg-none px-3 pb-3">
             <div class="input-group">
-                <span class="input-group-text bg-body border-end-0">
+                <span class="input-group-text border-end-0">
                     <i class="bi bi-search text-muted"></i>
                 </span>
                 <input type="text" 
@@ -92,7 +92,7 @@
     </header>
 
     <!-- Body Content (Scrollable) -->
-    <main class="landing-body flex-grow-1 overflow-auto bg-body">
+    <main class="landing-body flex-grow-1 overflow-auto">
         <GlobalErrorBoundary @ref="errorBoundaryRef">
             <ChildContent>
                 @Body
@@ -115,7 +115,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="landing-footer bg-dark border-top py-2">
+    <footer class="landing-footer border-top py-2">
         <div class="container-fluid px-4">
             <div class="row gy-2">
                 <!-- Brand & Description -->
@@ -162,10 +162,10 @@
         await OnSearchInput();
     }
 
-    private async Task HandleResultSelected(SearchResult searchResult)
+    private async Task HandleResultSelected(SearchResult songResult)
     {
-        //_navManager.NavigateTo($"/song/{songId}");
-        //await Task.CompletedTask;
+        _navManager.NavigateTo($"/songs/{songResult.Id}/landing");
+        await Task.CompletedTask;
     }
 
     private async Task OpenSearchModal()

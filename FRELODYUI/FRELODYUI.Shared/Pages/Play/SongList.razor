@@ -30,6 +30,7 @@
                         <span class="font-weight-light text-muted">@song.IdString</span>
                     </div>
                     <div class="d-flex justify-content-end mt-3">
+                        <SongRating SongId="@song.IdString" ShowSummary="true" ShowPanel="false" />
                         <button class="btn btn-outline-primary btn-sm me-2" 
                                 @onclick="() => NavigateToDetails(song.IdString)"
                                 @onclick:stopPropagation>

@@ -5,19 +5,24 @@
 
 .landing-header {
     z-index: 1000;
-    background-color: var(--bs-body-bg);
+    background-color: var(--modal-header-bg);
+    border-bottom: 1px solid var(--border-light);
 }
 
 .landing-body {
     height: 0; /* Allows flex-grow to control height */
+    background-color: var(--modal-content-bg);
 }
 
 .landing-footer {
     flex-shrink: 0;
+    background-color: var(--bg-footer);
+    border-top: 1px solid var(--border-light);
+    color: var(--text-secondary);
 }
 
 .btn-link {
-    --bs-btn-hover-color: white;
+    --bs-btn-hover-color: var(--text-primary);
     --bs-btn-active-color: var(--bs-warning);
     --bs-btn-color: var(--bs-warning);
 }

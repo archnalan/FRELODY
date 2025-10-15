@@ -89,5 +89,22 @@ namespace FRELODYAPIs.Controllers
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
         }
+        //SearchSongs
+        [HttpGet]
+        [ProducesResponseType(typeof(PaginationDetails<SearchSongResult>), 200)]
+        public async Task<IActionResult> EnhancedSongSearch(
+            [FromQuery] int offset,
+            [FromQuery] int limit,
+            [FromQuery] string searchTerm,
+            [FromQuery] string? orderByColumn = null,
+            CancellationToken cancellationToken = default)            
+        {
+            var result = await _songCollectionService.EnhancedSongSearch(offset, limit, searchTerm, orderByColumn, cancellationToken);
+            
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
+            
+            return Ok(result.Data);
+        }
     }
 }

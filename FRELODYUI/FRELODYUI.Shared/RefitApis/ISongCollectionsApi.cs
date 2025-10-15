@@ -36,5 +36,13 @@ namespace FRELODYUI.Shared.RefitApis
         [Query] List<string>? curatorIds = null,
         [Query] string? orderByColumn = null,
         CancellationToken cancellationToken = default);
+      
+        [Get("/api/song-collections/enhanced-song-search")]
+        Task<IApiResponse<PaginationDetails<SearchSongResult>>> EnhancedSongSearch(
+            [Query] int offset,
+            [Query] int limit,
+            [Query] string searchTerm,
+            [Query] string? orderByColumn = null,
+            CancellationToken cancellationToken = default);            
     }
 }

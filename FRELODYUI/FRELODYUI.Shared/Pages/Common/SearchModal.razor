@@ -1,4 +1,5 @@
 ﻿@using Microsoft.AspNetCore.Components.Web
+@using Newtonsoft.Json
 @inject IJSRuntime JSRuntime
 
 <div class="search-modal @(IsOpen ? "search-modal--open" : "")" @onclick="OnBackdropClick">
@@ -28,15 +29,7 @@
 
         <!-- Search Body -->
         <div class="search-modal__body">
-            @if (IsLoading)
-            {
-                <div class="search-loading">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-            }
-            else if (string.IsNullOrEmpty(SearchQuery))
+            @if (string.IsNullOrEmpty(SearchQuery))
             {
                 <!-- Recent Searches -->
                 <div class="recent-searches">
@@ -66,23 +59,70 @@
             {
                 <!-- Search Results -->
                 <div class="search-results">
-                    <h6 class="section-title">Search Results</h6>
+                    <h6 class="section-title">
+                        Search Results (@SearchResults.Count)
+                        <small class="text-muted ms-2">Sorted by relevance</small>
+                    </h6>
                     <div class="results-list">
-                        @foreach (var result in SearchResults)
+                        @foreach (var result in SearchResults.OrderByDescending(r => r.RelevanceScore))
                         {
                             <div class="result-item @(result == SelectedResult ? "result-item--selected" : "")"
                                  @onclick="() => SelectResult(result)"
                                  @onmouseenter="() => SetSelectedResult(result)">
                                 <div class="result-content">
-                                    <div class="result-title">@result.Title</div>
-                                    <div class="result-subtitle">@result.Artist • @result.Album</div>
+                                    <div class="result-title">
+                                        @result.Title
+                                        @if (result.SongNumber.HasValue)
+                                        {
+                                            <span class="song-number">#@result.SongNumber</span>
+                                        }
+                                    </div>
+                                    <div class="result-subtitle">
+                                        @result.Artist • @result.Album
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(result.MatchSnippet))
+                                    {
+                                        <div class="match-snippet" @onclick:stopPropagation>
+                                            <small class="text-muted">@((MarkupString)result.MatchSnippet)</small>
+                                        </div>
+                                    }
                                 </div>
                                 <div class="result-actions">
-                                    <span class="result-duration">@result.Duration</span>
-                                    <i class="bi bi-play-circle play-icon"></i>
+                                    <!--<span class="relevance-badge" title="Relevance score: @result.RelevanceScore">
+                                        <i class="@GetRelevanceIcon(result.RelevanceScore)"/>
+                                    </span>-->
+                                    <i class="bi bi-play-circle"></i>
                                 </div>
                             </div>
                         }
+                    </div>
+                </div>
+            }
+            else if (IsLoading)
+            {
+                <div>
+                    <div class="search-results">
+                        <h6 class="section-title skeleton-glow">
+                            <span class="skeleton-text" style="width: 120px; display: inline-block;"></span>
+                        </h6>
+                        <div class="results-list">
+                            @for (int i = 0; i < 5; i++)
+                            {
+                                <div class="result-item skeleton-glow">
+                                    <div class="result-content">
+                                        <div class="result-title">
+                                            <span class="skeleton-text" style="width: 60%; display: inline-block;"></span>
+                                        </div>
+                                        <div class="result-subtitle">
+                                            <span class="skeleton-text" style="width: 40%; display: inline-block;"></span>
+                                        </div>
+                                    </div>
+                                    <div class="result-actions">
+                                        <span class="skeleton-circle" style="width: 24px; height: 24px; display: inline-block;"></span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
             }
@@ -122,12 +162,25 @@
 
     private ElementReference searchInputRef;
     private bool IsOpen { get; set; }
-    private string SearchQuery { get; set; } = string.Empty;
     private bool IsLoading { get; set; }
     private List<SearchResult> SearchResults { get; set; } = new();
     private SearchResult? SelectedResult { get; set; }
     private List<string> RecentSearches { get; set; } = new();
     private CancellationTokenSource? _debounceCts;
+    private bool isLoading = false;
+    private string _searchQuery = string.Empty;
+    private string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (_searchQuery != value)
+            {
+                _searchQuery = value;
+                _ = HandleSearchInput(); 
+            }
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -168,8 +221,16 @@
 
     private async Task LoadRecentSearches()
     {
-        // Load from local storage or API
-        RecentSearches = new List<string> { "Classic Rock", "Jazz", "Pop Hits" };
+        try
+        {
+            RecentSearches = await _storageService
+                    .GetItemAsync<List<string>>("recentSearches") 
+                    ?? new List<string> { "Classic Rock", "Jazz", "Hymnal" };
+        }
+        catch
+        {
+            RecentSearches = new List<string> { "Classic Rock", "Jazz", "Hymnal" };
+        }
     }
 
     private async Task HandleSearchInput()
@@ -188,11 +249,10 @@
                 StateHasChanged();
                 return;
             }
-
             IsLoading = true;
             StateHasChanged();
-
-            await OnSearch.InvokeAsync(SearchQuery);
+            await HandleSearch(SearchQuery);
+            //await OnSearch.InvokeAsync(SearchQuery);
 
             IsLoading = false;
             StateHasChanged();
@@ -223,6 +283,39 @@
                 }
                 break;
         }
+    }
+
+    private async Task HandleSearch(string searchTerm)
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        var result = await _songCollectionsApi.EnhancedSongSearch(0, 20, searchTerm);
+        if (result.IsSuccessStatusCode)
+        {
+            if (result.Content?.Data != null)
+            {
+                SearchResults = result.Content.Data.Select(r => new SearchResult
+                {
+                    Id = r.Id,
+                    Title = r.Title,
+                    Artist = r.WrittenBy ?? "Unknown Artist",
+                    SongNumber = r.SongNumber,
+                    Album = r.SongBookTitle ?? r.CategoryName ?? "Unknown Album",
+                    MatchType = r.MatchType,
+                    MatchSnippet = r.MatchSnippet,
+                    RelevanceScore = r.RelevanceScore
+                }).ToList();
+
+            }           
+        }
+        else
+        {
+            SearchResults = new();
+        }
+
+        isLoading = false;
+        StateHasChanged();
     }
 
     private async Task SelectNextResult()
@@ -288,16 +381,40 @@
             {
                 RecentSearches = RecentSearches.Take(10).ToList();
             }
+            _storageService.SetItemAsync<List<string>>("recentSearches", RecentSearches);
         }
     }
 
-    public class SearchResult
+    private string GetRelevanceIcon(int relevanceScore)
     {
-        public string Id { get; set; } = string.Empty;
-        public string Title { get; set; } = string.Empty;
-        public string Artist { get; set; } = string.Empty;
-        public string Album { get; set; } = string.Empty;
-        public string Duration { get; set; } = string.Empty;
-        public string ImageUrl { get; set; } = string.Empty;
+        return relevanceScore switch
+        {
+            >= 90 => "bi bi-bullseye", // High relevance (title/lyrics)
+            >= 70 => "bi bi-star", // Medium relevance (category/book)
+            _ => "bi bi-search"     // Lower relevance
+        };
+    }
+
+    private string FormatMatchSnippet(string matchType, string snippet, string searchTerm)
+    {
+        if (string.IsNullOrEmpty(snippet)) return string.Empty;
+
+        // Basic highlighting - you can enhance this
+        var highlightedSnippet = System.Text.RegularExpressions.Regex.Replace(
+            snippet,
+            System.Text.RegularExpressions.Regex.Escape(searchTerm),
+            "<mark>$0</mark>",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return matchType.ToLower() switch
+        {
+            "title" => $"Title: \"{highlightedSnippet}\"",
+            "lyrics" => $"Lyrics: \"...{highlightedSnippet}...\"",
+            "category" => $"Category: {highlightedSnippet}",
+            "book" => $"Song Book: {highlightedSnippet}",
+            "collection" => $"Collection: {highlightedSnippet}",
+            "author" => $"Author: {highlightedSnippet}",
+            _ => highlightedSnippet
+        };
     }
 }
