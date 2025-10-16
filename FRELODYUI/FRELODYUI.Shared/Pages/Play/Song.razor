@@ -16,14 +16,16 @@
             <div class="d-flex gap-2 my-3 me-2" style="justify-content:space-between">
                 <div class="ms-2">
                     <button class="btn btn-outline-primary" @onclick="GoBack">
-                        <i class="bi bi-arrow-left"></i>
-                        Back 
+                        <i class="bi bi-chevron-left"></i>
                     </button>
                 </div>
                 <div class="d-flex gap-2 me-2">
-                    <button class="btn btn-outline-primary" @onclick="@(() => CustomizeSong(song.Id))">
-                        <i class="bi bi-pencil-square"></i>
-                        Customize
+                    <button class="btn btn-outline-primary" 
+                        data-bs-toggle="tooltip"
+                        title="Customize"
+                        aria-label="edit this song"
+                        @onclick="@(() => CustomizeSong(song.Id))">
+                        <i class="bi bi-pencil-square"></i>                        
                     </button>                  
                     <ShareDropdown Song="song" OnActionCompleted="() => StateHasChanged()" />
                 </div>

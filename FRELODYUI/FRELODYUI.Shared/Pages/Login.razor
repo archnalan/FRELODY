@@ -220,7 +220,7 @@
         var authState = await _globalAuth.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            _navManager.NavigateTo("/");
+            _navManager.NavigateTo("/dashboard");
             //NavigateToReturnUrl();
         }
     }
