@@ -1,4 +1,4 @@
-﻿
+
 window.initDragAndDrop = function () {
     // Setup global event listeners for drag and drop
     console.log("Drag and drop initialized");

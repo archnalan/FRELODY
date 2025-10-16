@@ -1,6 +1,5 @@
 ﻿@using Microsoft.AspNetCore.Components.Web
 @using Newtonsoft.Json
-@inject IJSRuntime JSRuntime
 
 <div class="search-modal @(IsOpen ? "search-modal--open" : "")" @onclick="OnBackdropClick">
     <div class="search-modal__content" @onclick:stopPropagation="true">
@@ -178,21 +177,6 @@
                 _searchQuery = value;
                 _ = HandleSearchInput(); 
             }
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JSRuntime.InvokeVoidAsync("eval", @"
-                window.addEventListener('keydown', (e) => {
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                        e.preventDefault();
-                        document.querySelector('button[onclick*=""OpenSearchModal""]')?.click();
-                    }
-                });
-            ");
         }
     }
 

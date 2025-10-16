@@ -56,6 +56,46 @@ window.closeDropdownsOnClickOutside = function (dotNetReference) {
     });
 };
 
+
+window.getTabIndexOrDefault = (el) => {
+    if (!el) return 0;
+
+    // If element has explicit tabIndex, use that
+    if (el.tabIndex && el.tabIndex > 0) {
+        return el.tabIndex;
+    }
+
+    // Otherwise, return a safe base number
+    return 1000; // big enough so we don't clash with native flow
+};
+
+
+(function () {
+    function appBasePath() {
+        const base = document.querySelector("base");
+        const href = (base && base.getAttribute("href")) || "/";
+        return href.endsWith("/") ? href : href + "/";
+    }
+
+    // Call from C#: await JsRt.InvokeVoidAsync("goBack");
+    window.goBack = function () {
+        try {
+            // If there is at least one prior entry in this tab/session, go back.
+            if (history.length > 1) {
+                history.go(-1);
+                return;
+            }
+        } catch { /* ignore and fall through */ }
+
+        // Fallback to app base (no hardcoded /songs-list)
+        location.assign(appBasePath());
+    };
+})();
+
+function getBoundingClientRect(element) {
+    return element.getBoundingClientRect();
+}
+
 window.focusInputAndSetCursorToEnd = function (element) {
     if (element && element.focus) {
         element.focus();
@@ -72,4 +112,13 @@ window.focusInputAndSetCursorToEnd = function (element) {
             range.select();
         }
     }
+};
+
+window.setupSearchShortcut = () => {
+    window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            document.querySelector('.search-trigger')?.click();
+        }
+    });
 };

@@ -72,17 +72,17 @@
                                             var firstName = context.User.FindFirst("FirstName")?.Value;
                                             var lastName = context.User.FindFirst("LastName")?.Value;
                                             var userId = context.User.FindFirst("UserId")?.Value;
-                                            var fullName = $"{firstName} {lastName}";
-                                            var displayName = fullName.Length > 15 ? fullName.Substring(0, 15) + "..." : fullName;
+                                            //var fullName = $"{firstName} {lastName}";
+                                            var displayName = firstName?.Length > 7 ? firstName.Substring(0, 7) + "..." : firstName;
                                         }
                                         <div class="dropdown">
                                             <button class="btn btn-secondary dropdown-toggle d-flex align-items-center" 
                                                     type="button" 
                                                     data-bs-toggle="dropdown" 
                                                     aria-expanded="false">
-                                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2" 
                                                      style="width: 32px; height: 32px;">
-                                                    <span class="text-primary fw-bold" style="font-size: 0.875rem;">
+                                                    <span class="text-secondary fw-bold" style="font-size: 0.875rem;">
                                                         @(firstName?.FirstOrDefault())@(lastName?.FirstOrDefault())
                                                     </span>
                                                 </div>
@@ -204,6 +204,14 @@
         if (isDarkTheme)
         {
             await ApplyTheme("dark");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JsRt.InvokeVoidAsync("setupSearchShortcut");
         }
     }
 
