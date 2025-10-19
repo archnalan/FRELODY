@@ -34,6 +34,14 @@
                         <h6 class="mb-2">@Modal.SubTitle</h6>
                         <p class="m-0">@Modal.Message</p>
                         <p class="m-0 text-danger">@Modal.DangerText</p>
+                        @if (!string.IsNullOrEmpty(Modal.HyperlinkText))
+                        {
+                            <a href="@(Modal.Context?.Data?.ToString())"
+                               class="btn btn-link"
+                               @onclick="OnConfirmModal">
+                                @Modal.HyperlinkText
+                            </a>
+                        }
                     </div>
                 </div>
             </div>

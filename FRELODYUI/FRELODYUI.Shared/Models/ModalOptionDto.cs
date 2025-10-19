@@ -13,6 +13,7 @@ namespace FRELODYUI.Shared.Models
         public string? Message { get; set; }
         public string? ButtonText { get; set; }
         public string? DangerText { get; set; }
+        public string? HyperlinkText { get; set; }
         public OptionType OptionType { get; set; }
         public ModalContext? Context { get; set; } 
     }

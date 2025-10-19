@@ -39,7 +39,7 @@
                             .Where(c => c.Songs.Any())
                             .OrderBy(c => c.Name))
                     {
-                        <div class="category-header mx-2"
+                        <div class="category-header mx-2 mt-2"
                              @onclick="() => ToggleCategoryExpansion(category)">
                             <span class="fs-6 fw-semibold">@category.Name</span>
                             <span class="m-0">Songs: <b>@category.Songs.Count</b></span>

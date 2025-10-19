@@ -35,6 +35,29 @@
             </div> 
         }
 
+        @if (isInSelectionMode && !string.IsNullOrEmpty(currentUserId))
+        {
+            <div class="toast-container position-absolute text-success top-0 end-0 p-3" style="z-index: 11">
+                <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-body row">
+                        <div class="col-9">
+                            @if (selectedSongIds.Count == 1)
+                            {
+                                <i class="bi bi-check me-2"></i>
+                            }
+                            else if (selectedSongIds.Count > 1)
+                            {
+                                <i class="bi bi-check-all me-2"></i>
+                            }
+                            <strong>@selectedSongIds.Count</strong> song@(selectedSongIds.Count != 1 ? "s" : "") selected
+                        </div>
+                        <div class="col-3">
+                            <button type="button" class="ms-auto btn-close end-0" @onclick="ExitSelectionMode" aria-label="Close"></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
         <div class="d-flex flex-column justify-content-center align-items-center flex-md-row my-3 gap-2">
             <div class="d-flex align-items-center bg-light border rounded rounded-3 gap-3 p-2 shadow">
                 <button class="btn @(viewMode == ViewMode.All ? "btn-outline-primary" : "btn-outline-secondary")"
@@ -104,6 +127,16 @@
                         <i class="bi bi-grid"></i>
                     }
                 </button>
+                @if (selectedSongIds.Any())
+                {
+                    <button class="btn btn-outline-success"
+                            data-bs-toggle="tooltip"
+                            title="Add to Collection"
+                            @onclick="HandleCollectionAdd"
+                            style="width:3.5rem">
+                        <i class="bi bi-folder-plus"></i>
+                    </button>
+                }
             </div>
         </div>
 
@@ -111,7 +144,12 @@
         {
             case ViewMode.All:
                 <div class="row" style="z-index:0">
-                    <SongList @ref="songListRef" ViewStyle="activeView" />
+                    <SongList @ref="songListRef"
+                              ViewStyle="activeView"
+                              OnSongLongPress="HandleSongLongPress"
+                              OnSelectionModeChanged="StateHasChanged"
+                              OnAuthenticationRequired="HandleAuthenticationRequired"
+                              SelectedSongIds="selectedSongIds" />
                 </div>
                 break;
             default:
@@ -123,7 +161,13 @@
 
     </div>
 </div>
-
+@if (showCollectionModal)
+{
+    <SongCollectionAdd show="showCollectionModal"
+                       Content="collectionDto"
+                       OnSave="HandleCollectionSave"
+                       OnCancel="CloseCollectionModal" />
+}
 <DialogModal IsVisible="_modalService.IsModalVisible"
              Modal="@_modalService.CurrentModal"
              OnCloseModal="CloseModal"
@@ -133,6 +177,7 @@
     [Parameter] public bool ShowSearch { get; set; } = true;
     private string error = string.Empty;
     private bool IsNavigating = false;
+    private string? currentUserId;
 
     private ViewMode viewMode = ViewMode.All;
     private ActiveView activeView = ActiveView.Expanded;
@@ -149,7 +194,13 @@
     private CancellationTokenSource? _debounceCts;
     private const int SearchDebounceMs = 500;
 
-    protected override Task OnInitializedAsync()
+    // Collection add state
+    private bool showCollectionModal = false;
+    private SongCollectionCreateDto collectionDto = new();
+    private HashSet<string> selectedSongIds = new();
+    private bool isInSelectionMode => selectedSongIds.Any();
+
+    protected override async Task OnInitializedAsync()
     {
         var modeResult = _storageService.GetItemAsync<ViewMode>("ViewMode");
         if (modeResult.IsCompleted)
@@ -169,7 +220,11 @@
 
         _heroDataService.OnSearchChanged += HandleSearchChanged;
 
-        return Task.CompletedTask;
+        var user = await _globalAuth.GetAuthenticatedUserAsync();
+        if (user.IsSuccess && user.Data != null)
+        {
+            currentUserId = user.Data.Id;
+        }
     }
 
 
@@ -254,11 +309,126 @@
     {
         _navManager.NavigateTo("/compose");
     }
+    private void HandleSongLongPress(string songId)
+    {
+        if (selectedSongIds.Contains(songId))
+        {
+            selectedSongIds.Remove(songId);
+        }
+        else
+        {
+            selectedSongIds.Add(songId);
+        }
+        StateHasChanged();
+    }
+
+    private void HandleAuthenticationRequired()
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Login Required",
+            Message = "Please log in to create song collections.",
+            HyperlinkText = "Go to Login",
+            ButtonText = "Close",
+            OptionType = OptionType.Info,
+            Context = new ModalContext
+            {
+                ActionType = "NavigateToLogin",
+                Data = "/login"
+            }
+        });
+    }
+    private async Task ExitSelectionMode()
+    {
+        selectedSongIds.Clear();
+
+        // Notify child components
+        if (songListRef != null)
+            await songListRef.ExitSelectionMode();
+        if (songListViewRef != null)
+            //await songListViewRef.ExitSelectionMode();
+
+        StateHasChanged();
+    }
+
+    private void HandleCollectionAdd()
+    {
+        if (!selectedSongIds.Any())
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "No Songs Selected",
+                Message = "Please select at least one song by long-pressing on it.",
+                ButtonText = "OK",
+                OptionType = OptionType.Warning
+            });
+            return;
+        }
+
+        collectionDto = new SongCollectionCreateDto
+        {
+            SongIds = selectedSongIds.ToList(),
+            SheduledDate = DateTimeOffset.Now
+        };
+        showCollectionModal = true;
+    }
+
+    private async Task HandleCollectionSave(SongCollectionCreateDto collection)
+    {
+        try
+        {
+            var response = await _songCollectionsApi.AddCollection(collection);
+            if (response.IsSuccessStatusCode)
+            {
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Success",
+                    Message = $"Collection '{collection.Title}' created successfully with {collection.SongIds.Count} songs.",
+                    ButtonText = "OK",
+                    OptionType = OptionType.Success
+                });
+
+                // Exit selection mode after successful save
+                await ExitSelectionMode(); 
+                CloseCollectionModal();
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating collection");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "An error occurred while creating the collection.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+    }
+
+    private void CloseCollectionModal()
+    {
+        showCollectionModal = false;
+        collectionDto = new();
+    }
 
     private async Task ConfirmModal()
     {
-        if (_modalService.CurrentModal?.Context?.ActionType == "")
+        if (_modalService.CurrentModal?.Context?.ActionType == "NavigateToLogin")
         {
+            var loginUrl = _modalService.CurrentModal.Context.Data?.ToString() ?? "/login";
+           // _navManager.NavigateTo(loginUrl);
         }
         else
         {
