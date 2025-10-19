@@ -1,8 +1,10 @@
 ﻿using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYLIB.ServiceHandler;
+using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,6 +21,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(PaginationDetails<ChordDto>), 200)]
         public async Task<IActionResult> GetAllChords([FromQuery]int? offset, [FromQuery]int? limit)
         {
@@ -32,6 +35,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(ChordDto), 200)]
         public async Task<IActionResult> GetChordById([FromQuery] string id)
         {
@@ -43,6 +47,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
 
 
         [HttpPost]
+        [Authorize(Roles = $"{UserRoles.Editor},{UserRoles.Contributor},{UserRoles.Admin},{UserRoles.Owner}")]
         [ProducesResponseType(typeof(ChordEditDto), 200)]
         public async Task<ActionResult> CreateChord([FromBody]ChordCreateDto chordDto)
         {
@@ -67,6 +72,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpPut]
+        [Authorize(Roles = $"{UserRoles.Editor},{UserRoles.Contributor},{UserRoles.Admin},{UserRoles.Owner}")]
         [ProducesResponseType(typeof(ChordEditDto), 200)]
         public async Task<ActionResult> UpdateChord([FromBody] ChordEditDto chordDto)
         {
@@ -79,6 +85,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpDelete]
+        [Authorize(Roles = $"{UserRoles.Moderator},{UserRoles.Admin},{UserRoles.Owner}")]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> DeleteChord([FromQuery] string id)
         {
@@ -91,6 +98,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(PaginationDetails<ChordDto>), 200)]
         public async Task<IActionResult> SearchChords([FromQuery]string? keywords, [FromQuery] int offset = 0, [FromQuery] int limit = 10)
         {

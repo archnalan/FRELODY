@@ -3,6 +3,9 @@ using FRELODYAPIs.Areas.Admin.ViewModels;
 using FRELODYAPP.Dtos;
 using FRELODYLIB.Models;
 using FRELODYLIB.ServiceHandler;
+using FRELODYSHRD.Constants;
+using FRELODYSHRD.Dtos.CreateDtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,10 +23,22 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = $"{UserRoles.Editor},{UserRoles.Contributor},{UserRoles.Admin},{UserRoles.Owner}")]
         [ProducesResponseType(typeof(List<SongCollectionDto>), 200)]
         public async Task<IActionResult> GetAllSongCollections()
         {
             var result = await _songCollectionService.GetAllSongCollectionsAsync();
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
+            return Ok(result.Data);
+        }
+
+        [HttpGet]
+        [Authorize]
+        [ProducesResponseType(typeof(List<SongCollectionDto>), 200)]
+        public async Task<IActionResult> GetUserSongCollections([FromQuery] string userId)
+        {
+            var result = await _songCollectionService.GetUserSongCollectionsAsync(userId);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
@@ -48,8 +63,31 @@ namespace FRELODYAPIs.Controllers
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return CreatedAtAction(nameof(GetSongCollectionById), new { id = result.Data.Id }, result.Data);
         }
+        
+        [HttpPost]
+        [Authorize]
+        [ProducesResponseType(typeof(SongCollectionDto), 201)]
+        public async Task<IActionResult> AddCollection([FromBody] SongCollectionCreateDto collection)
+        {
+            var result = await _songCollectionService.AddCollectionAsync(collection);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
+            return CreatedAtAction(nameof(GetSongCollectionById), new { id = result.Data.Id }, result.Data);
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ProducesResponseType(typeof(SongCollectionDto), 200)]
+        public async Task<IActionResult> MakeCollectionPrivate([FromQuery] string id)
+        {
+            var result = await _songCollectionService.MakeCollectionPrivateAsync(id);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
+            return Ok(result.Data);
+        }
 
         [HttpPut]
+        [Authorize]
         [ProducesResponseType(typeof(SongCollectionDto), 200)]
         public async Task<IActionResult> UpdateSongCollection([FromQuery] string id, [FromBody] SongCollectionDto updatedCollection)
         {
@@ -60,6 +98,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpDelete]
+        [Authorize]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> DeleteSongCollection([FromQuery] string id)
         {
@@ -89,7 +128,7 @@ namespace FRELODYAPIs.Controllers
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
         }
-        //SearchSongs
+        
         [HttpGet]
         [ProducesResponseType(typeof(PaginationDetails<SearchSongResult>), 200)]
         public async Task<IActionResult> EnhancedSongSearch(

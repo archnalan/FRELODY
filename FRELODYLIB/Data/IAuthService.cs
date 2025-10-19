@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYAPP.Data
 {
-    public interface IAuthorizationService
+    public interface IAuthService
     {
         Task<ServiceResult<string>> AddUserToRoleAsync(string userId, string roleName);
         Task<ServiceResult<CreateUserResponseDto>> CreateUser([Required] CreateUserDto createUserDto);

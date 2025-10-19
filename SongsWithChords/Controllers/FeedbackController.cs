@@ -1,13 +1,16 @@
 using FRELODYAPIs.Areas.Admin.Interfaces;
+using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.ModelTypes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FRELODYAPIs.Areas.Admin.ApiControllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
+    [Authorize(Roles = $"{UserRoles.Editor},{UserRoles.Contributor},{UserRoles.Admin},{UserRoles.Owner}")]
     public class FeedbackController : ControllerBase
     {
         private readonly IFeedbackService _feedbackService;

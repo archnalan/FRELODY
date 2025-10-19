@@ -47,6 +47,7 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<SongPlayHistory> SongPlayHistories { get; set; }
         public DbSet<SongUserFavorite> SongUserFavorites { get; set; }
+        public DbSet<SongUserCollection> SongUserCollections { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -94,6 +95,15 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<SongPlayHistory>().HasQueryFilter(x =>
                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<SongUserCollection>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<SongUserFavorite>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<UserRefreshToken>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<User>().HasQueryFilter(x =>
                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                     && (x.IsDeleted == false || x.IsDeleted == null)
@@ -104,6 +114,8 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<ChatSession>().HasQueryFilter(x =>
                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                     && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Tenant>().HasQueryFilter(x =>
+                    (x.IsDeleted == false || x.IsDeleted == null));
 
             // Configure Song and its children
             builder.Entity<Song>()
@@ -270,6 +282,26 @@ namespace FRELODYAPP.Data.Infrastructure
                  .HasForeignKey(r => r.UserId)
                  .IsRequired(false)
                  .OnDelete(DeleteBehavior.Restrict); 
+            });
+
+            builder.Entity<SongUserCollection>(b =>
+            {
+                b.HasOne(suc => suc.Song)
+                 .WithMany()
+                 .HasForeignKey(suc => suc.SongId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasOne(suc => suc.SongCollection)
+                 .WithMany()
+                 .HasForeignKey(suc => suc.SongCollectionId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasIndex(suc => new { suc.SongId, suc.SongCollectionId, suc.TenantId })
+                 .IsUnique();
+
+                b.HasIndex(suc => suc.AddedByUserId);
+                b.HasIndex(suc => suc.DateScheduled);
+                b.HasIndex(suc => suc.DateCreated);
             });
 
             builder.Entity<ChatMessage>(b =>

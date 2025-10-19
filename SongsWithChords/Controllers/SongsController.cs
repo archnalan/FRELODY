@@ -2,8 +2,10 @@
 using FRELODYAPP.Dtos;
 using FRELODYAPP.Dtos.SubDtos;
 using FRELODYLIB.ServiceHandler;
+using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.SubDtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -89,6 +91,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpPut]
+        [Authorize]
         [ProducesResponseType(typeof(SongDto), 200)]
         public async Task<IActionResult> UpdateSong(string id, [FromBody] SimpleSongCreateDto songDto)
         {
@@ -143,6 +146,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpDelete]
+        [Authorize(Roles = $"{UserRoles.Moderator},{UserRoles.Admin},{UserRoles.Owner}")]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> DeleteSong([FromQuery] string songId)
         {

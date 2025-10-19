@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FRELODYAPP.Models.SubModels
 {
-    public class UserRefreshToken
+    public class UserRefreshToken : BaseEntity
     {
         [Key]
         public int Id { get; set; }
@@ -16,9 +16,6 @@ namespace FRELODYAPP.Models.SubModels
 
         [Required]
         public DateTime ExpiryDate { get; set; }
-
-        [Required]
-        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
         public DateTime? RevokedDate { get; set; }
 

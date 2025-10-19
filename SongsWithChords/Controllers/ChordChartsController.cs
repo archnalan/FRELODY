@@ -1,9 +1,11 @@
 using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Areas.Admin.LogicData;
 using FRELODYAPP.Data;
+using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
 using FRELODYSHRD.Dtos.HybridDtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -93,6 +95,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPut]
+        [Authorize]
         [ProducesResponseType(typeof(ChordChartEditDto), 200)]
         public async Task<IActionResult> UpdateChordChart([FromBody] ChordChartEditDto chartDto)
         {
@@ -107,6 +110,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpDelete]
+        [Authorize(Roles = $"{UserRoles.Moderator},{UserRoles.Admin},{UserRoles.Owner}")]
         [ProducesResponseType(204)]
         public async Task<IActionResult> DeleteChordChart([FromQuery] string id)
         {
@@ -158,6 +162,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPut]
+        [Authorize]
         [ProducesResponseType(typeof(ChordChartEditDto), 200)]
         public async Task<IActionResult> UpdateChordChartFiles(
             IFormFile? chartImage,

@@ -2,7 +2,9 @@ using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Dtos.UserDtos;
 using FRELODYLIB.ServiceHandler;
+using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.UserDtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FRELODYAPIs.Controllers
@@ -19,6 +21,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         [ProducesResponseType(typeof(UpdateUserProfileOutDto), 200)]
         public async Task<IActionResult> GetUserProfile([FromQuery] string userId)
         {
@@ -125,6 +128,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = $"{UserRoles.Moderator},{UserRoles.Admin},{UserRoles.Owner}")]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> DisableUser([FromQuery] string userId)
         {

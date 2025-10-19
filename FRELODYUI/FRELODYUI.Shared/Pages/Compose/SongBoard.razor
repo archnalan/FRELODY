@@ -1,5 +1,6 @@
 ﻿@page "/compose"
 @using Microsoft.AspNetCore.WebUtilities
+@attribute [Authorize(Roles = $"{nameof(UserRoles.Editor)},{nameof(UserRoles.Contributor)}")]
 @implements IDisposable
 @inject ILogger<SongBoard> _logger
 

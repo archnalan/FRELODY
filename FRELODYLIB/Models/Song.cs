@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
-using FRELODYAPP.Data;
+﻿using FRELODYAPP.Data;
 using FRELODYAPP.Interfaces;
 using FRELODYAPP.Models.SubModels;
+using FRELODYLIB.Models;
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 

@@ -1,6 +1,7 @@
 using FRELODYAPIs.Areas.Admin.ViewModels;
 using FRELODYAPP.Dtos;
 using FRELODYLIB.ServiceHandler;
+using FRELODYSHRD.Dtos.CreateDtos;
 using Refit;
 using System.Collections.Generic;
 using System.Threading;
@@ -13,11 +14,21 @@ namespace FRELODYUI.Shared.RefitApis
         [Get("/api/song-collections/get-all-song-collections")]
         Task<IApiResponse<List<SongCollectionDto>>> GetAllSongCollections();
 
+        [Get("/api/song-collections/get-user-song-collections")]
+        Task<IApiResponse<List<SongCollectionDto>>> GetUserSongCollections([Query] string userId);
+
         [Get("/api/song-collections/get-song-collection-by-id")]
         Task<IApiResponse<SongCollectionDto>> GetSongCollectionById([Query] string id);
 
         [Post("/api/song-collections/create-song-collection")]
         Task<IApiResponse<SongCollectionDto>> CreateSongCollection([Body] SongCollectionDto collection);
+        
+        [Post("/api/song-collections/add-collection")]
+        Task<IApiResponse<SongCollectionDto>> AddCollection([Body] SongCollectionCreateDto collection);
+
+        
+        [Post("/api/song-collections/make-collection-private")]
+        Task<IApiResponse<SongCollectionDto>> MakeCollectionPrivate([Query] string id);
 
         [Put("/api/song-collections/update-song-collection")]
         Task<IApiResponse<SongCollectionDto>> UpdateSongCollection([Query] string id, [Body] SongCollectionDto updatedCollection);

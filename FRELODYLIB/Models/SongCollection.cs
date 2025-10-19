@@ -37,6 +37,7 @@ namespace FRELODYLIB.Models
         public string? Theme { get; set; } // Optional: e.g. Gospel, Advent, Youth, etc.
 
         public virtual ICollection<SongBook>? SongBooks { get; set; }
+        public virtual ICollection<SongUserCollection>? SongCollections { get; set; }
     }
 
 }

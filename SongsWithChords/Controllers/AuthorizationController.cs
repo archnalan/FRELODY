@@ -2,7 +2,9 @@ using FRELODYAPP.Data;
 using FRELODYAPP.Dtos.AuthDtos;
 using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Dtos.UserDtos;
+using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.AuthDtos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,14 +14,15 @@ namespace FRELODYAPIs.Controllers
     [ApiController]
     public class AuthorizationController : ControllerBase
     {
-        private readonly IAuthorizationService _authorizationDAL;
+        private readonly IAuthService _authorizationDAL;
 
-        public AuthorizationController(IAuthorizationService authorizationDAL)
+        public AuthorizationController(IAuthService authorizationDAL)
         {
             _authorizationDAL = authorizationDAL;
         }
 
         [HttpPost]
+        [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Owner}")]
         [ProducesResponseType(typeof(string), 200)]
         public async Task<IActionResult> AddUserToRole([FromBody] AddUserToRoleDto UserRoleDto)
         {
@@ -32,6 +35,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(CreateUserResponseDto), 200)]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserDto createUserDto)
         {
@@ -44,6 +48,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(LoginResponseDto), 200)]
         public async Task<IActionResult> ExternalLoginCallback([FromBody] ExternalLoginDto ExternalLogin)
         {
@@ -56,6 +61,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         [ProducesResponseType(typeof(UpdateUserProfileOutDto), 200)]
         public async Task<IActionResult> GetUserProfile([FromQuery] string id = null, [FromQuery] string userName = null)
         {
@@ -68,6 +74,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         [ProducesResponseType(typeof(List<ComboBoxDto>), 200)]
         public async Task<IActionResult> GetUsersForComboBoxes()
         {
@@ -80,6 +87,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(string), 200)]
         public async Task<IActionResult> InitiatePasswordReset([FromBody] string EmailAddress)
         {
@@ -92,6 +100,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(LoginResponseDto), 200)]
         public async Task<IActionResult> Login([FromBody] UserLogin userLogin)
         {
@@ -104,6 +113,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(LoginResponseDto), 200)]
         public async Task<IActionResult> LoginUserNameOrPhone([FromBody] LoginUserNameOrPhoneDto loginDto, [FromQuery]string TenantId)
         {
@@ -116,6 +126,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Owner}")]
         [ProducesResponseType(typeof(string), 200)]
         public async Task<IActionResult> RemoveUserFromRole([FromQuery]string UserId, [FromQuery] string RoleName)
         {
@@ -140,6 +151,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPut]
+        [Authorize]
         [ProducesResponseType(typeof(CreateUserResponseDto), 200)]
         public async Task<IActionResult> UpdateUser([FromBody] UpdateUserProfile updateUserProfile)
         {
@@ -152,6 +164,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(LoginResponseDto), 200)]
         public async Task<IActionResult> RefreshToken([FromBody]RefreshTokenDto RefreshTokenDto)
         {
@@ -164,6 +177,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [Authorize]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> RevokeToken([FromBody] string RefreshToken)
         {
@@ -177,6 +191,7 @@ namespace FRELODYAPIs.Controllers
 
         [HttpPost]
         [ProducesResponseType(typeof(bool), 200)]
+        [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Owner},{UserRoles.Moderator}")]
         public async Task<IActionResult> LogSecurityEvent([FromBody] LogSecurityEventDto logSecurityEventDto)
         {
             var result = await _authorizationDAL.LogSecurityEvent(

@@ -3,6 +3,8 @@ using FRELODYAPP.Dtos;
 using FRELODYLIB.Models;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Dtos.CreateDtos;
+using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYAPIs.Areas.Admin.Interfaces
 {
@@ -15,5 +17,8 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<SongCollectionDto>> GetSongCollectionByIdAsync(string id);
         Task<ServiceResult<PaginationDetails<SearchSongResult>>> EnhancedSongSearch(int offset, int limit, string searchTerm, string? orderByColumn = null, CancellationToken cancellationToken = default);
         Task<ServiceResult<SongCollectionDto>> UpdateSongCollectionAsync(string id, SongCollectionDto updatedCollection);
+        Task<ServiceResult<List<SongCollectionDto>>> GetUserSongCollectionsAsync(string userId);
+        Task<ServiceResult<SongCollectionDto>> MakeCollectionPrivateAsync(string id);
+        Task<ServiceResult<SongCollectionDto>> AddCollectionAsync([Required] SongCollectionCreateDto collectionCreateDto);
     }
 }

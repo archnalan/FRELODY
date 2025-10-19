@@ -5,11 +5,13 @@ using FRELODYAPP.Dtos;
 using FRELODYLIB.Models;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Dtos.CreateDtos;
 using Mapster;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -49,6 +51,34 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             catch (Exception ex)
             {
                 _logger.LogError("Error retrieving song collections: {Error}", ex);
+                return ServiceResult<List<SongCollectionDto>>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Get User Song Collections
+        public async Task<ServiceResult<List<SongCollectionDto>>> GetUserSongCollectionsAsync(string userId)
+        {
+            try
+            {
+                var collections = await _context.SongCollections
+                    .Where(c => c.Curator == userId)
+                    //Direct song collection path
+                    .Include(c => c.SongCollections)
+                            .ThenInclude(cs => cs.Song)
+                    //SongBook -> Category -> Song path
+                    .Include(c => c.SongBooks)
+                        .ThenInclude(s=>s.Categories)
+                            .ThenInclude(c=>c.Songs)
+                    .OrderBy(c => c.SortOrder)
+                    .ThenBy(c => c.Title)
+                    .ToListAsync();
+                var collectionsDto = collections.Adapt<List<SongCollectionDto>>();
+                return ServiceResult<List<SongCollectionDto>>.Success(collectionsDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error retrieving song collections for user {UserId}: {Error}", userId, ex);
                 return ServiceResult<List<SongCollectionDto>>.Failure(ex);
             }
         }
@@ -101,6 +131,128 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             catch (Exception ex)
             {
                 _logger.LogError("Error creating song collection: {Error}", ex);
+                return ServiceResult<SongCollectionDto>.Failure(ex);
+            }
+        }
+        #endregion
+
+        // Add this region after the existing #region Create song collection
+
+        #region Add collection with songs
+        public async Task<ServiceResult<SongCollectionDto>> AddCollectionAsync([Required] SongCollectionCreateDto collectionCreateDto)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using (var transaction = await _context.Database.BeginTransactionAsync())
+                {
+                    try
+                    {
+                        var collection = new SongCollection
+                        {
+                            Title = collectionCreateDto.Title,
+                            Theme = collectionCreateDto.Theme,
+                            Curator = collectionCreateDto.Curator ?? _userId,
+                            CollectionDate = collectionCreateDto.SheduledDate?.DateTime,
+                            Slug = GenerateSlug(collectionCreateDto.Title),
+                            IsPublic = true,
+                            IsFeatured = false
+                        };
+
+                        await _context.SongCollections.AddAsync(collection);
+                        await _context.SaveChangesAsync();
+
+                        // Add songs to the collection if provided
+                        if (collectionCreateDto.SongIds != null && collectionCreateDto.SongIds.Any())
+                        {
+                            var songCollectionSongs = new List<SongUserCollection>();
+                            int sortOrder = 1;
+
+                            foreach (var songId in collectionCreateDto.SongIds)
+                            {
+                                // Verify song exists
+                                var songExists = await _context.Songs.AnyAsync(s => s.Id == songId);
+                                if (!songExists)
+                                {
+                                    _logger.LogWarning("Song with Id {SongId} not found, skipping.", songId);
+                                    continue;
+                                }
+
+                                songCollectionSongs.Add(new SongUserCollection
+                                {
+                                    SongId = songId,
+                                    SongCollectionId = collection.Id,
+                                    AddedByUserId = _userId,
+                                    SortOrder = sortOrder++,
+                                    DateScheduled = collectionCreateDto.SheduledDate ?? DateTimeOffset.UtcNow
+                                });
+                            }
+
+                            if (songCollectionSongs.Any())
+                            {
+                                await _context.SongUserCollections.AddRangeAsync(songCollectionSongs);
+                                await _context.SaveChangesAsync();
+                            }
+                        }
+
+                        // Reload with related data
+                        var createdCollection = await _context.SongCollections
+                            .Include(c => c.SongCollections)
+                                .ThenInclude(cs => cs.Song)
+                            .Include(c => c.SongBooks)
+                            .ThenInclude(sb => sb.Categories)
+                                .ThenInclude(cat => cat.Songs)
+                            .FirstOrDefaultAsync(c => c.Id == collection.Id);
+
+                        var collectionDto = createdCollection.Adapt<SongCollectionDto>();
+                        await transaction.CommitAsync();
+                        return ServiceResult<SongCollectionDto>.Success(collectionDto);
+                    }
+                    catch (Exception ex)
+                    {
+                        await transaction.RollbackAsync();
+                        _logger.LogError("Error adding song collection: {Error}", ex);
+                        return ServiceResult<SongCollectionDto>.Failure(ex);
+                    }
+                }
+            });           
+        }
+
+        private string GenerateSlug(string title)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+                return Guid.NewGuid().ToString("N")[..8];
+
+            return title.ToLowerInvariant()
+                .Replace(" ", "-")
+                .Replace("'", "")
+                .Replace("\"", "")
+                .Trim();
+        }
+        #endregion
+
+        #region Make collection private
+        public async Task<ServiceResult<SongCollectionDto>> MakeCollectionPrivateAsync(string id)
+        {
+            try
+            {
+                var collection = await _context.SongCollections
+                    .FirstOrDefaultAsync(c => c.Id == id);
+                if (collection == null)
+                {
+                    _logger.LogWarning("Song collection with Id {Id} not found.", id);
+                    return ServiceResult<SongCollectionDto>.Failure(
+                        new KeyNotFoundException($"Song collection with Id {id} not found."));
+                }
+                collection.IsPublic = false;
+                await _context.SaveChangesAsync();
+                var collectionDto = collection.Adapt<SongCollectionDto>();
+                return ServiceResult<SongCollectionDto>.Success(collectionDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error making song collection with Id {Id} private: {Error}", id, ex);
                 return ServiceResult<SongCollectionDto>.Failure(ex);
             }
         }

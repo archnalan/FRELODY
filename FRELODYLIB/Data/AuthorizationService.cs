@@ -28,7 +28,7 @@ using System.Text;
 
 namespace FRELODYAPP.Data
 {
-    public class AuthorizationService : IAuthorizationService
+    public class AuthorizationService : IAuthService
     {
         private IConfiguration _config;
         private readonly SignInManager<User> _signInManager;
