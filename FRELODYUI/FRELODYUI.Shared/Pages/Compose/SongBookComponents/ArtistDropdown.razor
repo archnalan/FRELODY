@@ -1,4 +1,4 @@
-﻿@inject ILogger<SongBookDropdown> _logger
+@inject ILogger<ArtistDropdown> _logger
 
 <div class="dropdown" style="width: 100%;">
     <div class="position-relative">
@@ -6,7 +6,7 @@
                type="text"
                tabindex="@TabIndex" 
                @ref="searchInput"
-               placeholder="add song book..."
+               placeholder="add artist..."
                autocomplete="off"
                @bind="searchTerm"
                @oninput="HandleSearch"
@@ -24,25 +24,25 @@
                 <i class="bi bi-x-circle"></i> None
             </button>
             <div class="dropdown-divider"></div>
-            @foreach (var songBook in filteredSongBooks)
+            @foreach (var artist in filteredArtists)
             {
-                <button tabindex="@(TabIndex + 1)" class="dropdown-item" type="button" @onclick="() => SelectSongBook(songBook)">
+                <button tabindex="@(TabIndex + 1)" class="dropdown-item" type="button" @onclick="() => SelectArtist(artist)">
                     <div class="d-flex flex-column">
-                        <span class="fw-semibold">@songBook.Title</span>
-                        @if (!string.IsNullOrEmpty(songBook.Author))
+                        <span class="fw-semibold">@artist.Name</span>
+                        @if (!string.IsNullOrEmpty(artist.Country))
                         {
-                            <small class="text-muted">by @songBook.Author</small>
+                            <small class="text-muted">@artist.Country</small>
                         }
                     </div>
                 </button>
             }
-            @if (!filteredSongBooks.Any())
+            @if (!filteredArtists.Any())
             {
-                <div class="dropdown-item text-muted">No song books found</div>
+                <div class="dropdown-item text-muted">No artists found</div>
             }
             <div class="dropdown-divider"></div>
             <button tabindex="@(TabIndex + 3)" class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
-                <i class="bi bi-plus-circle-dotted"></i> Add New
+                <i class="bi bi-plus-circle-dotted"></i> Add New Artist
             </button>
         </div>
         <div style="z-index:0" class="modal-backdrop bg-transparent" @onclick="() => ToggleDropdown(false)"></div>
@@ -51,10 +51,10 @@
 
 @if (showCustomizeModal)
 {
-    <SongBookCustomize Show="showCustomizeModal"
-                       Content="SelectedSongBook"
-                       OnSave="HandleSongBookSaved" 
-                       OnCancel="CloseCustomizeModal" />
+    <ArtistCustomize Show="showCustomizeModal"
+                     Content="SelectedArtist"
+                     OnSave="HandleArtistSaved" 
+                     OnCancel="CloseCustomizeModal" />
 }
 
 @if (_modalService.IsModalVisible)
@@ -66,30 +66,30 @@
 }
 
 @code {
-    [Parameter] public SongBookDto SelectedSongBook { get; set; } = new();
-    [Parameter] public EventCallback<SongBookDto> SelectedSongBookChanged { get; set; }
+    [Parameter] public ArtistDto SelectedArtist { get; set; } = new();
+    [Parameter] public EventCallback<ArtistDto> SelectedArtistChanged { get; set; }
     [Parameter] public int TabIndex { get; set; } = 0;
 
     private string searchTerm = "";
     private bool showDropdown = false;
     private bool showCustomizeModal = false;
-    private List<SongBookDto> AvailableSongBooks { get; set; } = new();
-    private List<SongBookDto> filteredSongBooks = new();
+    private List<ArtistDto> AvailableArtists { get; set; } = new();
+    private List<ArtistDto> filteredArtists = new();
     private ElementReference searchInput;
 
     protected async override Task OnInitializedAsync()
     {
-        searchTerm = SelectedSongBook?.Title ?? "";
-        await LoadSongBooks();
+        searchTerm = SelectedArtist?.Name ?? "";
+        await LoadArtists();
     }
 
-    private async Task LoadSongBooks()
+    private async Task LoadArtists()
     {
-        var response = await _songsBooksApi.GetAllSongBooks();
+        var response = await _artistsApi.GetAllArtists();
         if (response.IsSuccessStatusCode)
         {
-            AvailableSongBooks = response.Content!;
-            filteredSongBooks = response.Content!;
+            AvailableArtists = response.Content!;
+            filteredArtists = response.Content!;
         }
         else
         {
@@ -102,7 +102,7 @@
                 OptionType = OptionType.Error,
                 Context = new ModalContext
                 {
-                    ActionType = "LoadSongBooks",
+                    ActionType = "LoadArtists",
                     Data = errorMessage
                 }
             });
@@ -117,39 +117,38 @@
     private void HandleSearch(ChangeEventArgs e)
     {
         searchTerm = e.Value?.ToString() ?? "";
-        FilterSongBooks();
+        FilterArtists();
     }
 
-    private void FilterSongBooks()
+    private void FilterArtists()
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
-            filteredSongBooks = AvailableSongBooks;
+            filteredArtists = AvailableArtists;
             return;
         }
 
-        filteredSongBooks = AvailableSongBooks
-            .Where(sb => sb.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                        (!string.IsNullOrEmpty(sb.Author) && sb.Author.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
-                        (!string.IsNullOrEmpty(sb.Publisher) && sb.Publisher.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
+        filteredArtists = AvailableArtists
+            .Where(a => a.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                        (!string.IsNullOrEmpty(a.Country) && a.Country.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
             .ToList();
     }
 
-    private async Task SelectSongBook(SongBookDto songBook)
+    private async Task SelectArtist(ArtistDto artist)
     {
-        SelectedSongBook = songBook;
-        searchTerm = songBook.Title;
+        SelectedArtist = artist;
+        searchTerm = artist.Name;
         showDropdown = false;
-        await SelectedSongBookChanged.InvokeAsync(songBook);
+        await SelectedArtistChanged.InvokeAsync(artist);
     }
 
     private async Task SelectNone()
     {
-        var emptySongBook = new SongBookDto();
-        SelectedSongBook = emptySongBook;
+        var emptyArtist = new ArtistDto();
+        SelectedArtist = emptyArtist;
         searchTerm = "";
         showDropdown = false;
-        await SelectedSongBookChanged.InvokeAsync(emptySongBook);
+        await SelectedArtistChanged.InvokeAsync(emptyArtist);
     }
 
     private void ToggleDropdown(bool show)
@@ -161,7 +160,7 @@
     {
         showCustomizeModal = true;
         showDropdown = false;
-        if (SelectedSongBook != null) SelectedSongBook.Title = searchTerm;
+        if (SelectedArtist != null) SelectedArtist.Name = searchTerm;
         StateHasChanged();
     }
 
@@ -170,16 +169,17 @@
         showCustomizeModal = false;
     }
 
-    private async Task HandleSongBookSaved(SongBookDto newSongBook)
+    private async Task HandleArtistSaved(ArtistDto newArtist)
     {
-        // Check if song book already exists
-        newSongBook = AvailableSongBooks.FirstOrDefault(sb => 
-                     sb.Title.Trim().ToLower() == newSongBook.Title.Trim().ToLower()) 
-                     ?? newSongBook;
+        // Check if artist already exists
+        newArtist = AvailableArtists.FirstOrDefault(a => 
+                     a.Name.Trim().ToLower() == newArtist.Name.Trim().ToLower()) 
+                     ?? newArtist;
         
-        if (!AvailableSongBooks.Any(sb => sb.Id == newSongBook.Id))
+        if (!AvailableArtists.Any(a => a.Id == newArtist.Id))
         {
-            var response = await _songsBooksApi.CreateSongBook(newSongBook);
+            newArtist.Id = Guid.NewGuid().ToString();
+            var response = await _artistsApi.CreateArtist(newArtist);
             if(!response.IsSuccessStatusCode)
             {
                 var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
@@ -191,21 +191,21 @@
                     OptionType = OptionType.Error,
                     Context = new ModalContext
                     {
-                        ActionType = "CreateSongBook",
+                        ActionType = "CreateArtist",
                         Data = errorMessage
                     }
                 });
                 return;
             }
             
-            // Add the created song book to the list
-            var createdSongBook = response.Content!;
-            AvailableSongBooks.Add(createdSongBook);
-            newSongBook = createdSongBook;
+            // Add the created artist to the list
+            var createdArtist = response.Content!;
+            AvailableArtists.Add(createdArtist);
+            newArtist = createdArtist;
         }
 
-        // Select the new song book
-        await SelectSongBook(newSongBook);
+        // Select the new artist
+        await SelectArtist(newArtist);
         CloseCustomizeModal();
     }
 

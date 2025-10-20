@@ -44,6 +44,7 @@ namespace FRELODYAPP.Dtos
         public string? AddedBy { get; set; }
 
         public string? CategoryId { get; set; }
+        public string? AlbumId { get; set; }
 
         public bool? IsFavorite { get; set; }
 

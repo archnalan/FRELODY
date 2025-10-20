@@ -41,6 +41,8 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<UserFeedback> UserFeedback { get; set; }
         public DbSet<Page> Pages { get; set; }
         public DbSet<Setting> Settings { get; set; }
+        public DbSet<Artist> Artists { get; set; } = default!;
+        public DbSet<Album> Albums { get; set; } = default!;
         public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
         public DbSet<ShareLink> ShareLinks { get; set; }
         public DbSet<ChatSession> ChatSessions { get; set; }
@@ -68,15 +70,18 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<SongPart>().HasQueryFilter(x =>
                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
                     && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<SongUserRating>().HasQueryFilter(x =>
-                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
-                    && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<LyricLine>().HasQueryFilter(x =>
                      (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<LyricSegment>().HasQueryFilter(x =>
                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
                     && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Artist>().HasQueryFilter(x =>
+               (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+               && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Album>().HasQueryFilter(x =>
+                (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+                && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Setting>().HasQueryFilter(x =>
                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                     && (x.IsDeleted == false || x.IsDeleted == null));
@@ -92,6 +97,9 @@ namespace FRELODYAPP.Data.Infrastructure
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<ShareLink>().HasQueryFilter(x => 
                     x.IsActive != false);
+            builder.Entity<SongUserRating>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongPlayHistory>().HasQueryFilter(x =>
                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                    && (x.IsDeleted == false || x.IsDeleted == null));
@@ -169,6 +177,20 @@ namespace FRELODYAPP.Data.Infrastructure
                 .HasOne(c => c.ParentCategory)
                 .WithMany(c => c.SubCategories)
                 .HasForeignKey(c => c.ParentCategoryId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Album>()
+               .HasOne<Artist>()
+               .WithMany(a => a.Albums)
+               .HasForeignKey(al => al.ArtistId)
+               .IsRequired(false)
+               .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Song>()
+                .HasOne<Album>()
+                .WithMany(al => al.Songs)
+                .HasForeignKey(s => s.AlbumId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
 

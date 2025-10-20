@@ -46,8 +46,13 @@
         {
             <!-- Collections/Playlists Folder Structure -->
             <div class="w-100 playlists-container">
-                @foreach (var colSong in collections.Where(c => string.IsNullOrEmpty(searchQuery) || 
-                    c.Playlist.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true))
+                @{
+                    var collectionFilter = collections.Where(c => string.IsNullOrEmpty(searchQuery) ||
+                    c.Playlist.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true ||
+                    c.Playlist.Theme?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true ||
+                    c.Songs.Any(s => s.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)));
+                }
+                @foreach (var colSong in collectionFilter)
                 {
                     <PlaylistFolder Collection="colSong"
                                     IsExpanded="expandedCollections.Contains(colSong.Playlist.Id)"
@@ -62,8 +67,7 @@
                 }
             </div>
 
-            @if (!collections.Any(c => string.IsNullOrEmpty(searchQuery) || 
-                c.Playlist.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true))
+            @if (!collectionFilter.Any())
             {
                 <div class="text-center my-5">
                     <i class="bi bi-search fs-1 text-muted"></i>

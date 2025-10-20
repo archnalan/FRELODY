@@ -9,6 +9,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<List<CategoryDto>>> GetAllCategories();
         Task<ServiceResult<List<SongDto>>> GetAllSongsByCategoryId(string categoryId);
         Task<ServiceResult<List<CategoryDto>>> GetCategoriesBySongBookId(string songBookId);
+        Task<ServiceResult<CategoryDto>> GetCategoryById(string categoryId);
         Task<ServiceResult<CategoryDto>> UpdateCategory(string categoryId, CategoryDto categoryDto);
     }
 }

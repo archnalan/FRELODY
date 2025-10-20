@@ -327,7 +327,7 @@
         _modalService.Show(new ModalOptionDto
         {
             Title = "Login Required",
-            Message = "Please log in to create song collections.",
+            Message = "Please log in to create playlists.",
             HyperlinkText = "Go to Login",
             ButtonText = "Close",
             OptionType = OptionType.Info,
@@ -348,7 +348,7 @@
         if (songListViewRef != null)
             //await songListViewRef.ExitSelectionMode();
 
-        StateHasChanged();
+            StateHasChanged();
     }
 
     private void HandleCollectionAdd()
@@ -383,7 +383,7 @@
                 _modalService.Show(new ModalOptionDto
                 {
                     Title = "Success",
-                    Message = $"Collection '{collection.Title}' created successfully with {collection.SongIds.Count} songs.",
+                    Message = $"Playlist '{collection.Title}' created successfully with {collection.SongIds.Count} songs.",
                     ButtonText = "OK",
                     OptionType = OptionType.Success
                 });
@@ -391,6 +391,8 @@
                 // Exit selection mode after successful save
                 await ExitSelectionMode(); 
                 CloseCollectionModal();
+
+                _navManager.NavigateTo("/playlists");
             }
             else
             {

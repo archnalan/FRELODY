@@ -59,6 +59,14 @@ builder.Services.AddRefitClient<ISettingsApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddRefitClient<IArtistsApi>()
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+    .AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddRefitClient<IAlbumsApi>()
+    .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+    .AddHttpMessageHandler<AuthHeaderHandler>();
+
 builder.Services.AddRefitClient<ISongPlayHistoryApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();

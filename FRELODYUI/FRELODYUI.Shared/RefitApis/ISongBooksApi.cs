@@ -13,7 +13,7 @@ namespace FRELODYUI.Shared.RefitApis
         [Get("/api/song-books/get-all-song-books")]
         Task<IApiResponse<List<SongBookDto>>> GetAllSongBooks();
 
-        [Get("/api/song-books/get-song-books-by-id")]
+        [Get("/api/song-books/get-song-book-by-id")]
         Task<IApiResponse<SongBookDto>> GetSongBookById([Query]string id);
 
         [Post("/api/song-books/create-song-book")]

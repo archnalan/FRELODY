@@ -43,6 +43,34 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         }
         #endregion
 
+        #region Get Category By Id
+        public async Task<ServiceResult<CategoryDto>> GetCategoryById(string categoryId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(categoryId))
+                {
+                    return ServiceResult<CategoryDto>.Failure(
+                        new BadRequestException("Category ID is required"));
+                }
+                var category = await _context.Categories.FindAsync(categoryId);
+                if (category == null)
+                {
+                    return ServiceResult<CategoryDto>.Failure(
+                        new NotFoundException($"Category not found. ID: {categoryId}"));
+                }
+                var categoryDto = category.Adapt<CategoryDto>();
+                return ServiceResult<CategoryDto>.Success(categoryDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("An error occurred while retrieving category {CategoryId}. {Error}", categoryId, ex);
+                return ServiceResult<CategoryDto>.Failure(
+                    new ServerErrorException("An error occurred while retrieving the specified category."));
+            }
+        }
+        #endregion
+
         #region Get categories by song book Id
         public async Task<ServiceResult<List<CategoryDto>>> GetCategoriesBySongBookId(string songBookId)
         {

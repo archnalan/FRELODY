@@ -1,0 +1,255 @@
+@inject ILogger<AlbumDropdown> _logger
+
+<div class="dropdown" style="width: 100%;">
+    <div class="position-relative">
+        <input class="form-control form-control-sm pe-4"
+               type="text"
+               tabindex="@TabIndex" 
+               placeholder="add album..."
+               autocomplete="off"
+               @bind="searchTerm"
+               @oninput="HandleSearch"
+               @onfocus="@(() => ToggleDropdown(true))" />
+
+        <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-2 text-muted"
+           @onclick="@(() => ToggleDropdown(!showDropdown))"></i>
+    </div>   
+    
+    @if (showDropdown)
+    {
+        <div class="dropdown-menu show w-100"
+             style="position: absolute; max-height: 300px; overflow-y: auto; z-index:5">
+            <button tabindex="@(TabIndex + 1)" class="dropdown-item text-muted" type="button" @onclick="() => SelectNone()">
+                <i class="bi bi-x-circle"></i> None
+            </button>
+            <div class="dropdown-divider"></div>
+            @foreach (var album in filteredAlbums)
+            {
+                <button tabindex="@(TabIndex + 1)" class="dropdown-item" type="button" @onclick="() => SelectAlbum(album)">
+                    <div class="d-flex flex-column">
+                        <span class="fw-semibold">@album.Title</span>
+                        @if (album.ReleaseDate.HasValue)
+                        {
+                            <small class="text-muted">@album.ReleaseDate.Value.Year</small>
+                        }
+                    </div>
+                </button>
+            }
+            @if (!filteredAlbums.Any())
+            {
+                <div class="dropdown-item text-muted">No albums found</div>
+            }
+            <div class="dropdown-divider"></div>
+            <button tabindex="@(TabIndex + 3)" class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
+                <i class="bi bi-plus-circle-dotted"></i> Add New Album
+            </button>
+        </div>
+        <div style="z-index:0" class="modal-backdrop bg-transparent" @onclick="() => ToggleDropdown(false)"></div>
+    }
+</div>
+
+@if (showCustomizeModal)
+{
+    <AlbumCustomize Show="showCustomizeModal"
+                    Content="SelectedAlbum"
+                    OnSave="HandleAlbumSaved" 
+                    OnCancel="CloseCustomizeModal" />
+}
+
+@if (_modalService.IsModalVisible)
+{
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
+}
+
+@code {
+    [Parameter] public AlbumDto SelectedAlbum { get; set; } = new();
+    [Parameter] public EventCallback<AlbumDto> SelectedAlbumChanged { get; set; }
+    [Parameter] public string? ArtistId { get; set; }
+    [Parameter] public int TabIndex { get; set; } = 0;
+
+    private string searchTerm = "";
+    private bool showDropdown = false;
+    private bool showCustomizeModal = false;
+    private List<AlbumDto> AvailableAlbums { get; set; } = new();
+    private List<AlbumDto> filteredAlbums = new();
+
+    protected async override Task OnInitializedAsync()
+    {
+        searchTerm = SelectedAlbum?.Title ?? "";
+        if (!string.IsNullOrEmpty(ArtistId))
+        {
+            await LoadAlbums();
+        }
+    }
+
+    private async Task LoadAlbums()
+    {
+        try
+        {
+            Refit.IApiResponse<List<AlbumDto>> response;
+
+            if (!string.IsNullOrEmpty(ArtistId))
+            {
+                // Load albums for specific artist
+                response = await _albumsApi.GetAlbumsByArtistId(ArtistId);
+            }
+            else
+            {
+                // Load all albums
+                response = await _albumsApi.GetAllAlbums();
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                AvailableAlbums = response.Content!;
+                filteredAlbums = response.Content!;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        ActionType = "LoadAlbums",
+                        Data = errorMessage
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading albums");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "An error occurred while loading albums.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "LoadAlbums",
+                    Data = ex.Message
+                }
+            });
+        }
+    }
+
+    private void HandleSearch(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        FilterAlbums();
+    }
+
+    private void FilterAlbums()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredAlbums = AvailableAlbums;
+            return;
+        }
+
+        filteredAlbums = AvailableAlbums
+            .Where(a => a.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private async Task SelectAlbum(AlbumDto album)
+    {
+        SelectedAlbum = album;
+        searchTerm = album.Title;
+        showDropdown = false;
+        await SelectedAlbumChanged.InvokeAsync(album);
+    }
+
+    private async Task SelectNone()
+    {
+        var emptyAlbum = new AlbumDto();
+        SelectedAlbum = emptyAlbum;
+        searchTerm = "";
+        showDropdown = false;
+        await SelectedAlbumChanged.InvokeAsync(emptyAlbum);
+    }
+
+    private void ToggleDropdown(bool show)
+    {
+        showDropdown = show;
+    }
+
+    private void OpenCustomizeModal()
+    {
+        showCustomizeModal = true;
+        showDropdown = false;
+        SelectedAlbum = new();
+        SelectedAlbum.Title = searchTerm;
+        SelectedAlbum.ArtistId = ArtistId;
+        StateHasChanged();
+    }
+
+    private void CloseCustomizeModal()
+    {
+        showCustomizeModal = false;
+    }
+
+    private async Task HandleAlbumSaved(AlbumDto newAlbum)
+    {
+        // Check if album already exists
+        newAlbum = AvailableAlbums.FirstOrDefault(a => 
+                     a.Title.Trim().ToLower() == newAlbum.Title.Trim().ToLower()) 
+                     ?? newAlbum;
+        
+        if (!AvailableAlbums.Any(a => a.Id == newAlbum.Id))
+        {
+            newAlbum.Id = Guid.NewGuid().ToString();
+            newAlbum.ArtistId = ArtistId;
+            var response = await _albumsApi.CreateAlbum(newAlbum);
+
+            if (response.IsSuccessStatusCode)
+            {
+                newAlbum = response.Content!;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        ActionType = "CreateAlbum",
+                        Data = errorMessage
+                    }
+                });
+                return;
+            }
+            AvailableAlbums.Add(newAlbum);
+        }
+
+        // Select the new album
+        await SelectAlbum(newAlbum);
+        CloseCustomizeModal();
+    }
+
+    private async Task ConfirmModal()
+    {
+        //Handle specific contexts
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+}

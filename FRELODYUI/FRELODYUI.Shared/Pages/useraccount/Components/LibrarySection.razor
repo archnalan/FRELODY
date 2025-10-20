@@ -24,6 +24,68 @@
             </div>
         </div>
     }
+    else if (selectedCollection != null)
+    {
+        <!-- Playlist Detail View -->
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button class="btn btn-sm btn-link text-white text-decoration-none p-0" @onclick="GoBackToCollections">
+                            <i class="bi bi-chevron-left fs-5 me-2"></i>
+                            <span>Back to Playlists</span>
+                        </button>
+                        <h5 class="mb-0">@selectedCollection.Playlist.Title</h5>
+                        <div style="width: 100px;"></div> <!-- Spacer for centering -->
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(selectedCollection.Playlist.Description))
+                    {
+                        <p class="text-muted mb-3">@selectedCollection.Playlist.Description</p>
+                    }
+                    
+                    @if (selectedCollection.Songs?.Any() == true)
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var song in selectedCollection.Songs.OrderBy(s => s.SortOrder ?? int.MaxValue))
+                            {
+                                <div class="list-group-item border-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="flex-grow-1" style="cursor: pointer;" @onclick="() => ViewSong(song.Id)">
+                                            <div class="d-flex align-items-center gap-2">
+                                                @if (song.SongNumber.HasValue)
+                                                {
+                                                    <span class="badge bg-secondary">@song.SongNumber.Value</span>
+                                                }
+                                                <div>
+                                                    <div class="fw-medium">@song.Title</div>
+                                                    @if (!string.IsNullOrEmpty(song.WrittenBy))
+                                                    {
+                                                        <small class="text-muted">By @song.WrittenBy</small>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewSong(song.Id)">
+                                            <i class="bi bi-play"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="bi bi-music-note fs-1 text-muted"></i>
+                            <p class="text-muted mb-0 mt-2">No songs in this playlist</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
     else
     {
         <!-- Favorite Songs -->
@@ -129,7 +191,7 @@
                                             <div class="fw-medium">@collection.Playlist.Title</div>
                                             <small class="text-muted">@(collection.Songs.Count) @(collection.Songs.Count == 1 ? "song" : "songs")</small>
                                         </div>
-                                        <button class="btn btn-sm btn-outline-info">
+                                        <button class="btn btn-sm btn-outline-info" @onclick="() => ViewPlaylistDetails(collection)">
                                             <i class="bi bi-arrow-right"></i>
                                         </button>
                                     </div>
@@ -163,11 +225,25 @@
 
     private string searchQuery = "";
     private int MAX_HIST_ITEMS = 5;
+    private CollectionWithSongs? selectedCollection = null;
 
     private async Task SearchChanged()
     {
         await OnSearchChanged.InvokeAsync(searchQuery);
     }
+
+    private void ViewPlaylistDetails(CollectionWithSongs collection)
+    {
+        selectedCollection = collection;
+        StateHasChanged();
+    }
+
+    private void GoBackToCollections()
+    {
+        selectedCollection = null;
+        StateHasChanged();
+    }
+
     private void ViewSong(string songId)
     {
         _ = Task.Run(async () =>

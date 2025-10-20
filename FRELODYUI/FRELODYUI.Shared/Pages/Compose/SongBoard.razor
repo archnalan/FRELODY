@@ -35,35 +35,88 @@
                        placeholder="Song Title" />
             </div>
 
-            <!-- Dropdown -->
+            <!-- Selection Tabs and Dropdowns -->
             <div class="col-9 col-md-4">
-                @if (string.IsNullOrEmpty(selectedSongBook?.Id))
-                {
-                    <SongBookDropdown @ref="songBookDropdownRef"
-                                      SelectedSongBook="selectedSongBook"
-                                      SelectedSongBookChanged="HandleSongBookChanged" />
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs nav-fill mb-2" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @(activeSelectionTab == "songbook" ? "active" : "")"
+                                type="button"
+                                @onclick='() => SetActiveSelectionTab("songbook")'>
+                            <i class="bi bi-book"></i> Songbook
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @(activeSelectionTab == "artist" ? "active" : "")"
+                                type="button"
+                                @onclick='() => SetActiveSelectionTab("artist")'>
+                            <i class="bi bi-person"></i> Artist/Album
+                        </button>
+                    </li>
+                </ul>
 
-                }
-                else if(selectedSongBook != null && !string.IsNullOrEmpty(selectedSongBook.Id))
-                {
-                    <div class="w-100 row">
-                        <div class="col-4 btn btn-link text-decoration-none" 
-                             @onclick="ChangeBookSelection">
-                            <strong class="text-sm-start">
-                                @(selectedSongBook.Title.Length > MAX_TITLE_LEN
-                                                        ? selectedSongBook.Title.Substring(0, 15) + "…"
-                                                        : selectedSongBook.Title)
-                            </strong>
-                        </div>
-                        <div class="col-8">
-                            <CategoriesDropdown SelectedCategory="@selectedCategory"
-                                                SelectedCategoryChanged="HandleCategoryChanged"
-                                                SongBookId="@selectedSongBook.Id"
-                                                TabIndex="10" />
-                        </div>
-                       
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Songbook Flow -->
+                    @if (activeSelectionTab == "songbook")
+                    {
+                        @if (string.IsNullOrEmpty(selectedSongBook?.Id))
+                        {
+                            <SongBookDropdown @ref="songBookDropdownRef"
+                                              SelectedSongBook="selectedSongBook"
+                                              SelectedSongBookChanged="HandleSongBookChanged" />
+                        }
+                        else if (selectedSongBook != null && !string.IsNullOrEmpty(selectedSongBook.Id))
+                        {
+                            <div class="w-100 row">
+                                <div class="col-4 btn btn-link text-decoration-none"
+                                     @onclick="ChangeBookSelection">
+                                    <strong class="text-sm-start">
+                                        @(selectedSongBook.Title.Length > MAX_TITLE_LEN
+                                                                    ? selectedSongBook.Title.Substring(0, 15) + "…"
+                                                                    : selectedSongBook.Title)
+                        </strong>
                     </div>
-                }
+                    <div class="col-8">
+                        <CategoriesDropdown SelectedCategory="@selectedCategory"
+                                            SelectedCategoryChanged="HandleCategoryChanged"
+                                            SongBookId="@selectedSongBook.Id"
+                                            TabIndex="10" />
+                    </div>
+                </div>
+                                }
+                    }
+
+                    <!-- Artist/Album Flow -->
+                    @if (activeSelectionTab == "artist")
+                    {
+                        @if (string.IsNullOrEmpty(selectedArtist?.Id))
+                        {
+                            <ArtistDropdown @ref="artistDropdownRef"
+                                            SelectedArtist="selectedArtist"
+                                            SelectedArtistChanged="HandleArtistChanged" />
+                        }
+                        else if (selectedArtist != null && !string.IsNullOrEmpty(selectedArtist.Id))
+                        {
+                            <div class="w-100 row">
+                                <div class="col-4 btn btn-link text-decoration-none"
+                                     @onclick="ChangeArtistSelection">
+                                    <strong class="text-sm-start">
+                                        @(selectedArtist.Name.Length > MAX_TITLE_LEN
+                                                                    ? selectedArtist.Name.Substring(0, 15) + "…"
+                                                                    : selectedArtist.Name)
+                        </strong>
+                    </div>
+                    <div class="col-8">
+                        <AlbumDropdown SelectedAlbum="@selectedAlbum"
+                                       SelectedAlbumChanged="HandleAlbumChanged"
+                                       ArtistId="@selectedArtist.Id"
+                                       TabIndex="10" />
+                    </div>
+                </div>
+                                }
+                    }
+                </div>
             </div>
 
             <!-- Save Button -->
@@ -112,13 +165,20 @@
     new() { [1] = new List<SegmentCreateDto>() };
     private List<TabItem> initialPartsItems = new();
     private TabItem? activeTabItem;
+
     private SongBookDto? selectedSongBook = null;
-    private CategoryDto? selectedCategory = null; 
+    private CategoryDto? selectedCategory = null;
+
+    private ArtistDto? selectedArtist = null;
+    private AlbumDto? selectedAlbum = null;
+
     private SimpleSongCreateDto songData = new();
     private SongBookDropdown? songBookDropdownRef;
+    private ArtistDropdown? artistDropdownRef;
     private TabsComponent? TabsComponentRef;
     private const int MAX_TITLE_LEN = 15;
     private bool isLoading = true;
+    private string activeSelectionTab = "songbook";
 
     private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
                   Segments="@AllPartsSegments.GetValueOrDefault(id, new List<SegmentCreateDto>())"
@@ -161,6 +221,8 @@
                     SongNumber = song.SongNumber ?? 0;
                     initialPartsItems = new List<TabItem>();
                     AllPartsSegments = new Dictionary<int, List<SegmentCreateDto>>();
+                    if (!string.IsNullOrEmpty(song.AlbumId)) GetAlbum(song.AlbumId);
+                    else if (!string.IsNullOrEmpty(song.CategoryId)) GetBookCategory(song.CategoryId);
 
                     // Process parts
                     foreach (var part in song.SongParts!.OrderBy(v => v.PartNumber))
@@ -247,6 +309,69 @@
             StateHasChanged();
         }
 
+    }
+
+    private async void GetAlbum(string albumId)
+    {
+        var albumResponse = await _albumsApi.GetAlbumById(albumId);
+        if (albumResponse.IsSuccessStatusCode)
+        {
+            var album = albumResponse.Content!;
+            selectedAlbum = album;
+            var artistResponse = await _artistsApi.GetArtistById(album.ArtistId ?? "");
+            if (artistResponse.IsSuccessStatusCode)
+            {
+                selectedArtist = artistResponse.Content!;
+            }
+        }
+        if (selectedAlbum !=null || selectedArtist != null)
+        {
+            SetActiveSelectionTab("artist");
+        }
+        StateHasChanged();  
+    }
+
+    private async void GetBookCategory(string categoryId)
+    {
+        var categoryResponse = await _categoriesApi.GetCategoryById(categoryId);
+        if (categoryResponse.IsSuccessStatusCode)
+        {
+            selectedCategory = categoryResponse.Content!;
+            if (!string.IsNullOrEmpty(selectedCategory.SongBookId))
+            {
+                var bookResponse = await _songsBooksApi.GetSongBookById(selectedCategory.SongBookId);
+                if (bookResponse.IsSuccessStatusCode)
+                {
+                    selectedSongBook = bookResponse.Content!;
+                }
+            }
+        }
+        if (selectedCategory != null || selectedSongBook != null)
+        {
+            SetActiveSelectionTab("songbook");
+        }
+        StateHasChanged();
+    }
+    
+    private void SetActiveSelectionTab(string tab)
+    {
+        activeSelectionTab = tab;
+
+        // Clear the other tab's selections when switching
+        if (tab == "songbook")
+        {
+            selectedArtist = null;
+            selectedAlbum = null;
+        }
+        else if (tab == "artist")
+        {
+            selectedSongBook = null;
+            selectedCategory = null;
+            songData.SongBookId = null;
+            songData.CategoryId = null;
+        }
+
+        StateHasChanged();
     }
 
     private void InitializeNewContent()
@@ -441,6 +566,21 @@
     {
         selectedCategory = newCategory;
         songData.CategoryId = newCategory?.Id;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleArtistChanged(ArtistDto? newArtist)
+    {
+        selectedArtist = newArtist;
+        // Reset selected album when artist changes
+        selectedAlbum = null;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleAlbumChanged(AlbumDto? newAlbum)
+    {
+        selectedAlbum = newAlbum;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -745,6 +885,18 @@
         if (songBookDropdownRef != null)
         {
             await songBookDropdownRef.FocusInput();
+        }
+    }
+    
+    private async void ChangeArtistSelection()
+    {
+        selectedArtist = null;
+        selectedAlbum = null;
+        StateHasChanged();
+
+        if (artistDropdownRef != null)
+        {
+            await artistDropdownRef.FocusInput();
         }
     }
 

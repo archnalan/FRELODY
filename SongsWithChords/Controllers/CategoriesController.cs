@@ -43,6 +43,18 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(CategoryDto), 200)]
+        public async Task<IActionResult> GetCategoryById([FromQuery] string id)
+        {
+            var result = await _categoryService.GetCategoryById(id);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
+            return Ok(result.Data);
+        }
+
+        [HttpGet]
         [ProducesResponseType(typeof(List<SongDto>), 200)]
         public async Task<IActionResult> GetAllSongsByCategoryId([FromQuery]string categoryId)
         {

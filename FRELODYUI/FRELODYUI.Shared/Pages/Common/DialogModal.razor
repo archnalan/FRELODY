@@ -7,30 +7,40 @@
      aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="z-index:1055">
         <div class="modal-content text-center">
-            <div class="modal-body border-0 p-0 mt-3">
+            <div class="modal-body border-0">
                 <div class="container p-2">
-                    <div class="row justify-content-center">
-                        @switch (Modal.OptionType)
-                        {
-                            case OptionType.Success:
-                                <i class="bi bi-patch-check-fill text-success" style="font-size: 3rem;"></i>
-                                break;
-                            case OptionType.Warning:
-                                <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3rem;"></i>
-                                break;
-                            case OptionType.Error:
-                                <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
-                                break;
-                            case OptionType.Feedback:
-                                <i class="bi bi-chat-square-text-fill text-info" style="font-size: 3rem;"></i>
-                                break;
-                            default:
-                                <i class="bi bi-info-circle-fill text-info" style="font-size: 3rem;"></i>
-                                break;
-                        }
+                    <div class="position-relative">
+                        <div class="d-flex align-items-center justify-content-center">
+                            @switch (Modal.OptionType)
+                            {
+                                case OptionType.Success:
+                                    <i class="bi bi-patch-check-fill text-success" style="font-size: 1.5rem;"></i>
+                                    break;
+                                case OptionType.Warning:
+                                    <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 1.5rem;"></i>
+                                    break;
+                                case OptionType.Error:
+                                    <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 1.5rem;"></i>
+                                    break;
+                                case OptionType.Feedback:
+                                    <i class="bi bi-chat-square-text-fill text-info" style="font-size: 1.5rem;"></i>
+                                    break;
+                                default:
+                                    <i class="bi bi-info-circle-fill text-info" style="font-size: 1.5rem;"></i>
+                                    break;
+                            }
+
+                            <h5 class="mb-0 ms-2">@Modal.Title</h5>
+                        </div>
+                        <div class="position-absolute top-0 end-0">
+                            <button type="button"
+                                    class="btn-close"
+                                    aria-label="Close"
+                                    @onclick="CloseModal">
+                            </button>
+                        </div>
                     </div>
                     <div class="row">
-                        <h5 class="mb-3">@Modal.Title</h5>
                         <h6 class="mb-2">@Modal.SubTitle</h6>
                         <p class="m-0">@Modal.Message</p>
                         <p class="m-0 text-danger">@Modal.DangerText</p>
@@ -45,7 +55,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer justify-content-center gap-4 border-0 mb-3">
+            <div class="modal-footer justify-content-center gap-4 border-0 pt-0">
                 @if (Modal.OptionType != OptionType.Info)
                 {
                     <button class="btn btn-outline-primary"

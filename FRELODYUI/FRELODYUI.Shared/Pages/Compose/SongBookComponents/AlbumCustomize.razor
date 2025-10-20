@@ -1,0 +1,55 @@
+@inject ILogger<AlbumCustomize> _logger
+
+@if (Show)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Album</h5>
+                    <button type="button" class="btn-close" @onclick="Cancel"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@Content" OnValidSubmit="Save">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Album Title <span class="text-danger">*</span></label>
+                            <InputText @bind-Value="Content.Title" class="form-control" placeholder="Enter album title" />
+                            <ValidationMessage For="@(() => Content.Title)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Release Date</label>
+                            <InputDate @bind-Value="Content.ReleaseDate" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Label</label>
+                            <InputText @bind-Value="Content.Label" class="form-control" placeholder="Enter record label" />
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public AlbumDto Content { get; set; } = new();
+    [Parameter] public EventCallback<AlbumDto> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private void Save()
+    {
+        OnSave.InvokeAsync(Content);
+    }
+
+    private void Cancel()
+    {
+        OnCancel.InvokeAsync();
+    }
+}

@@ -12,7 +12,7 @@
                         <DataAnnotationsValidator />
 
                         <div class="mb-3">
-                            <label class="form-label">Title *</label>
+                            <label class="form-label">Title <span class="text-danger">*</span></label>
                             <InputText class="form-control" @bind-Value="songBook.Title" placeholder="Song book title" />
                             <ValidationMessage For="@(() => songBook.Title)" />
                         </div>
@@ -24,7 +24,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Publisher *</label>
+                            <label class="form-label">Publisher <span class="text-danger">*</span></label>
                             <InputText class="form-control" @bind-Value="songBook.Publisher" placeholder="Publisher name" />
                             <ValidationMessage For="@(() => songBook.Publisher)" />
                         </div>
@@ -39,7 +39,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Language *</label>
+                                    <label class="form-label">Language <span class="text-danger">*</span></label>
                                     <InputText class="form-control" @bind-Value="songBook.Language" placeholder="Language" />
                                     <ValidationMessage For="@(() => songBook.Language)" />
                                 </div>

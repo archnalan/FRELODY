@@ -41,6 +41,7 @@ namespace FRELODYAPP.Models
 		public string? History { get; set; }
 
         public string? CategoryId { get; set; }
+        public string? AlbumId { get; set; }
 
         [Range(0, 5)]
         [Column(TypeName = "decimal(3,2)")]
