@@ -424,6 +424,11 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             new BadRequestException("Song not found."));
                     }
 
+                    if(song.CreatedBy != _userId)
+                    {
+                       var createResult = await CreateSong(songDto);
+                       return createResult;
+                    }
                     // Update basic song properties
                     song.Title = songDto.Title;
                     song.SongNumber = songDto.SongNumber;

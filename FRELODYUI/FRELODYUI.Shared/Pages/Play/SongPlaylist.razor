@@ -1,0 +1,462 @@
+@page "/playlists"
+@page "/playlists/{CollectionId}"
+@using FRELODYUI.Shared.Pages.Play.Components
+@inject ILogger<SongPlaylist> _logger
+@implements IDisposable
+
+<div class="container-fluid h-100" style="max-width:55rem;justify-self:center">
+    <div class="container text-center mt-3">
+        <!-- Header -->
+        <div class="position-sticky text-center top-0 bg-body" style="z-index:5">
+            <div class="d-flex justify-content-between align-items-center my-3">
+               @*  <button class="btn btn-outline-primary" @onclick="GoBack">
+                    <i class="bi bi-chevron-left"></i>
+                </button> *@
+                <h3 class="m-0">My Playlists</h3>
+                <button class="btn btn-primary" @onclick="CreateNewPlaylist">
+                    <i class="bi bi-plus-lg me-2"></i>
+                    <span class="d-none d-md-inline">New</span>
+                </button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="rounded-3 bg-light border shadow p-3 mb-2">
+                <div class="d-flex position-relative">
+                    <input type="text"
+                           class="form-control h-12 ps-5 rounded-3"
+                           placeholder="Search playlists or songs..."
+                           @bind-value="searchQuery"
+                           @bind-value:event="oninput"
+                           @bind-value:after="OnSearchInput" />
+                    <button class="btn btn-link position-absolute border-0 start-0 top-0 h-100">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="mt-4 text-center">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p>Loading playlists...</p>
+            </div>
+        }
+        else if (collections.Any())
+        {
+            <!-- Collections/Playlists Folder Structure -->
+            <div class="w-100 playlists-container">
+                @foreach (var colSong in collections.Where(c => string.IsNullOrEmpty(searchQuery) || 
+                    c.Playlist.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true))
+                {
+                    <PlaylistFolder Collection="colSong"
+                                    IsExpanded="expandedCollections.Contains(colSong.Playlist.Id)"
+                                    OnToggle="() => ToggleCollection(colSong.Playlist.Id)"
+                                    OnEdit="() => EditPlaylist(colSong)"
+                                    OnRefresh="LoadPlaylists"
+                                    OnSongClick="OpenSong"
+                                    OnSongMove="(songId) => InitiateSongMove(colSong.Playlist.Id, songId)"
+                                    OnAddSong="() => OpenAddSongModal(colSong.Playlist.Id)"
+                                    IsMovingMode="movingContext != null && movingContext.SourceCollectionId == colSong.Playlist.Id"
+                                    SelectedSongId="movingContext?.SongId" />
+                }
+            </div>
+
+            @if (!collections.Any(c => string.IsNullOrEmpty(searchQuery) || 
+                c.Playlist.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true))
+            {
+                <div class="text-center my-5">
+                    <i class="bi bi-search fs-1 text-muted"></i>
+                    <h6 class="mt-3">No playlists match "@searchQuery"</h6>
+                </div>
+            }
+        }
+        else
+        {
+            <!-- Empty State -->
+            <div class="text-center my-5 p-5">
+                <i class="bi bi-music-note-list fs-1 text-muted"></i>
+                <h5 class="mt-3">No Playlists Yet</h5>
+                <p class="text-muted">Create your first playlist to organize songs for performances</p>
+                <button class="btn btn-primary mt-3" @onclick="CreateNewPlaylist">
+                    <i class="bi bi-plus-lg me-2"></i>Create Playlist
+                </button>
+            </div>
+        }
+
+        <!-- Moving Mode Banner -->
+        @if (movingContext != null)
+        {
+            <div class="position-fixed bottom-0 start-50 translate-middle-x mb-3 p-3 bg-primary text-white rounded-3 shadow-lg" style="z-index:1000; max-width:90vw;">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-arrow-left-right fs-4"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold">Moving: @movingContext.SongTitle</div>
+                        <small>Select a destination playlist</small>
+                    </div>
+                    <button class="btn btn-light btn-sm" @onclick="CancelMove">Cancel</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modals -->
+@if (showPlaylistModal)
+{
+    <PlaylistEditModal IsVisible="showPlaylistModal"
+                      Collection="editingCollection"
+                      OnSave="SavePlaylist"
+                      OnCancel="ClosePlaylistModal" />
+}
+
+<SearchModal @ref="searchModalRef" OnResultSelected="HandleSongSelected" />
+
+<DialogModal IsVisible="_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+<MessageToast ShowToast="@showSuccessMessage" ToastMessage="@successMessage" Type="ToastType.Success" />
+
+@code {
+    [Parameter] public string? CollectionId { get; set; }
+
+    private List<CollectionWithSongs> collections = new();
+    private bool isLoading = true;
+    private string searchQuery = string.Empty;
+    private HashSet<string> expandedCollections = new();
+    private string? currentUserId;
+
+    // Editing state
+    private bool showPlaylistModal = false;
+    private SongCollectionDto editingCollection = new();
+
+    // Moving song between playlists
+    private MovingContext? movingContext;
+
+    // Debounce
+    private CancellationTokenSource? _debounceCts;
+    private const int SearchDebounceMs = 500;
+
+    // Search modal state
+    private SearchModal? searchModalRef;
+    private string? activeCollectionId;
+    private bool showSuccessMessage = false;
+    private string successMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await _globalAuth.GetAuthenticatedUserAsync();
+        if (user.IsSuccess && user.Data != null)
+        {
+            currentUserId = user.Data.Id;
+        }
+
+        await LoadPlaylists();
+
+        // Auto-expand if navigated to specific collection
+        if (!string.IsNullOrEmpty(CollectionId))
+        {
+            expandedCollections.Add(CollectionId);
+        }
+    }
+
+    private async Task LoadPlaylists()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                ShowAuthenticationRequired();
+                return;
+            }
+
+            var response = await _songCollectionsApi.GetUserSongCollections(currentUserId);
+
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                collections = response.Content;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _logger.LogError("Error loading playlists: {Error}", errorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading playlists");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "Failed to load playlists.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+        finally
+        {
+            isLoading = false;
+            await CloseModal();
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleCollection(string collectionId)
+    {
+        if (expandedCollections.Contains(collectionId))
+        {
+            expandedCollections.Remove(collectionId);
+        }
+        else
+        {
+            expandedCollections.Add(collectionId);
+        }
+        StateHasChanged();
+    }
+
+    private void CreateNewPlaylist()
+    {
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            ShowAuthenticationRequired();
+            return;
+        }
+
+        editingCollection = new SongCollectionDto
+        {
+            IsPublic = true,
+            IsFeatured = false
+        };
+        showPlaylistModal = true;
+    }
+
+    private void EditPlaylist(CollectionWithSongs collection)
+    {
+        editingCollection = collection.Playlist;
+        showPlaylistModal = true;
+    }
+
+    private async Task SavePlaylist(SongCollectionDto collection)
+    {
+        await LoadPlaylists();
+        ClosePlaylistModal();
+    }
+
+    private void ClosePlaylistModal()
+    {
+        showPlaylistModal = false;
+        editingCollection = new();
+    }
+
+    
+    private void InitiateSongMove(string sourceCollectionId, string songId)
+    {
+        var collection = collections.FirstOrDefault(c => c.Playlist.Id == sourceCollectionId);
+        var song = collection?.Songs.FirstOrDefault(s => s.Id == songId);
+
+        if (song != null)
+        {
+            movingContext = new MovingContext
+            {
+                SourceCollectionId = sourceCollectionId,
+                SongId = songId,
+                SongTitle = song.Title
+            };
+            StateHasChanged();
+        }
+    }
+
+    private void CancelMove()
+    {
+        movingContext = null;
+        StateHasChanged();
+    }
+
+    private async Task ExecuteSongMove(string destinationCollectionId)
+    {
+        if (movingContext == null) return;
+
+        try
+        {
+            // Remove from source
+            await _songCollectionsApi.RemoveSongFromCollection(movingContext.SourceCollectionId, movingContext.SongId);
+
+            // Add to destination (This might need a new API endpoint to add single song)
+            // For now, we'll need to update the entire collection
+            var destCollection = collections.FirstOrDefault(c => c.Playlist.Id == destinationCollectionId);
+            if (destCollection != null)
+            {
+                var createDto = new SongCollectionCreateDto
+                {
+                    Title = destCollection.Playlist.Title,
+                    SongIds = destCollection.Songs.Select(s => s.Id).Append(movingContext.SongId).ToList(),
+                    Theme = destCollection.Playlist.Theme,
+                    Curator = destCollection.Playlist.Curator,
+                    SheduledDate = DateTimeOffset.Now
+                };
+
+                await _songCollectionsApi.UpdateSongCollection(destinationCollectionId, destCollection.Playlist);
+            }
+
+            movingContext = null;
+            await LoadPlaylists();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error moving song between playlists");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "Failed to move song.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+    }
+
+    private async Task OpenAddSongModal(string collectionId)
+    {
+        activeCollectionId = collectionId;
+        if (searchModalRef != null)
+        {
+            await searchModalRef.Open();
+        }
+    }
+
+    private async Task HandleSongSelected(SearchResult selectedSong)
+    {
+        if (string.IsNullOrEmpty(activeCollectionId) || selectedSong == null)
+            return;
+
+        try
+        {
+            var response = await _songCollectionsApi.AddSongToCollection(activeCollectionId, selectedSong.Id);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await ShowSuccessMessage("Song added to playlist successfully.");
+                await LoadPlaylists();
+                
+                // Ensure the collection stays expanded
+                if (!expandedCollections.Contains(activeCollectionId))
+                {
+                    expandedCollections.Add(activeCollectionId);
+                }
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding song to playlist");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "An error occurred while adding the song to the playlist.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+        finally
+        {
+            activeCollectionId = null;
+        }
+    }
+
+    private void OpenSong(string songId)
+    {
+        _navManager.NavigateTo($"/songs/{songId}");
+    }
+
+    private async Task OnSearchInput()
+    {
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _debounceCts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(SearchDebounceMs, _debounceCts.Token);
+            StateHasChanged();
+        }
+        catch (TaskCanceledException)
+        {
+            // Expected when cancelled
+        }
+    }
+
+    private void ShowAuthenticationRequired()
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Login Required",
+            Message = "Please log in to manage playlists.",
+            HyperlinkText = "Go to Login",
+            ButtonText = "Close",
+            OptionType = OptionType.Info,
+            Context = new ModalContext
+            {
+                ActionType = "NavigateToLogin",
+                Data = "/login"
+            }
+        });
+    }
+
+    private async Task GoBack()
+    {
+        await JsRt.InvokeVoidAsync("goBack");
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "")
+        {
+        }
+        else if (_modalService.CurrentModal?.Context?.ActionType == "NavigateToLogin")
+        {
+            _navManager.NavigateTo("/login");
+        }
+
+        await CloseModal();
+    }
+
+    private async Task ShowSuccessMessage(string message)
+    {
+        successMessage = message;
+        showSuccessMessage = true;
+        StateHasChanged();
+
+        // Auto-hide after 3 seconds
+        await Task.Delay(3000);
+        showSuccessMessage = false;
+        StateHasChanged();
+    }
+
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+    }
+}

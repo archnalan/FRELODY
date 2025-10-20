@@ -1,0 +1,349 @@
+@inject ILogger<PlaylistFolder> _logger
+
+<div class="playlist-folder mb-3">
+    <div class="folder-header bg-light border rounded-3 p-3 @(IsExpanded ? "rounded-bottom-0" : "")"
+         @onclick="HandleToggle"
+         style="cursor:pointer;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3 flex-grow-1">
+                <span class="folder-icon fs-4">
+                    @if (IsExpanded)
+                    {
+                        <i class="bi bi-folder2-open text-primary"></i>
+                    }
+                    else
+                    {
+                        <i class="bi bi-folder2 text-secondary"></i>
+                    }
+                </span>
+                <div class="flex-grow-1">
+                    <h5 class="mb-0 fw-semibold">@Collection.Playlist.Title</h5>
+                    @if (!string.IsNullOrEmpty(Collection.Playlist.Theme))
+                    {
+                        <small class="text-muted">
+                            <i class="bi bi-tag me-1"></i>@Collection.Playlist.Theme
+                        </small>
+                    }
+                </div>
+                <span class="badge bg-primary rounded-pill">@Collection.Songs.Count</span>
+            </div>
+            <div class="d-flex gap-2" @onclick:stopPropagation>
+                <button class="btn btn-sm btn-outline-primary"
+                        data-bs-toggle="tooltip"
+                        title="Share Playlist"
+                        @onclick="() => SharePlaylist(Collection.Playlist.Id)">
+                    <i class="bi bi-share"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary"
+                        data-bs-toggle="tooltip"
+                        title="Edit Playlist"
+                        @onclick="() => OnEdit.InvokeAsync()">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger"
+                        data-bs-toggle="tooltip"
+                        title="Delete Playlist"
+                        @onclick="() => DeletePlaylist(Collection)">
+                    <i class="bi bi-trash"></i>
+                </button>
+                <span class="toggle-icon">
+                    @if (IsExpanded)
+                    {
+                        <i class="bi bi-chevron-up"></i>
+                    }
+                    else
+                    {
+                        <i class="bi bi-chevron-down"></i>
+                    }
+                </span>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Collection.Playlist.Description) && IsExpanded)
+        {
+            <p class="text-muted small mt-2 mb-0">@Collection.Playlist.Description</p>
+        }
+    </div>
+
+    @if (IsExpanded)
+    {
+        <div class="folder-content border border-top-0 rounded-bottom-3">
+            @if (Collection.Songs.Any())
+            {
+                <!-- Songs list with scrollable container -->
+                <div class="songs-list-container" style="max-height: 400px; overflow-y: auto;">
+                    @foreach (var song in Collection.Songs)
+                    {
+                        <PlaylistSongItem Song="song"
+                                         OnClick="() => OnSongClick.InvokeAsync(song.Id)"
+                                         OnRemove="() => RemoveSongFromPlaylist(Collection.Playlist.Id,song.Id)"
+                                          OnShare="() => ShareSong(song.Id)"
+                                         OnMove="() => OnSongMove.InvokeAsync(song.Id)"
+                                         IsSelected="IsMovingMode && SelectedSongId == song.Id"
+                                         IsMovingMode="IsMovingMode" />
+                    }
+                </div>
+                
+                <!-- Add Song button footer (always visible when playlist has songs) -->
+                <div class="playlist-footer border-top p-2 bg-light" @onclick:stopPropagation>
+                    <button class="btn btn-outline-primary btn-sm w-100"
+                            @onclick="() => OnAddSong.InvokeAsync()">
+                        <i class="bi bi-plus-circle me-2"></i>Add Song
+                    </button>
+                </div>
+            }
+            else
+            {
+                <!-- Empty state with Add Song button -->
+                <div class="p-4 text-center text-muted" @onclick:stopPropagation>
+                    <i class="bi bi-music-note fs-3"></i>
+                    <p class="mb-3 mt-2">No songs in this playlist</p>
+                    <button class="btn btn-primary btn-sm"
+                            @onclick="() => OnAddSong.InvokeAsync()">
+                        <i class="bi bi-plus-circle me-2"></i>Add Song
+                    </button>
+                </div>
+            }
+        </div>
+    }
+</div>
+<DialogModal IsVisible="_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+<MessageToast ShowToast="@showSuccessMessage" ToastMessage="@successMessage" Type="ToastType.Success" />
+
+@code {
+    [Parameter] public CollectionWithSongs Collection { get; set; } = new();
+    [Parameter] public bool IsExpanded { get; set; }
+    [Parameter] public EventCallback OnToggle { get; set; }
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback<string> OnSongClick { get; set; }
+    [Parameter] public EventCallback<string> OnSongMove { get; set; }
+    [Parameter] public EventCallback OnAddSong { get; set; }
+    [Parameter] public bool IsMovingMode { get; set; }
+    [Parameter] public string? SelectedSongId { get; set; }
+
+    private bool isGeneratingLink = false;
+
+    private bool showSuccessMessage = false;
+    private string successMessage = string.Empty;
+    private void HandleToggle()
+    {
+        OnToggle.InvokeAsync();
+    }
+
+
+    private async Task ShareSong(string songId)
+    {
+        try
+        {
+            var shareLink = await _shareService.GenerateShareLinkAsync(songId);
+            if (shareLink != null)
+            {
+                await _clipboardService.CopyToClipboardAsync(shareLink.ShareUrl);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Link Copied",
+                    Message = "Song share link copied to clipboard!",
+                    ButtonText = "OK",
+                    OptionType = OptionType.Success
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sharing song");
+        }
+    }
+
+    private async void SharePlaylist(string playlistId)
+    {
+        isGeneratingLink = true;
+        StateHasChanged();
+
+        try
+        {
+            var shareLink = await _shareService.GenerateShareLinkAsync(playlistId);
+            if (shareLink != null)
+            {
+                await _clipboardService.CopyToClipboardAsync(shareLink.ShareUrl);
+                await ShowSuccessMessage("Share link copied to clipboard!");
+            }
+            else
+            {
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Share Link Error",
+                    Message = "Failed to generate share link. Please try again later.",
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        ActionType = "GenerateShareLink",
+                        Data = "Share link generation failed for song ID: " + playlistId
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating share link for song {SongId}", playlistId);
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "An error occurred while generating the share link.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext
+                {
+                    ActionType = "GenerateShareLink",
+                    Data = ex.Message
+                }
+            });
+        }
+        finally
+        {
+            isGeneratingLink = false;
+            StateHasChanged();
+        }
+    }
+
+    private void DeletePlaylist(CollectionWithSongs collection)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Delete Playlist",
+            Message = $"Are you sure you want to delete '{collection.Playlist.Title}'?",
+            DangerText = $"This will remove the playlist and all its {collection.Songs.Count} songs.",
+            ButtonText = "Delete",
+            OptionType = OptionType.Confirmation,
+            Context = new ModalContext
+            {
+                ActionType = "DeletePlaylist",
+                Data = collection.Playlist.Id
+            }
+        });
+    }
+
+    private void RemoveSongFromPlaylist(string collectionId, string songId)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Remove Song",
+            Message = "Remove this song from the playlist?",
+            ButtonText = "Remove",
+            OptionType = OptionType.Confirmation,
+            Context = new ModalContext
+            {
+                ActionType = "RemoveSong",
+                Data = new { CollectionId = collectionId, SongId = songId }
+            }
+        });
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "DeletePlaylist")
+        {
+            var playlistId = _modalService.CurrentModal.Context.Data;
+            await DeletePlaylist(playlistId.ToString() ??"");
+            
+        }
+        else if(_modalService.CurrentModal?.Context?.ActionType == "RemoveSong")
+        {
+            var data = _modalService.CurrentModal.Context.Data as dynamic;
+            string collectionId = data.CollectionId;
+            string songId = data.SongId;
+            await ExecuteRemoveSong(collectionId, songId);
+        }
+        await CloseModal();
+    }
+
+    private async Task DeletePlaylist(string collectionId)
+    {
+        try
+        {
+            var response = await _songCollectionsApi.DeleteSongCollection(collectionId);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await ShowSuccessMessage("Playlist deleted successfully.");
+                await OnRefresh.InvokeAsync();
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting playlist");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "Failed to delete playlist.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+    }
+
+    private async Task ExecuteRemoveSong(string collectionId, string songId)
+    {
+        try
+        {
+            var response = await _songCollectionsApi.RemoveSongFromCollection(collectionId, songId);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await ShowSuccessMessage("Song removed from playlist.");
+                await OnRefresh.InvokeAsync();
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing song from playlist");
+        }
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    private async Task ShowSuccessMessage(string message)
+    {
+        successMessage = message;
+        showSuccessMessage = true;
+        StateHasChanged();
+
+        // Auto-hide after 3 seconds
+        await Task.Delay(3000);
+        showSuccessMessage = false;
+        StateHasChanged();
+    }
+
+}

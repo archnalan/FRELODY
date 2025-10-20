@@ -2,6 +2,7 @@ using FRELODYAPIs.Areas.Admin.ViewModels;
 using FRELODYAPP.Dtos;
 using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYUI.Shared.Models.PlaylistModels;
 using Refit;
 using System.Collections.Generic;
 using System.Threading;
@@ -15,10 +16,10 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<List<SongCollectionDto>>> GetAllSongCollections();
 
         [Get("/api/song-collections/get-user-song-collections")]
-        Task<IApiResponse<List<SongCollectionDto>>> GetUserSongCollections([Query] string userId);
+        Task<IApiResponse<List<CollectionWithSongs>>> GetUserSongCollections([Query] string userId);
 
         [Get("/api/song-collections/get-song-collection-by-id")]
-        Task<IApiResponse<SongCollectionDto>> GetSongCollectionById([Query] string id);
+        Task<IApiResponse<CollectionWithSongs>> GetSongCollectionById([Query] string id);
 
         [Post("/api/song-collections/create-song-collection")]
         Task<IApiResponse<SongCollectionDto>> CreateSongCollection([Body] SongCollectionDto collection);
@@ -26,12 +27,17 @@ namespace FRELODYUI.Shared.RefitApis
         [Post("/api/song-collections/add-collection")]
         Task<IApiResponse<SongCollectionDto>> AddCollection([Body] SongCollectionCreateDto collection);
 
-        
+        [Post("/api/song-collections/add-song-to-collection")]
+        Task<IApiResponse<SongCollectionDto>> AddSongToCollection([Query] string collectionId, [Query] string songId);
+
         [Post("/api/song-collections/make-collection-private")]
         Task<IApiResponse<SongCollectionDto>> MakeCollectionPrivate([Query] string id);
 
         [Put("/api/song-collections/update-song-collection")]
         Task<IApiResponse<SongCollectionDto>> UpdateSongCollection([Query] string id, [Body] SongCollectionDto updatedCollection);
+        
+        [Delete("/api/song-collections/remove-song-from-collection")]
+        Task<IApiResponse<bool>> RemoveSongFromCollection([Query] string collectionId, [Query] string songId);
 
         [Delete("/api/song-collections/delete-song-collection")]
         Task<IApiResponse<bool>> DeleteSongCollection([Query] string id);

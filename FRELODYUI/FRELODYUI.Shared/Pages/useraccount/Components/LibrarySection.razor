@@ -114,7 +114,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">
-                        <i class="bi bi-collection me-2"></i>My Collections
+                        <i class="bi bi-collection me-2"></i>My Playlists
                     </h5>
                 </div>
                 <div class="card-body">
@@ -126,8 +126,8 @@
                                 <div class="list-group-item border-0 px-0">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <div class="fw-medium">@collection.Title</div>
-                                            <small class="text-muted">@collection.SortOrder songs</small>
+                                            <div class="fw-medium">@collection.Playlist.Title</div>
+                                            <small class="text-muted">@(collection.Songs.Count) @(collection.Songs.Count == 1 ? "song" : "songs")</small>
                                         </div>
                                         <button class="btn btn-sm btn-outline-info">
                                             <i class="bi bi-arrow-right"></i>
@@ -157,7 +157,7 @@
 @code {
     [Parameter] public List<ComboBoxDto>? FavoriteSongs { get; set; }
     [Parameter] public List<SongPlayHistoryDto>? RecentPlays { get; set; }
-    [Parameter] public List<SongCollectionDto>? Collections { get; set; }
+    [Parameter] public List<CollectionWithSongs>? Collections { get; set; }
     [Parameter] public EventCallback<string> OnSearchChanged { get; set; }
     [Parameter] public bool IsLoading { get; set; }
 

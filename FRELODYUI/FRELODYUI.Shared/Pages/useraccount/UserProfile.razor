@@ -130,7 +130,7 @@
     // Library data
     private List<ComboBoxDto> favoriteSongs = new();
     private List<SongPlayHistoryDto> recentPlays = new();
-    private List<SongCollectionDto> collections = new();
+    private List<CollectionWithSongs> collections = new();
 
     // UI state
     private string activeTab = "library";
@@ -309,7 +309,7 @@
     {
         try
         {
-            var response = await _songCollectionsApi.GetAllSongCollections();
+            var response = await _songCollectionsApi.GetUserSongCollections(userId);
 
             if (response.IsSuccessStatusCode && response.Content != null)
             {
@@ -462,7 +462,7 @@
                 ).ToList();
                 
                 collections = collections.Where(c => 
-                    c.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true
+                    c.Playlist.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true
                 ).ToList();
             }
             
@@ -572,29 +572,3 @@
         _debounceCts?.Dispose();
     }
 }
-
-<!-- Component Styles -->
-<style>
-    .profile-header {
-        margin-bottom: 2rem;
-    }
-    
-    .nav-tabs .nav-link {
-        border: none;
-        border-bottom: 3px solid transparent;
-        color: #6c757d;
-        padding: 1rem 1.5rem;
-    }
-    
-    .nav-tabs .nav-link.active {
-        background-color: transparent;
-        border-bottom-color: #0d6efd;
-        color: #0d6efd;
-        font-weight: 600;
-    }
-    
-    .nav-tabs .nav-link:hover {
-        border-color: transparent;
-        color: #0d6efd;
-    }
-</style>

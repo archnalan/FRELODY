@@ -1,0 +1,153 @@
+@inject ILogger<PlaylistEditModal> _logger
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @(string.IsNullOrEmpty(Collection.Id) ? "Create New Playlist" : "Edit Playlist")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="HandleCancel"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="Collection" OnValidSubmit="HandleSave">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Title <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="Collection.Title" placeholder="e.g., Sunday Morning Set" />
+                            <ValidationMessage For="@(() => Collection.Title)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <InputTextArea class="form-control" @bind-Value="Collection.Description" 
+                                          rows="3" placeholder="Optional description..." />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Theme/Category</label>
+                            <InputText class="form-control" @bind-Value="Collection.Theme" 
+                                      placeholder="e.g., Worship, Christmas, Youth" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Curator</label>
+                            <InputText class="form-control" @bind-Value="Collection.Curator" 
+                                      placeholder="Your name or team name" />
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="isPublicCheck" 
+                                   checked="@(Collection.IsPublic ?? false)" 
+                                   @onchange="@((ChangeEventArgs e) => Collection.IsPublic = (bool?)e.Value)" />
+                            <label class="form-check-label" for="isPublicCheck">
+                                Make this playlist public
+                            </label>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="button" class="btn btn-secondary" @onclick="HandleCancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-2"></i>Save
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+<DialogModal IsVisible="_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public SongCollectionDto Collection { get; set; } = new();
+    [Parameter] public EventCallback<SongCollectionDto> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task HandleSave()
+    {
+        await SavePlaylist(Collection);
+    }
+
+    private async Task SavePlaylist(SongCollectionDto collection)
+    {
+        try
+        {
+            Refit.IApiResponse<SongCollectionDto> response;
+
+            if (string.IsNullOrEmpty(collection.Id))
+            {
+                // Create new
+                var createDto = new SongCollectionCreateDto
+                {
+                    Title = collection.Title,
+                    Theme = collection.Theme,
+                    Curator = collection.Curator,
+                    SongIds = new List<string>(),
+                    SheduledDate = DateTimeOffset.Now
+                };
+                response = await _songCollectionsApi.AddCollection(createDto);
+            }
+            else
+            {
+                // Update existing
+                response = await _songCollectionsApi.UpdateSongCollection(collection.Id, collection);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                await OnSave.InvokeAsync(collection);
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving playlist");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "An error occurred while saving the playlist.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "")
+        {
+        }
+
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+}

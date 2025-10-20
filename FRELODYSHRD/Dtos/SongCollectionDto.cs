@@ -1,4 +1,5 @@
 using FRELODYAPP.Dtos.SubDtos;
+using FRELODYSHRD.Dtos;
 using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYAPP.Dtos
@@ -31,5 +32,7 @@ namespace FRELODYAPP.Dtos
 
         [StringLength(255)]
         public string? Theme { get; set; }
+        public virtual ICollection<SongBookDto>? SongBooks { get; set; }
+        public virtual ICollection<SongUserCollectionDto>? SongCollections { get; set; }
     }
 }

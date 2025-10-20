@@ -6,6 +6,7 @@ using FRELODYLIB.Models;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYUI.Shared.Models.PlaylistModels;
 using Mapster;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -57,56 +58,87 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #endregion
 
         #region Get User Song Collections
-        public async Task<ServiceResult<List<SongCollectionDto>>> GetUserSongCollectionsAsync(string userId)
+        public async Task<ServiceResult<List<CollectionWithSongs>>> GetUserSongCollectionsAsync(string userId)
         {
             try
             {
-                var collections = await _context.SongCollections
+                var userCollections = await _context.SongCollections
                     .Where(c => c.Curator == userId)
-                    //Direct song collection path
-                    .Include(c => c.SongCollections)
-                            .ThenInclude(cs => cs.Song)
-                    //SongBook -> Category -> Song path
-                    .Include(c => c.SongBooks)
-                        .ThenInclude(s=>s.Categories)
-                            .ThenInclude(c=>c.Songs)
                     .OrderBy(c => c.SortOrder)
                     .ThenBy(c => c.Title)
                     .ToListAsync();
-                var collectionsDto = collections.Adapt<List<SongCollectionDto>>();
-                return ServiceResult<List<SongCollectionDto>>.Success(collectionsDto);
+                var collectionsWithSongs = new List<CollectionWithSongs>();
+                foreach (var collection in userCollections)
+                {
+                    var userCollectionSongs = await _context.SongUserCollections
+                        .Where(sc => sc.SongCollectionId == collection.Id)
+                        .Include(sc => sc.Song)
+                        .OrderBy(sc => sc.SortOrder)
+                        .ToListAsync();
+                    CollectionWithSongs playlist = new()
+                    {
+                        Playlist = collection.Adapt<SongCollectionDto>(),
+                        Songs = userCollectionSongs.Select(uc => new PlaylistSongDto
+                        {
+                            Id = uc.Song.Id,
+                            Title = uc.Song.Title,
+                            SongNumber = uc.Song.SongNumber,
+                            WrittenBy = uc.Song.WrittenBy,
+                            SortOrder = uc.SortOrder,
+                            DateScheduled = uc.DateScheduled
+                        }).ToList()
+                    };
+                    collectionsWithSongs.Add(playlist);
+                }
+                return ServiceResult<List<CollectionWithSongs>>.Success(collectionsWithSongs);
             }
             catch (Exception ex)
             {
                 _logger.LogError("Error retrieving song collections for user {UserId}: {Error}", userId, ex);
-                return ServiceResult<List<SongCollectionDto>>.Failure(ex);
+                return ServiceResult<List<CollectionWithSongs>>.Failure(ex);
             }
         }
         #endregion
 
         #region Get song collection by Id
-        public async Task<ServiceResult<SongCollectionDto>> GetSongCollectionByIdAsync(string id)
+        public async Task<ServiceResult<CollectionWithSongs>> GetSongCollectionByIdAsync(string id)
         {
             try
             {
                 var collection = await _context.SongCollections
-                    .Include(c => c.SongBooks)
                     .FirstOrDefaultAsync(c => c.Id == id);
 
                 if (collection == null)
                 {
                     _logger.LogWarning("Song collection with Id {Id} not found.", id);
-                    return ServiceResult<SongCollectionDto>.Failure(
+                    return ServiceResult<CollectionWithSongs>.Failure(
                         new KeyNotFoundException($"Song collection with Id {id} not found."));
                 }
 
-                var collectionDto = collection.Adapt<SongCollectionDto>();
-                return ServiceResult<SongCollectionDto>.Success(collectionDto);
+                var userCollection = await _context.SongUserCollections
+                    .Where(sc => sc.SongCollectionId == id)
+                    .Include(sc => sc.Song)
+                    .OrderBy(sc => sc.SortOrder)
+                    .ToListAsync();
+                CollectionWithSongs playlist = new()
+                {
+                    Playlist = collection.Adapt<SongCollectionDto>(),
+                    Songs = userCollection.Select(uc => new PlaylistSongDto
+                    {
+                        Id = uc.Song.Id,
+                        Title = uc.Song.Title,
+                        SongNumber = uc.Song.SongNumber,
+                        WrittenBy = uc.Song.WrittenBy,
+                        SortOrder = uc.SortOrder,
+                        DateScheduled = uc.DateScheduled
+                    }).ToList()
+                };
+                return ServiceResult<CollectionWithSongs>.Success(playlist);
             }
             catch (Exception ex)
             {
                 _logger.LogError("Error retrieving song collection with Id {Id}: {Error}", id, ex);
-                return ServiceResult<SongCollectionDto>.Failure(ex);
+                return ServiceResult<CollectionWithSongs>.Failure(ex);
             }
         }
         #endregion
@@ -230,6 +262,48 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 .Replace("\"", "")
                 .Trim();
         }
+
+        public async Task<ServiceResult<SongCollectionDto>> AddSongToCollectionAsync(string collectionId, string songId)
+        {
+            try
+            {
+                bool songExists = await _context.Songs.AnyAsync(s => s.Id == songId);
+                if (!songExists)
+                {
+                    _logger.LogWarning("Song with Id {SongId} not found.", songId);
+                    return ServiceResult<SongCollectionDto>.Failure(
+                        new KeyNotFoundException($"Song with Id {songId} not found."));
+                }
+                var collectionExists = await _context.SongCollections.AnyAsync(c => c.Id == collectionId);
+                if (!collectionExists)
+                {
+                    _logger.LogWarning("Song collection with Id {CollectionId} not found.", collectionId);
+                    return ServiceResult<SongCollectionDto>.Failure(
+                        new KeyNotFoundException($"Song collection with Id {collectionId} not found."));
+                }
+                var songCollection = new SongUserCollection
+                {
+                    SongCollectionId = collectionId,
+                    SongId = songId,
+                    AddedByUserId = _userId,
+                    DateScheduled = DateTimeOffset.UtcNow
+                };
+                await _context.SongUserCollections.AddAsync(songCollection);
+                await _context.SaveChangesAsync();
+                var collection = await _context.SongCollections
+                    .Include(c => c.SongCollections)
+                        .ThenInclude(sc => sc.Song)
+                    .FirstOrDefaultAsync(c => c.Id == collectionId);
+              
+                var collectionDto = collection.Adapt<SongCollectionDto>();
+                return ServiceResult<SongCollectionDto>.Success(collectionDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error adding song with Id {SongId} to collection {CollectionId}: {Error}", songId, collectionId, ex);
+                return ServiceResult<SongCollectionDto>.Failure(ex);
+            }
+        }
         #endregion
 
         #region Make collection private
@@ -254,6 +328,31 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError("Error making song collection with Id {Id} private: {Error}", id, ex);
                 return ServiceResult<SongCollectionDto>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Remove Song from collection
+        public async Task<ServiceResult<bool>> RemoveSongFromCollectionAsync(string collectionId, string songId)
+        {
+            try
+            {
+                var songCollection = await _context.SongUserCollections
+                    .FirstOrDefaultAsync(sc => sc.SongCollectionId == collectionId && sc.SongId == songId);
+                if (songCollection == null)
+                {
+                    _logger.LogWarning("Song with Id {SongId} not found in collection {CollectionId}.", songId, collectionId);
+                    return ServiceResult<bool>.Failure(
+                        new KeyNotFoundException($"Song with Id {songId} not found in collection {collectionId}."));
+                }
+                _context.SongUserCollections.Remove(songCollection);
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error removing song with Id {SongId} from collection {CollectionId}: {Error}", songId, collectionId, ex);
+                return ServiceResult<bool>.Failure(ex);
             }
         }
         #endregion
@@ -321,7 +420,12 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         new KeyNotFoundException($"Song collection with Id {id} not found."));
                 }
 
-                collection.IsDeleted = true;
+                var songsInCollection = await _context.SongUserCollections
+                    .Where(sc => sc.SongCollectionId == id).ToListAsync();
+               
+                _context.SongUserCollections.RemoveRange(songsInCollection);
+
+                _context.SongCollections.Remove(collection);
                 await _context.SaveChangesAsync();
 
                 return ServiceResult<bool>.Success(true);
@@ -373,8 +477,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     LEFT JOIN SongCollections sc ON sb.CollectionId = sc.Id
                     LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
                         AND suf.UserId = @UserId
-                        AND suf.IsDeleted = 0  -- soft delete check
-                    WHERE 
+                         AND (suf.IsDeleted = 0 OR suf.IsDeleted IS NULL)
+                    WHERE
                         (@SongName IS NULL OR s.Title LIKE '%' + @SongName + '%')
                         AND (@SongNumber IS NULL OR s.SongNumber = @SongNumber)
                         AND (@CategoryName IS NULL OR c.Name LIKE '%' + @CategoryName + '%')

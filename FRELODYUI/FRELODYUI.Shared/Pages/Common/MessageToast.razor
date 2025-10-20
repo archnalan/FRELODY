@@ -1,0 +1,44 @@
+﻿@if (ShowToast)
+{
+    <div class="position-absolute top-0 translate-middle-x mt-2" style="max-width:500px; z-index: 2000;">
+        <div class="toast align-items-center show @GetToastClass()" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="@GetIconClass() me-2"></i>
+                    @ToastMessage
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" @onclick="() => ShowToast = false" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool ShowToast { get; set; }
+    [Parameter] public string ToastMessage { get; set; } = "Operation completed successfully.";
+    [Parameter] public ToastType Type { get; set; } = ToastType.Success;
+
+    private string GetToastClass()
+    {
+        return Type switch
+        {
+            ToastType.Success => "text-bg-success",
+            ToastType.Error => "text-bg-danger",
+            ToastType.Info => "text-bg-info",
+            ToastType.Warning => "text-bg-warning",
+            _ => "text-bg-success"
+        };
+    }
+
+    private string GetIconClass()
+    {
+        return Type switch
+        {
+            ToastType.Success => "bi bi-check-circle-fill",
+            ToastType.Error => "bi bi-exclamation-circle-fill",
+            ToastType.Info => "bi bi-info-circle-fill",
+            ToastType.Warning => "bi bi-exclamation-triangle-fill",
+            _ => "bi bi-check-circle-fill"
+        };
+    }
+}

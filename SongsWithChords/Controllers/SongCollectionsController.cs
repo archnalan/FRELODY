@@ -5,6 +5,7 @@ using FRELODYLIB.Models;
 using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYUI.Shared.Models.PlaylistModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -35,7 +36,7 @@ namespace FRELODYAPIs.Controllers
 
         [HttpGet]
         [Authorize]
-        [ProducesResponseType(typeof(List<SongCollectionDto>), 200)]
+        [ProducesResponseType(typeof(List<CollectionWithSongs>), 200)]
         public async Task<IActionResult> GetUserSongCollections([FromQuery] string userId)
         {
             var result = await _songCollectionService.GetUserSongCollectionsAsync(userId);
@@ -45,7 +46,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(SongCollectionDto), 200)]
+        [ProducesResponseType(typeof(CollectionWithSongs), 200)]
         public async Task<IActionResult> GetSongCollectionById([FromQuery] string id)
         {
             var result = await _songCollectionService.GetSongCollectionByIdAsync(id);
@@ -78,6 +79,17 @@ namespace FRELODYAPIs.Controllers
         [HttpPost]
         [Authorize]
         [ProducesResponseType(typeof(SongCollectionDto), 200)]
+        public async Task<IActionResult> AddSongToCollection([FromQuery] string collectionId, [FromQuery] string songId)
+        {
+            var result = await _songCollectionService.AddSongToCollectionAsync(collectionId, songId);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
+            return Ok(result.Data);
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ProducesResponseType(typeof(SongCollectionDto), 200)]
         public async Task<IActionResult> MakeCollectionPrivate([FromQuery] string id)
         {
             var result = await _songCollectionService.MakeCollectionPrivateAsync(id);
@@ -92,6 +104,17 @@ namespace FRELODYAPIs.Controllers
         public async Task<IActionResult> UpdateSongCollection([FromQuery] string id, [FromBody] SongCollectionDto updatedCollection)
         {
             var result = await _songCollectionService.UpdateSongCollectionAsync(id, updatedCollection);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
+            return Ok(result.Data);
+        }
+        
+        [HttpDelete]
+        [Authorize]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> RemoveSongFromCollection([FromQuery] string collectionId, [FromQuery] string songId)
+        {
+            var result = await _songCollectionService.RemoveSongFromCollectionAsync(collectionId, songId);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
