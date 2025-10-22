@@ -50,7 +50,7 @@ builder.Services.AddRefitClient<ICategoriesApi>()
     .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
-builder.Services.AddRefitClient<ISongCollectionsApi>()
+builder.Services.AddRefitClient<IPlaylistsApi>()
     .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 

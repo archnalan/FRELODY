@@ -86,19 +86,22 @@
                         <i class="bi bi-journal"></i>
                     }
                 </button>
-                <button class="btn @(viewMode == ViewMode.Favorites ? "btn-outline-primary" : "btn-outline-secondary")"
-                        data-bs-toggle="tooltip"
-                        title="View Favorites"
-                        @onclick="() => SetViewMode(ViewMode.Favorites)" style="width:3.5rem">
-                    @if (viewMode == ViewMode.Favorites)
-                    {
-                        <i class="bi bi-heart-fill"></i>
-                    }
-                    else
-                    {
-                        <i class="bi bi-heart"></i>
-                    }
-                </button>
+                @if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    <button class="btn @(viewMode == ViewMode.Favorites ? "btn-outline-primary" : "btn-outline-secondary")"
+                    data-bs-toggle="tooltip"
+                    title="View Favorites"
+                    @onclick="() => SetViewMode(ViewMode.Favorites)" style="width:3.5rem">
+                        @if (viewMode == ViewMode.Favorites)
+                        {
+                            <i class="bi bi-heart-fill"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-heart"></i>
+                        }
+                    </button>
+                }
             </div>
             <div class="d-flex align-items-center bg-light border rounded rounded-3 gap-3 p-2 shadow">
                 <button class="btn @(activeView == ActiveView.Expanded ? "btn-outline-primary" : "btn-outline-secondary")"
@@ -196,7 +199,7 @@
 
     // Collection add state
     private bool showCollectionModal = false;
-    private SongCollectionCreateDto collectionDto = new();
+    private PlaylistCreateDto collectionDto = new();
     private HashSet<string> selectedSongIds = new();
     private bool isInSelectionMode => selectedSongIds.Any();
 
@@ -365,7 +368,7 @@
             return;
         }
 
-        collectionDto = new SongCollectionCreateDto
+        collectionDto = new PlaylistCreateDto
         {
             SongIds = selectedSongIds.ToList(),
             SheduledDate = DateTimeOffset.Now
@@ -373,11 +376,11 @@
         showCollectionModal = true;
     }
 
-    private async Task HandleCollectionSave(SongCollectionCreateDto collection)
+    private async Task HandleCollectionSave(PlaylistCreateDto collection)
     {
         try
         {
-            var response = await _songCollectionsApi.AddCollection(collection);
+            var response = await _playlistsApi.AddPlaylist(collection);
             if (response.IsSuccessStatusCode)
             {
                 _modalService.Show(new ModalOptionDto

@@ -126,7 +126,7 @@
 @code {
     [Parameter] public string? CollectionId { get; set; }
 
-    private List<CollectionWithSongs> collections = new();
+    private List<PlaylistSongs> collections = new();
     private bool isLoading = true;
     private string searchQuery = string.Empty;
     private HashSet<string> expandedCollections = new();
@@ -134,7 +134,7 @@
 
     // Editing state
     private bool showPlaylistModal = false;
-    private SongCollectionDto editingCollection = new();
+    private PlaylistDto editingCollection = new();
 
     // Moving song between playlists
     private MovingContext? movingContext;
@@ -179,7 +179,7 @@
                 return;
             }
 
-            var response = await _songCollectionsApi.GetUserSongCollections(currentUserId);
+            var response = await _playlistsApi.GetUserPlaylists(currentUserId);
 
             if (response.IsSuccessStatusCode && response.Content != null)
             {
@@ -231,7 +231,7 @@
             return;
         }
 
-        editingCollection = new SongCollectionDto
+        editingCollection = new PlaylistDto
         {
             IsPublic = true,
             IsFeatured = false
@@ -239,13 +239,13 @@
         showPlaylistModal = true;
     }
 
-    private void EditPlaylist(CollectionWithSongs collection)
+    private void EditPlaylist(PlaylistSongs collection)
     {
         editingCollection = collection.Playlist;
         showPlaylistModal = true;
     }
 
-    private async Task SavePlaylist(SongCollectionDto collection)
+    private async Task SavePlaylist(PlaylistDto collection)
     {
         await LoadPlaylists();
         ClosePlaylistModal();
@@ -288,14 +288,14 @@
         try
         {
             // Remove from source
-            await _songCollectionsApi.RemoveSongFromCollection(movingContext.SourceCollectionId, movingContext.SongId);
+            await _playlistsApi.RemoveSongFromPlaylist(movingContext.SourceCollectionId, movingContext.SongId);
 
             // Add to destination (This might need a new API endpoint to add single song)
             // For now, we'll need to update the entire collection
             var destCollection = collections.FirstOrDefault(c => c.Playlist.Id == destinationCollectionId);
             if (destCollection != null)
             {
-                var createDto = new SongCollectionCreateDto
+                var createDto = new PlaylistCreateDto
                 {
                     Title = destCollection.Playlist.Title,
                     SongIds = destCollection.Songs.Select(s => s.Id).Append(movingContext.SongId).ToList(),
@@ -304,7 +304,7 @@
                     SheduledDate = DateTimeOffset.Now
                 };
 
-                await _songCollectionsApi.UpdateSongCollection(destinationCollectionId, destCollection.Playlist);
+                await _playlistsApi.UpdatePlaylist(destinationCollectionId, destCollection.Playlist);
             }
 
             movingContext = null;
@@ -339,7 +339,7 @@
 
         try
         {
-            var response = await _songCollectionsApi.AddSongToCollection(activeCollectionId, selectedSong.Id);
+            var response = await _playlistsApi.AddSongToPlaylist(activeCollectionId, selectedSong.Id);
 
             if (response.IsSuccessStatusCode)
             {

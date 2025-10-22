@@ -39,7 +39,7 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddTransient<ITenantProvider, TenantProvider>();
 builder.Services.AddScoped<ITenantService, TenantService>();
-builder.Services.AddScoped<ISongCollectionService,SongCollectionService>();
+builder.Services.AddScoped<IPlaylistService,PlaylistService>();
 builder.Services.AddScoped<ISongBookService,SongBookService>();
 builder.Services.AddScoped<IArtistService,ArtistService>();
 builder.Services.AddScoped<ICategoryService,CategoryService>();

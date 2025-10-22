@@ -35,6 +35,7 @@
 @using FRELODYUI.Shared.Models.PlaylistModels
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authorization
+@using FRELODYSHRD.Dtos.Composite
 @using FRELODYSHRD.Constants
 
 @inject IAuthApi _authApi
@@ -45,7 +46,7 @@
 @inject ISongsApi _songsApi
 @inject IJSRuntime JsRt
 @inject IApiResponseHandler _apiResponseHandler
-@inject ISongCollectionsApi _songCollectionsApi
+@inject IPlaylistsApi _playlistsApi
 @inject ISongBooksApi _songsBooksApi
 @inject IArtistsApi _artistsApi
 @inject ICategoriesApi _categoriesApi

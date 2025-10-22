@@ -18,6 +18,6 @@ namespace FRELODYSHRD.Dtos
         public int? SortOrder { get; set; }
         public DateTimeOffset DateScheduled { get; set; } = DateTimeOffset.UtcNow;
         public virtual SongDto? Song { get; set; }
-        public virtual SongCollectionDto? SongCollection { get; set; }
+        public virtual PlaylistDto? SongCollection { get; set; }
     }
 }

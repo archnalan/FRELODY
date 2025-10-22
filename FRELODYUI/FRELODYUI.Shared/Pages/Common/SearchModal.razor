@@ -273,7 +273,7 @@
         isLoading = true;
         StateHasChanged();
 
-        var result = await _songCollectionsApi.EnhancedSongSearch(0, 20, searchTerm);
+        var result = await _playlistsApi.EnhancedSongSearch(0, 20, searchTerm);
         if (result.IsSuccessStatusCode)
         {
             if (result.Content?.Data != null)

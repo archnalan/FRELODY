@@ -14,21 +14,21 @@ namespace FRELODYAPIs.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
-    public class SongCollectionsController : ControllerBase
+    public class PlaylistsController : ControllerBase
     {
-        private readonly ISongCollectionService _songCollectionService;
+        private readonly IPlaylistService _playlistService;
 
-        public SongCollectionsController(ISongCollectionService songCollectionService)
+        public PlaylistsController(IPlaylistService playlistService)
         {
-            _songCollectionService = songCollectionService;
+            _playlistService = playlistService;
         }
 
         [HttpGet]
         [Authorize(Roles = $"{UserRoles.Editor},{UserRoles.Contributor},{UserRoles.Admin},{UserRoles.Owner}")]
-        [ProducesResponseType(typeof(List<SongCollectionDto>), 200)]
-        public async Task<IActionResult> GetAllSongCollections()
+        [ProducesResponseType(typeof(List<PlaylistDto>), 200)]
+        public async Task<IActionResult> GetAllPlaylists()
         {
-            var result = await _songCollectionService.GetAllSongCollectionsAsync();
+            var result = await _playlistService.GetAllPlaylistsAsync();
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
@@ -36,52 +36,52 @@ namespace FRELODYAPIs.Controllers
 
         [HttpGet]
         [Authorize]
-        [ProducesResponseType(typeof(List<CollectionWithSongs>), 200)]
-        public async Task<IActionResult> GetUserSongCollections([FromQuery] string userId)
+        [ProducesResponseType(typeof(List<PlaylistSongs>), 200)]
+        public async Task<IActionResult> GetUserPlaylists([FromQuery] string userId)
         {
-            var result = await _songCollectionService.GetUserSongCollectionsAsync(userId);
+            var result = await _playlistService.GetUserPlaylistsAsync(userId);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(CollectionWithSongs), 200)]
-        public async Task<IActionResult> GetSongCollectionById([FromQuery] string id)
+        [ProducesResponseType(typeof(PlaylistSongs), 200)]
+        public async Task<IActionResult> GetPlaylistById([FromQuery] string id)
         {
-            var result = await _songCollectionService.GetSongCollectionByIdAsync(id);
+            var result = await _playlistService.GetPlaylistByIdAsync(id);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
         }
 
         [HttpPost]
-        [ProducesResponseType(typeof(SongCollectionDto), 201)]
-        public async Task<IActionResult> CreateSongCollection([FromBody] SongCollectionDto collection)
+        [ProducesResponseType(typeof(PlaylistDto), 201)]
+        public async Task<IActionResult> CreatePlaylist([FromBody] PlaylistDto collection)
         {
-            var result = await _songCollectionService.CreateSongCollectionAsync(collection);
+            var result = await _playlistService.CreatePlaylistAsync(collection);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
-            return CreatedAtAction(nameof(GetSongCollectionById), new { id = result.Data.Id }, result.Data);
+            return CreatedAtAction(nameof(GetPlaylistById), new { id = result.Data.Id }, result.Data);
         }
         
         [HttpPost]
         [Authorize]
-        [ProducesResponseType(typeof(SongCollectionDto), 201)]
-        public async Task<IActionResult> AddCollection([FromBody] SongCollectionCreateDto collection)
+        [ProducesResponseType(typeof(PlaylistDto), 201)]
+        public async Task<IActionResult> AddCollection([FromBody] PlaylistCreateDto collection)
         {
-            var result = await _songCollectionService.AddCollectionAsync(collection);
+            var result = await _playlistService.AddPlaylistAsync(collection);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
-            return CreatedAtAction(nameof(GetSongCollectionById), new { id = result.Data.Id }, result.Data);
+            return CreatedAtAction(nameof(GetPlaylistById), new { id = result.Data.Id }, result.Data);
         }
 
         [HttpPost]
         [Authorize]
-        [ProducesResponseType(typeof(SongCollectionDto), 200)]
+        [ProducesResponseType(typeof(PlaylistDto), 200)]
         public async Task<IActionResult> AddSongToCollection([FromQuery] string collectionId, [FromQuery] string songId)
         {
-            var result = await _songCollectionService.AddSongToCollectionAsync(collectionId, songId);
+            var result = await _playlistService.AddSongToPlaylistAsync(collectionId, songId);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
@@ -89,10 +89,10 @@ namespace FRELODYAPIs.Controllers
 
         [HttpPost]
         [Authorize]
-        [ProducesResponseType(typeof(SongCollectionDto), 200)]
+        [ProducesResponseType(typeof(PlaylistDto), 200)]
         public async Task<IActionResult> MakeCollectionPrivate([FromQuery] string id)
         {
-            var result = await _songCollectionService.MakeCollectionPrivateAsync(id);
+            var result = await _playlistService.MakePlaylistPrivateAsync(id);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
@@ -100,10 +100,10 @@ namespace FRELODYAPIs.Controllers
 
         [HttpPut]
         [Authorize]
-        [ProducesResponseType(typeof(SongCollectionDto), 200)]
-        public async Task<IActionResult> UpdateSongCollection([FromQuery] string id, [FromBody] SongCollectionDto updatedCollection)
+        [ProducesResponseType(typeof(PlaylistDto), 200)]
+        public async Task<IActionResult> UpdatePlaylist([FromQuery] string id, [FromBody] PlaylistDto updatedCollection)
         {
-            var result = await _songCollectionService.UpdateSongCollectionAsync(id, updatedCollection);
+            var result = await _playlistService.UpdatePlaylistAsync(id, updatedCollection);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
@@ -114,7 +114,7 @@ namespace FRELODYAPIs.Controllers
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> RemoveSongFromCollection([FromQuery] string collectionId, [FromQuery] string songId)
         {
-            var result = await _songCollectionService.RemoveSongFromCollectionAsync(collectionId, songId);
+            var result = await _playlistService.RemoveSongFromPlaylistAsync(collectionId, songId);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
@@ -123,9 +123,9 @@ namespace FRELODYAPIs.Controllers
         [HttpDelete]
         [Authorize]
         [ProducesResponseType(typeof(bool), 200)]
-        public async Task<IActionResult> DeleteSongCollection([FromQuery] string id)
+        public async Task<IActionResult> DeletePlaylist([FromQuery] string id)
         {
-            var result = await _songCollectionService.DeleteSongCollectionAsync(id);
+            var result = await _playlistService.DeletePlaylistAsync(id);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
@@ -144,7 +144,7 @@ namespace FRELODYAPIs.Controllers
         [FromQuery] string? orderByColumn = null,
         CancellationToken cancellationToken = default)
         {
-            var result = await _songCollectionService.GetPaginatedSongs(
+            var result = await _playlistService.GetPaginatedSongs(
                 offset, limit, songName, songNumber, categoryName, songBookId, curatorIds, orderByColumn, cancellationToken);
 
             if (!result.IsSuccess)
@@ -161,7 +161,7 @@ namespace FRELODYAPIs.Controllers
             [FromQuery] string? orderByColumn = null,
             CancellationToken cancellationToken = default)            
         {
-            var result = await _songCollectionService.EnhancedSongSearch(offset, limit, searchTerm, orderByColumn, cancellationToken);
+            var result = await _playlistService.EnhancedSongSearch(offset, limit, searchTerm, orderByColumn, cancellationToken);
             
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");

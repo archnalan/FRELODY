@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace FRELODYLIB.Models
 {
-    public class SongCollection : BaseEntity
+    public class Playlist : BaseEntity
     {
         [Required]
         [StringLength(100)]
@@ -25,7 +25,7 @@ namespace FRELODYLIB.Models
         public string? Curator { get; set; } 
 
         [DataType(DataType.Date)]
-        public DateTime? CollectionDate { get; set; } = DateTime.UtcNow;
+        public DateTime? PlaylistDate { get; set; } = DateTime.UtcNow;
 
         public bool? IsPublic { get; set; } = true;
 
@@ -37,7 +37,7 @@ namespace FRELODYLIB.Models
         public string? Theme { get; set; } // Optional: e.g. Gospel, Advent, Youth, etc.
 
         public virtual ICollection<SongBook>? SongBooks { get; set; }
-        public virtual ICollection<SongUserCollection>? SongCollections { get; set; }
+        public virtual ICollection<SongUserPlaylist>? SongPlaylists { get; set; }
     }
 
 }

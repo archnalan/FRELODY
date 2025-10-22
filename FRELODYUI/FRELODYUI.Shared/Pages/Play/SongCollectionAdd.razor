@@ -64,8 +64,8 @@
 }
 
 @code {
-    [Parameter] public SongCollectionCreateDto Content { get; set; } = new();
-    [Parameter] public EventCallback<SongCollectionCreateDto> OnSave { get; set; }
+    [Parameter] public PlaylistCreateDto Content { get; set; } = new();
+    [Parameter] public EventCallback<PlaylistCreateDto> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool show { get; set; }
 

@@ -115,7 +115,7 @@
 <MessageToast ShowToast="@showSuccessMessage" ToastMessage="@successMessage" Type="ToastType.Success" />
 
 @code {
-    [Parameter] public CollectionWithSongs Collection { get; set; } = new();
+    [Parameter] public PlaylistSongs Collection { get; set; } = new();
     [Parameter] public bool IsExpanded { get; set; }
     [Parameter] public EventCallback OnToggle { get; set; }
     [Parameter] public EventCallback OnEdit { get; set; }
@@ -211,7 +211,7 @@
         }
     }
 
-    private void DeletePlaylist(CollectionWithSongs collection)
+    private void DeletePlaylist(PlaylistSongs collection)
     {
         _modalService.Show(new ModalOptionDto
         {
@@ -266,7 +266,7 @@
     {
         try
         {
-            var response = await _songCollectionsApi.DeleteSongCollection(collectionId);
+            var response = await _playlistsApi.DeletePlaylist(collectionId);
 
             if (response.IsSuccessStatusCode)
             {
@@ -302,7 +302,7 @@
     {
         try
         {
-            var response = await _songCollectionsApi.RemoveSongFromCollection(collectionId, songId);
+            var response = await _playlistsApi.RemoveSongFromPlaylist(collectionId, songId);
 
             if (response.IsSuccessStatusCode)
             {

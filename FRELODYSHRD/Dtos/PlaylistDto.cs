@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYAPP.Dtos
 {
-    public class SongCollectionDto :BaseEntityDto
+    public class PlaylistDto :BaseEntityDto
     {
         public string Id { get; set; }
 
@@ -22,7 +22,7 @@ namespace FRELODYAPP.Dtos
         public string? Curator { get; set; }
 
         [DataType(DataType.Date)]
-        public DateTime? CollectionDate { get; set; }
+        public DateTime? PlaylistDate { get; set; }
 
         public bool? IsPublic { get; set; }
 

@@ -43,14 +43,14 @@
                         <button class="nav-link @(activeSelectionTab == "songbook" ? "active" : "")"
                                 type="button"
                                 @onclick='() => SetActiveSelectionTab("songbook")'>
-                            <i class="bi bi-book"></i> Songbook
+                            <i class="bi bi-book"></i><span class="d-none d-md-inline ms-1">Songbook</span>
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link @(activeSelectionTab == "artist" ? "active" : "")"
                                 type="button"
                                 @onclick='() => SetActiveSelectionTab("artist")'>
-                            <i class="bi bi-person"></i> Artist/Album
+                            <i class="bi bi-person"></i><span class="d-none d-md-inline ms-1">Artist/Album</span>
                         </button>
                     </li>
                 </ul>
@@ -60,6 +60,22 @@
                     <!-- Songbook Flow -->
                     @if (activeSelectionTab == "songbook")
                     {
+                        <!-- Existing Book-Category Pairs -->
+                        @if (selectedBookCategories.Any())
+                        {
+                            <div class="mb-2">
+                                @foreach (var bookCat in selectedBookCategories)
+                                {
+                                    <div class="badge bg-primary me-1 mb-1 d-inline-flex align-items-center">
+                                        <span class="small">@bookCat.BookTitle @(bookCat.CategoryName != null ? $"/ {bookCat.CategoryName}" : "")</span>
+                                        <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
+                                                @onclick="() => RemoveBookCategory(bookCat)"></button>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Add New Book-Category Pair -->
                         @if (string.IsNullOrEmpty(selectedSongBook?.Id))
                         {
                             <SongBookDropdown @ref="songBookDropdownRef"
@@ -68,28 +84,49 @@
                         }
                         else if (selectedSongBook != null && !string.IsNullOrEmpty(selectedSongBook.Id))
                         {
-                            <div class="w-100 row">
-                                <div class="col-4 btn btn-link text-decoration-none"
-                                     @onclick="ChangeBookSelection">
-                                    <strong class="text-sm-start">
-                                        @(selectedSongBook.Title.Length > MAX_TITLE_LEN
-                                                                    ? selectedSongBook.Title.Substring(0, 15) + "…"
-                                                                    : selectedSongBook.Title)
-                        </strong>
-                    </div>
-                    <div class="col-8">
-                        <CategoriesDropdown SelectedCategory="@selectedCategory"
-                                            SelectedCategoryChanged="HandleCategoryChanged"
-                                            SongBookId="@selectedSongBook.Id"
-                                            TabIndex="10" />
-                    </div>
-                </div>
-                                }
+                            <div class="row g-1">
+                                <div class="col-4">
+                                    <button type="button" class="btn btn-sm btn-link text-truncate w-100 text-start"
+                                            @onclick="ChangeBookSelection">
+                                        <strong>@GetTruncatedTitle(selectedSongBook.Title)</strong>
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <CategoriesDropdown SelectedCategory="@selectedCategory"
+                                                        SelectedCategoryChanged="HandleCategoryChanged"
+                                                        SongBookId="@selectedSongBook.Id"
+                                                        TabIndex="10" />
+                                </div>
+                                <div class="col-2">
+                                    <button type="button" class="btn btn-sm btn-success w-100"
+                                            @onclick="AddBookCategoryPair"
+                                            title="Add this book/category">
+                                        <i class="bi bi-plus-circle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
                     }
 
                     <!-- Artist/Album Flow -->
                     @if (activeSelectionTab == "artist")
                     {
+                        <!-- Existing Artist-Album Pairs -->
+                        @if (selectedArtistAlbums.Any())
+                        {
+                            <div class="mb-2">
+                                @foreach (var artistAlbum in selectedArtistAlbums)
+                                {
+                                    <div class="badge bg-info me-1 mb-1 d-inline-flex align-items-center">
+                                        <span class="small">@artistAlbum.ArtistName @(artistAlbum.AlbumTitle != null ? $"/ {artistAlbum.AlbumTitle}" : "")</span>
+                                        <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
+                                                @onclick="() => RemoveArtistAlbum(artistAlbum)"></button>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Add New Artist-Album Pair -->
                         @if (string.IsNullOrEmpty(selectedArtist?.Id))
                         {
                             <ArtistDropdown @ref="artistDropdownRef"
@@ -98,23 +135,28 @@
                         }
                         else if (selectedArtist != null && !string.IsNullOrEmpty(selectedArtist.Id))
                         {
-                            <div class="w-100 row">
-                                <div class="col-4 btn btn-link text-decoration-none"
-                                     @onclick="ChangeArtistSelection">
-                                    <strong class="text-sm-start">
-                                        @(selectedArtist.Name.Length > MAX_TITLE_LEN
-                                                                    ? selectedArtist.Name.Substring(0, 15) + "…"
-                                                                    : selectedArtist.Name)
-                        </strong>
-                    </div>
-                    <div class="col-8">
-                        <AlbumDropdown SelectedAlbum="@selectedAlbum"
-                                       SelectedAlbumChanged="HandleAlbumChanged"
-                                       ArtistId="@selectedArtist.Id"
-                                       TabIndex="10" />
-                    </div>
-                </div>
-                                }
+                            <div class="row g-1">
+                                <div class="col-4">
+                                    <button type="button" class="btn btn-sm btn-link text-truncate w-100 text-start"
+                                            @onclick="ChangeArtistSelection">
+                                        <strong>@GetTruncatedTitle(selectedArtist.Name)</strong>
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <AlbumDropdown SelectedAlbum="@selectedAlbum"
+                                                   SelectedAlbumChanged="HandleAlbumChanged"
+                                                   ArtistId="@selectedArtist.Id"
+                                                   TabIndex="10" />
+                                </div>
+                                <div class="col-2">
+                                    <button type="button" class="btn btn-sm btn-success w-100"
+                                            @onclick="AddArtistAlbumPair"
+                                            title="Add this artist/album">
+                                        <i class="bi bi-plus-circle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
                     }
                 </div>
             </div>
@@ -179,6 +221,9 @@
     private const int MAX_TITLE_LEN = 15;
     private bool isLoading = true;
     private string activeSelectionTab = "songbook";
+
+    private List<BookCategoryPairViewModel> selectedBookCategories = new();
+    private List<ArtistAlbumPairViewModel> selectedArtistAlbums = new();
 
     private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
                   Segments="@AllPartsSegments.GetValueOrDefault(id, new List<SegmentCreateDto>())"
@@ -352,7 +397,7 @@
         }
         StateHasChanged();
     }
-    
+
     private void SetActiveSelectionTab(string tab)
     {
         activeSelectionTab = tab;
@@ -367,8 +412,6 @@
         {
             selectedSongBook = null;
             selectedCategory = null;
-            songData.SongBookId = null;
-            songData.CategoryId = null;
         }
 
         StateHasChanged();
@@ -407,7 +450,21 @@
         songData.Title = SongTitle;
         songData.SongNumber = SongNumber;
         songData.SongLyrics = allSegments;
+        // Map BookCategory pairs
+        songData.BookCategories = selectedBookCategories.Select(bc => new BookCategorySongDto
+        {
+            SongBookId = bc.SongBookId,
+            CategoryId = bc.CategoryId,
+            SongNumber = bc.SongNumber ?? SongNumber
+        }).ToList();
 
+        // Map ArtistAlbum pairs
+        songData.ArtistAlbums = selectedArtistAlbums.Select(aa => new ArtistAlbumSongDto
+        {
+            ArtistId = aa.ArtistId,
+            AlbumId = aa.AlbumId,
+            TrackNumber = aa.TrackNumber
+        }).ToList();
         if (allSegments.Count == 0)
         {
             _modalService.Show(new ModalOptionDto
@@ -887,7 +944,7 @@
             await songBookDropdownRef.FocusInput();
         }
     }
-    
+
     private async void ChangeArtistSelection()
     {
         selectedArtist = null;
@@ -898,6 +955,75 @@
         {
             await artistDropdownRef.FocusInput();
         }
+    }
+    private void AddBookCategoryPair()
+    {
+        if (selectedSongBook == null) return;
+
+        var existingPair = selectedBookCategories.FirstOrDefault(bc =>
+            bc.SongBookId == selectedSongBook.Id &&
+            bc.CategoryId == selectedCategory?.Id);
+
+        if (existingPair == null)
+        {
+            selectedBookCategories.Add(new BookCategoryPairViewModel
+            {
+                SongBookId = selectedSongBook.Id,
+                BookTitle = selectedSongBook.Title,
+                CategoryId = selectedCategory?.Id,
+                CategoryName = selectedCategory?.Name,
+                SongNumber = SongNumber
+            });
+        }
+
+        // Reset for next entry
+        selectedSongBook = null;
+        selectedCategory = null;
+        StateHasChanged();
+    }
+
+    private void RemoveBookCategory(BookCategoryPairViewModel bookCat)
+    {
+        selectedBookCategories.Remove(bookCat);
+        StateHasChanged();
+    }
+
+    private void AddArtistAlbumPair()
+    {
+        if (selectedArtist == null) return;
+
+        var existingPair = selectedArtistAlbums.FirstOrDefault(aa =>
+            aa.ArtistId == selectedArtist.Id &&
+            aa.AlbumId == selectedAlbum?.Id);
+
+        if (existingPair == null)
+        {
+            selectedArtistAlbums.Add(new ArtistAlbumPairViewModel
+            {
+                ArtistId = selectedArtist.Id,
+                ArtistName = selectedArtist.Name,
+                AlbumId = selectedAlbum?.Id,
+                AlbumTitle = selectedAlbum?.Title
+            });
+        }
+
+        // Reset for next entry
+        selectedArtist = null;
+        selectedAlbum = null;
+        StateHasChanged();
+    }
+
+    private void RemoveArtistAlbum(ArtistAlbumPairViewModel artistAlbum)
+    {
+        selectedArtistAlbums.Remove(artistAlbum);
+        StateHasChanged();
+    }
+
+    private string GetTruncatedTitle(string title)
+    {
+        return title.Length > MAX_TITLE_LEN
+            ? title.Substring(0, MAX_TITLE_LEN) + "…"
+            : title;
     }
 
     private async Task ConfirmModal()
@@ -921,4 +1047,23 @@
     {
         _tabsManager.OnRelocateLine -= HandleRelocateLineRequest;
     }
+
+    private class BookCategoryPairViewModel
+    {
+        public string SongBookId { get; set; } = default!;
+        public string BookTitle { get; set; } = default!;
+        public string? CategoryId { get; set; }
+        public string? CategoryName { get; set; }
+        public int? SongNumber { get; set; }
+    }
+
+    private class ArtistAlbumPairViewModel
+    {
+        public string ArtistId { get; set; } = default!;
+        public string ArtistName { get; set; } = default!;
+        public string? AlbumId { get; set; }
+        public string? AlbumTitle { get; set; }
+        public int? TrackNumber { get; set; }
+    }
+
 }

@@ -6,14 +6,14 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FRELODYLIB.Models
 {
-    [Index(nameof(SongId), nameof(SongCollectionId), nameof(TenantId), IsUnique = true)]
-    public class SongUserCollection : BaseEntity
+    [Index(nameof(SongId), nameof(PlaylistId), nameof(TenantId), IsUnique = true)]
+    public class SongUserPlaylist : BaseEntity
     {
         [Required]
         public string SongId { get; set; } = default!;
 
         [Required]
-        public string SongCollectionId { get; set; } = default!;
+        public string PlaylistId { get; set; } = default!;
 
         public string? AddedByUserId { get; set; }
         public int? SortOrder { get; set; }
@@ -22,7 +22,7 @@ namespace FRELODYLIB.Models
         [ForeignKey(nameof(SongId))]
         public virtual Song? Song { get; set; }
 
-        [ForeignKey(nameof(SongCollectionId))]
-        public virtual SongCollection? SongCollection { get; set; }
+        [ForeignKey(nameof(PlaylistId))]
+        public virtual Playlist? SongPlaylist { get; set; }
     }
 }

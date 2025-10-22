@@ -4,6 +4,7 @@ using FRELODYAPP.Data.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FRELODYLIB.Migrations
 {
     [DbContext(typeof(SongDbContext))]
-    partial class SongDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251021173116_PlayList")]
+    partial class PlayList
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -155,6 +158,146 @@ namespace FRELODYLIB.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Artists");
+                });
+
+            modelBuilder.Entity("FRELODYAPP.Models.ArtistAlbumSong", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("Access")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AlbumId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ArtistId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool?>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("SongId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("TrackNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Access");
+
+                    b.HasIndex("AlbumId");
+
+                    b.HasIndex("DateCreated");
+
+                    b.HasIndex("DateModified");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("ModifiedBy");
+
+                    b.HasIndex("SongId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("ArtistId", "SongId", "AlbumId", "TenantId")
+                        .IsUnique()
+                        .HasFilter("[AlbumId] IS NOT NULL AND [TenantId] IS NOT NULL");
+
+                    b.ToTable("ArtistAlbumSongs");
+                });
+
+            modelBuilder.Entity("FRELODYAPP.Models.BookCategorySong", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("Access")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CategoryId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool?>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("SongBookId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("SongId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("SongNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Access");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("DateCreated");
+
+                    b.HasIndex("DateModified");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("ModifiedBy");
+
+                    b.HasIndex("SongId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("SongBookId", "SongId", "CategoryId", "TenantId")
+                        .IsUnique()
+                        .HasFilter("[CategoryId] IS NOT NULL AND [TenantId] IS NOT NULL");
+
+                    b.ToTable("BookCategorySongs");
                 });
 
             modelBuilder.Entity("FRELODYAPP.Models.Category", b =>
@@ -1729,13 +1872,13 @@ namespace FRELODYLIB.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PlaylistId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("PlaylistId1")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("SongId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("SongPlaylistId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
@@ -1764,11 +1907,11 @@ namespace FRELODYLIB.Migrations
 
                     b.HasIndex("PlaylistId");
 
-                    b.HasIndex("PlaylistId1");
+                    b.HasIndex("SongPlaylistId");
 
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("SongId", "PlaylistId", "TenantId")
+                    b.HasIndex("SongId", "SongPlaylistId", "TenantId")
                         .IsUnique()
                         .HasFilter("[TenantId] IS NOT NULL");
 
@@ -1933,6 +2076,68 @@ namespace FRELODYLIB.Migrations
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("FRELODYAPP.Models.ArtistAlbumSong", b =>
+                {
+                    b.HasOne("FRELODYAPP.Models.Album", "Album")
+                        .WithMany()
+                        .HasForeignKey("AlbumId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FRELODYAPP.Models.Artist", "Artist")
+                        .WithMany()
+                        .HasForeignKey("ArtistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FRELODYAPP.Models.Song", "Song")
+                        .WithMany()
+                        .HasForeignKey("SongId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FRELODYAPP.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Album");
+
+                    b.Navigation("Artist");
+
+                    b.Navigation("Song");
+                });
+
+            modelBuilder.Entity("FRELODYAPP.Models.BookCategorySong", b =>
+                {
+                    b.HasOne("FRELODYAPP.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FRELODYAPP.Models.SongBook", "SongBook")
+                        .WithMany()
+                        .HasForeignKey("SongBookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FRELODYAPP.Models.Song", "Song")
+                        .WithMany()
+                        .HasForeignKey("SongId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FRELODYAPP.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Song");
+
+                    b.Navigation("SongBook");
                 });
 
             modelBuilder.Entity("FRELODYAPP.Models.Category", b =>
@@ -2211,19 +2416,19 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYLIB.Models.SongUserPlaylist", b =>
                 {
-                    b.HasOne("FRELODYLIB.Models.Playlist", "SongPlaylist")
-                        .WithMany()
-                        .HasForeignKey("PlaylistId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("FRELODYLIB.Models.Playlist", null)
-                        .WithMany("SongPlaylists")
-                        .HasForeignKey("PlaylistId1");
+                        .WithMany("SongCollections")
+                        .HasForeignKey("PlaylistId");
 
                     b.HasOne("FRELODYAPP.Models.Song", "Song")
                         .WithMany()
                         .HasForeignKey("SongId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FRELODYLIB.Models.Playlist", "SongPlaylist")
+                        .WithMany()
+                        .HasForeignKey("SongPlaylistId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -2343,7 +2548,7 @@ namespace FRELODYLIB.Migrations
                 {
                     b.Navigation("SongBooks");
 
-                    b.Navigation("SongPlaylists");
+                    b.Navigation("SongCollections");
                 });
 #pragma warning restore 612, 618
         }

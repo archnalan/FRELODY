@@ -2,7 +2,7 @@
 @inject ILogger<Song> _logger
 @implements IDisposable
 
-<div class="w-100 d-flex justify-content-center mx-auto p-6 bg-body ">
+<div class="w-100 d-flex justify-content-center mx-auto p-6">
     @if (isLoading)
     {
         <div class="mt-4 text-center">
@@ -33,11 +33,11 @@
             <div class="d-flex justify-content-center align-items-center mb-2">
                 @if (song.SongNumber.HasValue)
                 {
-                    <h3 class="text-black text-opacity-50 me-3">
+                    <h3 class="text-opacity-50 me-3">
                         @song.SongNumber.Value.ToString("D3")
                     </h3>
                 }
-                <h3 class="fw-bold text-black text-center">
+                <h3 class="fw-bold text-center">
                     @song.Title
                 </h3>
             </div>
@@ -155,11 +155,19 @@
     private int capo = 0;
     private Dictionary<string, int>? chordScale;
     private string[]? originalChords;
+    private string currentUserId = string.Empty;
 
     protected override async Task OnParametersSetAsync()
     {
         if (!string.IsNullOrEmpty(SongId))
             await LoadSong();
+
+
+        var user = await _globalAuth.GetAuthenticatedUserAsync();
+        if (user.IsSuccess && user.Data != null)
+        {
+            currentUserId = user.Data.Id;
+        }
     }
 
     private async Task LoadSong()
@@ -331,6 +339,23 @@
             });
             return;
         }
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "You must be logged in to customize a song.",
+                ButtonText = "Close",
+                HyperlinkText = "Login",
+                OptionType = OptionType.Info,
+                Context = new ModalContext
+                {
+                    ActionType = "CustomizeSong",
+                    Data = "/login"
+                }
+            });
+            return;
+        }
         _navManager.NavigateTo("/compose?songId=" + songId);
     }
 
@@ -343,6 +368,11 @@
         else if (_modalService.CurrentModal?.Context?.ActionType == "CreateShareLink")
         {
             await ShareLinkAsync();
+        }
+        else if (_modalService.CurrentModal?.Context?.ActionType == "CustomizeSong")
+        {
+            var returnUrl = _modalService.CurrentModal.Context.Data as string ?? "/";
+            _navManager.NavigateTo(returnUrl);
         }
         else
         {

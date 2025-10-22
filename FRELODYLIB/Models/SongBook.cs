@@ -41,7 +41,7 @@ namespace FRELODYAPP.Models
 		public string? CollectionId { get; set; }
 		
 		[ForeignKey(nameof(CollectionId))]
-        public virtual SongCollection? Collection { get; set; }
+        public virtual Playlist? Collection { get; set; }
 
         public ICollection<Category>? Categories { get; set; }
 

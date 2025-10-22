@@ -28,7 +28,7 @@ namespace FRELODYAPP.Data.Infrastructure
             _isSuperAdmin = _tenantProvider.IsSuperAdmin();
         }
         public DbSet<Tenant> Tenants { get; set; }
-        public DbSet<SongCollection> SongCollections { get; set; }
+        public DbSet<Playlist> Playlists { get; set; }
         public DbSet<SongBook> SongBooks { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Song> Songs { get; set; }
@@ -49,13 +49,14 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<SongPlayHistory> SongPlayHistories { get; set; }
         public DbSet<SongUserFavorite> SongUserFavorites { get; set; }
-        public DbSet<SongUserCollection> SongUserCollections { get; set; }
+        public DbSet<SongUserPlaylist> SongUserPlaylists { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
             // Configure global query filters for entities implementing IBaseEntity
-            builder.Entity<SongCollection>().HasQueryFilter(x =>
+            builder.Entity<Playlist>().HasQueryFilter(x =>
                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
                    && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongBook>().HasQueryFilter(x =>
@@ -103,7 +104,7 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<SongPlayHistory>().HasQueryFilter(x =>
                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                    && (x.IsDeleted == false || x.IsDeleted == null));
-            builder.Entity<SongUserCollection>().HasQueryFilter(x =>
+            builder.Entity<SongUserPlaylist>().HasQueryFilter(x =>
                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongUserFavorite>().HasQueryFilter(x =>
@@ -306,19 +307,19 @@ namespace FRELODYAPP.Data.Infrastructure
                  .OnDelete(DeleteBehavior.Restrict); 
             });
 
-            builder.Entity<SongUserCollection>(b =>
+            builder.Entity<SongUserPlaylist>(b =>
             {
                 b.HasOne(suc => suc.Song)
                  .WithMany()
                  .HasForeignKey(suc => suc.SongId)
                  .OnDelete(DeleteBehavior.Cascade);
 
-                b.HasOne(suc => suc.SongCollection)
+                b.HasOne(suc => suc.SongPlaylist)
                  .WithMany()
-                 .HasForeignKey(suc => suc.SongCollectionId)
+                 .HasForeignKey(suc => suc.PlaylistId)
                  .OnDelete(DeleteBehavior.Cascade);
 
-                b.HasIndex(suc => new { suc.SongId, suc.SongCollectionId, suc.TenantId })
+                b.HasIndex(suc => new { suc.SongId, suc.PlaylistId, suc.TenantId })
                  .IsUnique();
 
                 b.HasIndex(suc => suc.AddedByUserId);

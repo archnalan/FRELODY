@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace FRELODYUI.Shared.Models.PlaylistModels
 {
-    public class CollectionWithSongs
+    public class PlaylistSongs
     {
-        public SongCollectionDto Playlist { get; set; } = new();
+        public PlaylistDto Playlist { get; set; } = new();
         public List<PlaylistSongDto> Songs { get; set; } = new();
     }
 

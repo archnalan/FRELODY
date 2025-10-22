@@ -219,20 +219,20 @@
 @code {
     [Parameter] public List<ComboBoxDto>? FavoriteSongs { get; set; }
     [Parameter] public List<SongPlayHistoryDto>? RecentPlays { get; set; }
-    [Parameter] public List<CollectionWithSongs>? Collections { get; set; }
+    [Parameter] public List<PlaylistSongs>? Collections { get; set; }
     [Parameter] public EventCallback<string> OnSearchChanged { get; set; }
     [Parameter] public bool IsLoading { get; set; }
 
     private string searchQuery = "";
     private int MAX_HIST_ITEMS = 5;
-    private CollectionWithSongs? selectedCollection = null;
+    private PlaylistSongs? selectedCollection = null;
 
     private async Task SearchChanged()
     {
         await OnSearchChanged.InvokeAsync(searchQuery);
     }
 
-    private void ViewPlaylistDetails(CollectionWithSongs collection)
+    private void ViewPlaylistDetails(PlaylistSongs collection)
     {
         selectedCollection = collection;
         StateHasChanged();

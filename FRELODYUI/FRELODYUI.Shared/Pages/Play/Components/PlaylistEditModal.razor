@@ -67,8 +67,8 @@
 
 @code {
     [Parameter] public bool IsVisible { get; set; }
-    [Parameter] public SongCollectionDto Collection { get; set; } = new();
-    [Parameter] public EventCallback<SongCollectionDto> OnSave { get; set; }
+    [Parameter] public PlaylistDto Collection { get; set; } = new();
+    [Parameter] public EventCallback<PlaylistDto> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
     private async Task HandleSave()
@@ -76,16 +76,16 @@
         await SavePlaylist(Collection);
     }
 
-    private async Task SavePlaylist(SongCollectionDto collection)
+    private async Task SavePlaylist(PlaylistDto collection)
     {
         try
         {
-            Refit.IApiResponse<SongCollectionDto> response;
+            Refit.IApiResponse<PlaylistDto> response;
 
             if (string.IsNullOrEmpty(collection.Id))
             {
                 // Create new
-                var createDto = new SongCollectionCreateDto
+                var createDto = new PlaylistCreateDto
                 {
                     Title = collection.Title,
                     Theme = collection.Theme,
@@ -93,12 +93,12 @@
                     SongIds = new List<string>(),
                     SheduledDate = DateTimeOffset.Now
                 };
-                response = await _songCollectionsApi.AddCollection(createDto);
+                response = await _playlistsApi.AddPlaylist(createDto);
             }
             else
             {
                 // Update existing
-                response = await _songCollectionsApi.UpdateSongCollection(collection.Id, collection);
+                response = await _playlistsApi.UpdatePlaylist(collection.Id, collection);
             }
 
             if (response.IsSuccessStatusCode)

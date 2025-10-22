@@ -130,7 +130,7 @@
     // Library data
     private List<ComboBoxDto> favoriteSongs = new();
     private List<SongPlayHistoryDto> recentPlays = new();
-    private List<CollectionWithSongs> collections = new();
+    private List<PlaylistSongs> collections = new();
 
     // UI state
     private string activeTab = "library";
@@ -309,7 +309,7 @@
     {
         try
         {
-            var response = await _songCollectionsApi.GetUserSongCollections(userId);
+            var response = await _playlistsApi.GetUserPlaylists(userId);
 
             if (response.IsSuccessStatusCode && response.Content != null)
             {

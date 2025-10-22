@@ -4,7 +4,7 @@
 
 <PageTitle>User Details</PageTitle>
 
-<div class="w-100 d-flex justify-content-center mx-auto p-6 bg-body">
+<div class="w-100 d-flex justify-content-center mx-auto p-6">
     @if (isLoading)
     {
         <div class="mt-4 text-center">
@@ -69,7 +69,7 @@
 
             <!-- User Info Section -->
             <div class="text-center mt-5 pt-4 mb-4">
-                <h3 class="fw-bold text-black mb-1">
+                <h3 class="fw-bold mb-1">
                     @user.FirstName @user.LastName
                 </h3>
                 <p class="text-muted mb-2">@@@user.UserName</p>

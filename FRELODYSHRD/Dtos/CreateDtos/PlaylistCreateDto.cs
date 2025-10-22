@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FRELODYSHRD.Dtos.CreateDtos
 {
-    public class SongCollectionCreateDto
+    public class PlaylistCreateDto
     {
         public string Title { get; set; }
         public List<string> SongIds { get; set; }
