@@ -1,3 +1,11 @@
+.login {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
 .form-control:focus,
 .form-control:focus + .input-group-text {
     border-color: #0d6efd;
@@ -107,3 +115,10 @@
     .password-input::placeholder {
         color: var(--input-placeholder);
     }
+
+
+@media (min-width: 768px) {
+    .login {
+        flex-shrink: 1;
+    }
+}

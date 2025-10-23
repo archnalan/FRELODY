@@ -10,6 +10,7 @@ namespace FRELODYUI.Shared.Models
     {
         All,
         Catalogue,
+        Playlists,
         Favorites,       
     }
     public enum ActiveView

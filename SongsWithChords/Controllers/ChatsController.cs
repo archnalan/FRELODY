@@ -34,7 +34,7 @@ namespace FRELODYAPIs.Controllers
         [ProducesResponseType(typeof(ChatMessageDto), 200)]
         public async Task<IActionResult> SendMessage(
             [FromQuery] string sessionId,
-            [FromBody] string message,
+            [FromQuery] string message,
             [FromQuery] bool isFromAdmin = false)
         {
             if (string.IsNullOrWhiteSpace(message))

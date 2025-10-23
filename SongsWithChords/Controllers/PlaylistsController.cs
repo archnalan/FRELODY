@@ -57,9 +57,9 @@ namespace FRELODYAPIs.Controllers
 
         [HttpPost]
         [ProducesResponseType(typeof(PlaylistDto), 201)]
-        public async Task<IActionResult> CreatePlaylist([FromBody] PlaylistDto collection)
+        public async Task<IActionResult> CreatePlaylist([FromBody] PlaylistDto playlist)
         {
-            var result = await _playlistService.CreatePlaylistAsync(collection);
+            var result = await _playlistService.CreatePlaylistAsync(playlist);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return CreatedAtAction(nameof(GetPlaylistById), new { id = result.Data.Id }, result.Data);
@@ -68,9 +68,9 @@ namespace FRELODYAPIs.Controllers
         [HttpPost]
         [Authorize]
         [ProducesResponseType(typeof(PlaylistDto), 201)]
-        public async Task<IActionResult> AddCollection([FromBody] PlaylistCreateDto collection)
+        public async Task<IActionResult> AddPlaylist([FromBody] PlaylistCreateDto playlist)
         {
-            var result = await _playlistService.AddPlaylistAsync(collection);
+            var result = await _playlistService.AddPlaylistAsync(playlist);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return CreatedAtAction(nameof(GetPlaylistById), new { id = result.Data.Id }, result.Data);
@@ -79,9 +79,9 @@ namespace FRELODYAPIs.Controllers
         [HttpPost]
         [Authorize]
         [ProducesResponseType(typeof(PlaylistDto), 200)]
-        public async Task<IActionResult> AddSongToCollection([FromQuery] string collectionId, [FromQuery] string songId)
+        public async Task<IActionResult> AddSongToPlaylist([FromQuery] string playlistId, [FromQuery] string songId)
         {
-            var result = await _playlistService.AddSongToPlaylistAsync(collectionId, songId);
+            var result = await _playlistService.AddSongToPlaylistAsync(playlistId, songId);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
@@ -90,7 +90,7 @@ namespace FRELODYAPIs.Controllers
         [HttpPost]
         [Authorize]
         [ProducesResponseType(typeof(PlaylistDto), 200)]
-        public async Task<IActionResult> MakeCollectionPrivate([FromQuery] string id)
+        public async Task<IActionResult> MakePlaylistPrivate([FromQuery] string id)
         {
             var result = await _playlistService.MakePlaylistPrivateAsync(id);
             if (!result.IsSuccess)
@@ -101,9 +101,9 @@ namespace FRELODYAPIs.Controllers
         [HttpPut]
         [Authorize]
         [ProducesResponseType(typeof(PlaylistDto), 200)]
-        public async Task<IActionResult> UpdatePlaylist([FromQuery] string id, [FromBody] PlaylistDto updatedCollection)
+        public async Task<IActionResult> UpdatePlaylist([FromQuery] string id, [FromBody] PlaylistDto updatedPlaylist)
         {
-            var result = await _playlistService.UpdatePlaylistAsync(id, updatedCollection);
+            var result = await _playlistService.UpdatePlaylistAsync(id, updatedPlaylist);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
@@ -112,9 +112,9 @@ namespace FRELODYAPIs.Controllers
         [HttpDelete]
         [Authorize]
         [ProducesResponseType(typeof(bool), 200)]
-        public async Task<IActionResult> RemoveSongFromCollection([FromQuery] string collectionId, [FromQuery] string songId)
+        public async Task<IActionResult> RemoveSongFromPlaylist([FromQuery] string playlistId, [FromQuery] string songId)
         {
-            var result = await _playlistService.RemoveSongFromPlaylistAsync(collectionId, songId);
+            var result = await _playlistService.RemoveSongFromPlaylistAsync(playlistId, songId);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);

@@ -52,13 +52,18 @@
     border: 1px solid #ced4da;
     border-radius: 5px;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     min-height: 40px;
     transform: translateY(5px);
     opacity: 0;
     transition: transform 0.3s ease, opacity 0.3s ease;
 }
+
+    .song-item:hover {
+        background-color: var(--bs-primary);
+        color: var(--bs-light);
+    }
 
 .songs-list.show .song-item {
     transform: translateY(0);

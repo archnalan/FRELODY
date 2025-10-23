@@ -5,15 +5,15 @@
          @onclick="HandleToggle"
          style="cursor:pointer;">
         <div class="d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-3 flex-grow-1">
+            <div class="d-flex align-items-center gap-3 flex-grow-1 pe-2">
                 <span class="folder-icon fs-4">
                     @if (IsExpanded)
                     {
-                        <i class="bi bi-folder2-open text-primary"></i>
+                        <i class="bi bi-folder2-open text-primary-emphasis"></i>
                     }
                     else
                     {
-                        <i class="bi bi-folder2 text-secondary"></i>
+                        <i class="bi bi-folder2 text-secondary-emphasis"></i>
                     }
                 </span>
                 <div class="flex-grow-1">
@@ -25,27 +25,66 @@
                         </small>
                     }
                 </div>
-                <span class="badge bg-primary rounded-pill">@Collection.Songs.Count</span>
+                <span class="badge bg-dark rounded-pill">@Collection.Songs.Count</span>
             </div>
             <div class="d-flex gap-2" @onclick:stopPropagation>
-                <button class="btn btn-sm btn-outline-primary"
-                        data-bs-toggle="tooltip"
-                        title="Share Playlist"
-                        @onclick="() => SharePlaylist(Collection.Playlist.Id)">
-                    <i class="bi bi-share"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-secondary"
-                        data-bs-toggle="tooltip"
-                        title="Edit Playlist"
-                        @onclick="() => OnEdit.InvokeAsync()">
-                    <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger"
-                        data-bs-toggle="tooltip"
-                        title="Delete Playlist"
-                        @onclick="() => DeletePlaylist(Collection)">
-                    <i class="bi bi-trash"></i>
-                </button>
+                 @if (ShowActionButtons)
+                {
+                    <!-- Actions Dropdown -->
+                    <div class="dropdown">
+                        <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" 
+                                type="button" 
+                                data-bs-toggle="dropdown" 
+                                aria-expanded="false"
+                                title="More Actions">
+                            More
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <button class="dropdown-item" @onclick="() => NavigateToDetail()">
+                                    Playlist Details<i class="ms-2 bi bi-chevron-right"></i>
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item" @onclick="() => OnEdit.InvokeAsync()">
+                                    <i class="bi bi-pencil-square me-2"></i>Edit Playlist
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item" @onclick="() => SharePlaylist(Collection.Playlist.Id)">
+                                    <i class="bi bi-upload me-2"></i>Share Playlist
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button class="dropdown-item text-danger" @onclick="() => DeletePlaylist(Collection)">
+                                    <i class="bi bi-trash me-2"></i>Delete Playlist
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <button class="dropdown-item" @onclick="() => OnEdit.InvokeAsync()">
+                                <i class="bi bi-pencil-square me-2"></i>Edit Playlist
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item" @onclick="() => SharePlaylist(Collection.Playlist.Id)">
+                                <i class="bi bi-share me-2"></i>Share Playlist
+                            </button>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <button class="dropdown-item text-danger" @onclick="() => DeletePlaylist(Collection)">
+                                <i class="bi bi-trash me-2"></i>Delete Playlist
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                }
+                
                 <span class="toggle-icon">
                     @if (IsExpanded)
                     {
@@ -75,22 +114,28 @@
                     @foreach (var song in Collection.Songs)
                     {
                         <PlaylistSongItem Song="song"
-                                         OnClick="() => OnSongClick.InvokeAsync(song.Id)"
-                                         OnRemove="() => RemoveSongFromPlaylist(Collection.Playlist.Id,song.Id)"
-                                          OnShare="() => ShareSong(song.Id)"
-                                         OnMove="() => OnSongMove.InvokeAsync(song.Id)"
-                                         IsSelected="IsMovingMode && SelectedSongId == song.Id"
-                                         IsMovingMode="IsMovingMode" />
+                                          ShowActionBtns="ShowActionButtons"
+                                          OnRemove="() => RemoveSongFromPlaylist(Collection.Playlist.Id,song.Id)"
+                                          OnShare="() => ShareSong(song.Id)"/>
                     }
                 </div>
-                
-                <!-- Add Song button footer (always visible when playlist has songs) -->
-                <div class="playlist-footer border-top p-2 bg-light" @onclick:stopPropagation>
-                    <button class="btn btn-outline-primary btn-sm w-100"
-                            @onclick="() => OnAddSong.InvokeAsync()">
-                        <i class="bi bi-plus-circle me-2"></i>Add Song
-                    </button>
-                </div>
+                @if (ShowActionButtons)
+                {
+                    <!-- Add Song button footer (always visible when playlist has songs) -->
+                    <div class="playlist-footer border-top p-2 bg-light" @onclick:stopPropagation>
+                        <button class="btn btn-outline-primary btn-sm"
+                                @onclick="() => OnAddSong.InvokeAsync()">
+                            <i class="bi bi-plus me-2"></i>Add Song
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="tooltip"
+                                title="View Full Playlist"
+                                @onclick="() => NavigateToDetail()">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+
+                    </div>
+                }
             }
             else
             {
@@ -98,10 +143,19 @@
                 <div class="p-4 text-center text-muted" @onclick:stopPropagation>
                     <i class="bi bi-music-note fs-3"></i>
                     <p class="mb-3 mt-2">No songs in this playlist</p>
-                    <button class="btn btn-primary btn-sm"
-                            @onclick="() => OnAddSong.InvokeAsync()">
-                        <i class="bi bi-plus-circle me-2"></i>Add Song
-                    </button>
+
+                    @if (ShowActionButtons)
+                    {
+                        <button class="btn btn-primary btn-sm"
+                                @onclick="() => OnAddSong.InvokeAsync()">
+                            <i class="bi bi-plus-circle me-2"></i>Add Song
+                        </button>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Your playlist songs will be listed here</p>
+                    }
+                  
                 </div>
             }
         </div>
@@ -120,21 +174,23 @@
     [Parameter] public EventCallback OnToggle { get; set; }
     [Parameter] public EventCallback OnEdit { get; set; }
     [Parameter] public EventCallback OnRefresh { get; set; }
-    [Parameter] public EventCallback<string> OnSongClick { get; set; }
-    [Parameter] public EventCallback<string> OnSongMove { get; set; }
     [Parameter] public EventCallback OnAddSong { get; set; }
-    [Parameter] public bool IsMovingMode { get; set; }
-    [Parameter] public string? SelectedSongId { get; set; }
+    [Parameter] public bool ShowActionButtons { get; set; } = true;
 
     private bool isGeneratingLink = false;
 
     private bool showSuccessMessage = false;
     private string successMessage = string.Empty;
+    
     private void HandleToggle()
     {
         OnToggle.InvokeAsync();
     }
 
+    private void NavigateToDetail()
+    {
+        _navManager.NavigateTo($"/playlists/{Collection.Playlist.Id}/detail");
+    }
 
     private async Task ShareSong(string songId)
     {

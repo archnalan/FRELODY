@@ -6,9 +6,9 @@
 @inject ILogger<ChordList> Logger
 @implements IDisposable
 
-<div class="w-100 h-100 overflow-auto position-relative bg-body">
-    <div class="@GetInnerContainerClass()">
-        <div class="w-75 position-sticky text-center top-0 bg-body">
+<div class="w-100 h-100 overflow-auto position-relative">
+    <div class="d-flex flex-column justify-content-start align-items-center">
+        <div class="w-75 position-sticky text-center top-0">
             <h3 class="m-3 text-primary">Chords</h3>
 
             @if (!string.IsNullOrEmpty(successMessage))
@@ -17,7 +17,7 @@
                     @successMessage
                 </div>
             }
-            <div class="rounded-3 bg-light border shadow p-3 mb-2 min-w-15rem">
+            <div class="rounded-3 border shadow p-3 mb-2 min-w-15rem">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex w-50 position-relative me-3">
                         <input type="text"
@@ -153,11 +153,6 @@
         {
             // Swallow – expected when user keeps typing
         }
-    }
-
-    private string GetInnerContainerClass()
-    {
-        return $"{(theme == "dark" ? "text-light bg-dark" : "text-dark bg-body")} d-flex flex-column justify-content-start align-items-center h-100";
     }
 
     private async Task LoadChords()

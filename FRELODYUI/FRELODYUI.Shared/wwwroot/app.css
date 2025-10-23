@@ -102,8 +102,24 @@ html, body {
     border-color: #1861ac;
 }*/
 
+.form-control {
+    background-color: var(--input-bg);
+}
+
+.dropdown-menu {
+    --bs-dropdown-bg: var(--modal-content-bg)
+}
+
+.card {
+    --bs-card-bg: var(--modal-content-bg);
+}
+
+    .card:hover {
+        --bs-card-bg: var(--modal-border-color);
+    }
+
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 .content {

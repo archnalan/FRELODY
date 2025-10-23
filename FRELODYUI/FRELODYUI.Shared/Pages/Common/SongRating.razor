@@ -7,7 +7,7 @@
     @* Summary *@
     @if (ShowSummary && ratingInfo is not null && ratingInfo.TotalRatings > 0 && ratingInfo.AggregateRating.HasValue)
     {
-        <div class="text-center">
+        <div class="rate-info text-center">
             @for (int i = 1; i <= 5; i++)
             {
                 var value = i;

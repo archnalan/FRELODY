@@ -1,44 +1,34 @@
-<div class="song-item d-flex align-items-center p-2 m-1 rounded-2 @(IsSelected ? "bg-primary bg-opacity-10 border border-primary" : "bg-white")"
-     @onclick="HandleClick"
-     style="cursor:pointer; transition: all 0.2s;">
-    
-    @if (IsSelected)
-    {
-        <i class="bi bi-check-circle-fill text-primary fs-5 me-2"></i>
-    }
-    else if (Song.SongNumber.HasValue)
-    {
-        <span class="badge bg-secondary me-2" style="min-width:40px;">@Song.SongNumber.Value</span>
-    }
+@inject ILogger<PlaylistSongItem> _logger    
 
-    <div class="flex-grow-1" style="min-width:0;">
+<div class="song-item p-2 m-1 rounded-2"
+     @onclick="@(()=>OnSongDisplay(Song.Id))"
+     style="cursor:pointer; transition: all 0.2s;">
+
+    <span class="badge bg-dark me-2" style="min-width:40px;">
+        @((Song.SongNumber.HasValue ? Song.SongNumber.Value : 0).ToString("000"))
+    </span>
+
+    <div class="text-start flex-grow-1" style="min-width:0;">
         <div class="fw-semibold text-truncate">@Song.Title</div>
         @if (!string.IsNullOrEmpty(Song.WrittenBy))
         {
             <small class="text-muted text-truncate d-block">@Song.WrittenBy</small>
         }
     </div>
-
-    @if (!IsMovingMode)
+    @if (ShowActionBtns)
     {
         <div class="d-flex gap-1" @onclick:stopPropagation>
             <button class="btn btn-sm btn-outline-primary"
                     data-bs-toggle="tooltip"
                     title="Play Song"
-                    @onclick="HandleClick">
+                    @onclick="@(() => OnSongDisplay(Song.Id))">
                 <i class="bi bi-play-fill"></i>
             </button>
-            <button class="btn btn-sm btn-outline-secondary"
+            <button class="btn btn-sm btn-outline-dark"
                     data-bs-toggle="tooltip"
                     title="Share Song"
                     @onclick="() => OnShare.InvokeAsync()">
-                <i class="bi bi-share"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-info"
-                    data-bs-toggle="tooltip"
-                    title="Move to Another Playlist"
-                    @onclick="() => OnMove.InvokeAsync()">
-                <i class="bi bi-arrow-left-right"></i>
+                <i class="bi bi-upload"></i>
             </button>
             <button class="btn btn-sm btn-outline-danger"
                     data-bs-toggle="tooltip"
@@ -47,20 +37,37 @@
                 <i class="bi bi-x-lg"></i>
             </button>
         </div>
-    }
+    }    
 </div>
 
 @code {
     [Parameter] public PlaylistSongDto Song { get; set; } = new();
-    [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public EventCallback OnRemove { get; set; }
     [Parameter] public EventCallback OnShare { get; set; }
-    [Parameter] public EventCallback OnMove { get; set; }
-    [Parameter] public bool IsSelected { get; set; }
-    [Parameter] public bool IsMovingMode { get; set; }
+    [Parameter] public bool ShowActionBtns { get; set; } = true;
 
-    private void HandleClick()
+    private void OnSongDisplay(string songId)
     {
-        OnClick.InvokeAsync();
+        _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _playHistoryApi.LogSongPlay(songId, "Playlist");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to log song play from playlists page {SongId}", songId);
+                }
+            });
+        bool IsFromLanding = _heroDataService.GetRenderOrigin();
+        if (IsFromLanding)
+        {
+            _navManager.NavigateTo($"/songs/{songId}/landing");
+        }
+        else
+        {
+            _navManager.NavigateTo($"/songs/{songId}");
+        }
     }
+
 }

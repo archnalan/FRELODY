@@ -279,6 +279,16 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     return ServiceResult<PlaylistDto>.Failure(
                         new KeyNotFoundException($"Song playlist with Id {playlistId} not found."));
                 }
+
+                var songAlreadyInPlaylist = await _context.SongUserPlaylists
+                    .AnyAsync(sp => sp.PlaylistId == playlistId && sp.SongId == songId);
+                if (songAlreadyInPlaylist)
+                {
+                    _logger.LogWarning("Song with Id {SongId} already exists in playlist {PlaylistId}.", songId, playlistId);
+                    return ServiceResult<PlaylistDto>.Failure(
+                        new InvalidOperationException($"Song is already in the playlist."));
+                }
+
                 var songplaylist = new SongUserPlaylist
                 {
                     PlaylistId = playlistId,
@@ -286,13 +296,14 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     AddedByUserId = _userId,
                     DateScheduled = DateTimeOffset.UtcNow
                 };
+
                 await _context.SongUserPlaylists.AddAsync(songplaylist);
                 await _context.SaveChangesAsync();
                 var playlist = await _context.Playlists
                     .Include(c => c.SongPlaylists)
                         .ThenInclude(sc => sc.Song)
                     .FirstOrDefaultAsync(c => c.Id == playlistId);
-              
+
                 var playlistDto = playlist.Adapt<PlaylistDto>();
                 return ServiceResult<PlaylistDto>.Success(playlistDto);
             }
@@ -472,7 +483,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     FROM Songs s
                     LEFT JOIN Categories c ON s.CategoryId = c.Id
                     LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                    LEFT JOIN Playlists sc ON sb.playlistId = sc.Id
+                    LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
                     LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
                         AND suf.UserId = @UserId
                          AND (suf.IsDeleted = 0 OR suf.IsDeleted IS NULL)
@@ -481,7 +492,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         AND (@SongNumber IS NULL OR s.SongNumber = @SongNumber)
                         AND (@CategoryName IS NULL OR c.Name LIKE '%' + @CategoryName + '%')
                         AND (@SongBookId IS NULL OR sb.Id = @SongBookId)
-                        AND (@CuratorIds IS NULL OR sc.Curator IN (SELECT [value] FROM OPENJSON(@CuratorIds)))
+                        AND (@CuratorIds IS NULL OR p.Curator IN (SELECT [value] FROM OPENJSON(@CuratorIds)))
                     ORDER BY s.Title 
                     OFFSET @Offset ROWS 
                     FETCH NEXT @Limit ROWS ONLY";
@@ -562,8 +573,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     sb.Description AS SongBookDescription,
                     c.Id AS CategoryId,
                     c.CategorySlug,
-                    p.Title AS playlistTitle,
-                    p.Curator AS playlistCurator,
+                    p.Title AS PlaylistTitle,
+                    p.Curator AS PlaylistCurator,
                     CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
                     100 AS RelevanceScore,
                     'title' AS MatchType,
@@ -571,7 +582,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 FROM Songs s
                 LEFT JOIN Categories c ON s.CategoryId = c.Id
                 LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.playlistId = p.Id
+                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
                 LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
                     AND suf.UserId = @UserId
                     AND suf.IsDeleted = 0
@@ -632,7 +643,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 ) aggregated_line ON ll.Id = aggregated_line.LyricLineId
                 LEFT JOIN Categories c ON s.CategoryId = c.Id
                 LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.playlistId = p.Id
+                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
                 LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
                     AND suf.UserId = @UserId
                     AND suf.IsDeleted = 0
@@ -666,7 +677,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 FROM Songs s
                 LEFT JOIN Categories c ON s.CategoryId = c.Id
                 LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Pplaylists p ON sb.playlistId = p.Id
+                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
                 LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
                     AND suf.UserId = @UserId
                     AND suf.IsDeleted = 0
@@ -691,8 +702,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     sb.Description AS SongBookDescription,
                     c.Id AS CategoryId,
                     c.CategorySlug,
-                    p.Title AS playlistTitle,
-                    pCurator AS playlistCurator,
+                    p.Title AS PlaylistTitle,
+                    p.Curator AS PlaylistCurator,
                     CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
                     70 AS RelevanceScore,
                     'book' AS MatchType,
@@ -700,7 +711,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 FROM Songs s
                 LEFT JOIN Categories c ON s.CategoryId = c.Id
                 LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.playlistId = p.Id
+                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
                 LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
                     AND suf.UserId = @UserId
                     AND suf.IsDeleted = 0
@@ -708,7 +719,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 UNION ALL
 
-                -- playlist title matches (low priority)
+                -- Playlist title matches (low priority)
                 SELECT 
                     s.Id,
                     s.Title,
@@ -725,20 +736,20 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     sb.Description AS SongBookDescription,
                     c.Id AS CategoryId,
                     c.CategorySlug,
-                    p.Title AS playlistTitle,
-                    p.Curator AS playlistCurator,
+                    p.Title AS PlaylistTitle,
+                    p.Curator AS PlaylistCurator,
                     CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
                     60 AS RelevanceScore,
-                    'playlist' AS MatchType,
+                    'Playlist' AS MatchType,
                     p.Title AS MatchSnippet
                 FROM Songs s
                 LEFT JOIN Categories c ON s.CategoryId = c.Id
                 LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.playlistId = p.Id
+                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
                 LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
                     AND suf.UserId = @UserId
                     AND suf.IsDeleted = 0
-                WHERE sc.Title LIKE @SearchPattern
+                WHERE p.Title LIKE @SearchPattern
 
                 UNION ALL
 
@@ -768,7 +779,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 FROM Songs s
                 LEFT JOIN Categories c ON s.CategoryId = c.Id
                 LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.playlistId = p.Id
+                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
                 LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
                     AND suf.UserId = @UserId
                     AND suf.IsDeleted = 0
@@ -849,7 +860,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 SELECT s.Id FROM Songs s
                 LEFT JOIN Categories c ON s.CategoryId = c.Id
                 LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON p.playlistId = p.Id
+                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
                 WHERE p.Title LIKE @SearchPattern
                 UNION
                 SELECT s.Id FROM Songs s

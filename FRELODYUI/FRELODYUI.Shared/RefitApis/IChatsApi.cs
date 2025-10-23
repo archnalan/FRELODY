@@ -11,7 +11,7 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<ChatSessionDto>> CreateAnonymousChatSession();
 
         [Post("/api/chats/send-message")]
-        Task<IApiResponse<ChatMessageDto>> SendMessage([Query] string sessionId, [Body] string message, [Query] bool isFromAdmin = false);
+        Task<IApiResponse<ChatMessageDto>> SendMessage([Query] string sessionId, [Query] string message, [Query] bool isFromAdmin = false);
 
         [Get("/api/chats/get-active-sessions")]
         Task<IApiResponse<List<ChatSessionDto>>> GetActiveSessions();

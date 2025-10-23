@@ -162,7 +162,7 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<SongBook>()
               .HasOne(sb => sb.Collection)
               .WithMany(c => c.SongBooks)
-              .HasForeignKey(sb => sb.CollectionId);
+              .HasForeignKey(sb => sb.PlaylistId);
 
             builder.Entity<Category>()
                 .HasOne<SongBook>()

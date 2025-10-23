@@ -1,0 +1,9 @@
+.song-item {
+    display: flex;
+    align-items: center;
+}
+
+    .song-item:hover {
+        background-color: var(--bs-primary);
+        color: var(--bs-light);
+    }
