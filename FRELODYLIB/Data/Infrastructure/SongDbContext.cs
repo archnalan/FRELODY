@@ -158,7 +158,6 @@ namespace FRELODYAPP.Data.Infrastructure
                 .WithMany(chord => chord.LyricSegments)
                 .HasForeignKey(segment => segment.ChordId);
 
-            // Configure SongBook and Category
             builder.Entity<SongBook>()
               .HasOne(sb => sb.Collection)
               .WithMany(c => c.SongBooks)
@@ -194,6 +193,24 @@ namespace FRELODYAPP.Data.Infrastructure
                 .HasForeignKey(s => s.AlbumId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Song>(s =>
+            {
+                s.HasIndex(song => new { song.Title, song.Slug });
+                s.HasIndex(song => song.SongNumber);
+                s.HasIndex(song => song.WrittenBy);
+                s.HasIndex(song => song.WrittenDateRange);
+                s.HasOne<Artist>()
+                 .WithMany()
+                 .HasForeignKey(s => s.ArtistId)
+                 .IsRequired(false)
+                 .OnDelete(DeleteBehavior.Restrict);
+                s.HasOne<SongBook>()
+                 .WithMany()
+                 .HasForeignKey(s => s.SongBookId)
+                 .IsRequired(false)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
 
             builder.Entity<SongPlayHistory>(b =>
             {

@@ -166,20 +166,41 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 try
                 {
-                    bool categoryExists = false;
-                    if( !string.IsNullOrEmpty(songDto.CategoryId))
+                    bool songBookExists = false, categoryExists = false, artistExists = false, albumExists = false; 
+                    if ( !string.IsNullOrEmpty(songDto.BookCategory?.SongBookId))
                     {
-                        categoryExists = await _context.Categories
-                            .AnyAsync(c => c.Id == songDto.CategoryId);
+                        songBookExists = await _context.SongBooks
+                            .AnyAsync(sb => sb.Id == songDto.BookCategory.SongBookId);
+
+                        if (!string.IsNullOrEmpty(songDto.BookCategory.CategoryId))
+                            categoryExists = await _context.Categories
+                                .AnyAsync(c => c.Id == songDto.BookCategory.CategoryId
+                                && c.SongBookId == songDto.BookCategory.SongBookId);
+
                     }
-                    var song = new Song
+                    else if (!string.IsNullOrEmpty(songDto.ArtistAlbum?.ArtistId))
                     {
-                        Title = songDto.Title,
-                        SongNumber = songDto.SongNumber,
-                        CategoryId = categoryExists ? songDto.CategoryId : null,
-                        Slug = songDto.Title.ToLower().Replace(" ", "-"),
-                        Rating = 0m
-                    };
+                        artistExists = await _context.Artists
+                            .AnyAsync(a => a.Id == songDto.ArtistAlbum.ArtistId);
+
+                        if(!string.IsNullOrEmpty(songDto.ArtistAlbum?.AlbumId))
+                            albumExists = await _context.Albums
+                                .AnyAsync(a => a.Id == songDto.ArtistAlbum.AlbumId
+                                && a.ArtistId == songDto.ArtistAlbum.ArtistId);
+
+                    }
+
+                     var song = new Song
+                     {
+                         Title = songDto.Title,
+                         SongNumber = songDto.SongNumber,
+                         SongBookId = songBookExists ? songDto.BookCategory?.SongBookId : null,
+                         CategoryId = categoryExists ? songDto.CategoryId : null,
+                         AlbumId = albumExists ? songDto.ArtistAlbum?.AlbumId : null,
+                         ArtistId = artistExists ? songDto.ArtistAlbum?.ArtistId : null,
+                         Slug = songDto.Title.ToLower().Replace(" ", "-"),
+                         Rating = 0m
+                     };
                     await _context.Songs.AddAsync(song);
                     await _context.SaveChangesAsync();
 
@@ -433,6 +454,29 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     song.Title = songDto.Title;
                     song.SongNumber = songDto.SongNumber;
                     song.Slug = songDto.Title.ToLower().Replace(" ", "-");
+
+                    bool songBookExists = false, categoryExists = false, artistExists = false, albumExists = false;
+                    if (!string.IsNullOrEmpty(songDto.BookCategory?.SongBookId))
+                    {
+                        songBookExists = await _context.SongBooks
+                            .AnyAsync(sb => sb.Id == songDto.BookCategory.SongBookId);
+
+                        if (!string.IsNullOrEmpty(songDto.BookCategory.CategoryId))
+                            categoryExists = await _context.Categories
+                                .AnyAsync(c => c.Id == songDto.BookCategory.CategoryId
+                                && c.SongBookId == songDto.BookCategory.SongBookId);
+
+                    }
+                    else if (!string.IsNullOrEmpty(songDto.ArtistAlbum?.ArtistId))
+                    {
+                        artistExists = await _context.Artists
+                            .AnyAsync(a => a.Id == songDto.ArtistAlbum.ArtistId);
+
+                        if (!string.IsNullOrEmpty(songDto.ArtistAlbum?.AlbumId))
+                            albumExists = await _context.Albums
+                                .AnyAsync(a => a.Id == songDto.ArtistAlbum.AlbumId
+                                && a.ArtistId == songDto.ArtistAlbum.ArtistId);
+                    }
 
                     // If no lyrics to update, just save the song changes
                     if (songDto.SongLyrics == null || !songDto.SongLyrics.Any())

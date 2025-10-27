@@ -14,7 +14,18 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<PlaylistDto>> CreatePlaylistAsync(PlaylistDto Playlist);
         Task<ServiceResult<bool>> DeletePlaylistAsync(string id);
         Task<ServiceResult<List<PlaylistDto>>> GetAllPlaylistsAsync();
-        Task<ServiceResult<PaginationDetails<SongResult>>> GetPaginatedSongs(int offset, int limit, string? songName = null, int? songNumber = null, string? categoryName = null, string? songBookId = null, List<string>? curatorIds = null, string? orderByColumn = null, CancellationToken cancellationToken = default);
+        Task<ServiceResult<PaginationDetails<SongResult>>> GetPaginatedSongs(
+            int offset, 
+            int limit, 
+            string? songName = null, 
+            int? songNumber = null, 
+            string? categoryName = null, 
+            string? songBookId = null, 
+            string? artistId = null,
+            string? albumId = null, 
+            List<string>? curatorIds = null, 
+            string? orderByColumn = null, 
+            CancellationToken cancellationToken = default);
         Task<ServiceResult<PlaylistSongs>> GetPlaylistByIdAsync(string id);
         Task<ServiceResult<PaginationDetails<SearchSongResult>>> EnhancedSongSearch(int offset, int limit, string searchTerm, string? orderByColumn = null, CancellationToken cancellationToken = default);
         Task<ServiceResult<PlaylistDto>> UpdatePlaylistAsync(string id, PlaylistDto updatedPlaylist);

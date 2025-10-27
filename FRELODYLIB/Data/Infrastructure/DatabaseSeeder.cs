@@ -4,6 +4,7 @@ using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
 using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYSHRD.Dtos.UserDtos;
 using FRELODYSHRD.ModelTypes;
 using Microsoft.AspNetCore.Identity;
@@ -38,24 +39,26 @@ namespace FRELODYAPP.Data.Infrastructure
                 using var scope = _serviceProvider.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<SongDbContext>();
                 await CreateRolesAsync(scope,dbContext);
-                await SeedDefaultTenantAsync(dbContext);
-
-                await SeedSDAHymnalSongBookAsync(dbContext);
-                var sdaHymnal = await dbContext.SongBooks.FirstAsync(sb => sb.Slug == "sda-hymnal");
-                bool seeded = await CategoryData.Initialize(_serviceProvider, sdaHymnal.Id);
-                if (seeded)
+                var tenantId = await SeedDefaultTenantAsync(dbContext);
+                if (!string.IsNullOrEmpty(tenantId))
                 {
-                    var mercyAndGraceCategory = await dbContext.Categories
-                  .FirstAsync(c => c.Name == "Grace and Mercy of God" && c.SongBookId == sdaHymnal.Id);
-                    await SeedAmazingGraceAsync(dbContext);
-                    await AttachAmazingGraceToSDAHymnalAsync(dbContext, mercyAndGraceCategory.Id);
+                    await SeedSDAHymnalSongBookAsync(tenantId, dbContext);
+                    var sdaHymnal = await dbContext.SongBooks.FirstAsync(sb => sb.Slug == "sda-hymnal");
+                    bool seeded = await CategoryData.Initialize(_serviceProvider, sdaHymnal.Id, tenantId);
+                    if (seeded)
+                    {
+                        var mercyAndGraceCategory = await dbContext.Categories
+                      .FirstAsync(c => c.Name.ToLower().Trim() == "grace and mercy of god" && c.SongBookId == sdaHymnal.Id);
+                        await SeedAmazingGraceAsync(tenantId, dbContext);
+                        await AttachAmazingGraceToSDAHymnalAsync(tenantId,dbContext, mercyAndGraceCategory.Id);
 
+                    }
+
+                    // More seeding methods here as needed
+                    // await SeedCategoriesAsync(dbContext);
+                    // await SeedChordsAsync(dbContext);
+                    // etc.
                 }
-
-                // More seeding methods here as needed
-                // await SeedCategoriesAsync(dbContext);
-                // await SeedChordsAsync(dbContext);
-                // etc.
             }
             catch (Exception ex)
             {
@@ -85,7 +88,7 @@ namespace FRELODYAPP.Data.Infrastructure
             }
         }
 
-        private async Task SeedDefaultTenantAsync(SongDbContext dbContext)
+        private async Task<string?> SeedDefaultTenantAsync(SongDbContext dbContext)
         {
             const string defaultTenantName = "FRELODY";
 
@@ -95,7 +98,7 @@ namespace FRELODYAPP.Data.Infrastructure
             if (existingTenant != null)
             {
                 _logger.LogInformation($"Default FRELODY tenant already exists with ID: {existingTenant.Id}");
-                return;
+                return existingTenant.Id;
             }
             _logger.LogInformation("Seeding default FRELODY tenant...");
 
@@ -117,9 +120,9 @@ namespace FRELODYAPP.Data.Infrastructure
 
             await dbContext.Tenants.AddAsync(defaultTenant);
             await dbContext.SaveChangesAsync();
-
             await CreatePowerUserAsync(dbContext);
             _logger.LogInformation("Default FRELODY tenant seeded successfully.");
+            return defaultTenant.Id;
         }
 
         private async Task CreatePowerUserAsync(SongDbContext dbContext)
@@ -179,7 +182,7 @@ namespace FRELODYAPP.Data.Infrastructure
             }
         }
 
-        private async Task SeedAmazingGraceAsync(SongDbContext dbContext)
+        private async Task SeedAmazingGraceAsync(string defaultTenantId, SongDbContext dbContext)
         {
             // Check if song already exists
             if (await dbContext.Songs.AnyAsync(s => s.Title == "Amazing Grace"))
@@ -191,17 +194,18 @@ namespace FRELODYAPP.Data.Infrastructure
             _logger.LogInformation("Seeding Amazing Grace song...");
 
             // Ensure chords exist or create them
-            var chordG = await GetOrCreateChordAsync(dbContext, "G");
-            var chordG7 = await GetOrCreateChordAsync(dbContext, "G7");
-            var chordC = await GetOrCreateChordAsync(dbContext, "C");
-            var chordD = await GetOrCreateChordAsync(dbContext, "D");
+            var chordG = await GetOrCreateChordAsync(defaultTenantId, dbContext, "G");
+            var chordG7 = await GetOrCreateChordAsync(defaultTenantId, dbContext, "G7");
+            var chordC = await GetOrCreateChordAsync(defaultTenantId, dbContext, "C");
+            var chordD = await GetOrCreateChordAsync(defaultTenantId,dbContext, "D");
 
             // Create the song
             var song = new Song
             {
                 Title = "Amazing Grace",
                 Slug = "amazing-grace",
-                SongNumber = 1
+                TenantId = defaultTenantId,
+                Access = Access.Public
             };
 
             await dbContext.Songs.AddAsync(song);
@@ -262,7 +266,7 @@ namespace FRELODYAPP.Data.Infrastructure
             _logger.LogInformation("Amazing Grace song seeded successfully.");
         }
 
-        private async Task<Chord> GetOrCreateChordAsync(SongDbContext dbContext, string chordName)
+        private async Task<Chord> GetOrCreateChordAsync(string tenantId, SongDbContext dbContext, string chordName)
         {
             // Check if chord exists (case-insensitive, ignoring whitespace)
             var chord = await dbContext.Chords
@@ -273,7 +277,9 @@ namespace FRELODYAPP.Data.Infrastructure
                 // Create new chord
                 chord = new Chord
                 {
-                    ChordName = chordName
+                    ChordName = chordName,
+                    TenantId= tenantId,
+                    Access = Access.Public
                 };
                 await dbContext.Chords.AddAsync(chord);
                 await dbContext.SaveChangesAsync();
@@ -284,7 +290,7 @@ namespace FRELODYAPP.Data.Infrastructure
             return chord;
         }
 
-        private async Task SeedSDAHymnalSongBookAsync(SongDbContext dbContext)
+        private async Task SeedSDAHymnalSongBookAsync(string defaultTenantId, SongDbContext dbContext)
         {
             const string sdaHymnalSlug = "sda-hymnal";
             if (await dbContext.SongBooks.AnyAsync(sb => sb.Slug == sdaHymnalSlug))
@@ -304,7 +310,9 @@ namespace FRELODYAPP.Data.Infrastructure
                 ISBN = "9780828010612",
                 Author = "Various",
                 Edition = "1985",
-                Language = "English"
+                Language = "English",
+                TenantId = defaultTenantId,
+                Access = Access.Public
             };
 
             await dbContext.SongBooks.AddAsync(sdaHymnal);
@@ -313,7 +321,7 @@ namespace FRELODYAPP.Data.Infrastructure
             _logger.LogInformation("SDAHymnal songbook seeded successfully.");
         }
         
-        private async Task AttachAmazingGraceToSDAHymnalAsync(SongDbContext dbContext, string categoryId)
+        private async Task AttachAmazingGraceToSDAHymnalAsync(string defaultTenantId,SongDbContext dbContext, string categoryId)
         {
             // Get the SDA Hymnal songbook
             var sdaHymnal = await dbContext.SongBooks
@@ -333,7 +341,6 @@ namespace FRELODYAPP.Data.Infrastructure
                 return;
             }
 
-            // Attach Amazing Grace to SDA Hymnal as hymn 108
             amazingGrace.CategoryId = categoryId; 
             amazingGrace.SongNumber = 108;
 

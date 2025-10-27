@@ -139,13 +139,15 @@ namespace FRELODYAPIs.Controllers
         [FromQuery] string? songName = null,
         [FromQuery] int? songNumber = null,
         [FromQuery] string? categoryName = null,
-        [FromQuery] string? songBookId = null,
+        [FromQuery] string? songBookId = null, 
+        [FromQuery] string? artistId = null,
+        [FromQuery] string? albumId = null,
         [FromQuery] List<string>? curatorIds = null,
         [FromQuery] string? orderByColumn = null,
         CancellationToken cancellationToken = default)
         {
             var result = await _playlistService.GetPaginatedSongs(
-                offset, limit, songName, songNumber, categoryName, songBookId, curatorIds, orderByColumn, cancellationToken);
+                offset, limit, songName, songNumber, categoryName, songBookId, artistId, albumId, curatorIds, orderByColumn, cancellationToken);
 
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");

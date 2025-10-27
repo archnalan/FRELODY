@@ -449,80 +449,144 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
         #region Get Song results with pagination
         public async Task<ServiceResult<PaginationDetails<SongResult>>> GetPaginatedSongs(
-            int offset,
-            int limit,
-            string? songName = null,
-            int? songNumber = null,
-            string? categoryName = null,
-            string? songBookId = null,
-            List<string>? curatorIds = null,
-            string? orderByColumn = null,
-            CancellationToken cancellationToken = default)
+    int offset,
+    int limit,
+    string? songName = null,
+    int? songNumber = null,
+    string? categoryName = null,
+    string? songBookId = null,
+    string? artistId = null,
+    string? albumId = null,
+    List<string>? curatorIds = null,
+    string? orderByColumn = null,
+    CancellationToken cancellationToken = default)
         {
             try
             {
-                limit = limit <= 0 ? 10 : limit; // zero limit not allowed
+                limit = limit <= 0 ? 10 : limit;
+
                 var sql = @"
-                    SELECT
-                        s.Id,
-                        s.Title,
-                        s.SongNumber,
-                        s.Slug,
-                        s.SongPlayLevel,
-                        s.WrittenDateRange,
-                        s.WrittenBy,
-                        s.History,
-                        c.Name AS CategoryName,
-                        sb.Title AS SongBookTitle,
-                        sb.Slug AS SongBookSlug,
-                        sb.Id AS SongBookId,
-                        sb.Description AS SongBookDescription,
-                        c.Id AS CategoryId,
-                        c.CategorySlug,
-                        CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite  -- Cast to BIT for proper bool mapping
-                    FROM Songs s
-                    LEFT JOIN Categories c ON s.CategoryId = c.Id
-                    LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                    LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
-                    LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
-                        AND suf.UserId = @UserId
-                         AND (suf.IsDeleted = 0 OR suf.IsDeleted IS NULL)
-                    WHERE
-                        (@SongName IS NULL OR s.Title LIKE '%' + @SongName + '%')
-                        AND (@SongNumber IS NULL OR s.SongNumber = @SongNumber)
-                        AND (@CategoryName IS NULL OR c.Name LIKE '%' + @CategoryName + '%')
-                        AND (@SongBookId IS NULL OR sb.Id = @SongBookId)
-                        AND (@CuratorIds IS NULL OR p.Curator IN (SELECT [value] FROM OPENJSON(@CuratorIds)))
-                    ORDER BY s.Title 
-                    OFFSET @Offset ROWS 
-                    FETCH NEXT @Limit ROWS ONLY";
-        
+            SELECT
+                s.Id,
+                s.Title,
+                s.SongNumber,
+                s.Slug,
+                s.SongPlayLevel,
+                s.WrittenDateRange,
+                s.WrittenBy,
+                s.History,
+                c.Name AS CategoryName,
+                c.Id AS CategoryId,
+                c.CategorySlug,
+                sb.Title AS SongBookTitle,
+                sb.Slug AS SongBookSlug,
+                sb.Id AS SongBookId,
+                sb.Description AS SongBookDescription,
+                a.Name AS ArtistName,
+                a.Id AS ArtistId,
+                alb.Title AS AlbumTitle,
+                alb.Id AS AlbumId,
+                
+                -- Favorite status
+                CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite
+                
+            FROM Songs s
+            
+            LEFT JOIN Categories c ON s.CategoryId = c.Id
+            LEFT JOIN SongBooks sb ON s.SongBookId = sb.Id OR c.SongBookId = sb.Id
+            
+            LEFT JOIN Artists a ON s.ArtistId = a.Id
+            LEFT JOIN Albums alb ON s.AlbumId = alb.Id
+            
+            LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
+            
+            LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                AND suf.UserId = @UserId
+                AND (suf.IsDeleted = 0 OR suf.IsDeleted IS NULL)
+                
+            WHERE
+                (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
+                AND (@SongName IS NULL OR s.Title LIKE '%' + @SongName + '%')
+                AND (@SongNumber IS NULL OR s.SongNumber = @SongNumber)
+                AND (@CategoryName IS NULL OR c.Name LIKE '%' + @CategoryName + '%')
+                AND (@SongBookId IS NULL OR sb.Id = @SongBookId)
+                AND (@ArtistId IS NULL OR a.Id = @ArtistId)
+                AND (@AlbumId IS NULL OR alb.Id = @AlbumId)
+                AND (@CuratorIds IS NULL OR p.Curator IN (SELECT [value] FROM OPENJSON(@CuratorIds)))
+                
+            ORDER BY 
+                CASE WHEN @OrderByColumn = 'Title' THEN s.Title END ASC,
+                CASE WHEN @OrderByColumn = 'SongNumber' THEN s.SongNumber END ASC,
+                CASE WHEN @OrderByColumn = 'Rating' THEN s.Rating END DESC,
+                s.Title ASC  -- Default ordering
+                
+            OFFSET @Offset ROWS 
+            FETCH NEXT @Limit ROWS ONLY";
 
                 var parameters = new List<SqlParameter>
-                {
-                    new SqlParameter("@Offset", offset),
-                    new SqlParameter("@Limit", limit),
-                    new SqlParameter("@SongName", songName ?? (object)DBNull.Value),
-                    new SqlParameter("@SongNumber", songNumber ?? (object)DBNull.Value),
-                    new SqlParameter("@CategoryName", categoryName ?? (object)DBNull.Value),
-                    new SqlParameter("@SongBookId", songBookId ?? (object)DBNull.Value),
-                    new SqlParameter("@CuratorIds", curatorIds != null && curatorIds.Count > 0 
-                        ? JsonSerializer.Serialize(curatorIds) 
-                        : (object)DBNull.Value),
-                    new SqlParameter("@UserId", _userId ?? (object)DBNull.Value),
-                };
+        {
+            new SqlParameter("@Offset", offset),
+            new SqlParameter("@Limit", limit),
+            new SqlParameter("@SongName", songName ?? (object)DBNull.Value),
+            new SqlParameter("@SongNumber", songNumber ?? (object)DBNull.Value),
+            new SqlParameter("@CategoryName", categoryName ?? (object)DBNull.Value),
+            new SqlParameter("@SongBookId", songBookId ?? (object)DBNull.Value),
+            new SqlParameter("@ArtistId", artistId ?? (object)DBNull.Value),
+            new SqlParameter("@AlbumId", albumId ?? (object)DBNull.Value),
+            new SqlParameter("@CuratorIds", curatorIds != null && curatorIds.Count > 0
+                ? JsonSerializer.Serialize(curatorIds)
+                : (object)DBNull.Value),
+            new SqlParameter("@UserId", _userId ?? (object)DBNull.Value),
+            new SqlParameter("@OrderByColumn", orderByColumn ?? (object)DBNull.Value)
+        };
 
                 var rawResults = await _context.Database
                     .SqlQueryRaw<SongResult>(sql, parameters.ToArray())
                     .AsNoTracking()
-                    .ToPaginatedResultAsync(offset,limit,cancellationToken,orderByColumn);
-                
-                return ServiceResult<PaginationDetails<SongResult>>.Success(rawResults);
+                    .ToListAsync(cancellationToken);
+
+                // Get total count for pagination
+                var countSql = @"
+            SELECT COUNT(DISTINCT s.Id)
+            FROM Songs s
+            LEFT JOIN Categories c ON s.CategoryId = c.Id
+            LEFT JOIN SongBooks sb ON s.SongBookId = sb.Id OR c.SongBookId = sb.Id
+            LEFT JOIN Artists a ON s.ArtistId = a.Id
+            LEFT JOIN Albums alb ON s.AlbumId = alb.Id
+            LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
+            WHERE
+                (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
+                AND (@SongName IS NULL OR s.Title LIKE '%' + @SongName + '%')
+                AND (@SongNumber IS NULL OR s.SongNumber = @SongNumber)
+                AND (@CategoryName IS NULL OR c.Name LIKE '%' + @CategoryName + '%')
+                AND (@SongBookId IS NULL OR sb.Id = @SongBookId)
+                AND (@ArtistId IS NULL OR a.Id = @ArtistId)
+                AND (@AlbumId IS NULL OR alb.Id = @AlbumId)
+                AND (@CuratorIds IS NULL OR p.Curator IN (SELECT [value] FROM OPENJSON(@CuratorIds)))";
+
+                var countParams = parameters.Where(p => p.ParameterName != "@Offset"
+                    && p.ParameterName != "@Limit"
+                    && p.ParameterName != "@OrderByColumn").ToArray();
+
+                var totalCount = await _context.Database
+                    .SqlQueryRaw<int>(countSql, countParams)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                var paginatedResult = new PaginationDetails<SongResult>
+                {
+                    OffSet = offset,
+                    Limit = limit,
+                    TotalSize = totalCount,
+                    HasMore = (offset + limit) < totalCount,
+                    Data = rawResults
+                };
+
+                return ServiceResult<PaginationDetails<SongResult>>.Success(paginatedResult);
             }
             catch (Exception ex)
             {
                 _logger.LogError("Error retrieving paginated songs: {Error}", ex);
-                return ServiceResult<PaginationDetails<SongResult>>.Failure( 
+                return ServiceResult<PaginationDetails<SongResult>>.Failure(
                     new ServerErrorException("An error occurred while retrieving paginated songs."));
             }
         }

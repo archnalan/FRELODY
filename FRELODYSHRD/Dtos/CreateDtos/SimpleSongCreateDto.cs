@@ -1,5 +1,5 @@
-﻿using FRELODYSHRD.Dtos.Composite;
-using FRELODYSHRD.ModelTypes;
+﻿using FRELODYSHRD.ModelTypes;
+using FRELODYUI.Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,13 +12,15 @@ namespace FRELODYSHRD.Dtos.CreateDtos
     {
         public string Title { get; set; }
         public int? SongNumber { get; set; }
-        public string? SongBookId { get; set; }
         public string? CategoryId { get; set; }
+        public string? SongBookId { get; set; }
+        public string? AlbumId { get; set; }
+        public string? ArtistId { get; set; }
+        public BookCategoryPairViewModel? BookCategory { get; set; }
+        public ArtistAlbumPairViewModel? ArtistAlbum { get; set; }
         public Dictionary<SongSection, int>? PartRepeatCounts { get; set; } // section key, repeat count value
         public Dictionary<int, int>? LineRepeatCounts { get; set; } //line number key, repeat count value
         public ICollection<SegmentCreateDto>? SongLyrics { get; set; }
-        public List<BookCategorySongDto>? BookCategories { get; set; }
-        public List<ArtistAlbumSongDto>? ArtistAlbums { get; set; }
 
     }
 }

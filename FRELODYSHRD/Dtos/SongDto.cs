@@ -42,10 +42,10 @@ namespace FRELODYAPP.Dtos
 
         [StringLength(200)]
         public string? AddedBy { get; set; }
-
         public string? CategoryId { get; set; }
+        public string? SongBookId { get; set; }
         public string? AlbumId { get; set; }
-
+        public string? ArtistId { get; set; }
         public bool? IsFavorite { get; set; }
 
         [Range(0, 5)]

@@ -23,6 +23,8 @@ namespace FRELODYAPIs.Areas.Admin.ViewModels
 
         public string? History { get; set; }
 
+        // Book/Category info
+
         public string? CategoryName { get; set; }
 
         public string? SongBookTitle { get; set; }
@@ -36,6 +38,14 @@ namespace FRELODYAPIs.Areas.Admin.ViewModels
         public string? CategoryId { get; set; }
 
         public string? CategorySlug { get; set; }
+        
+        // Artist/Album info
+        public string? ArtistName { get; set; }
+        public string? ArtistId { get; set; }
+        public string? AlbumTitle { get; set; }
+        public string? AlbumId { get; set; }
+        public string? Role { get; set; } 
+        public int? TrackNumber { get; set; }
 
         public bool? IsFavorite { get; set; }
     }

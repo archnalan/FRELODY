@@ -39,9 +39,10 @@ namespace FRELODYAPP.Models
 
 		[StringLength(255)]
 		public string? History { get; set; }
-
         public string? CategoryId { get; set; }
+        public string? SongBookId { get; set; }
         public string? AlbumId { get; set; }
+        public string? ArtistId { get; set; }
 
         [Range(0, 5)]
         [Column(TypeName = "decimal(3,2)")]

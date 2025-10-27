@@ -11,6 +11,7 @@ namespace FRELODYUI.Shared.Services
 {
     public class TabManagementService
     {
+        public string TabsComponentKey { get; set; } = Guid.NewGuid().ToString();
         public List<TabItem> TabItems { get; set; } = new();        
         public TabItem? ActiveTab { get; set; }
 

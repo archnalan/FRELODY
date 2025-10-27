@@ -17,159 +17,29 @@
     }
     else
     {
-        <div class="row row-cols-lg-12 g-2 align-items-center">
-            <!-- Input 1 -->
-            <div class="col-3 col-md-2">
-                <input type="number"
-                       @bind="FormattedSongNumber"
-                       class="form-control"
-                       placeholder="Song #"
-                       min="1" />
-            </div>
-
-            <!-- Input 2 -->
-            <div class="col-9 col-md-4">
-                <input type="text"
-                       @bind="SongTitle"
-                       class="form-control"
-                       placeholder="Song Title" />
-            </div>
-
-            <!-- Selection Tabs and Dropdowns -->
-            <div class="col-9 col-md-4">
-                <!-- Tab Navigation -->
-                <ul class="nav nav-tabs nav-fill mb-2" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link @(activeSelectionTab == "songbook" ? "active" : "")"
-                                type="button"
-                                @onclick='() => SetActiveSelectionTab("songbook")'>
-                            <i class="bi bi-book"></i><span class="d-none d-md-inline ms-1">Songbook</span>
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link @(activeSelectionTab == "artist" ? "active" : "")"
-                                type="button"
-                                @onclick='() => SetActiveSelectionTab("artist")'>
-                            <i class="bi bi-person"></i><span class="d-none d-md-inline ms-1">Artist/Album</span>
-                        </button>
-                    </li>
-                </ul>
-
-                <!-- Tab Content -->
-                <div class="tab-content">
-                    <!-- Songbook Flow -->
-                    @if (activeSelectionTab == "songbook")
-                    {
-                        <!-- Existing Book-Category Pairs -->
-                        @if (selectedBookCategories.Any())
-                        {
-                            <div class="mb-2">
-                                @foreach (var bookCat in selectedBookCategories)
-                                {
-                                    <div class="badge bg-primary me-1 mb-1 d-inline-flex align-items-center">
-                                        <span class="small">@bookCat.BookTitle @(bookCat.CategoryName != null ? $"/ {bookCat.CategoryName}" : "")</span>
-                                        <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
-                                                @onclick="() => RemoveBookCategory(bookCat)"></button>
-                                    </div>
-                                }
-                            </div>
-                        }
-
-                        <!-- Add New Book-Category Pair -->
-                        @if (string.IsNullOrEmpty(selectedSongBook?.Id))
-                        {
-                            <SongBookDropdown @ref="songBookDropdownRef"
-                                              SelectedSongBook="selectedSongBook"
-                                              SelectedSongBookChanged="HandleSongBookChanged" />
-                        }
-                        else if (selectedSongBook != null && !string.IsNullOrEmpty(selectedSongBook.Id))
-                        {
-                            <div class="row g-1">
-                                <div class="col-4">
-                                    <button type="button" class="btn btn-sm btn-link text-truncate w-100 text-start"
-                                            @onclick="ChangeBookSelection">
-                                        <strong>@GetTruncatedTitle(selectedSongBook.Title)</strong>
-                                    </button>
-                                </div>
-                                <div class="col-6">
-                                    <CategoriesDropdown SelectedCategory="@selectedCategory"
-                                                        SelectedCategoryChanged="HandleCategoryChanged"
-                                                        SongBookId="@selectedSongBook.Id"
-                                                        TabIndex="10" />
-                                </div>
-                                <div class="col-2">
-                                    <button type="button" class="btn btn-sm btn-success w-100"
-                                            @onclick="AddBookCategoryPair"
-                                            title="Add this book/category">
-                                        <i class="bi bi-plus-circle"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        }
-                    }
-
-                    <!-- Artist/Album Flow -->
-                    @if (activeSelectionTab == "artist")
-                    {
-                        <!-- Existing Artist-Album Pairs -->
-                        @if (selectedArtistAlbums.Any())
-                        {
-                            <div class="mb-2">
-                                @foreach (var artistAlbum in selectedArtistAlbums)
-                                {
-                                    <div class="badge bg-info me-1 mb-1 d-inline-flex align-items-center">
-                                        <span class="small">@artistAlbum.ArtistName @(artistAlbum.AlbumTitle != null ? $"/ {artistAlbum.AlbumTitle}" : "")</span>
-                                        <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
-                                                @onclick="() => RemoveArtistAlbum(artistAlbum)"></button>
-                                    </div>
-                                }
-                            </div>
-                        }
-
-                        <!-- Add New Artist-Album Pair -->
-                        @if (string.IsNullOrEmpty(selectedArtist?.Id))
-                        {
-                            <ArtistDropdown @ref="artistDropdownRef"
-                                            SelectedArtist="selectedArtist"
-                                            SelectedArtistChanged="HandleArtistChanged" />
-                        }
-                        else if (selectedArtist != null && !string.IsNullOrEmpty(selectedArtist.Id))
-                        {
-                            <div class="row g-1">
-                                <div class="col-4">
-                                    <button type="button" class="btn btn-sm btn-link text-truncate w-100 text-start"
-                                            @onclick="ChangeArtistSelection">
-                                        <strong>@GetTruncatedTitle(selectedArtist.Name)</strong>
-                                    </button>
-                                </div>
-                                <div class="col-6">
-                                    <AlbumDropdown SelectedAlbum="@selectedAlbum"
-                                                   SelectedAlbumChanged="HandleAlbumChanged"
-                                                   ArtistId="@selectedArtist.Id"
-                                                   TabIndex="10" />
-                                </div>
-                                <div class="col-2">
-                                    <button type="button" class="btn btn-sm btn-success w-100"
-                                            @onclick="AddArtistAlbumPair"
-                                            title="Add this artist/album">
-                                        <i class="bi bi-plus-circle"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        }
-                    }
+        @if (cacheData != null)
+        {
+            <div class="alert alert-info d-flex align-items-center justify-content-between mb-3" role="alert">
+                <div>
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Session Recovery:</strong> Unsaved changes detected. Would you like to restore your previous work?
+                </div>
+                <div>
+                    <button type="button" class="btn btn-sm btn-primary me-2" @onclick="RestoreFromCache">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Restore
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="DiscardCache">
+                        <i class="bi bi-x-circle me-1"></i>Discard
+                    </button>
                 </div>
             </div>
+        }
 
-            <!-- Save Button -->
-            <div class="col-3 col-md-2 d-grid">
-                <button type="button" 
-                        class="btn btn-outline-primary"
-                        @onclick="HandleSongSave" >
-                    <span class="me-2 d-none d-md-inline">Save Song</span>
-                    <i class="bi bi-clipboard-check"></i>
-                </button>
-            </div>
+        <div class="row row-cols-lg-12 g-2 align-items-center">
+            <BookArtistAdd @ref="bookArtistAddRef"
+                           OnBookCategoryChanged="HandleBookCategoryChanged"
+                           OnArtistAlbumChanged="HandleArtistAlbumChanged"
+                           SongNumber="@SongNumber" />
         </div>
 
         @if (initialPartsItems.Any())
@@ -214,16 +84,16 @@
     private ArtistDto? selectedArtist = null;
     private AlbumDto? selectedAlbum = null;
 
-    private SimpleSongCreateDto songData = new();
-    private SongBookDropdown? songBookDropdownRef;
-    private ArtistDropdown? artistDropdownRef;
+    private SimpleSongCreateDto songData = new(); 
+    private SimpleSongCreateDto? cacheData;
+    private BookArtistAdd? bookArtistAddRef;
     private TabsComponent? TabsComponentRef;
     private const int MAX_TITLE_LEN = 15;
     private bool isLoading = true;
-    private string activeSelectionTab = "songbook";
+    private BookCategoryPairViewModel? currentBookCategory = null;
+    private ArtistAlbumPairViewModel? currentArtistAlbum = null;
 
-    private List<BookCategoryPairViewModel> selectedBookCategories = new();
-    private List<ArtistAlbumPairViewModel> selectedArtistAlbums = new();
+    private IDisposable? _locationChangingRegistration;
 
     private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
                   Segments="@AllPartsSegments.GetValueOrDefault(id, new List<SegmentCreateDto>())"
@@ -251,6 +121,12 @@
             if (query.TryGetValue("songId", out var songIdValues))
             {
                 SongId = songIdValues.FirstOrDefault();
+            }
+            var cachedData = await _storageService
+                    .GetItemAsync<SimpleSongCreateDto>("songDraft");
+            if (cachedData != null)
+            {
+                cacheData = cachedData;
             }
             if (string.IsNullOrEmpty(SongId))
             {
@@ -331,6 +207,7 @@
                 }
             }
             _tabsManager.OnRelocateLine += HandleRelocateLineRequest;
+            _locationChangingRegistration = _navManager.RegisterLocationChangingHandler(HandleLocationChanging);
         }
         catch (Exception ex)
         {
@@ -367,11 +244,21 @@
             if (artistResponse.IsSuccessStatusCode)
             {
                 selectedArtist = artistResponse.Content!;
+                if (bookArtistAddRef != null)
+                    await bookArtistAddRef.SetArtistAlbumPair(new ArtistAlbumPairViewModel
+                    {
+                        ArtistId = selectedArtist.Id,
+                        ArtistName = selectedArtist.Name,
+                        AlbumId = selectedAlbum.Id,
+                        AlbumTitle = selectedAlbum.Title,
+                        TrackNumber = 1
+                    });
             }
         }
         if (selectedAlbum !=null || selectedArtist != null)
         {
-            SetActiveSelectionTab("artist");
+            if( bookArtistAddRef != null)
+                await bookArtistAddRef. SetActiveSelectionTab("artist");           
         }
         StateHasChanged();  
     }
@@ -388,32 +275,22 @@
                 if (bookResponse.IsSuccessStatusCode)
                 {
                     selectedSongBook = bookResponse.Content!;
+                    if (bookArtistAddRef != null)
+                        await bookArtistAddRef.SetSongBookCategoryPair(new BookCategoryPairViewModel
+                        {
+                            SongBookId = selectedSongBook.Id,
+                            BookTitle = selectedSongBook.Title,
+                            CategoryId = selectedCategory.Id,
+                            CategoryName = selectedCategory.Name
+                        });
                 }
             }
         }
         if (selectedCategory != null || selectedSongBook != null)
         {
-            SetActiveSelectionTab("songbook");
+            if (bookArtistAddRef != null)
+                await bookArtistAddRef.SetActiveSelectionTab("songbook");            
         }
-        StateHasChanged();
-    }
-
-    private void SetActiveSelectionTab(string tab)
-    {
-        activeSelectionTab = tab;
-
-        // Clear the other tab's selections when switching
-        if (tab == "songbook")
-        {
-            selectedArtist = null;
-            selectedAlbum = null;
-        }
-        else if (tab == "artist")
-        {
-            selectedSongBook = null;
-            selectedCategory = null;
-        }
-
         StateHasChanged();
     }
 
@@ -450,21 +327,25 @@
         songData.Title = SongTitle;
         songData.SongNumber = SongNumber;
         songData.SongLyrics = allSegments;
-        // Map BookCategory pairs
-        songData.BookCategories = selectedBookCategories.Select(bc => new BookCategorySongDto
-        {
-            SongBookId = bc.SongBookId,
-            CategoryId = bc.CategoryId,
-            SongNumber = bc.SongNumber ?? SongNumber
-        }).ToList();
 
-        // Map ArtistAlbum pairs
-        songData.ArtistAlbums = selectedArtistAlbums.Select(aa => new ArtistAlbumSongDto
-        {
-            ArtistId = aa.ArtistId,
-            AlbumId = aa.AlbumId,
-            TrackNumber = aa.TrackNumber
-        }).ToList();
+        // Map single BookCategory pair if exists
+        songData.BookCategory = currentBookCategory != null
+            ? new BookCategoryPairViewModel
+            {
+                SongBookId = currentBookCategory.SongBookId,
+                CategoryId = currentBookCategory.CategoryId
+            }
+            : new BookCategoryPairViewModel();
+
+        songData.ArtistAlbum = currentArtistAlbum != null
+            ? new ArtistAlbumPairViewModel
+            {
+                ArtistId = currentArtistAlbum.ArtistId,
+                AlbumId = currentArtistAlbum.AlbumId,
+                TrackNumber = currentArtistAlbum.TrackNumber
+            }
+            : new ArtistAlbumPairViewModel();
+
         if (allSegments.Count == 0)
         {
             _modalService.Show(new ModalOptionDto
@@ -606,39 +487,6 @@
 
         // Force re-render of the tabs content by triggering StateHasChanged
         StateHasChanged();
-    }
-
-    private async Task HandleSongBookChanged(SongBookDto? newSongBook)
-    {
-        selectedSongBook = newSongBook;
-        songData.SongBookId = newSongBook?.Id;
-        // Reset selected category when song book changes
-        selectedCategory = null;
-        songData.CategoryId = null;
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task HandleCategoryChanged(CategoryDto? newCategory)
-    {
-        selectedCategory = newCategory;
-        songData.CategoryId = newCategory?.Id;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task HandleArtistChanged(ArtistDto? newArtist)
-    {
-        selectedArtist = newArtist;
-        // Reset selected album when artist changes
-        selectedAlbum = null;
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task HandleAlbumChanged(AlbumDto? newAlbum)
-    {
-        selectedAlbum = newAlbum;
-        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleRelocateLineRequest(RelocateLineActionDto relocateArgs)
@@ -931,99 +779,41 @@
         });
     }
 
-    private async void ChangeBookSelection()
-    {
-        selectedSongBook = null;
-        selectedCategory = null;
-        songData.SongBookId = null;
-        songData.CategoryId = null;
-        StateHasChanged();
-
-        if (songBookDropdownRef != null)
-        {
-            await songBookDropdownRef.FocusInput();
-        }
-    }
-
-    private async void ChangeArtistSelection()
-    {
-        selectedArtist = null;
-        selectedAlbum = null;
-        StateHasChanged();
-
-        if (artistDropdownRef != null)
-        {
-            await artistDropdownRef.FocusInput();
-        }
-    }
-    private void AddBookCategoryPair()
-    {
-        if (selectedSongBook == null) return;
-
-        var existingPair = selectedBookCategories.FirstOrDefault(bc =>
-            bc.SongBookId == selectedSongBook.Id &&
-            bc.CategoryId == selectedCategory?.Id);
-
-        if (existingPair == null)
-        {
-            selectedBookCategories.Add(new BookCategoryPairViewModel
-            {
-                SongBookId = selectedSongBook.Id,
-                BookTitle = selectedSongBook.Title,
-                CategoryId = selectedCategory?.Id,
-                CategoryName = selectedCategory?.Name,
-                SongNumber = SongNumber
-            });
-        }
-
-        // Reset for next entry
-        selectedSongBook = null;
-        selectedCategory = null;
-        StateHasChanged();
-    }
-
-    private void RemoveBookCategory(BookCategoryPairViewModel bookCat)
-    {
-        selectedBookCategories.Remove(bookCat);
-        StateHasChanged();
-    }
-
-    private void AddArtistAlbumPair()
-    {
-        if (selectedArtist == null) return;
-
-        var existingPair = selectedArtistAlbums.FirstOrDefault(aa =>
-            aa.ArtistId == selectedArtist.Id &&
-            aa.AlbumId == selectedAlbum?.Id);
-
-        if (existingPair == null)
-        {
-            selectedArtistAlbums.Add(new ArtistAlbumPairViewModel
-            {
-                ArtistId = selectedArtist.Id,
-                ArtistName = selectedArtist.Name,
-                AlbumId = selectedAlbum?.Id,
-                AlbumTitle = selectedAlbum?.Title
-            });
-        }
-
-        // Reset for next entry
-        selectedArtist = null;
-        selectedAlbum = null;
-        StateHasChanged();
-    }
-
-    private void RemoveArtistAlbum(ArtistAlbumPairViewModel artistAlbum)
-    {
-        selectedArtistAlbums.Remove(artistAlbum);
-        StateHasChanged();
-    }
-
     private string GetTruncatedTitle(string title)
     {
         return title.Length > MAX_TITLE_LEN
             ? title.Substring(0, MAX_TITLE_LEN) + "…"
             : title;
+    }
+
+    private async Task HandleBookCategoryChanged(BookCategoryPairViewModel? bookCategory)
+    {
+        currentBookCategory = bookCategory;
+
+        // Clear artist/album when book/category is set
+        if (bookCategory != null)
+        {
+            currentArtistAlbum = null;
+            selectedArtist = null;
+            selectedAlbum = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleArtistAlbumChanged(ArtistAlbumPairViewModel? artistAlbum)
+    {
+        currentArtistAlbum = artistAlbum;
+
+        // Clear book/category when artist/album is set
+        if (artistAlbum != null)
+        {
+            currentBookCategory = null;
+            selectedSongBook = null;
+            selectedCategory = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ConfirmModal()
@@ -1034,36 +824,261 @@
             _modalService.Close();
             _navManager.NavigateTo("/songs-list");
         }
-        await CloseModal();
+        else if (_modalService.CurrentModal.Context?.ActionType == "RestoreFromCache")
+        {
+            // Save current work first
+            await HandleSongSave();
+            _modalService.Close();
+            // Then restore from cache
+            await PerformCacheRestore();
+        }
+        else
+        {
+            await CloseModal();
+        }
     }
 
     private async Task CloseModal()
     {
+        if (_modalService.CurrentModal?.Context?.ActionType == "RestoreFromCache" &&
+                _modalService.CurrentModal?.Context?.Data.ToString() == "HasCurrentWork")
+        {
+            await PerformCacheRestore();
+        }
         _modalService.Close();
         await Task.CompletedTask;
     }
 
+    private async Task RestoreFromCache()
+    {
+        // Check if there's unsaved current work
+        var hasCurrentWork = currentBookCategory != null||
+                             currentArtistAlbum != null ||
+                             AllPartsSegments.Values.Any(segments => segments.Any());
+
+        if (hasCurrentWork)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Unsaved Changes",
+                Message = "You have unsaved work in the current editor. Do you want to save it before restoring from cache?",
+                ButtonText = "Save & Restore",
+                OptionType = OptionType.Warning,
+                Context = new ModalContext
+                {
+                    ActionType = "RestoreFromCache",
+                    Data = "HasCurrentWork"
+                }
+            });
+            return;
+        }
+
+        await PerformCacheRestore();
+    }
+
+    private async Task PerformCacheRestore()
+    {
+        if (cacheData == null) return;
+
+        try
+        {
+            ClearCurrentState();
+
+            SongTitle = cacheData.Title;
+            //SongNumber = cacheData.SongNumber ?? 1;
+
+            // Restore book category with proper titles
+            if (cacheData.BookCategory != null)
+            {
+                var bookResponse = await _songsBooksApi.GetSongBookById(cacheData.BookCategory.SongBookId);
+                var bookTitle = bookResponse.IsSuccessStatusCode ? bookResponse.Content?.Title : "Unknown Book";
+                string? categoryName = null;
+                if (!string.IsNullOrEmpty(cacheData.BookCategory.CategoryId))
+                {
+                    var catResponse = await _categoriesApi.GetCategoryById(cacheData.BookCategory.CategoryId);
+                    categoryName = catResponse.IsSuccessStatusCode ? catResponse.Content?.Name : null;
+                }
+                currentBookCategory = new BookCategoryPairViewModel
+                    {
+                        SongBookId = cacheData.BookCategory.SongBookId,
+                        BookTitle = bookTitle ?? "Unknown",
+                        CategoryId = cacheData.BookCategory.CategoryId,
+                        CategoryName = categoryName,
+                    };
+                // Set active tab to songbook if we have book categories
+                //activeSelectionTab = "songbook";
+                if (bookArtistAddRef != null)
+                {
+                    await bookArtistAddRef.SetActiveSelectionTab("songbook");
+                    await bookArtistAddRef.SetSongBookCategoryPair(currentBookCategory);
+                }
+            }                
+            else if (cacheData.ArtistAlbum != null)// Restore artist album with proper names
+            {
+                var artistResponse = await _artistsApi.GetArtistById(cacheData.ArtistAlbum.ArtistId);
+                var artistName = artistResponse.IsSuccessStatusCode ? artistResponse.Content?.Name : "Unknown Artist";
+                string? albumTitle = null;
+                if (!string.IsNullOrEmpty(cacheData.ArtistAlbum.AlbumId))
+                {
+                    var albumResponse = await _albumsApi.GetAlbumById(cacheData.ArtistAlbum.AlbumId);
+                    albumTitle = albumResponse.IsSuccessStatusCode ? albumResponse.Content?.Title : null;
+                }
+                currentArtistAlbum = new ArtistAlbumPairViewModel
+                {
+                    ArtistId = cacheData.ArtistAlbum.ArtistId,
+                    ArtistName = artistName,
+                    AlbumId = cacheData.ArtistAlbum.AlbumId,
+                    AlbumTitle = albumTitle,
+                    TrackNumber = cacheData.ArtistAlbum.TrackNumber
+                };
+
+                if( bookArtistAddRef != null)
+                {
+                    await bookArtistAddRef.SetActiveSelectionTab("artist");
+                    await bookArtistAddRef.SetArtistAlbumPair(currentArtistAlbum);
+                }
+            }
+
+            // Restore segments and rebuild the entire UI structure
+            if (cacheData.SongLyrics != null && cacheData.SongLyrics.Any())
+            {
+                // Group segments by part number
+                var groupedSegments = cacheData.SongLyrics
+                    .GroupBy(s => s.PartNumber)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // Rebuild AllPartsSegments
+                foreach (var partNum in groupedSegments.Keys.OrderBy(k => k))
+                {
+                    AllPartsSegments[partNum] = groupedSegments[partNum];
+                }
+
+                // Rebuild initialPartsItems from scratch
+                var newTabItems = new List<TabItem>();
+
+                foreach (var partNum in AllPartsSegments.Keys.OrderBy(k => k))
+                {
+                    var firstSegment = AllPartsSegments[partNum].FirstOrDefault();
+                    var sectionName = firstSegment?.PartName.ToString() ?? nameof(SongSection.Verse);
+
+                    // Create a new tab item with proper closure
+                    var currentPartNum = partNum; // Capture for closure
+
+                    newTabItems.Add(new TabItem
+                    {
+                        Id = currentPartNum,
+                        SectionName = sectionName,
+                        SectionNumber = currentPartNum,
+                        DisplayOrder = newTabItems.Count + 1,
+                        Content = builder =>
+                        {
+                            builder.OpenComponent<SongSectionBoard>(0);
+                            builder.AddAttribute(1, "SectionId", currentPartNum);
+                            builder.AddAttribute(2, "OnSegmentsUpdate",
+                                EventCallback.Factory.Create<List<SegmentCreateDto>>(
+                                    this, segments => HandleVerseUpdate(currentPartNum, segments)));
+                            builder.AddAttribute(3, "Segments", AllPartsSegments[currentPartNum]);
+                            builder.AddAttribute(4, "ActiveTab", activeTabItem);
+                            builder.CloseComponent();
+                        }
+                    });
+                }
+
+                initialPartsItems = newTabItems;
+            }
+            else
+            {
+                InitializeNewContent();
+            }
+
+            // Clear cache
+            cacheData = null;
+            await _storageService.RemoveItemAsync("songDraft");
+            _tabsManager.TabsComponentKey = Guid.NewGuid().ToString();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during cache restoration");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Restoration Error",
+                Message = "An error occurred while restoring your work. Please try again.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+    }
+
+    private void ClearCurrentState()
+    {
+        // Clear current state completely
+        SongTitle = "";
+        SongNumber = 1;
+
+        currentArtistAlbum = null;
+        currentArtistAlbum = null;
+        AllPartsSegments.Clear();
+        initialPartsItems.Clear();
+    }
+
+    private void DiscardCache()
+    {
+        cacheData = null;
+        _storageService.RemoveItemAsync("songDraft");
+        StateHasChanged();
+    }
+
+    private async ValueTask HandleLocationChanging(LocationChangingContext context)
+    {
+        // Check if there's unsaved work
+        var hasUnsavedWork = currentBookCategory != null ||
+                             currentArtistAlbum != null ||
+                             AllPartsSegments.Values.Any(segments => segments.Any());
+
+        if (hasUnsavedWork)
+        {
+            try
+            {
+                // Save current work to cache
+                var allSegments = AllPartsSegments.Values.SelectMany(v => v).ToList();
+
+                var draftData = new SimpleSongCreateDto
+                {
+                    Title = SongTitle,
+                    SongNumber = SongNumber,
+                    SongLyrics = allSegments,
+                    BookCategory = currentBookCategory != null
+                        ? new BookCategoryPairViewModel
+                        {
+                            SongBookId = currentBookCategory.SongBookId,
+                            CategoryId = currentBookCategory.CategoryId
+                        }
+                        : null,
+                    ArtistAlbum = currentArtistAlbum != null
+                        ? new ArtistAlbumPairViewModel
+                        {
+                            ArtistId = currentArtistAlbum.ArtistId,
+                            AlbumId = currentArtistAlbum.AlbumId
+                        }
+                        : null
+                };
+
+                await _storageService.SetItemAsync("songDraft", draftData);
+                _logger.LogInformation("Saved draft before navigation");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving draft during navigation");
+            }
+        }
+    }
+        
+
     public void Dispose()
     {
         _tabsManager.OnRelocateLine -= HandleRelocateLineRequest;
-    }
-
-    private class BookCategoryPairViewModel
-    {
-        public string SongBookId { get; set; } = default!;
-        public string BookTitle { get; set; } = default!;
-        public string? CategoryId { get; set; }
-        public string? CategoryName { get; set; }
-        public int? SongNumber { get; set; }
-    }
-
-    private class ArtistAlbumPairViewModel
-    {
-        public string ArtistId { get; set; } = default!;
-        public string ArtistName { get; set; } = default!;
-        public string? AlbumId { get; set; }
-        public string? AlbumTitle { get; set; }
-        public int? TrackNumber { get; set; }
+        _locationChangingRegistration?.Dispose();
     }
 
 }

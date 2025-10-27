@@ -1,0 +1,357 @@
+
+<div class="d-flex gap-2">
+    <!-- Vertical tabs -->
+    <ul class="nav nav-pills flex-column border rounded rounded-3 p-1 gap-1" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex justify-content-center align-items-center @(activeSelectionTab == "songbook" ? "active" : "")"
+                    data-bs-toggle="tooltip"
+                    title="Song Book"
+                    type="button"
+                    style="width: 2.5rem; height: 2.5rem;"
+                    @onclick='() => SetActiveSelectionTab("songbook")'>
+                <i class="bi bi-book"></i>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex justify-content-center align-items-center @(activeSelectionTab == "artist" ? "active" : "")"
+                    data-bs-toggle="tooltip"
+                    title="Artist"
+                    type="button"
+                    style="width: 2.5rem; height: 2.5rem;"
+                    @onclick='() => SetActiveSelectionTab("artist")'>
+                <i class="bi bi-person"></i>
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="flex-grow-1 tab-content">
+        <!-- Songbook Flow -->
+        @if (activeSelectionTab == "songbook")
+        {
+            <div class="d-flex flex-column justify-content-end h-100">
+                <!-- Current Book-Category Pair -->
+                @if (currentBookCategory != null)
+                {
+                    <div class="mb-2">
+                        <div class="badge bg-primary d-inline-flex align-items-center">
+                            <span class="small">@currentBookCategory.BookTitle @(currentBookCategory.CategoryName != null ? $"/ {currentBookCategory.CategoryName}" : "")</span>
+                            <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
+                                    @onclick="ClearBookCategory"></button>
+                        </div>
+                    </div>
+                }
+
+                <!-- Add New Book-Category Pair -->
+                @if (string.IsNullOrEmpty(selectedSongBook?.Id))
+                {
+                    <SongBookDropdown @ref="songBookDropdownRef"
+                                      SelectedSongBook="selectedSongBook"
+                                      SelectedSongBookChanged="HandleSongBookChanged" />
+                }
+                else if (selectedSongBook != null && !string.IsNullOrEmpty(selectedSongBook.Id))
+                {
+                    <div class="d-flex gap-1 align-items-center">
+                        <button type="button" class="btn btn-sm btn-link text-truncate flex-shrink-1"
+                                style="max-width: 7rem;"
+                                @onclick="ChangeBookSelection">
+                            <strong>@GetTruncatedTitle(selectedSongBook.Title)</strong>
+                        </button>
+                        <div class="flex-grow-1">
+                            <CategoriesDropdown SelectedCategory="@selectedCategory"
+                                                SelectedCategoryChanged="HandleCategoryChanged"
+                                                SongBookId="@selectedSongBook.Id"
+                                                TabIndex="10" />
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Artist/Album Flow -->
+        @if (activeSelectionTab == "artist")
+        {
+            <div class="d-flex flex-column justify-content-end h-100">
+                <!-- Current Artist-Album Pair -->
+                @if (currentArtistAlbum != null)
+                {
+                    <div class="mb-2">
+                        <div class="badge bg-info d-inline-flex align-items-center">
+                            <span class="small">@currentArtistAlbum.ArtistName @(currentArtistAlbum.AlbumTitle != null ? $"/ {currentArtistAlbum.AlbumTitle}" : "")</span>
+                            <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
+                                    @onclick="ClearArtistAlbum"></button>
+                        </div>
+                    </div>
+                }
+
+                <!-- Add New Artist-Album Pair -->
+                @if (string.IsNullOrEmpty(selectedArtist?.Id))
+                {
+                    <ArtistDropdown @ref="artistDropdownRef"
+                                    SelectedArtist="selectedArtist"
+                                    SelectedArtistChanged="HandleArtistChanged" />
+                }
+                else if (selectedArtist != null && !string.IsNullOrEmpty(selectedArtist.Id))
+                {
+                    <div class="d-flex gap-1 align-items-center">
+                        <button type="button" class="btn btn-sm btn-link text-truncate flex-shrink-1"
+                                style="max-width: 7rem;"
+                                @onclick="ChangeArtistSelection">
+                            <strong>@GetTruncatedTitle(selectedArtist.Name)</strong>
+                        </button>
+                        <div class="flex-grow-1">
+                            <AlbumDropdown SelectedAlbum="@selectedAlbum"
+                                           SelectedAlbumChanged="HandleAlbumChanged"
+                                           ArtistId="@selectedArtist.Id"
+                                           TabIndex="10" />
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string activeSelectionTab = "songbook";
+
+    private SongBookDto? selectedSongBook = null;
+    private CategoryDto? selectedCategory = null;
+
+    public ArtistDto? selectedArtist = null;
+    public AlbumDto? selectedAlbum = null;
+
+    private const int MAX_TITLE_LEN = 15;
+    private SongBookDropdown? songBookDropdownRef;
+    private ArtistDropdown? artistDropdownRef;
+
+    // Single pair storage - only one type can exist at a time
+    private BookCategoryPairViewModel? currentBookCategory = null;
+    private ArtistAlbumPairViewModel? currentArtistAlbum = null;
+
+    [Parameter] public EventCallback<BookCategoryPairViewModel?> OnBookCategoryChanged { get; set; }
+    [Parameter] public EventCallback<ArtistAlbumPairViewModel?> OnArtistAlbumChanged { get; set; }
+    [Parameter] public int SongNumber { get; set; } = 1;
+
+    public async Task SetActiveSelectionTab(string tab)
+    {
+        if (activeSelectionTab == tab) return;
+
+        activeSelectionTab = tab;
+
+        // Clear selections and notify parent when switching tabs
+        if (tab == "songbook")
+        {
+            // Clear artist/album data
+            selectedArtist = null;
+            selectedAlbum = null;
+            currentArtistAlbum = null;
+            await OnArtistAlbumChanged.InvokeAsync(null);
+        }
+        else if (tab == "artist")
+        {
+            // Clear songbook/category data
+            selectedSongBook = null;
+            selectedCategory = null;
+            currentBookCategory = null;
+            await OnBookCategoryChanged.InvokeAsync(null);
+        }
+
+        StateHasChanged();
+    }
+
+    public async Task SetSongBookCategoryPair(BookCategoryPairViewModel? pair)
+    {
+        currentBookCategory = pair;
+        if (pair != null)
+        {
+            selectedSongBook = new SongBookDto
+            {
+                Id = pair.SongBookId,
+                Title = pair.BookTitle
+            };
+            if (pair.CategoryId != null && pair.CategoryName != null)
+            {
+                selectedCategory = new CategoryDto
+                {
+                    Id = pair.CategoryId,
+                    Name = pair.CategoryName
+                };
+            }
+            else
+            {
+                selectedCategory = null;
+            }
+        }
+        else
+        {
+            selectedSongBook = null;
+            selectedCategory = null;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task SetArtistAlbumPair(ArtistAlbumPairViewModel? pair)
+    {
+        currentArtistAlbum = pair;
+        if (pair != null)
+        {
+            selectedArtist = new ArtistDto
+            {
+                Id = pair.ArtistId,
+                Name = pair.ArtistName
+            };
+            if (pair.AlbumId != null && pair.AlbumTitle != null)
+            {
+                selectedAlbum = new AlbumDto
+                {
+                    Id = pair.AlbumId,
+                    Title = pair.AlbumTitle
+                };
+            }
+            else
+            {
+                selectedAlbum = null;
+            }
+        }
+        else
+        {
+            selectedArtist = null;
+            selectedAlbum = null;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleSongBookChanged(SongBookDto? newSongBook)
+    {
+        if (newSongBook == null) return;
+
+        selectedSongBook = newSongBook;
+        selectedCategory = null;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleCategoryChanged(CategoryDto? newCategory)
+    {
+        selectedCategory = newCategory;
+
+        // Update or create the pair immediately when category is selected
+        if (selectedSongBook != null && !string.IsNullOrEmpty(selectedSongBook.Id))
+        {
+            currentBookCategory = new BookCategoryPairViewModel
+            {
+                SongBookId = selectedSongBook.Id,
+                BookTitle = selectedSongBook.Title,
+                CategoryId = selectedCategory?.Id,
+                CategoryName = selectedCategory?.Name,
+            };
+
+            // Notify parent immediately
+            await OnBookCategoryChanged.InvokeAsync(currentBookCategory);
+
+            // Reset for next potential entry
+            selectedSongBook = null;
+            selectedCategory = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleArtistChanged(ArtistDto? newArtist)
+    {
+        if (newArtist == null) return;
+
+        selectedArtist = newArtist;
+        selectedAlbum = null;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleAlbumChanged(AlbumDto? newAlbum)
+    {
+        selectedAlbum = newAlbum;
+
+        // Update or create the pair immediately when album is selected
+        if (selectedArtist != null && !string.IsNullOrEmpty(selectedArtist.Id))
+        {
+            currentArtistAlbum = new ArtistAlbumPairViewModel
+            {
+                ArtistId = selectedArtist.Id,
+                ArtistName = selectedArtist.Name,
+                AlbumId = newAlbum?.Id,
+                AlbumTitle = newAlbum?.Title
+            };
+
+            // Notify parent immediately
+            await OnArtistAlbumChanged.InvokeAsync(currentArtistAlbum);
+
+            // Reset for next potential entry
+            selectedArtist = null;
+            selectedAlbum = null;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ClearBookCategory()
+    {
+        currentBookCategory = null;
+        selectedSongBook = null;
+        selectedCategory = null;
+
+        await OnBookCategoryChanged.InvokeAsync(null);
+        StateHasChanged();
+
+        if (songBookDropdownRef != null)
+        {
+            await songBookDropdownRef.FocusInput();
+        }
+    }
+
+    private async Task ClearArtistAlbum()
+    {
+        currentArtistAlbum = null;
+        selectedArtist = null;
+        selectedAlbum = null;
+
+        await OnArtistAlbumChanged.InvokeAsync(null);
+        StateHasChanged();
+
+        if (artistDropdownRef != null)
+        {
+            await artistDropdownRef.FocusInput();
+        }
+    }
+
+    private async Task ChangeBookSelection()
+    {
+        selectedSongBook = null;
+        selectedCategory = null;
+        StateHasChanged();
+
+        if (songBookDropdownRef != null)
+        {
+            await songBookDropdownRef.FocusInput();
+        }
+    }
+
+    private async Task ChangeArtistSelection()
+    {
+        selectedArtist = null;
+        selectedAlbum = null;
+        StateHasChanged();
+
+        if (artistDropdownRef != null)
+        {
+            await artistDropdownRef.FocusInput();
+        }
+    }
+
+    private string GetTruncatedTitle(string title)
+    {
+        return title.Length > MAX_TITLE_LEN
+            ? title.Substring(0, MAX_TITLE_LEN) + "…"
+            : title;
+    }
+}

@@ -49,7 +49,9 @@ namespace FRELODYUI.Shared.RefitApis
         [Query] string? songName = null,
         [Query] int? songNumber = null,
         [Query] string? categoryName = null,
-        [Query] string? songBookId = null,
+        [Query] string? songBookId = null, 
+        [Query] string? artistId = null,
+        [Query] string? albumId = null,
         [Query] List<string>? curatorIds = null,
         [Query] string? orderByColumn = null,
         CancellationToken cancellationToken = default);
