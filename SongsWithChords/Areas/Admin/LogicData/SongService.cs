@@ -195,7 +195,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                          Title = songDto.Title,
                          SongNumber = songDto.SongNumber,
                          SongBookId = songBookExists ? songDto.BookCategory?.SongBookId : null,
-                         CategoryId = categoryExists ? songDto.CategoryId : null,
+                         CategoryId = categoryExists ? songDto.BookCategory?.CategoryId : null,
                          AlbumId = albumExists ? songDto.ArtistAlbum?.AlbumId : null,
                          ArtistId = artistExists ? songDto.ArtistAlbum?.ArtistId : null,
                          Slug = songDto.Title.ToLower().Replace(" ", "-"),
@@ -259,6 +259,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             SongId = song.Id,
                             PartNumber = partNumber,
                             PartName = partName,
+                            RepeatCount = partRepeatCount
                         };
                         await _context.SongParts.AddAsync(part);
                         await _context.SaveChangesAsync();
@@ -549,12 +550,14 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     {
                         var partName = partGroup.Key.PartName;
                         var partNumber = partGroup.Key.PartNumber;
+                        var partRepeatCount = songDto.PartRepeatCounts?.GetValueOrDefault(partName) ?? 0;
 
                         var part = new SongPart
                         {
                             SongId = song.Id,
                             PartNumber = partNumber,
                             PartName = partName,
+                            RepeatCount = partRepeatCount
                         };
                         await _context.SongParts.AddAsync(part);
                         await _context.SaveChangesAsync();
@@ -569,6 +572,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             foreach (var lineGroup in lyricLineGroups)
                             {
                                 var lineNumber = lineGroup.Key;
+                                var lineRepeatCount = songDto.LineRepeatCounts?.GetValueOrDefault(lineNumber) ?? 0;
 
                                 // Create the lyric line
                                 var lyricLine = new LyricLine
@@ -576,6 +580,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                     PartNumber = partNumber,
                                     LyricLineOrder = lineNumber,
                                     PartId = part.Id,
+                                    RepeatCount = lineRepeatCount,
                                 };
 
                                 await _context.LyricLines.AddAsync(lyricLine);

@@ -39,18 +39,18 @@ namespace FRELODYAPP.Data.Infrastructure
                 using var scope = _serviceProvider.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<SongDbContext>();
                 await CreateRolesAsync(scope,dbContext);
-                var tenantId = await SeedDefaultTenantAsync(dbContext);
-                if (!string.IsNullOrEmpty(tenantId))
+                var (tenantId, userId) = await SeedDefaultTenantAsync(dbContext);
+                if (!string.IsNullOrEmpty(tenantId) && !string.IsNullOrEmpty(userId))
                 {
-                    await SeedSDAHymnalSongBookAsync(tenantId, dbContext);
+                    await SeedSDAHymnalSongBookAsync(tenantId,userId, dbContext);
                     var sdaHymnal = await dbContext.SongBooks.FirstAsync(sb => sb.Slug == "sda-hymnal");
-                    bool seeded = await CategoryData.Initialize(_serviceProvider, sdaHymnal.Id, tenantId);
+                    bool seeded = await CategoryData.Initialize(_serviceProvider, sdaHymnal.Id, tenantId,userId);
                     if (seeded)
                     {
                         var mercyAndGraceCategory = await dbContext.Categories
                       .FirstAsync(c => c.Name.ToLower().Trim() == "grace and mercy of god" && c.SongBookId == sdaHymnal.Id);
-                        await SeedAmazingGraceAsync(tenantId, dbContext);
-                        await AttachAmazingGraceToSDAHymnalAsync(tenantId,dbContext, mercyAndGraceCategory.Id);
+                        await SeedAmazingGraceAsync(tenantId,userId, dbContext);
+                        await AttachAmazingGraceToSDAHymnalAsync(tenantId,userId, dbContext, mercyAndGraceCategory.Id);
 
                     }
 
@@ -88,7 +88,7 @@ namespace FRELODYAPP.Data.Infrastructure
             }
         }
 
-        private async Task<string?> SeedDefaultTenantAsync(SongDbContext dbContext)
+        private async Task<(string?,string?)> SeedDefaultTenantAsync(SongDbContext dbContext)
         {
             const string defaultTenantName = "FRELODY";
 
@@ -98,7 +98,7 @@ namespace FRELODYAPP.Data.Infrastructure
             if (existingTenant != null)
             {
                 _logger.LogInformation($"Default FRELODY tenant already exists with ID: {existingTenant.Id}");
-                return existingTenant.Id;
+                return (existingTenant.Id, null);
             }
             _logger.LogInformation("Seeding default FRELODY tenant...");
 
@@ -120,12 +120,12 @@ namespace FRELODYAPP.Data.Infrastructure
 
             await dbContext.Tenants.AddAsync(defaultTenant);
             await dbContext.SaveChangesAsync();
-            await CreatePowerUserAsync(dbContext);
+            var userId =await CreatePowerUserAsync(dbContext);
             _logger.LogInformation("Default FRELODY tenant seeded successfully.");
-            return defaultTenant.Id;
+            return (defaultTenant.Id, userId);
         }
 
-        private async Task CreatePowerUserAsync(SongDbContext dbContext)
+        private async Task<string?> CreatePowerUserAsync(SongDbContext dbContext)
         {
             using var scope = _serviceProvider.CreateScope();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
@@ -136,13 +136,13 @@ namespace FRELODYAPP.Data.Infrastructure
             if (string.IsNullOrWhiteSpace(powerUserEmail) || string.IsNullOrWhiteSpace(powerUserPassword))
             {
                 _logger.LogWarning("Power user email or password is not configured.");
-                return;
+                return null;
             }
             var existingUser = await userManager.FindByEmailAsync(powerUserEmail);
             if (existingUser != null)
             {              
                 _logger.LogInformation("Power user already exists.");
-                return;
+                return existingUser.Id;
             }
             var powerUser = new User
             {
@@ -158,7 +158,7 @@ namespace FRELODYAPP.Data.Infrastructure
             if (user is not null)
             {
                 _logger.LogInformation("Power user already exists in the database.");
-                return;
+                return user.Id;
             }
             var result = await userManager.CreateAsync(powerUser, powerUserPassword);
             if (result.Succeeded)
@@ -180,9 +180,11 @@ namespace FRELODYAPP.Data.Infrastructure
             {
                 _logger.LogError($"Error creating power user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
+
+            return powerUser.Id;
         }
 
-        private async Task SeedAmazingGraceAsync(string defaultTenantId, SongDbContext dbContext)
+        private async Task SeedAmazingGraceAsync(string defaultTenantId,string defaultUserId, SongDbContext dbContext)
         {
             // Check if song already exists
             if (await dbContext.Songs.AnyAsync(s => s.Title == "Amazing Grace"))
@@ -194,16 +196,18 @@ namespace FRELODYAPP.Data.Infrastructure
             _logger.LogInformation("Seeding Amazing Grace song...");
 
             // Ensure chords exist or create them
-            var chordG = await GetOrCreateChordAsync(defaultTenantId, dbContext, "G");
-            var chordG7 = await GetOrCreateChordAsync(defaultTenantId, dbContext, "G7");
-            var chordC = await GetOrCreateChordAsync(defaultTenantId, dbContext, "C");
-            var chordD = await GetOrCreateChordAsync(defaultTenantId,dbContext, "D");
+            var chordG = await GetOrCreateChordAsync(defaultTenantId, defaultUserId, dbContext, "G");
+            var chordG7 = await GetOrCreateChordAsync(defaultTenantId, defaultUserId, dbContext, "G7");
+            var chordC = await GetOrCreateChordAsync(defaultTenantId, defaultUserId, dbContext, "C");
+            var chordD = await GetOrCreateChordAsync(defaultTenantId, defaultUserId, dbContext, "D");
 
             // Create the song
             var song = new Song
             {
                 Title = "Amazing Grace",
                 Slug = "amazing-grace",
+                WrittenBy = "John Newton",
+                CreatedBy = defaultUserId,
                 TenantId = defaultTenantId,
                 Access = Access.Public
             };
@@ -216,7 +220,10 @@ namespace FRELODYAPP.Data.Infrastructure
             {
                 SongId = song.Id,
                 PartNumber = 1,
-                PartName = SongSection.Verse
+                PartName = SongSection.Verse,
+                CreatedBy=defaultUserId,
+                TenantId = defaultTenantId,
+                Access = Access.Public
             };
 
             await dbContext.SongParts.AddAsync(verse);
@@ -225,11 +232,11 @@ namespace FRELODYAPP.Data.Infrastructure
             // Create lyric lines
             var lines = new[]
             {
-                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 1 },
-                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 2 },
-                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 3 },
-                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 4 },
-                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 5 }
+                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 1,TenantId= defaultTenantId, Access = Access.Public },
+                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 2,TenantId= defaultTenantId, Access = Access.Public },
+                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 3,TenantId= defaultTenantId, Access = Access.Public },
+                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 4,TenantId= defaultTenantId, Access = Access.Public },
+                new LyricLine { PartId = verse.Id, PartNumber = 1, LyricLineOrder = 5,TenantId= defaultTenantId, Access = Access.Public }
             };
 
             await dbContext.LyricLines.AddRangeAsync(lines);
@@ -238,26 +245,26 @@ namespace FRELODYAPP.Data.Infrastructure
             // Create lyric segments
             var segments = new List<LyricSegment>
             {
-                new LyricSegment { Lyric = "Amazing", LineNumber = 1, ChordId = chordG.Id, LyricLineId = lines[0].Id, LyricOrder = 1 },
-                new LyricSegment { Lyric = "Grace", LineNumber = 1, ChordId = chordG7.Id, LyricLineId = lines[0].Id, LyricOrder = 2 },
+                new LyricSegment { Lyric = "Amazing", LineNumber = 1, ChordId = chordG.Id, LyricLineId = lines[0].Id, LyricOrder = 1,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
+                new LyricSegment { Lyric = "Grace", LineNumber = 1, ChordId = chordG7.Id, LyricLineId = lines[0].Id, LyricOrder = 2,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
 
-                new LyricSegment { Lyric = "How", LineNumber = 2, ChordId = null, LyricLineId = lines[1].Id, LyricOrder = 1 },
-                new LyricSegment { Lyric = "sweet the", LineNumber = 2, ChordId = chordC.Id, LyricLineId = lines[1].Id, LyricOrder = 2 },
-                new LyricSegment { Lyric = "sound", LineNumber = 2, ChordId = chordG.Id, LyricLineId = lines[1].Id, LyricOrder = 3 },
+                new LyricSegment { Lyric = "How", LineNumber = 2, ChordId = null, LyricLineId = lines[1].Id, LyricOrder = 1,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
+                new LyricSegment { Lyric = "sweet the", LineNumber = 2, ChordId = chordC.Id, LyricLineId = lines[1].Id, LyricOrder = 2,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
+                new LyricSegment { Lyric = "sound", LineNumber = 2, ChordId = chordG.Id, LyricLineId = lines[1].Id, LyricOrder = 3,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
 
-                new LyricSegment { Lyric = "That saved a wretch like", LineNumber = 3, ChordId = null, LyricLineId = lines[2].Id, LyricOrder = 1 },
-                new LyricSegment { Lyric = "me", LineNumber = 3, ChordId = chordD.Id, LyricLineId = lines[2].Id, LyricOrder = 2 },
+                new LyricSegment { Lyric = "That saved a wretch like", LineNumber = 3, ChordId = null, LyricLineId = lines[2].Id, LyricOrder = 1,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
+                new LyricSegment { Lyric = "me", LineNumber = 3, ChordId = chordD.Id, LyricLineId = lines[2].Id, LyricOrder = 2,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
 
-                new LyricSegment { Lyric = "I", LineNumber = 4, ChordId = null, LyricLineId = lines[3].Id, LyricOrder = 1 },
-                new LyricSegment { Lyric = "once was", LineNumber = 4, ChordId = chordG.Id, LyricLineId = lines[3].Id, LyricOrder = 2 },
-                new LyricSegment { Lyric = "lost, but", LineNumber = 4, ChordId = chordG7.Id, LyricLineId = lines[3].Id, LyricOrder = 3 },
-                new LyricSegment { Lyric = "now am", LineNumber = 4, ChordId = chordC.Id, LyricLineId = lines[3].Id, LyricOrder = 4 },
-                new LyricSegment { Lyric = "found,", LineNumber = 4, ChordId = chordG.Id, LyricLineId = lines[3].Id, LyricOrder = 5 },
+                new LyricSegment { Lyric = "I", LineNumber = 4, ChordId = null, LyricLineId = lines[3].Id, LyricOrder = 1,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
+                new LyricSegment { Lyric = "once was", LineNumber = 4, ChordId = chordG.Id, LyricLineId = lines[3].Id, LyricOrder = 2,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
+                new LyricSegment { Lyric = "lost, but", LineNumber = 4, ChordId = chordG7.Id, LyricLineId = lines[3].Id, LyricOrder = 3,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
+                new LyricSegment { Lyric = "now am", LineNumber = 4, ChordId = chordC.Id, LyricLineId = lines[3].Id, LyricOrder = 4,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
+                new LyricSegment { Lyric = "found,", LineNumber = 4, ChordId = chordG.Id, LyricLineId = lines[3].Id, LyricOrder = 5,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
 
-                new LyricSegment { Lyric = "Was", LineNumber = 5, ChordId = chordD.Id, LyricLineId = lines[4].Id, LyricOrder = 1 },
-                new LyricSegment { Lyric = "blind, but", LineNumber = 5, ChordId = chordD.Id, LyricLineId = lines[4].Id, LyricOrder = 2 },
-                new LyricSegment { Lyric = "now I", LineNumber = 5, ChordId = chordD.Id, LyricLineId = lines[4].Id, LyricOrder = 3 },
-                new LyricSegment { Lyric = "see.", LineNumber = 5, ChordId = chordG.Id, LyricLineId = lines[4].Id, LyricOrder = 4 }
+                new LyricSegment { Lyric = "Was", LineNumber = 5, ChordId = chordD.Id, LyricLineId = lines[4].Id, LyricOrder = 1,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
+                new LyricSegment { Lyric = "blind, but", LineNumber = 5, ChordId = chordD.Id, LyricLineId = lines[4].Id, LyricOrder = 2,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
+                new LyricSegment { Lyric = "now I", LineNumber = 5, ChordId = chordD.Id, LyricLineId = lines[4].Id, LyricOrder = 3,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public },
+                new LyricSegment { Lyric = "see.", LineNumber = 5, ChordId = chordG.Id, LyricLineId = lines[4].Id, LyricOrder = 4,TenantId=defaultTenantId,CreatedBy=defaultUserId,Access=Access.Public }
             };
 
             await dbContext.LyricSegments.AddRangeAsync(segments);
@@ -266,7 +273,7 @@ namespace FRELODYAPP.Data.Infrastructure
             _logger.LogInformation("Amazing Grace song seeded successfully.");
         }
 
-        private async Task<Chord> GetOrCreateChordAsync(string tenantId, SongDbContext dbContext, string chordName)
+        private async Task<Chord> GetOrCreateChordAsync(string tenantId, string userId, SongDbContext dbContext, string chordName)
         {
             // Check if chord exists (case-insensitive, ignoring whitespace)
             var chord = await dbContext.Chords
@@ -279,6 +286,7 @@ namespace FRELODYAPP.Data.Infrastructure
                 {
                     ChordName = chordName,
                     TenantId= tenantId,
+                    CreatedBy = userId,
                     Access = Access.Public
                 };
                 await dbContext.Chords.AddAsync(chord);
@@ -290,7 +298,7 @@ namespace FRELODYAPP.Data.Infrastructure
             return chord;
         }
 
-        private async Task SeedSDAHymnalSongBookAsync(string defaultTenantId, SongDbContext dbContext)
+        private async Task SeedSDAHymnalSongBookAsync(string defaultTenantId,string defaultUserId, SongDbContext dbContext)
         {
             const string sdaHymnalSlug = "sda-hymnal";
             if (await dbContext.SongBooks.AnyAsync(sb => sb.Slug == sdaHymnalSlug))
@@ -311,6 +319,7 @@ namespace FRELODYAPP.Data.Infrastructure
                 Author = "Various",
                 Edition = "1985",
                 Language = "English",
+                CreatedBy = defaultUserId,
                 TenantId = defaultTenantId,
                 Access = Access.Public
             };
@@ -320,8 +329,8 @@ namespace FRELODYAPP.Data.Infrastructure
 
             _logger.LogInformation("SDAHymnal songbook seeded successfully.");
         }
-        
-        private async Task AttachAmazingGraceToSDAHymnalAsync(string defaultTenantId,SongDbContext dbContext, string categoryId)
+
+        private async Task AttachAmazingGraceToSDAHymnalAsync(string defaultTenantId,string defaultUserId, SongDbContext dbContext, string categoryId)
         {
             // Get the SDA Hymnal songbook
             var sdaHymnal = await dbContext.SongBooks
@@ -343,6 +352,7 @@ namespace FRELODYAPP.Data.Infrastructure
 
             amazingGrace.CategoryId = categoryId; 
             amazingGrace.SongNumber = 108;
+            amazingGrace.ModifiedBy = defaultUserId;
 
             dbContext.Songs.Update(amazingGrace);
             await dbContext.SaveChangesAsync();

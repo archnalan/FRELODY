@@ -44,8 +44,6 @@ namespace FRELODYAPIs.Areas.Admin.ViewModels
         public string? ArtistId { get; set; }
         public string? AlbumTitle { get; set; }
         public string? AlbumId { get; set; }
-        public string? Role { get; set; } 
-        public int? TrackNumber { get; set; }
 
         public bool? IsFavorite { get; set; }
     }

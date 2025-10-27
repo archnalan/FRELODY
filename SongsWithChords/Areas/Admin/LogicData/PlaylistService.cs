@@ -547,7 +547,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 // Get total count for pagination
                 var countSql = @"
-            SELECT COUNT(DISTINCT s.Id)
+            SELECT COUNT(DISTINCT s.Id) AS Value
             FROM Songs s
             LEFT JOIN Categories c ON s.CategoryId = c.Id
             LEFT JOIN SongBooks sb ON s.SongBookId = sb.Id OR c.SongBookId = sb.Id
