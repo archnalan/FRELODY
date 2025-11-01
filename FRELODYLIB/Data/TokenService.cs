@@ -98,6 +98,7 @@ namespace FRELODYAPP.Data
             }
             else
             {
+                userRefreshToken.TenantId = user.TenantId;
                 await _context.UserRefreshTokens.AddAsync(userRefreshToken);
             }
 
