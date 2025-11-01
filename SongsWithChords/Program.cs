@@ -36,6 +36,11 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
+
+// Register services
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IPesaPalService, PesaPalService>();
 
 builder.Services.AddTransient<ITenantProvider, TenantProvider>();
 builder.Services.AddScoped<ITenantService, TenantService>();

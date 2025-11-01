@@ -43,6 +43,9 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<Setting> Settings { get; set; }
         public DbSet<Artist> Artists { get; set; } = default!;
         public DbSet<Album> Albums { get; set; } = default!;
+        public DbSet<Product> Products { get; set; }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OrderDetail> OrderDetails { get; set; }
         public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
         public DbSet<ShareLink> ShareLinks { get; set; }
         public DbSet<ChatSession> ChatSessions { get; set; }
@@ -308,6 +311,18 @@ namespace FRELODYAPP.Data.Infrastructure
                 b.HasIndex(u => u.TenantId);
                 b.Property(e => e.UserType)
                 .HasConversion<string>();
+            });
+
+            builder.Entity<OrderDetail>(od=>
+            {
+                od.HasOne<Product>()
+                 .WithMany()
+                 .HasForeignKey(d => d.ProductId)
+                 .OnDelete(DeleteBehavior.Cascade);
+                od.HasOne<Order>()
+                 .WithMany()
+                 .HasForeignKey(d => d.OrderId)
+                 .OnDelete(DeleteBehavior.Cascade);
             });
 
             builder.Entity<SongUserRating>(b =>
