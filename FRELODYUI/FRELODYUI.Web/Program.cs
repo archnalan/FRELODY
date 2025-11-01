@@ -106,6 +106,10 @@ builder.Services.AddRefitClient<IChatsApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddRefitClient<IPesaPalApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

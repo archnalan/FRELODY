@@ -7,8 +7,8 @@ namespace FRELODYAPP.Dtos.SubDtos
     public class BaseEntityDto : IBaseEntityDto
     {
         public string Id { get; set; }
-        public DateTime? DateCreated { get; set; }
-        public DateTime? DateModified { get; set; }
+        public DateTimeOffset? DateCreated { get; set; }
+        public DateTimeOffset? DateModified { get; set; }
         public Access? Access { get; set; }
 
         [StringLength(255)]
@@ -16,8 +16,8 @@ namespace FRELODYAPP.Dtos.SubDtos
     }
     public interface IBaseEntityDto
     {
-        DateTime? DateCreated { get; set; }
-        DateTime? DateModified { get; set; }
+        DateTimeOffset? DateCreated { get; set; }
+        DateTimeOffset? DateModified { get; set; }
         string? TenantId { get; set; }
     }
 }

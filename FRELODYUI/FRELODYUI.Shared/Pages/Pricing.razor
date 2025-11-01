@@ -1,0 +1,766 @@
+@page "/pricing"
+@using FRELODYSHRD.Dtos.PesaPalDtos
+@using FRELODYSHRD.Models.PesaPal
+@layout LandingLayout
+@inject ILogger<Pricing> _logger
+@inject IPesaPalApi _pesaPalApi
+@inject IApiResponseHandler _apiResponseHandler
+
+<PageTitle>Pricing - FRELODY</PageTitle>
+
+<!-- Hero Section -->
+<section class="pricing-hero bg-primary text-white py-5">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold mb-3">Choose Your Plan</h1>
+        <p class="lead mb-4">Select the perfect plan for your music creation journey</p>
+        
+        <!-- Trust Badges -->
+        <div class="d-flex justify-content-center gap-4 flex-wrap mb-4">
+            <div class="badge bg-white text-primary px-3 py-2">
+                <i class="bi bi-shield-check me-2"></i>Secure Payments
+            </div>
+            <div class="badge bg-white text-primary px-3 py-2">
+                <i class="bi bi-arrow-repeat me-2"></i>Cancel Anytime
+            </div>
+            <div class="badge bg-white text-primary px-3 py-2">
+                <i class="bi bi-credit-card me-2"></i>All Payment Methods
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Billing Toggle -->
+<section class="billing-toggle py-4 bg-light">
+    <div class="container">
+        <div class="d-flex justify-content-center align-items-center gap-3">
+            <span class="@(billingPeriod == BillingPeriod.monthly ? "fw-bold" : "text-muted")">Monthly</span>
+            <div class="form-check form-switch">
+                <input class="form-check-input" 
+                       type="checkbox" 
+                       role="switch" 
+                       id="billingSwitch"
+                       checked="@(billingPeriod == BillingPeriod.yearly)"
+                       @onchange="ToggleBillingPeriod"
+                       aria-label="Toggle between monthly and yearly billing">
+            </div>
+            <span class="@(billingPeriod == BillingPeriod.yearly ? "fw-bold" : "text-muted")">
+                Yearly 
+                <span class="badge bg-success ms-2">Save 20%</span>
+            </span>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing Cards -->
+<section class="pricing-cards py-5">
+    <div class="container">
+        @if (isLoading)
+        {
+            <div class="row g-4">
+                @for (int i = 0; i < 3; i++)
+                {
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="card h-100 placeholder-wave">
+                            <div class="card-body">
+                                <span class="placeholder col-6 mb-3"></span>
+                                <span class="placeholder col-8 mb-4"></span>
+                                <span class="placeholder col-12 mb-2"></span>
+                                <span class="placeholder col-12 mb-2"></span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @foreach (var product in pricingPlans)
+                {
+                    var isPopular = product.IsPopular ?? false;
+                    var monthlyPrice = GetDisplayPrice(product);
+                    
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="card h-100 @(isPopular ? "border-primary shadow-lg position-relative" : "border shadow-sm")" 
+                             style="border-radius: 1rem;">
+                            
+                            @if (isPopular)
+                            {
+                                <div class="position-absolute top-0 start-50 translate-middle">
+                                    <span class="badge bg-primary px-3 py-2">
+                                        <i class="bi bi-star-fill me-1"></i>Most Popular
+                                    </span>
+                                </div>
+                            }
+                            
+                            <div class="card-body p-4 d-flex flex-column">
+                                <div class="mb-4">
+                                    <h3 class="card-title fw-bold mb-2">@product.Name</h3>
+                                    <p class="text-muted small mb-3">@product.Description</p>
+                                    
+                                    <div class="pricing-amount mb-3">
+                                        @if (monthlyPrice == 0)
+                                        {
+                                            <span class="display-4 fw-bold">Free</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="display-4 fw-bold">UGX @monthlyPrice.ToString("N0")</span>
+                                            <span class="text-muted">/@GetBillingLabel()</span>
+                                        }
+                                    </div>
+                                    
+                                    @if (billingPeriod == BillingPeriod.yearly && monthlyPrice > 0)
+                                    {
+                                        <p class="text-success small mb-0">
+                                            <i class="bi bi-check-circle-fill me-1"></i>
+                                            Save UGX @CalculateYearlySavings(product).ToString("N0") annually
+                                        </p>
+                                    }
+                                </div>
+                                
+                                <!-- Features List -->
+                                <div class="mb-4 flex-grow-1">
+                                    <ul class="list-unstyled">
+                                        @if (product.Features != null)
+                                        {
+                                            @foreach (var feature in product.Features)
+                                            {
+                                                <li class="mb-2">
+                                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                                    @GetFeatureDescription(feature)
+                                                </li>
+                                            }
+                                        }
+                                    </ul>
+                                </div>
+                                
+                                <!-- CTA Button -->
+                                <button class="btn @(isPopular ? "btn-primary" : "btn-outline-primary") w-100 py-3" 
+                                        @onclick="() => SelectPlan(product)"
+                                        disabled="@isProcessing"
+                                        data-analytics="pricing-cta"
+                                        data-plan="@product.Name">
+                                    @if (monthlyPrice == 0)
+                                    {
+                                        <span>Start Free</span>
+                                    }
+                                    else if (product.Name.Contains("Studio", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span>Contact Sales</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Start 14-day Trial</span>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Feature Comparison -->
+<section class="feature-comparison py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5">Compare Features</h2>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th class="text-center">Starter</th>
+                        <th class="text-center">Creator</th>
+                        <th class="text-center">Studio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Song Creations</td>
+                        <td class="text-center">10/month</td>
+                        <td class="text-center"><i class="bi bi-infinity text-primary fs-5"></i></td>
+                        <td class="text-center"><i class="bi bi-infinity text-primary fs-5"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Song Access</td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                    </tr>
+                    <tr>
+                        <td>PDF Export</td>
+                        <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Bulk PDF Import</td>
+                        <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
+                        <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                    </tr>
+                    <tr>
+                        <td>AI-Assisted Composition</td>
+                        <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Support</td>
+                        <td class="text-center">Email</td>
+                        <td class="text-center">Priority</td>
+                        <td class="text-center">Dedicated</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- Social Proof -->
+<section class="social-proof py-5">
+    <div class="container">
+        <h2 class="text-center mb-4">Trusted by Musicians Worldwide</h2>
+        <div class="row g-4">
+            <div class="col-12 col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                        </div>
+                        <p class="mb-2">"FRELODY has transformed how I create and manage my worship music."</p>
+                        <small class="text-muted">- Worship Leader</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                        </div>
+                        <p class="mb-2">"The chord management features are incredibly powerful and intuitive."</p>
+                        <small class="text-muted">- Music Director</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                            <i class="bi bi-star-fill text-warning"></i>
+                        </div>
+                        <p class="mb-2">"Perfect for our church choir. Easy collaboration and sharing."</p>
+                        <small class="text-muted">- Choir Director</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQs -->
+<section class="faqs py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5">Frequently Asked Questions</h2>
+        
+        <div class="row">
+            <div class="col-12 col-lg-8 mx-auto">
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h3 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                Can I switch plans later?
+                            </button>
+                        </h3>
+                        <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate the charges accordingly.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h3 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                Is there a free trial?
+                            </button>
+                        </h3>
+                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Yes! Creator and Studio plans come with a 14-day free trial. No credit card required to start. The Starter plan is free forever.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h3 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                How does cancellation work?
+                            </button>
+                        </h3>
+                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                You can cancel anytime from your account settings. You'll retain access until the end of your billing period. No hidden fees or penalties.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h3 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                                What payment methods do you accept?
+                            </button>
+                        </h3>
+                        <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                We accept all major payment methods through PesaPal including mobile money, credit cards, and bank transfers.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h3 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                                Do you offer refunds?
+                            </button>
+                        </h3>
+                        <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Studio plan includes refunds within 30 days of purchase. For other plans, contact our support team for assistance.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Final CTA -->
+<section class="final-cta py-5 bg-primary text-white text-center">
+    <div class="container">
+        <h2 class="display-5 fw-bold mb-3">Ready to Start Creating?</h2>
+        <p class="lead mb-4">Join thousands of musicians using FRELODY</p>
+        <button class="btn btn-light btn-lg px-5 py-3" @onclick="ScrollToPlans">
+            View Pricing Plans
+        </button>
+    </div>
+</section>
+
+<!-- Legal Footer -->
+<section class="legal-footer py-3 border-top">
+    <div class="container">
+        <p class="text-muted small text-center mb-0">
+            <i class="bi bi-info-circle me-1"></i>
+            Prices are in Ugandan Shillings (UGX) and include applicable VAT. 
+            By subscribing, you agree to our 
+            <a href="/terms" class="text-decoration-none">Terms of Service</a> and 
+            <a href="/privacy" class="text-decoration-none">Privacy Policy</a>.
+            <a href="/sla" class="text-decoration-none">SLA</a>
+        </p>
+    </div>
+</section>
+
+<!-- PesaPal Payment Modal -->
+@if (showPaymentModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1050;">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 1rem; height: 80vh;">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">Complete Your Payment</h5>
+                    <button type="button" class="btn-close" @onclick="ClosePaymentModal"></button>
+                </div>
+                <div class="modal-body p-0" style="height: calc(80vh - 60px);">
+                    @if (!string.IsNullOrEmpty(paymentRedirectUrl))
+                    {
+                        <iframe src="@paymentRedirectUrl" 
+                                style="width: 100%; height: 100%; border: none;"
+                                title="PesaPal Payment Gateway"></iframe>
+                    }
+                    else
+                    {
+                        <div class="d-flex justify-content-center align-items-center h-100">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary mb-3" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p>Initializing payment gateway...</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<DialogModal IsVisible="_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    private List<ProductDto> pricingPlans = new();
+    private BillingPeriod billingPeriod = BillingPeriod.monthly;
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private bool showPaymentModal = false;
+    private string paymentRedirectUrl = string.Empty;
+    private ProductDto? selectedProduct;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPricingPlans();
+
+        // Check authentication status and redirect if needed for payment callback
+        var authState = await _globalAuth.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated != true)
+        {
+            var returnUrl = _navManager.ToBaseRelativePath(_navManager.Uri);
+            if (!string.IsNullOrEmpty(returnUrl) && returnUrl != "/")
+            {
+                await _storageService.SetItemAsync("returnUrl", returnUrl);
+            }
+        }
+    }
+
+    private async Task LoadPricingPlans()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Mock data - Replace with actual API call
+            pricingPlans = new List<ProductDto>
+            {
+                new ProductDto
+                {
+                    Id = "starter-plan",
+                    Name = "Starter",
+                    Description = "For individuals trying FRELODY",
+                    Price = 0,
+                    Period = BillingPeriod.forever,
+                    IsPopular = false,
+                    Features = new List<Feature>
+                    {
+                        Feature.UnlimitedSongAcccess,
+                        Feature.SongManagement
+                    }
+                },
+                new ProductDto
+                {
+                    Id = "creator-plan",
+                    Name = "Creator",
+                    Description = "For growing creators and freelancers",
+                    Price = 30000,
+                    Period = BillingPeriod.monthly,
+                    IsPopular = true,
+                    Features = new List<Feature>
+                    {
+                        Feature.UnlimitedSongCreations,
+                        Feature.UnlimitedSongAcccess,
+                        Feature.SongManagement,
+                        Feature.ChordManagement,
+                        Feature.PdfExport,
+                        Feature.AiAssistedComposition
+                    }
+                },
+                new ProductDto
+                {
+                    Id = "studio-plan",
+                    Name = "Studio",
+                    Description = "For teams needing collaboration and controls",
+                    Price = 100000,
+                    Period = BillingPeriod.monthly,
+                    IsPopular = false,
+                    Features = new List<Feature>
+                    {
+                        Feature.UnlimitedSongCreations,
+                        Feature.UnlimitedSongAcccess,
+                        Feature.DedicatedSupport,
+                        Feature.SongManagement,
+                        Feature.ChordManagement,
+                        Feature.UserManagement,
+                        Feature.PdfExport,
+                        Feature.BulkPdfImport,
+                        Feature.AiAssistedComposition,
+                        Feature.Refunds
+                    }
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading pricing plans");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "Failed to load pricing plans. Please refresh the page.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectPlan(ProductDto product)
+    {
+        // Check authentication
+        var authState = await _globalAuth.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated != true)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Sign In Required",
+                Message = "Please sign in to subscribe to a plan.",
+                ButtonText = "Go to Login",
+                HyperlinkText = "Create Account",
+                OptionType = OptionType.Info,
+                Context = new ModalContext
+                {
+                    ActionType = "NavigateToLogin",
+                    Data = "/pricing"
+                }
+            });
+            return;
+        }
+
+        selectedProduct = product;
+
+        // Free plan - no payment needed
+        if (product.Price == 0 || product.Price == null)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Starter Plan",
+                Message = "The Starter plan is free! You're already using it. Enjoy exploring FRELODY!",
+                ButtonText = "Close",
+                OptionType = OptionType.Success
+            });
+            _navManager.NavigateTo("/");
+            return;
+        }
+
+        // Studio plan - contact sales
+        if (product.Name.Contains("Studio", StringComparison.OrdinalIgnoreCase))
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Contact Sales",
+                Message = "Our sales team will help you get started with the Studio plan. We'll reach out within 24 hours.",
+                ButtonText = "Continue",
+                OptionType = OptionType.Confirmation,
+                Context = new ModalContext
+                {
+                    ActionType = "ContactSales",
+                    Data = product
+                }
+            });
+            return;
+        }
+
+        // Initiate payment flow
+        await InitiatePayment(product);
+    }
+
+    private async Task InitiatePayment(ProductDto product)
+    {
+        isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            // Step 1: Authenticate with PesaPal
+            var authResponse = await _pesaPalApi.Authenticate();
+            if (!authResponse.IsSuccessStatusCode || authResponse.Content == null)
+            {
+                throw new Exception("Failed to authenticate with payment provider");
+            }
+
+            // Step 2: Get or register IPN
+            var ipnResponse = await _pesaPalApi.GetIPNList();
+            string notificationId;
+            
+            if (ipnResponse.IsSuccessStatusCode && ipnResponse.Content?.Any() == true)
+            {
+                notificationId = ipnResponse.Content.First().IpnId;
+            }
+            else
+            {
+                // Register new IPN
+                var registerIpnRequest = new RegisterIPNRequest
+                {
+                    IpnUrl = $"{_navManager.BaseUri}api/PesaPal/ipn-callback",
+                    NotificationType = "GET"
+                };
+                
+                var registerResponse = await _pesaPalApi.RegisterIPN(registerIpnRequest);
+                if (!registerResponse.IsSuccessStatusCode || registerResponse.Content == null)
+                {
+                    throw new Exception("Failed to register payment notification");
+                }
+                
+                notificationId = registerResponse.Content.IpnId;
+            }
+
+            // Step 3: Submit order
+            var user = await _globalAuth.GetAuthenticatedUserAsync();
+            var amount = GetDisplayPrice(product);
+            
+            var orderRequest = new PesaOrderRequest
+            {
+                Id = product.Id,
+                Currency = "UGX",
+                Amount = amount,
+                Description = $"{product.Name} - {GetBillingLabel()} Subscription",
+                CallbackUrl = $"{_navManager.BaseUri}pricing?payment=success",
+                NotificationId = notificationId,
+                BillingAddress = new BillingAddress
+                {
+                    EmailAddress = user.Data?.Email ?? "",
+                    PhoneNumber = user.Data?.UserName ?? "",
+                    CountryCode = "256",
+                    FirstName = user.Data?.FirstName ?? "",
+                    LastName = user.Data?.LastName ?? "",
+                    City = "Kampala"
+                }
+            };
+
+            var orderResponse = await _pesaPalApi.SubmitOrder(orderRequest);
+            
+            if (!orderResponse.IsSuccessStatusCode || orderResponse.Content == null)
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(orderResponse);
+                throw new Exception($"Failed to create payment order: {errorMessage}");
+            }
+
+            // Step 4: Open payment modal with redirect URL
+            paymentRedirectUrl = orderResponse.Content.RedirectUrl;
+            showPaymentModal = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initiating payment for product {ProductId}", product.Id);
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Payment Error",
+                Message = $"Failed to initiate payment: {ex.Message}. Please try again.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleBillingPeriod()
+    {
+        billingPeriod = billingPeriod == BillingPeriod.monthly 
+            ? BillingPeriod.yearly 
+            : BillingPeriod.monthly;
+    }
+
+    private decimal GetDisplayPrice(ProductDto product)
+    {
+        if (product.Price == null || product.Price == 0) return 0;
+        
+        if (billingPeriod == BillingPeriod.yearly)
+        {
+            // 20% discount for yearly
+            return product.Price.Value * 12 * 0.8m;
+        }
+        
+        return product.Price.Value;
+    }
+
+    private string GetBillingLabel()
+    {
+        return billingPeriod == BillingPeriod.monthly ? "month" : "year";
+    }
+
+    private decimal CalculateYearlySavings(ProductDto product)
+    {
+        if (product.Price == null) return 0;
+        return product.Price.Value * 12 * 0.2m;
+    }
+
+    private string GetFeatureDescription(Feature feature)
+    {
+        return feature switch
+        {
+            Feature.UnlimitedSongCreations => "Unlimited Song Creations",
+            Feature.UnlimitedSongAcccess => "Unlimited Song Access",
+            Feature.DedicatedSupport => "Dedicated Priority Support",
+            Feature.SongManagement => "Advanced Song Management",
+            Feature.ChordManagement => "Chord Chart Management",
+            Feature.UserManagement => "Team & User Management",
+            Feature.PdfExport => "PDF Export & Sharing",
+            Feature.BulkPdfImport => "Bulk PDF Import",
+            Feature.AiAssistedComposition => "AI-Assisted Composition",
+            Feature.Refunds => "30-Day Money Back Guarantee",
+            _ => feature.ToString()
+        };
+    }
+
+    private async Task ScrollToPlans()
+    {
+        await JsRt.InvokeVoidAsync("eval", "document.querySelector('.pricing-cards').scrollIntoView({ behavior: 'smooth' })");
+    }
+
+    private void ClosePaymentModal()
+    {
+        showPaymentModal = false;
+        paymentRedirectUrl = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "NavigateToLogin")
+        {
+            await _storageService.SetItemAsync("returnUrl", "/pricing");
+            _navManager.NavigateTo("/login");
+        }
+        else if (_modalService.CurrentModal?.Context?.ActionType == "ContactSales")
+        {
+            // TODO: Implement contact sales logic
+            _logger.LogInformation("Contact sales request for Studio plan");
+        }
+        
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+}

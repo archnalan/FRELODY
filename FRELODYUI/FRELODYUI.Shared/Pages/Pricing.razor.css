@@ -1,0 +1,53 @@
+.pricing-hero {
+    background: linear-gradient(135deg, var(--bs-primary) 0%, var(--bs-primary-dark, #0056b3) 100%);
+}
+
+.billing-toggle {
+    position: sticky;
+    top: 56px;
+    z-index: 1020;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-check-input {
+    width: 3rem;
+    height: 1.5rem;
+    cursor: pointer;
+}
+
+.pricing-cards .card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pricing-cards .card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15) !important;
+}
+
+.pricing-amount {
+    line-height: 1.2;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: var(--bs-primary);
+    color: white;
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: var(--bs-primary);
+}
+
+.final-cta {
+    background: linear-gradient(135deg, var(--bs-primary) 0%, var(--bs-primary-dark, #0056b3) 100%);
+}
+
+@media (max-width: 768px) {
+    .pricing-cards .col-12 {
+        margin-bottom: 1.5rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+}

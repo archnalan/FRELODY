@@ -7,8 +7,8 @@ namespace FRELODYAPP.Models.SubModels
     {
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
-        public DateTime? DateCreated { get; set; }
-        public DateTime? DateModified { get; set; }
+        public DateTimeOffset? DateCreated { get; set; }
+        public DateTimeOffset? DateModified { get; set; }
         public bool? IsDeleted { get; set; }
         public Access? Access { get; set; }
 
@@ -23,8 +23,8 @@ namespace FRELODYAPP.Models.SubModels
     }
     public interface IBaseEntity
     {
-        DateTime? DateCreated { get; set; }
-        DateTime? DateModified { get; set; }
+        DateTimeOffset? DateCreated { get; set; }
+        DateTimeOffset? DateModified { get; set; }
         bool? IsDeleted { get; set; }
         string? CreatedBy { get; set; }
         string? ModifiedBy { get; set; }
