@@ -305,51 +305,43 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
-        public async Task<ServiceResult<PesaOrderResponse>> InitiatePesaPalPaymentAsync(
-    string productId,
-    string customerId,
-    decimal amount,
-    string description,
-    BillingAddress billingAddress,
-    string callbackUrl,
-    string? ipnCallbackUrl = null,
-    SubscriptionDetails? subscriptionDetails = null)
+        public async Task<ServiceResult<PesaOrderResponse>> InitiatePesaPalPaymentAsync(InitiatePesaPalDto initiatePesaPalDto)
         {
             try
             {
                 // Validate input parameters
-                if (string.IsNullOrWhiteSpace(productId))
+                if (string.IsNullOrWhiteSpace(initiatePesaPalDto.ProductId))
                 {
                     return ServiceResult<PesaOrderResponse>.Failure(
                         new BadRequestException("Product ID is required"));
                 }
 
-                if (string.IsNullOrWhiteSpace(customerId))
+                if (string.IsNullOrWhiteSpace(initiatePesaPalDto.CustomerId))
                 {
                     return ServiceResult<PesaOrderResponse>.Failure(
                         new BadRequestException("Customer ID is required"));
                 }
 
-                if (amount <= 0)
+                if (initiatePesaPalDto.Amount <= 0)
                 {
                     return ServiceResult<PesaOrderResponse>.Failure(
                         new BadRequestException("Amount must be greater than zero"));
                 }
 
-                if (billingAddress == null)
+                if (initiatePesaPalDto.BillingAddress == null)
                 {
                     return ServiceResult<PesaOrderResponse>.Failure(
                         new BadRequestException("Billing address is required"));
                 }
 
-                if (string.IsNullOrWhiteSpace(callbackUrl))
+                if (string.IsNullOrWhiteSpace(initiatePesaPalDto.CallbackUrl))
                 {
                     return ServiceResult<PesaOrderResponse>.Failure(
                         new BadRequestException("Callback URL is required"));
                 }
 
                 _logger.LogInformation("Initiating PesaPal payment for product {ProductId}, amount {Amount}",
-                    productId, amount);
+                    initiatePesaPalDto.ProductId, initiatePesaPalDto.Amount);
 
                 // Step 1: Authenticate with PesaPal
                 var authResult = await AuthenticateAsync();
@@ -378,7 +370,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     else
                     {
                         // No active IPN found, register a new one
-                        var registerResult = await RegisterNewIPN(ipnCallbackUrl);
+                        var registerResult = await RegisterNewIPN(initiatePesaPalDto.IpnCallbackUrl);
                         if (!registerResult.IsSuccess)
                         {
                             return ServiceResult<PesaOrderResponse>.Failure(registerResult.Error);
@@ -389,7 +381,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 else
                 {
                     // No IPNs registered, create a new one
-                    var registerResult = await RegisterNewIPN(ipnCallbackUrl);
+                    var registerResult = await RegisterNewIPN(initiatePesaPalDto.IpnCallbackUrl);
                     if (!registerResult.IsSuccess)
                     {
                         return ServiceResult<PesaOrderResponse>.Failure(registerResult.Error);
@@ -400,15 +392,15 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 // Step 3: Create order request
                 var orderRequest = new PesaOrderRequest
                 {
-                    Id = productId,
-                    Currency = "UGX",
-                    Amount = amount,
-                    Description = description,
-                    CallbackUrl = callbackUrl,
+                    Id = initiatePesaPalDto.ProductId,
+                    Currency = initiatePesaPalDto.Currency,
+                    Amount = initiatePesaPalDto.Amount,
+                    Description = initiatePesaPalDto.Description,
+                    CallbackUrl = initiatePesaPalDto.CallbackUrl,
                     NotificationId = notificationId,
-                    BillingAddress = billingAddress,
-                    AccountNumber = customerId,
-                    SubscriptionDetails = subscriptionDetails
+                    BillingAddress = initiatePesaPalDto.BillingAddress,
+                    AccountNumber = initiatePesaPalDto.CustomerId,
+                    SubscriptionDetails = initiatePesaPalDto.SubscriptionDetails
                 };
 
                 // Step 4: Submit order to PesaPal
@@ -416,7 +408,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 if (!submitResult.IsSuccess || submitResult.Data == null)
                 {
-                    _logger.LogError("Order submission to PesaPal failed for product {ProductId}", productId);
+                    _logger.LogError("Order submission to PesaPal failed for product {ProductId}", initiatePesaPalDto.ProductId);
                     return ServiceResult<PesaOrderResponse>.Failure(
                         submitResult.Error ?? new ServerErrorException("Failed to submit order to PesaPal"));
                 }
@@ -435,7 +427,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error initiating PesaPal payment for product {ProductId}", productId);
+                _logger.LogError(ex, "Error initiating PesaPal payment for product {ProductId}", initiatePesaPalDto.ProductId);
                 return ServiceResult<PesaOrderResponse>.Failure(
                     new ServerErrorException("An unexpected error occurred while initiating payment"));
             }

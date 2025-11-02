@@ -11,7 +11,7 @@
 <PageTitle>Pricing - FRELODY</PageTitle>
 
 <!-- Hero Section -->
-<section class="pricing-hero bg-primary text-white py-5">
+<section class="pricing-hero text-white py-5">
     <div class="container-fluid">
         <div class="content-wrapper" style="max-width:@MAX_WIDTH; margin: 0 auto;">
             <div class="text-center px-3">
@@ -145,20 +145,24 @@
                                             disabled="@isProcessing"
                                             data-analytics="pricing-cta"
                                             data-plan="@product.Name">
+                                        @if (isProcessing && selectedProduct?.Id == product.Id)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        }
                                         @if (displayPrice.Amount == 0)
                                         {
                                             <span>Start Free</span>
                                         }
                                         else if (product.Name.Contains("Studio", StringComparison.OrdinalIgnoreCase))
-                                        {
+                                        {                                           
                                             <span>Contact Sales</span>
                                         }
                                         else if (product.Period == BillingPeriod.forever)
-                                        {
+                                        {                                            
                                             <span>Buy Now - Lifetime Access</span>
                                         }
                                         else
-                                        {
+                                        {                                            
                                             <span>Start 14-day Trial</span>
                                         }
                                     </button>
@@ -431,16 +435,18 @@
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1050;">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content" style="border-radius: 1rem; height: 80vh;">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title">Complete Your Payment</h5>
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title text-center">Complete Your Payment</h5>
                     <button type="button" class="btn-close" @onclick="ClosePaymentModal"></button>
                 </div>
-                <div class="modal-body p-0" style="height: calc(80vh - 60px);">
+                <div class="modal-body row p-0" style="height: calc(80vh - 60px);">
                     @if (!string.IsNullOrEmpty(paymentRedirectUrl))
                     {
-                        <iframe src="@paymentRedirectUrl" 
-                                style="width: 100%; height: 100%; border: none;"
-                                title="PesaPal Payment Gateway"></iframe>
+                        <div class="col-11 col-md-9 p-md-3 border rounded-3 bg-white mx-auto mt-2 mb-4">
+                            <iframe src="@paymentRedirectUrl"
+                                    style="width: 100%; height: 100%; border: none;"
+                                    title="PesaPal Payment Gateway"></iframe>
+                        </div>
                     }
                     else
                     {
@@ -595,20 +601,19 @@
     private async void ToggleShowAllPlans()
     {
         showAllPlans = !showAllPlans; 
-        
+
         if (!showAllPlans) await ScrollToPlans(); 
-        
+
         StateHasChanged();
     }
 
     private string GetProductDisplayName(ProductDto product)
     {
-        // Simplify names for display
         return product.Name switch
         {
+            "Creator Monthly" => "Creator (Monthly)",
+            "Creator Yearly" => "Creator (Yearly -20%)",
             "Creator One-Time" => "Creator",
-            "Creator Monthly" => "Creator",
-            "Creator Yearly" => "Creator",
             _ => product.Name
         };
     }
@@ -701,6 +706,7 @@
 
             var amount = product.Price ?? 0;
             var description = GetPaymentDescription(product);
+            var countryCode = _currencyDisplay.GetCountryCode();
 
             var initiateDto = new InitiatePesaPalDto
             {
@@ -712,7 +718,7 @@
                 {
                     EmailAddress = user.Data.Email ?? "",
                     PhoneNumber = user.Data.UserName ?? "",
-                    CountryCode = "256",
+                    CountryCode = countryCode,
                     FirstName = user.Data.FirstName ?? "",
                     LastName = user.Data.LastName ?? "",
                     City = "Kampala"
@@ -757,7 +763,7 @@
         {
             return $"{GetProductDisplayName(product)} - One-Time Payment (Lifetime Access)";
         }
-        
+
         return $"{GetProductDisplayName(product)} - {GetBillingLabel(product.Period)} Subscription";
     }
 
@@ -767,8 +773,9 @@
         {
             BillingPeriod.daily => "day",
             BillingPeriod.monthly => "month",
-            BillingPeriod.yearly => "year",
             BillingPeriod.biannually => "6 months",
+            BillingPeriod.yearly => "year",
+            BillingPeriod.biennially => "2 years",
             BillingPeriod.forever => "lifetime",
             _ => "month"
         };

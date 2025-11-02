@@ -13,5 +13,6 @@ namespace FRELODYUI.Shared.Services
         Task<ServiceResult<CurrencyDisplayInfo>> GetDisplayCurrencyAsync(decimal baseAmount, string baseCurrency = "UGX");
         string FormatCurrency(decimal amount, string currencyCode);
         Task<ServiceResult<decimal>> ConvertToUserCurrency(decimal amount, string fromCurrency = "UGX");
+        string GetCountryCode();
     }
 }

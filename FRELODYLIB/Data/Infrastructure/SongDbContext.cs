@@ -17,7 +17,7 @@ namespace FRELODYAPP.Data.Infrastructure
         private readonly ITenantProvider _tenantProvider;
         private readonly string _tenantId;
         private readonly string _userId;
-        private readonly bool _isSuperAdmin;
+        private bool _isSuperAdmin;
 
         public SongDbContext(DbContextOptions<SongDbContext> options, ITenantProvider tenantProvider)
             : base(options)
@@ -25,7 +25,7 @@ namespace FRELODYAPP.Data.Infrastructure
             _tenantProvider = tenantProvider;
             _userId = _tenantProvider.GetUserId();
             _tenantId = _tenantProvider.GetTenantId();
-            _isSuperAdmin = _tenantProvider.IsSuperAdmin();
+            _isSuperAdmin = _tenantProvider.IsSuperAdmin(_userId);
         }
         public DbSet<Tenant> Tenants { get; set; }
         public DbSet<Playlist> Playlists { get; set; }
@@ -57,7 +57,7 @@ namespace FRELODYAPP.Data.Infrastructure
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-
+            _isSuperAdmin = _tenantProvider.IsSuperAdmin(_userId);
             // Configure global query filters for entities implementing IBaseEntity
             builder.Entity<Playlist>().HasQueryFilter(x =>
                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
@@ -410,6 +410,7 @@ namespace FRELODYAPP.Data.Infrastructure
 
         public override int SaveChanges()
         {
+            _isSuperAdmin = _tenantProvider.IsSuperAdmin(_userId);
             UpdateTimestamps();
             return base.SaveChanges();
         }
@@ -432,7 +433,12 @@ namespace FRELODYAPP.Data.Infrastructure
                     entity.Entity.ModifiedBy = _userId;
                     if (string.IsNullOrEmpty(entity.Entity.TenantId) && !_isSuperAdmin)
                     {
-                        entity.Entity.TenantId = _tenantId;
+                        if(!string.IsNullOrEmpty(_tenantId))
+                            entity.Entity.TenantId = _tenantId;
+                    }
+                    else
+                    {
+                        entity.Entity.TenantId = null;
                     }
                     entity.Entity.CreatedBy = _userId;
                 }

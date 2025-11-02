@@ -10,8 +10,9 @@ namespace FRELODYSHRD.Constants
     {
         daily,
         monthly,
+        biannually, //6 months
         yearly,
-        biannually,
+        biennially, //2 years
         forever,
     }
 }

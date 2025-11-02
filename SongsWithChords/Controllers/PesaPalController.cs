@@ -187,5 +187,20 @@ namespace FRELODYAPIs.Controllers
 
             return Ok(result.Data);
         }
+
+        ///<summary>
+        /// Initiates a payment request to PesaPal.
+        ///</summary>
+        [HttpPost("initiate-payment")]
+        [ProducesResponseType(typeof(PesaOrderResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> InitiatePesaPalPayment([FromBody] InitiatePesaPalDto initiatePesaPalDto)
+        {
+            var result = await _pesaPalService.InitiatePesaPalPaymentAsync(initiatePesaPalDto);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, new { error = result.Error?.Message });
+            }
+            return Ok(result.Data);
+        }
     }
 }

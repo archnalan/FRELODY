@@ -31,7 +31,12 @@ var connectionString = builder.Configuration.GetConnectionString("SongData") ?? 
 builder.Services.AddDbContext<SongDbContext>(options =>
 	options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+    .AddEnvironmentVariables()
+    .AddUserSecrets<Program>();
 builder.Services.AddDatabaseSeeder();
 builder.Services.AddControllersWithViews();
 

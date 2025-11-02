@@ -48,8 +48,7 @@ namespace FRELODYUI.Shared.Services
                 var conversionResult = await _currencyConverter.ConvertCurrencyAsync(
                     baseCurrency,
                     userCurrency,
-                    baseAmount,
-                    RoundingFormat.WholeNumber);
+                    baseAmount);
 
                 if (!conversionResult.IsSuccess)
                 {
@@ -150,6 +149,62 @@ namespace FRELODYUI.Shared.Services
             {
                 return CultureInfo.CurrentCulture;
             }
+        }
+
+        public string GetCountryCode()
+        {
+            try
+            {
+                // Get country code from user's regional settings
+                var regionInfo = RegionInfo.CurrentRegion;
+
+                // Extract the numeric country calling code
+                // RegionInfo doesn't directly provide calling codes, so we map from TwoLetterISORegionName
+                var countryCode = GetCallingCodeFromRegion(regionInfo.TwoLetterISORegionName);
+
+                return countryCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to determine country code from culture settings, defaulting to Uganda (256)");
+                // Fallback to Uganda if detection fails
+                return "256";
+            }
+        }
+
+        private string GetCallingCodeFromRegion(string twoLetterISOCode)
+        {
+            // Map common East African and global country codes
+            // This is a simplified mapping - expand as needed
+            var countryCallingCodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        // East Africa
+        { "UG", "256" },  // Uganda
+        { "KE", "254" },  // Kenya
+        { "TZ", "255" },  // Tanzania
+        { "RW", "250" },  // Rwanda
+        { "BI", "257" },  // Burundi
+        { "SS", "211" },  // South Sudan
+        { "ET", "251" },  // Ethiopia
+        
+        // Other African countries
+        { "NG", "234" },  // Nigeria
+        { "ZA", "27" },   // South Africa
+        { "GH", "233" },  // Ghana
+        { "EG", "20" },   // Egypt
+        
+        // Major global markets
+        { "US", "1" },    // United States
+        { "GB", "44" },   // United Kingdom
+        { "IN", "91" },   // India
+        { "CN", "86" },   // China
+        { "CA", "1" },    // Canada
+        { "AU", "61" },   // Australia
+    };
+
+            return countryCallingCodes.TryGetValue(twoLetterISOCode, out var callingCode)
+                ? callingCode
+                : "256"; // Default to Uganda
         }
     }
 
