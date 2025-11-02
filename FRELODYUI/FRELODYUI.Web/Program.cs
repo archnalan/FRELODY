@@ -1,5 +1,6 @@
 using Blazored.LocalStorage;
 using FRELODYSHRD.Interfaces;
+using FRELODYSHRD.Services;
 using FRELODYUI.Services;
 using FRELODYUI.Shared.RefitApis;
 using FRELODYUI.Shared.Services;
@@ -36,6 +37,9 @@ builder.Services.AddScoped<GlobalAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
                 provider.GetRequiredService<GlobalAuthStateProvider>());
 builder.Services.AddSingleton<ITimeHelper, TimeHelper>();
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ICurrencyConverter, CurrencyConverter>();
+builder.Services.AddScoped<ICurrencyDisplayService, CurrencyDisplayService>();
 var baseAddressApi = new Uri("https://localhost:7018");
 
 builder.Services.AddRefitClient<ISongsApi>()
@@ -107,6 +111,10 @@ builder.Services.AddRefitClient<IChatsApi>()
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<IPesaPalApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddRefitClient<IProductsApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 

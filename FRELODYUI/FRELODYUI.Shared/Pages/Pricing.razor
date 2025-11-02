@@ -1,273 +1,308 @@
 @page "/pricing"
+@layout LandingLayout
+@inject ICurrencyDisplayService _currencyDisplay
 @using FRELODYSHRD.Dtos.PesaPalDtos
 @using FRELODYSHRD.Models.PesaPal
-@layout LandingLayout
 @inject ILogger<Pricing> _logger
 @inject IPesaPalApi _pesaPalApi
 @inject IApiResponseHandler _apiResponseHandler
+@inject IProductsApi _productsApi
 
 <PageTitle>Pricing - FRELODY</PageTitle>
 
 <!-- Hero Section -->
 <section class="pricing-hero bg-primary text-white py-5">
-    <div class="container text-center">
-        <h1 class="display-4 fw-bold mb-3">Choose Your Plan</h1>
-        <p class="lead mb-4">Select the perfect plan for your music creation journey</p>
-        
-        <!-- Trust Badges -->
-        <div class="d-flex justify-content-center gap-4 flex-wrap mb-4">
-            <div class="badge bg-white text-primary px-3 py-2">
-                <i class="bi bi-shield-check me-2"></i>Secure Payments
+    <div class="container-fluid">
+        <div class="content-wrapper" style="max-width:@MAX_WIDTH; margin: 0 auto;">
+            <div class="text-center px-3">
+                <h1 class="display-4 fw-bold mb-3">Choose Your Plan</h1>
+                <p class="lead mb-4">Select the perfect plan for your music creation journey</p>
+                
+                <!-- Trust Badges -->
+                <div class="d-flex justify-content-center gap-4 flex-wrap mb-4">
+                    <div class="badge bg-white text-primary px-3 py-2">
+                        <i class="bi bi-shield-check me-2"></i>Secure Payments
+                    </div>
+                    <div class="badge bg-white text-primary px-3 py-2">
+                        <i class="bi bi-arrow-repeat me-2"></i>Cancel Anytime
+                    </div>
+                    <div class="badge bg-white text-primary px-3 py-2">
+                        <i class="bi bi-credit-card me-2"></i>All Payment Methods
+                    </div>
+                </div>
             </div>
-            <div class="badge bg-white text-primary px-3 py-2">
-                <i class="bi bi-arrow-repeat me-2"></i>Cancel Anytime
-            </div>
-            <div class="badge bg-white text-primary px-3 py-2">
-                <i class="bi bi-credit-card me-2"></i>All Payment Methods
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Billing Toggle -->
-<section class="billing-toggle py-4 bg-light">
-    <div class="container">
-        <div class="d-flex justify-content-center align-items-center gap-3">
-            <span class="@(billingPeriod == BillingPeriod.monthly ? "fw-bold" : "text-muted")">Monthly</span>
-            <div class="form-check form-switch">
-                <input class="form-check-input" 
-                       type="checkbox" 
-                       role="switch" 
-                       id="billingSwitch"
-                       checked="@(billingPeriod == BillingPeriod.yearly)"
-                       @onchange="ToggleBillingPeriod"
-                       aria-label="Toggle between monthly and yearly billing">
-            </div>
-            <span class="@(billingPeriod == BillingPeriod.yearly ? "fw-bold" : "text-muted")">
-                Yearly 
-                <span class="badge bg-success ms-2">Save 20%</span>
-            </span>
         </div>
     </div>
 </section>
 
 <!-- Pricing Cards -->
 <section class="pricing-cards py-5">
-    <div class="container">
-        @if (isLoading)
-        {
-            <div class="row g-4">
-                @for (int i = 0; i < 3; i++)
-                {
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <div class="card h-100 placeholder-wave">
-                            <div class="card-body">
-                                <span class="placeholder col-6 mb-3"></span>
-                                <span class="placeholder col-8 mb-4"></span>
-                                <span class="placeholder col-12 mb-2"></span>
-                                <span class="placeholder col-12 mb-2"></span>
+    <div class="container-fluid">
+        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
+            @if (isLoading)
+            {
+                <div class="row g-4 justify-content-center px-3">
+                    @for (int i = 0; i < 3; i++)
+                    {
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="card h-100 placeholder-wave">
+                                <div class="card-body">
+                                    <span class="placeholder col-6 mb-3"></span>
+                                    <span class="placeholder col-8 mb-4"></span>
+                                    <span class="placeholder col-12 mb-2"></span>
+                                    <span class="placeholder col-12 mb-2"></span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                }
-            </div>
-        }
-        else
-        {
-            <div class="row g-4">
-                @foreach (var product in pricingPlans)
-                {
-                    var isPopular = product.IsPopular ?? false;
-                    var monthlyPrice = GetDisplayPrice(product);
-                    
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <div class="card h-100 @(isPopular ? "border-primary shadow-lg position-relative" : "border shadow-sm")" 
-                             style="border-radius: 1rem;">
-                            
-                            @if (isPopular)
-                            {
-                                <div class="position-absolute top-0 start-50 translate-middle">
-                                    <span class="badge bg-primary px-3 py-2">
-                                        <i class="bi bi-star-fill me-1"></i>Most Popular
-                                    </span>
-                                </div>
-                            }
-                            
-                            <div class="card-body p-4 d-flex flex-column">
-                                <div class="mb-4">
-                                    <h3 class="card-title fw-bold mb-2">@product.Name</h3>
-                                    <p class="text-muted small mb-3">@product.Description</p>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="row g-4 justify-content-center px-3">
+                    @foreach (var product in GetDisplayedProducts())
+                    {
+                        var isPopular = product.IsPopular ?? false;
+                        var displayPrice = GetDisplayPrice(product);
+                        
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="card h-100 @(isPopular ? "border-primary shadow-lg position-relative" : "border shadow-sm")" 
+                                 style="border-radius: 1rem;">
+                                
+                                @if (isPopular)
+                                {
+                                    <div class="position-absolute top-0 start-50 translate-middle">
+                                        <span class="badge bg-primary px-3 py-2">
+                                            <i class="bi bi-star-fill me-1"></i>Most Popular
+                                        </span>
+                                    </div>
+                                }
+                                
+                                <div class="card-body p-4 d-flex flex-column">
+                                    <div class="mb-4">
+                                        <h3 class="card-title fw-bold mb-2">@GetProductDisplayName(product)</h3>
+                                        <p class="text-muted small mb-3">@product.Description</p>
+                                        
+                                        <div class="pricing-amount mb-3">
+                                            @if (displayPrice.Amount == 0)
+                                            {
+                                                <span class="display-6 fw-bold">Free</span>
+                                            }
+                                            else
+                                            {
+                                                <div>
+                                                    <span class="display-6 fw-bold">@displayPrice.FormattedAmount</span>
+                                                    @if (product.Period != BillingPeriod.forever)
+                                                    {
+                                                        <span class="text-muted">/@GetBillingLabel(product.Period)</span>
+                                                    }
+                                                </div>
+                                                
+                                                @if (displayPrice.IsConverted)
+                                                {
+                                                    <small class="text-muted d-block mt-2">
+                                                        <i class="bi bi-info-circle me-1"></i>
+                                                        Original: @displayPrice.OriginalCurrency @displayPrice.OriginalAmount?.ToString("N0")
+                                                    </small>
+                                                }
+                                                
+                                                @if (product.Period == BillingPeriod.forever)
+                                                {
+                                                    <div class="mt-2">
+                                                        <span class="badge bg-success">One-Time Payment</span>
+                                                    </div>
+                                                }
+                                                else if (product.Period == BillingPeriod.yearly)
+                                                {
+                                                    <p class="text-success small mb-0 mt-2">
+                                                        <i class="bi bi-check-circle-fill me-1"></i>
+                                                        Save 20% annually
+                                                    </p>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
                                     
-                                    <div class="pricing-amount mb-3">
-                                        @if (monthlyPrice == 0)
+                                    <!-- Features List -->
+                                    <div class="mb-4 flex-grow-1">
+                                        <ul class="list-unstyled">
+                                            @if (product.Features != null)
+                                            {
+                                                @foreach (var feature in product.Features)
+                                                {
+                                                    <li class="mb-2">
+                                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                                        @GetFeatureDescription(feature)
+                                                    </li>
+                                                }
+                                            }
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- CTA Button -->
+                                    <button class="btn @(isPopular ? "btn-primary" : "btn-outline-primary") w-100 py-3" 
+                                            @onclick="() => SelectPlan(product)"
+                                            disabled="@isProcessing"
+                                            data-analytics="pricing-cta"
+                                            data-plan="@product.Name">
+                                        @if (displayPrice.Amount == 0)
                                         {
-                                            <span class="display-4 fw-bold">Free</span>
+                                            <span>Start Free</span>
+                                        }
+                                        else if (product.Name.Contains("Studio", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span>Contact Sales</span>
+                                        }
+                                        else if (product.Period == BillingPeriod.forever)
+                                        {
+                                            <span>Buy Now - Lifetime Access</span>
                                         }
                                         else
                                         {
-                                            <span class="display-4 fw-bold">UGX @monthlyPrice.ToString("N0")</span>
-                                            <span class="text-muted">/@GetBillingLabel()</span>
+                                            <span>Start 14-day Trial</span>
                                         }
-                                    </div>
-                                    
-                                    @if (billingPeriod == BillingPeriod.yearly && monthlyPrice > 0)
-                                    {
-                                        <p class="text-success small mb-0">
-                                            <i class="bi bi-check-circle-fill me-1"></i>
-                                            Save UGX @CalculateYearlySavings(product).ToString("N0") annually
-                                        </p>
-                                    }
+                                    </button>
                                 </div>
-                                
-                                <!-- Features List -->
-                                <div class="mb-4 flex-grow-1">
-                                    <ul class="list-unstyled">
-                                        @if (product.Features != null)
-                                        {
-                                            @foreach (var feature in product.Features)
-                                            {
-                                                <li class="mb-2">
-                                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                                    @GetFeatureDescription(feature)
-                                                </li>
-                                            }
-                                        }
-                                    </ul>
-                                </div>
-                                
-                                <!-- CTA Button -->
-                                <button class="btn @(isPopular ? "btn-primary" : "btn-outline-primary") w-100 py-3" 
-                                        @onclick="() => SelectPlan(product)"
-                                        disabled="@isProcessing"
-                                        data-analytics="pricing-cta"
-                                        data-plan="@product.Name">
-                                    @if (monthlyPrice == 0)
-                                    {
-                                        <span>Start Free</span>
-                                    }
-                                    else if (product.Name.Contains("Studio", StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        <span>Contact Sales</span>
-                                    }
-                                    else
-                                    {
-                                        <span>Start 14-day Trial</span>
-                                    }
-                                </button>
                             </div>
                         </div>
+                    }
+                </div>
+                
+                <!-- Show More/Less Toggle -->
+                @if (pricingPlans.Count > 3)
+                {
+                    <div class="text-center mt-4 px-3">
+                        <button class="btn btn-outline-primary px-5 py-2 rounded-pill" 
+                                @onclick="ToggleShowAllPlans">
+                            @if (showAllPlans)
+                            {
+                                <span><i class="bi bi-chevron-up me-2"></i>Show Less Options</span>
+                            }
+                            else
+                            {
+                                <span><i class="bi bi-chevron-down me-2"></i>View More Plans</span>
+                            }
+                        </button>
                     </div>
                 }
-            </div>
-        }
+            }
+        </div>
     </div>
 </section>
 
 <!-- Feature Comparison -->
 <section class="feature-comparison py-5 bg-light">
-    <div class="container">
-        <h2 class="text-center mb-5">Compare Features</h2>
-        
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Feature</th>
-                        <th class="text-center">Starter</th>
-                        <th class="text-center">Creator</th>
-                        <th class="text-center">Studio</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Song Creations</td>
-                        <td class="text-center">10/month</td>
-                        <td class="text-center"><i class="bi bi-infinity text-primary fs-5"></i></td>
-                        <td class="text-center"><i class="bi bi-infinity text-primary fs-5"></i></td>
-                    </tr>
-                    <tr>
-                        <td>Song Access</td>
-                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                    </tr>
-                    <tr>
-                        <td>PDF Export</td>
-                        <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
-                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                    </tr>
-                    <tr>
-                        <td>Bulk PDF Import</td>
-                        <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
-                        <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
-                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                    </tr>
-                    <tr>
-                        <td>AI-Assisted Composition</td>
-                        <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
-                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                        <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                    </tr>
-                    <tr>
-                        <td>Support</td>
-                        <td class="text-center">Email</td>
-                        <td class="text-center">Priority</td>
-                        <td class="text-center">Dedicated</td>
-                    </tr>
-                </tbody>
-            </table>
+    <div class="container-fluid">
+        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
+            <div class="px-3">
+                <h2 class="text-center mb-5">Compare Features</h2>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th class="text-center">Starter</th>
+                                <th class="text-center">Creator</th>
+                                <th class="text-center">Studio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Song Creations</td>
+                                <td class="text-center">10/month</td>
+                                <td class="text-center"><i class="bi bi-infinity text-primary fs-5"></i></td>
+                                <td class="text-center"><i class="bi bi-infinity text-primary fs-5"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Song Access</td>
+                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>PDF Export</td>
+                                <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
+                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Bulk PDF Import</td>
+                                <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
+                                <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
+                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>AI-Assisted Composition</td>
+                                <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
+                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Support</td>
+                                <td class="text-center">Email</td>
+                                <td class="text-center">Priority</td>
+                                <td class="text-center">Dedicated</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </section>
 
 <!-- Social Proof -->
 <section class="social-proof py-5">
-    <div class="container">
-        <h2 class="text-center mb-4">Trusted by Musicians Worldwide</h2>
-        <div class="row g-4">
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <div class="mb-3">
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
+    <div class="container-fluid">
+        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
+            <div class="px-3">
+                <h2 class="text-center mb-4">Trusted by Musicians Worldwide</h2>
+                <div class="row g-4">
+                    <div class="col-12 col-md-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                </div>
+                                <p class="mb-2">"FRELODY has transformed how I create and manage my worship music."</p>
+                                <small class="text-muted">- Worship Leader</small>
+                            </div>
                         </div>
-                        <p class="mb-2">"FRELODY has transformed how I create and manage my worship music."</p>
-                        <small class="text-muted">- Worship Leader</small>
                     </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <div class="mb-3">
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
+                    <div class="col-12 col-md-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                </div>
+                                <p class="mb-2">"The chord management features are incredibly powerful and intuitive."</p>
+                                <small class="text-muted">- Music Director</small>
+                            </div>
                         </div>
-                        <p class="mb-2">"The chord management features are incredibly powerful and intuitive."</p>
-                        <small class="text-muted">- Music Director</small>
                     </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body text-center">
-                        <div class="mb-3">
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <i class="bi bi-star-fill text-warning"></i>
+                    <div class="col-12 col-md-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                </div>
+                                <p class="mb-2">"Perfect for our church choir. Easy collaboration and sharing."</p>
+                                <small class="text-muted">- Choir Director</small>
+                            </div>
                         </div>
-                        <p class="mb-2">"Perfect for our church choir. Easy collaboration and sharing."</p>
-                        <small class="text-muted">- Choir Director</small>
                     </div>
                 </div>
             </div>
@@ -277,73 +312,77 @@
 
 <!-- FAQs -->
 <section class="faqs py-5 bg-light">
-    <div class="container">
-        <h2 class="text-center mb-5">Frequently Asked Questions</h2>
-        
-        <div class="row">
-            <div class="col-12 col-lg-8 mx-auto">
-                <div class="accordion" id="faqAccordion">
-                    <div class="accordion-item">
-                        <h3 class="accordion-header">
-                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                Can I switch plans later?
-                            </button>
-                        </h3>
-                        <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body">
-                                Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate the charges accordingly.
+    <div class="container-fluid">
+        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
+            <div class="px-3">
+                <h2 class="text-center mb-5">Frequently Asked Questions</h2>
+                
+                <div class="row">
+                    <div class="col-12 col-lg-10 mx-auto">
+                        <div class="accordion" id="faqAccordion">
+                            <div class="accordion-item">
+                                <h3 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                        Can I switch plans later?
+                                    </button>
+                                </h3>
+                                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate the charges accordingly.
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <div class="accordion-item">
-                        <h3 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                Is there a free trial?
-                            </button>
-                        </h3>
-                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body">
-                                Yes! Creator and Studio plans come with a 14-day free trial. No credit card required to start. The Starter plan is free forever.
+                            
+                            <div class="accordion-item">
+                                <h3 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                        Is there a free trial?
+                                    </button>
+                                </h3>
+                                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        Yes! Creator and Studio plans come with a 14-day free trial. No credit card required to start. The Starter plan is free forever.
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <div class="accordion-item">
-                        <h3 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                                How does cancellation work?
-                            </button>
-                        </h3>
-                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body">
-                                You can cancel anytime from your account settings. You'll retain access until the end of your billing period. No hidden fees or penalties.
+                            
+                            <div class="accordion-item">
+                                <h3 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                        How does cancellation work?
+                                    </button>
+                                </h3>
+                                <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        You can cancel anytime from your account settings. You'll retain access until the end of your billing period. No hidden fees or penalties.
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <div class="accordion-item">
-                        <h3 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
-                                What payment methods do you accept?
-                            </button>
-                        </h3>
-                        <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body">
-                                We accept all major payment methods through PesaPal including mobile money, credit cards, and bank transfers.
+                            
+                            <div class="accordion-item">
+                                <h3 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                                        What payment methods do you accept?
+                                    </button>
+                                </h3>
+                                <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        We accept all major payment methods through PesaPal including mobile money, credit cards, and bank transfers.
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <div class="accordion-item">
-                        <h3 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
-                                Do you offer refunds?
-                            </button>
-                        </h3>
-                        <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body">
-                                Studio plan includes refunds within 30 days of purchase. For other plans, contact our support team for assistance.
+                            
+                            <div class="accordion-item">
+                                <h3 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                                        Do you offer refunds?
+                                    </button>
+                                </h3>
+                                <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        Studio plan includes refunds within 30 days of purchase. For other plans, contact our support team for assistance.
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -354,27 +393,35 @@
 </section>
 
 <!-- Final CTA -->
-<section class="final-cta py-5 bg-primary text-white text-center">
-    <div class="container">
-        <h2 class="display-5 fw-bold mb-3">Ready to Start Creating?</h2>
-        <p class="lead mb-4">Join thousands of musicians using FRELODY</p>
-        <button class="btn btn-light btn-lg px-5 py-3" @onclick="ScrollToPlans">
-            View Pricing Plans
-        </button>
+<section class="final-cta py-5 bg-primary text-white">
+    <div class="container-fluid">
+        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
+            <div class="text-center px-3">
+                <h2 class="display-5 fw-bold mb-3">Ready to Start Creating?</h2>
+                <p class="lead mb-4">Join thousands of musicians using FRELODY</p>
+                <button class="btn btn-light btn-lg px-5 py-3" @onclick="ScrollToPlans">
+                    View Pricing Plans
+                </button>
+            </div>
+        </div>
     </div>
 </section>
 
 <!-- Legal Footer -->
 <section class="legal-footer py-3 border-top">
-    <div class="container">
-        <p class="text-muted small text-center mb-0">
-            <i class="bi bi-info-circle me-1"></i>
-            Prices are in Ugandan Shillings (UGX) and include applicable VAT. 
-            By subscribing, you agree to our 
-            <a href="/terms" class="text-decoration-none">Terms of Service</a> and 
-            <a href="/privacy" class="text-decoration-none">Privacy Policy</a>.
-            <a href="/sla" class="text-decoration-none">SLA</a>
-        </p>
+    <div class="container-fluid">
+        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
+            <div class="px-3">
+                <p class="text-muted small text-center mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Prices are in Ugandan Shillings (UGX) and include applicable VAT. 
+                    By subscribing, you agree to our 
+                    <a href="/terms" class="text-decoration-none">Terms of Service</a> and 
+                    <a href="/privacy" class="text-decoration-none">Privacy Policy</a>.
+                    <a href="/sla" class="text-decoration-none">SLA</a>
+                </p>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -418,19 +465,29 @@
              OnConfirmModal="ConfirmModal" />
 
 @code {
+    private const string MAX_WIDTH = "70rem";
     private List<ProductDto> pricingPlans = new();
-    private BillingPeriod billingPeriod = BillingPeriod.monthly;
+    private Dictionary<string, CurrencyDisplayInfo> displayPrices = new();
     private bool isLoading = true;
     private bool isProcessing = false;
     private bool showPaymentModal = false;
+    private bool showAllPlans = false;
     private string paymentRedirectUrl = string.Empty;
     private ProductDto? selectedProduct;
+
+    // Default 3 products to show
+    private readonly string[] defaultProductNames = new[]
+    {
+        "Starter",
+        "Creator One-Time",
+        "Creator Monthly"
+    };
 
     protected override async Task OnInitializedAsync()
     {
         await LoadPricingPlans();
 
-        // Check authentication status and redirect if needed for payment callback
+        // Check authentication status
         var authState = await _globalAuth.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated != true)
         {
@@ -449,64 +506,50 @@
 
         try
         {
-            // Mock data - Replace with actual API call
-            pricingPlans = new List<ProductDto>
+            // Load products from API
+            var response = await _productsApi.GetProducts();
+
+            if (response.IsSuccessStatusCode && response.Content != null)
             {
-                new ProductDto
+                pricingPlans = response.Content;
+
+                // Convert prices to user's currency
+                foreach (var product in pricingPlans)
                 {
-                    Id = "starter-plan",
-                    Name = "Starter",
-                    Description = "For individuals trying FRELODY",
-                    Price = 0,
-                    Period = BillingPeriod.forever,
-                    IsPopular = false,
-                    Features = new List<Feature>
+                    if (product.Price.HasValue && product.Price > 0)
                     {
-                        Feature.UnlimitedSongAcccess,
-                        Feature.SongManagement
+                        var currencyResult = await _currencyDisplay.GetDisplayCurrencyAsync(
+                            product.Price.Value,
+                            product.Currency ?? "UGX");
+
+                        if (currencyResult.IsSuccess)
+                        {
+                            displayPrices[product.Id] = currencyResult.Data;
+                        }
                     }
-                },
-                new ProductDto
-                {
-                    Id = "creator-plan",
-                    Name = "Creator",
-                    Description = "For growing creators and freelancers",
-                    Price = 30000,
-                    Period = BillingPeriod.monthly,
-                    IsPopular = true,
-                    Features = new List<Feature>
+                    else
                     {
-                        Feature.UnlimitedSongCreations,
-                        Feature.UnlimitedSongAcccess,
-                        Feature.SongManagement,
-                        Feature.ChordManagement,
-                        Feature.PdfExport,
-                        Feature.AiAssistedComposition
-                    }
-                },
-                new ProductDto
-                {
-                    Id = "studio-plan",
-                    Name = "Studio",
-                    Description = "For teams needing collaboration and controls",
-                    Price = 100000,
-                    Period = BillingPeriod.monthly,
-                    IsPopular = false,
-                    Features = new List<Feature>
-                    {
-                        Feature.UnlimitedSongCreations,
-                        Feature.UnlimitedSongAcccess,
-                        Feature.DedicatedSupport,
-                        Feature.SongManagement,
-                        Feature.ChordManagement,
-                        Feature.UserManagement,
-                        Feature.PdfExport,
-                        Feature.BulkPdfImport,
-                        Feature.AiAssistedComposition,
-                        Feature.Refunds
+                        displayPrices[product.Id] = new CurrencyDisplayInfo
+                        {
+                            Amount = 0,
+                            CurrencyCode = "UGX",
+                            FormattedAmount = "Free",
+                            IsConverted = false
+                        };
                     }
                 }
-            };
+            }
+            else
+            {
+                _logger.LogError("Failed to load products from API");
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = "Failed to load pricing plans. Please refresh the page.",
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -524,6 +567,63 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private List<ProductDto> GetDisplayedProducts()
+    {
+        if (showAllPlans || pricingPlans.Count <= 3)
+        {
+            // Show all products, sorted by priority
+            return pricingPlans
+                .OrderBy(p => GetProductPriority(p.Name))
+                .ToList();
+        }
+
+        // Show only default 3 products
+        return pricingPlans
+            .Where(p => defaultProductNames.Contains(p.Name))
+            .OrderBy(p => Array.IndexOf(defaultProductNames, p.Name))
+            .ToList();
+    }
+
+    private int GetProductPriority(string productName)
+    {
+        var index = Array.IndexOf(defaultProductNames, productName);
+        return index >= 0 ? index : 999;
+    }
+
+    private async void ToggleShowAllPlans()
+    {
+        showAllPlans = !showAllPlans; 
+        
+        if (!showAllPlans) await ScrollToPlans(); 
+        
+        StateHasChanged();
+    }
+
+    private string GetProductDisplayName(ProductDto product)
+    {
+        // Simplify names for display
+        return product.Name switch
+        {
+            "Creator One-Time" => "Creator",
+            "Creator Monthly" => "Creator",
+            "Creator Yearly" => "Creator",
+            _ => product.Name
+        };
+    }
+
+    private CurrencyDisplayInfo GetDisplayPrice(ProductDto product)
+    {
+        return displayPrices.ContainsKey(product.Id)
+            ? displayPrices[product.Id]
+            : new CurrencyDisplayInfo 
+            { 
+                Amount = product.Price ?? 0, 
+                FormattedAmount = product.Price.HasValue ? $"UGX {product.Price.Value:N0}" : "Free",
+                CurrencyCode = "UGX",
+                IsConverted = false
+            };
     }
 
     private async Task SelectPlan(ProductDto product)
@@ -593,72 +693,43 @@
 
         try
         {
-            // Step 1: Authenticate with PesaPal
-            var authResponse = await _pesaPalApi.Authenticate();
-            if (!authResponse.IsSuccessStatusCode || authResponse.Content == null)
-            {
-                throw new Exception("Failed to authenticate with payment provider");
-            }
-
-            // Step 2: Get or register IPN
-            var ipnResponse = await _pesaPalApi.GetIPNList();
-            string notificationId;
-            
-            if (ipnResponse.IsSuccessStatusCode && ipnResponse.Content?.Any() == true)
-            {
-                notificationId = ipnResponse.Content.First().IpnId;
-            }
-            else
-            {
-                // Register new IPN
-                var registerIpnRequest = new RegisterIPNRequest
-                {
-                    IpnUrl = $"{_navManager.BaseUri}api/PesaPal/ipn-callback",
-                    NotificationType = "GET"
-                };
-                
-                var registerResponse = await _pesaPalApi.RegisterIPN(registerIpnRequest);
-                if (!registerResponse.IsSuccessStatusCode || registerResponse.Content == null)
-                {
-                    throw new Exception("Failed to register payment notification");
-                }
-                
-                notificationId = registerResponse.Content.IpnId;
-            }
-
-            // Step 3: Submit order
             var user = await _globalAuth.GetAuthenticatedUserAsync();
-            var amount = GetDisplayPrice(product);
-            
-            var orderRequest = new PesaOrderRequest
+            if (!user.IsSuccess || user.Data == null)
             {
-                Id = product.Id,
-                Currency = "UGX",
+                throw new Exception("User authentication failed");
+            }
+
+            var amount = product.Price ?? 0;
+            var description = GetPaymentDescription(product);
+
+            var initiateDto = new InitiatePesaPalDto
+            {
+                ProductId = product.Id,
+                CustomerId = user.Data.Id,
                 Amount = amount,
-                Description = $"{product.Name} - {GetBillingLabel()} Subscription",
-                CallbackUrl = $"{_navManager.BaseUri}pricing?payment=success",
-                NotificationId = notificationId,
+                Description = description,
                 BillingAddress = new BillingAddress
                 {
-                    EmailAddress = user.Data?.Email ?? "",
-                    PhoneNumber = user.Data?.UserName ?? "",
+                    EmailAddress = user.Data.Email ?? "",
+                    PhoneNumber = user.Data.UserName ?? "",
                     CountryCode = "256",
-                    FirstName = user.Data?.FirstName ?? "",
-                    LastName = user.Data?.LastName ?? "",
+                    FirstName = user.Data.FirstName ?? "",
+                    LastName = user.Data.LastName ?? "",
                     City = "Kampala"
-                }
+                },
+                CallbackUrl = $"{_navManager.BaseUri}pricing?payment=success&productId={product.Id}",
+                IpnCallbackUrl = $"{_navManager.BaseUri}api/PesaPal/ipn-callback"
             };
 
-            var orderResponse = await _pesaPalApi.SubmitOrder(orderRequest);
-            
-            if (!orderResponse.IsSuccessStatusCode || orderResponse.Content == null)
+            var response = await _pesaPalApi.InitiatePesaPalPayment(initiateDto);
+
+            if (!response.IsSuccessStatusCode || response.Content == null)
             {
-                var errorMessage = _apiResponseHandler.GetApiErrorMessage(orderResponse);
-                throw new Exception($"Failed to create payment order: {errorMessage}");
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                throw new Exception($"Failed to initiate payment: {errorMessage}");
             }
 
-            // Step 4: Open payment modal with redirect URL
-            paymentRedirectUrl = orderResponse.Content.RedirectUrl;
+            paymentRedirectUrl = response.Content.RedirectUrl;
             showPaymentModal = true;
             StateHasChanged();
         }
@@ -680,35 +751,27 @@
         }
     }
 
-    private void ToggleBillingPeriod()
+    private string GetPaymentDescription(ProductDto product)
     {
-        billingPeriod = billingPeriod == BillingPeriod.monthly 
-            ? BillingPeriod.yearly 
-            : BillingPeriod.monthly;
-    }
-
-    private decimal GetDisplayPrice(ProductDto product)
-    {
-        if (product.Price == null || product.Price == 0) return 0;
-        
-        if (billingPeriod == BillingPeriod.yearly)
+        if (product.Period == BillingPeriod.forever)
         {
-            // 20% discount for yearly
-            return product.Price.Value * 12 * 0.8m;
+            return $"{GetProductDisplayName(product)} - One-Time Payment (Lifetime Access)";
         }
         
-        return product.Price.Value;
+        return $"{GetProductDisplayName(product)} - {GetBillingLabel(product.Period)} Subscription";
     }
 
-    private string GetBillingLabel()
+    private string GetBillingLabel(BillingPeriod? period)
     {
-        return billingPeriod == BillingPeriod.monthly ? "month" : "year";
-    }
-
-    private decimal CalculateYearlySavings(ProductDto product)
-    {
-        if (product.Price == null) return 0;
-        return product.Price.Value * 12 * 0.2m;
+        return period switch
+        {
+            BillingPeriod.daily => "day",
+            BillingPeriod.monthly => "month",
+            BillingPeriod.yearly => "year",
+            BillingPeriod.biannually => "6 months",
+            BillingPeriod.forever => "lifetime",
+            _ => "month"
+        };
     }
 
     private string GetFeatureDescription(Feature feature)
@@ -750,7 +813,6 @@
         }
         else if (_modalService.CurrentModal?.Context?.ActionType == "ContactSales")
         {
-            // TODO: Implement contact sales logic
             _logger.LogInformation("Contact sales request for Studio plan");
         }
         

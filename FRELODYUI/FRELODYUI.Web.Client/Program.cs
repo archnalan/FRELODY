@@ -1,5 +1,6 @@
 using Blazored.LocalStorage;
 using FRELODYSHRD.Interfaces;
+using FRELODYSHRD.Services;
 using FRELODYUI.Services;
 using FRELODYUI.Shared.RefitApis;
 using FRELODYUI.Shared.Services;
@@ -91,6 +92,10 @@ builder.Services.AddRefitClient<IPesaPalApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddRefitClient<IProductsApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
 // Add device-specific services used by the FRELODYUI.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
@@ -105,5 +110,8 @@ builder.Services.AddScoped<HeroDataService>();
 builder.Services.AddScoped<GlobalAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
                 provider.GetRequiredService<GlobalAuthStateProvider>());
+builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ITimeHelper, TimeHelper>();
+builder.Services.AddScoped<ICurrencyConverter, CurrencyConverter>();
+builder.Services.AddScoped<ICurrencyDisplayService, CurrencyDisplayService>();
 await builder.Build().RunAsync();

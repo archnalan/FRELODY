@@ -1,5 +1,6 @@
 ﻿using FRELODYLIB.Interfaces;
 using FRELODYSHRD.Interfaces;
+using FRELODYSHRD.Services;
 using FRELODYUI.Services;
 using FRELODYUI.Shared.RefitApis;
 using FRELODYUI.Shared.Services;
@@ -37,7 +38,10 @@ namespace FRELODYUI
             builder.Services.AddScoped<GlobalAuthStateProvider>();
             builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
                 provider.GetRequiredService<GlobalAuthStateProvider>());
-            builder.Services.AddSingleton<ITimeHelper, TimeHelper>();
+            builder.Services.AddSingleton<ITimeHelper, TimeHelper>(); 
+            builder.Services.AddMemoryCache();
+            builder.Services.AddScoped<ICurrencyConverter, CurrencyConverter>();
+            builder.Services.AddScoped<ICurrencyDisplayService, CurrencyDisplayService>();
             var baseAddressApi = new Uri("https://localhost:7077");
 
             builder.Services.AddRefitClient<ISongsApi>()
@@ -109,6 +113,10 @@ namespace FRELODYUI
                             .AddHttpMessageHandler<AuthHeaderHandler>();
 
             builder.Services.AddRefitClient<IPesaPalApi>()
+                            .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                            .AddHttpMessageHandler<AuthHeaderHandler>();
+
+            builder.Services.AddRefitClient<IProductsApi>()
                             .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                             .AddHttpMessageHandler<AuthHeaderHandler>();
 

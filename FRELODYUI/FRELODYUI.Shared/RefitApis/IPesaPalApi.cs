@@ -39,5 +39,8 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Post("/api/pesa-pal/process-payment")]
         Task<IApiResponse<PesaOrderResponse>> ProcessPayment([Body] ProcessPaymentRequest request);
+
+        [Post("/api/pesa-pal/initiate-payment")]
+        Task<IApiResponse<PesaOrderResponse>> InitiatePesaPalPayment([Body] InitiatePesaPalDto request);
     }
 }

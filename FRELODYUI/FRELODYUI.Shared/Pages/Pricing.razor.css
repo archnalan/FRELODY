@@ -2,11 +2,9 @@
     background: linear-gradient(135deg, var(--bs-primary) 0%, var(--bs-primary-dark, #0056b3) 100%);
 }
 
-.billing-toggle {
-    position: sticky;
-    top: 56px;
-    z-index: 1020;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.content-wrapper {
+    padding-left: 1rem;
+    padding-right: 1rem;
 }
 
 .form-check-input {
@@ -42,6 +40,11 @@
     background: linear-gradient(135deg, var(--bs-primary) 0%, var(--bs-primary-dark, #0056b3) 100%);
 }
 
+/* Smooth transitions for show more/less */
+.row {
+    transition: all 0.3s ease-in-out;
+}
+
 @media (max-width: 768px) {
     .pricing-cards .col-12 {
         margin-bottom: 1.5rem;
@@ -49,5 +52,10 @@
     
     .table-responsive {
         font-size: 0.875rem;
+    }
+    
+    .content-wrapper {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
     }
 }
