@@ -1,4 +1,5 @@
-﻿using FRELODYAPP.Data.Infrastructure;
+﻿using FRELODYAPIs.Areas.Admin.Interfaces;
+using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Dtos.AuthDtos;
 using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Dtos.UserDtos;
@@ -44,13 +45,14 @@ namespace FRELODYAPP.Data
         private readonly SecurityUtilityService _securityUtilityService;
         private readonly TokenService _tokenService;
         private readonly string? _tenantId;
+        private readonly IUserService _userService;
 
         public AuthorizationService(IConfiguration config, SongDbContext context,
             SignInManager<User> signInManager, UserManager<User> userManager,
             IWebHostEnvironment webHostEnvironment, SmtpSenderService emailSmtpService,
             ILogger<AuthorizationService> logger, ITenantProvider tenantProvider,
             IHttpContextAccessor httpContextAccessor, RoleManager<IdentityRole> roleManager,
-            FileValidationService fileValidationService, SecurityUtilityService securityUtilityService, TokenService tokenService)
+            FileValidationService fileValidationService, SecurityUtilityService securityUtilityService, TokenService tokenService, IUserService userService)
         {
             _config = config;
             _signInManager = signInManager;
@@ -66,6 +68,7 @@ namespace FRELODYAPP.Data
             _securityUtilityService = securityUtilityService;
             _tokenService = tokenService;
             _tenantId = _tenantProvider.GetTenantId();
+            _userService = userService;
         }
 
         public async Task<ServiceResult<string>> InitiatePasswordReset(string emailAddress)
@@ -272,6 +275,15 @@ namespace FRELODYAPP.Data
                 {
                     if (user.TenantId == null && user.UserType != UserType.SuperAdmin) return ServiceResult<LoginResponseDto>.Failure(
                         new BadRequestException($"Invalid Tenant. contact {_config["ApplicationInfo:SupportEmail"]} for support"));
+
+                    if( !string.IsNullOrEmpty(userLogin.PhoneNumber))
+                    {
+                        var phoneUpdateResult = await _userService.UpdateUserPhoneNumberAsync(user.Id, userLogin.PhoneNumber);
+                        if (!phoneUpdateResult.IsSuccess)
+                        {
+                           return ServiceResult<LoginResponseDto>.Failure(phoneUpdateResult.Error);
+                        }
+                    }
 
                     var token = await _tokenService.GenerateTokens(user, user.TenantId);
 

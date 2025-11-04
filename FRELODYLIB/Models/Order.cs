@@ -11,10 +11,10 @@ namespace FRELODYLIB.Models
 {
     public class Order:BaseEntity
     {
-        public decimal? TotalAmout { get; set; }
+        public decimal TotalAmout { get; set; }
+        public string CustomerId { get; set; } = string.Empty;
         public OrderStatus? Status { get; set; }
         public DateTimeOffset? OrderDate { get; set; }
-        public string? CustomerId { get; set; }
         public string? OrderNote { get; set; }
     }
 }

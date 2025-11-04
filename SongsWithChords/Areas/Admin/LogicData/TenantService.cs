@@ -49,12 +49,15 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         Email = dto.UserEmail,
                         DateCreated = DateTime.UtcNow
                     };
-
+                    var userEmailParts = dto.UserEmail.Split('@');
                     user = new User
                     {
                         FirstName = names.Length > 0 ? names[0] : dto.UserFullName,
                         LastName = names.Length > 1 ? names[1] : "",
-                        UserName = dto.UserEmail,
+                        UserName = userEmailParts != null && userEmailParts.Length > 0
+                            && !string.IsNullOrWhiteSpace(userEmailParts[0])
+                            ? $"@{userEmailParts[0]}"
+                            : dto.UserEmail,
                         Email = dto.UserEmail,
                         EmailConfirmed = true,
                         TenantId = tenant.Id
@@ -73,12 +76,15 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         DateCreated = DateTime.UtcNow
                     };
 
+                    var emailParts = dto.Email?.Split('@');
                     user = new User
                     {
                         FirstName = "Power",
-                        LastName = "User",
-                        UserName = dto.Email,
-                        Email = dto.Email,
+                        LastName = "User",                        
+                        UserName = emailParts != null && emailParts.Length > 0 
+                        && !string.IsNullOrWhiteSpace(emailParts[0])
+                            ? $"@{emailParts[0]}"
+                            : dto.Email,
                         EmailConfirmed = true,
                         UserType = UserType.Admin,
                         TenantId = tenant.Id

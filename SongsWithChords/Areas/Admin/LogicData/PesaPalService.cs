@@ -307,131 +307,212 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
         public async Task<ServiceResult<PesaOrderResponse>> InitiatePesaPalPaymentAsync(InitiatePesaPalDto initiatePesaPalDto)
         {
-            try
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
             {
-                // Validate input parameters
-                if (string.IsNullOrWhiteSpace(initiatePesaPalDto.ProductId))
+                using (var transaction = await _context.Database.BeginTransactionAsync())
                 {
-                    return ServiceResult<PesaOrderResponse>.Failure(
-                        new BadRequestException("Product ID is required"));
-                }
-
-                if (string.IsNullOrWhiteSpace(initiatePesaPalDto.CustomerId))
-                {
-                    return ServiceResult<PesaOrderResponse>.Failure(
-                        new BadRequestException("Customer ID is required"));
-                }
-
-                if (initiatePesaPalDto.Amount <= 0)
-                {
-                    return ServiceResult<PesaOrderResponse>.Failure(
-                        new BadRequestException("Amount must be greater than zero"));
-                }
-
-                if (initiatePesaPalDto.BillingAddress == null)
-                {
-                    return ServiceResult<PesaOrderResponse>.Failure(
-                        new BadRequestException("Billing address is required"));
-                }
-
-                if (string.IsNullOrWhiteSpace(initiatePesaPalDto.CallbackUrl))
-                {
-                    return ServiceResult<PesaOrderResponse>.Failure(
-                        new BadRequestException("Callback URL is required"));
-                }
-
-                _logger.LogInformation("Initiating PesaPal payment for product {ProductId}, amount {Amount}",
-                    initiatePesaPalDto.ProductId, initiatePesaPalDto.Amount);
-
-                // Step 1: Authenticate with PesaPal
-                var authResult = await AuthenticateAsync();
-                if (!authResult.IsSuccess || authResult.Data == null)
-                {
-                    _logger.LogError("PesaPal authentication failed");
-                    return ServiceResult<PesaOrderResponse>.Failure(
-                        authResult.Error ?? new UnAuthorizedException("Authentication failed"));
-                }
-
-                _logger.LogInformation("PesaPal authentication successful");
-
-                // Step 2: Get or register IPN
-                string notificationId;
-                var ipnListResult = await GetRegisteredIPNsAsync();
-
-                if (ipnListResult.IsSuccess && ipnListResult.Data?.Any() == true)
-                {
-                    // Use the first active IPN
-                    var activeIpn = ipnListResult.Data.FirstOrDefault(i => i.IpnStatus == 1); // 1 = Active
-                    if (activeIpn != null)
+                    try
                     {
-                        notificationId = activeIpn.IpnId;
-                        _logger.LogInformation("Using existing IPN: {IpnId}", notificationId);
-                    }
-                    else
-                    {
-                        // No active IPN found, register a new one
-                        var registerResult = await RegisterNewIPN(initiatePesaPalDto.IpnCallbackUrl);
-                        if (!registerResult.IsSuccess)
+                        var jsonparams = JsonSerializer.Serialize(initiatePesaPalDto, new JsonSerializerOptions
                         {
-                            return ServiceResult<PesaOrderResponse>.Failure(registerResult.Error);
+                            WriteIndented = true
+                        });
+                        Console.WriteLine(jsonparams);
+                        // Validate input parameters
+                        if (string.IsNullOrWhiteSpace(initiatePesaPalDto.ProductId))
+                        {
+                            return ServiceResult<PesaOrderResponse>.Failure(
+                                new BadRequestException("Product ID is required"));
                         }
-                        notificationId = registerResult.Data;
+
+                        if (string.IsNullOrWhiteSpace(initiatePesaPalDto.CustomerId))
+                        {
+                            return ServiceResult<PesaOrderResponse>.Failure(
+                                new BadRequestException("Customer ID is required"));
+                        }
+
+                        if (initiatePesaPalDto.Amount <= 0)
+                        {
+                            return ServiceResult<PesaOrderResponse>.Failure(
+                                new BadRequestException("Amount must be greater than zero"));
+                        }
+
+                        if (initiatePesaPalDto.BillingAddress == null)
+                        {
+                            return ServiceResult<PesaOrderResponse>.Failure(
+                                new BadRequestException("Billing address is required"));
+                        }
+
+                        if (string.IsNullOrWhiteSpace(initiatePesaPalDto.CallbackUrl))
+                        {
+                            return ServiceResult<PesaOrderResponse>.Failure(
+                                new BadRequestException("Callback URL is required"));
+                        }
+
+                        _logger.LogInformation("Initiating PesaPal payment for product {ProductId}, amount {Amount}",
+                            initiatePesaPalDto.ProductId, initiatePesaPalDto.Amount);
+
+                        // Step 1: Authenticate with PesaPal
+                        var authResult = await AuthenticateAsync();
+                        if (!authResult.IsSuccess || authResult.Data == null)
+                        {
+                            _logger.LogError("PesaPal authentication failed");
+                            return ServiceResult<PesaOrderResponse>.Failure(
+                                authResult.Error ?? new UnAuthorizedException("Authentication failed"));
+                        }
+
+                        _logger.LogInformation("PesaPal authentication successful");
+
+                        // Step 2: Get or register IPN
+                        string notificationId;
+                        var ipnListResult = await GetRegisteredIPNsAsync();
+
+                        if (ipnListResult.IsSuccess && ipnListResult.Data?.Any() == true)
+                        {
+                            // Use the first active IPN
+                            var activeIpn = ipnListResult.Data.FirstOrDefault(i => i.IpnStatus == 1); // 1 = Active
+                            if (activeIpn != null)
+                            {
+                                notificationId = activeIpn.IpnId;
+                                _logger.LogInformation("Using existing IPN: {IpnId}", notificationId);
+                            }
+                            else
+                            {
+                                // No active IPN found, register a new one
+                                var registerResult = await RegisterNewIPN(initiatePesaPalDto.IpnCallbackUrl);
+                                if (!registerResult.IsSuccess)
+                                {
+                                    return ServiceResult<PesaOrderResponse>.Failure(registerResult.Error);
+                                }
+                                notificationId = registerResult.Data;
+                            }
+                        }
+                        else
+                        {
+                            // No IPNs registered, create a new one
+                            var registerResult = await RegisterNewIPN(initiatePesaPalDto.IpnCallbackUrl);
+                            if (!registerResult.IsSuccess)
+                            {
+                                return ServiceResult<PesaOrderResponse>.Failure(registerResult.Error);
+                            }
+                            notificationId = registerResult.Data;
+                        }
+
+                        // Step 3: Create order request
+                        var order = new Order
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            TotalAmout = initiatePesaPalDto.Amount,
+                            Status = OrderStatus.PENDING,
+                            OrderDate = DateTimeOffset.UtcNow,
+                            CustomerId = initiatePesaPalDto.CustomerId,
+                            OrderNote = initiatePesaPalDto.Description
+                        };
+
+                        await _context.Orders.AddAsync(order);
+                        await _context.SaveChangesAsync();
+
+                        var orderDetail = new OrderDetail
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            ProductId = initiatePesaPalDto.ProductId,
+                            OrderId = order.Id,
+                            TotalPrice = initiatePesaPalDto.Amount,
+                            Quantity = 1, 
+                            DetailNote = "PesaPal payment initiation",                            
+                        };
+                        await _context.OrderDetails.AddAsync(orderDetail);
+                        await _context.SaveChangesAsync();
+
+                        _logger.LogInformation("Created order {OrderId} for customer {CustomerId} with total amount {Amount}",
+                            order.Id, order.CustomerId, initiatePesaPalDto.Amount);
+
+                        var orderRequest = new PesaOrderRequest
+                        {
+                            Id = initiatePesaPalDto.ProductId,
+                            Currency = initiatePesaPalDto.Currency,
+                            Amount = initiatePesaPalDto.Amount,
+                            Description = initiatePesaPalDto.Description,
+                            CallbackUrl = initiatePesaPalDto.CallbackUrl,
+                            NotificationId = notificationId,
+                            BillingAddress = initiatePesaPalDto.BillingAddress,
+                            AccountNumber = initiatePesaPalDto.CustomerId,
+                            SubscriptionDetails = initiatePesaPalDto.SubscriptionDetails
+                        };
+                        var json = JsonSerializer.Serialize(orderRequest, new JsonSerializerOptions
+                        {
+                            WriteIndented = true
+                        });
+                        Console.WriteLine(json);
+
+                        // Step 4: Submit order to PesaPal
+                        var submitResult = await SubmitOrderAsync(orderRequest);
+
+                        if (!submitResult.IsSuccess || submitResult.Data == null)
+                        {
+                            // Update order status to failed
+                            order.Status = OrderStatus.FAILED;
+                            _context.Orders.Update(order);
+                            await _context.SaveChangesAsync();
+
+                            _logger.LogError("Order submission to PesaPal failed for order {OrderId}", order.Id);
+
+                            // Rollback transaction
+                            await transaction.RollbackAsync();
+
+                            return ServiceResult<PesaOrderResponse>.Failure(
+                                submitResult.Error ?? new ServerErrorException("Failed to submit order to PesaPal"));
+                        }
+
+                        var json1 = JsonSerializer.Serialize(submitResult.Data, new JsonSerializerOptions
+                        {
+                            WriteIndented = true
+                        });
+                        Console.WriteLine(json1);
+
+                        var payment = new Payment
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            OrderId = order.Id,
+                            OrderTrackingId = submitResult.Data.OrderTrackingId,
+                            MerchantReference = order.Id,
+                            Amount = initiatePesaPalDto.Amount,
+                            Currency = initiatePesaPalDto.Currency,
+                            Status = PaymentStatus.PENDING,
+                            Description = orderRequest.Description,
+                        };
+
+                        await _context.Payments.AddAsync(payment);
+                        await _context.SaveChangesAsync();
+
+                        await transaction.CommitAsync();
+
+                        _logger.LogInformation(
+                            "PesaPal payment initiated successfully. Order tracking ID: {OrderTrackingId}",
+                            submitResult.Data.OrderTrackingId);
+
+                        return ServiceResult<PesaOrderResponse>.Success(submitResult.Data);
                     }
-                }
-                else
-                {
-                    // No IPNs registered, create a new one
-                    var registerResult = await RegisterNewIPN(initiatePesaPalDto.IpnCallbackUrl);
-                    if (!registerResult.IsSuccess)
+                    catch (HttpRequestException ex)
                     {
-                        return ServiceResult<PesaOrderResponse>.Failure(registerResult.Error);
+                        await transaction.RollbackAsync();
+                        _logger.LogError(ex, "Network error during PesaPal payment initiation");
+                        return ServiceResult<PesaOrderResponse>.Failure(
+                            new ServerErrorException("Network error connecting to PesaPal"));
                     }
-                    notificationId = registerResult.Data;
+                    catch (Exception ex)
+                    {
+                        await transaction.RollbackAsync();
+                        _logger.LogError(ex, "Error initiating PesaPal payment for product {ProductId}", initiatePesaPalDto.ProductId);
+                        return ServiceResult<PesaOrderResponse>.Failure(
+                            new ServerErrorException("An unexpected error occurred while initiating payment"));
+                    }
                 }
-
-                // Step 3: Create order request
-                var orderRequest = new PesaOrderRequest
-                {
-                    Id = initiatePesaPalDto.ProductId,
-                    Currency = initiatePesaPalDto.Currency,
-                    Amount = initiatePesaPalDto.Amount,
-                    Description = initiatePesaPalDto.Description,
-                    CallbackUrl = initiatePesaPalDto.CallbackUrl,
-                    NotificationId = notificationId,
-                    BillingAddress = initiatePesaPalDto.BillingAddress,
-                    AccountNumber = initiatePesaPalDto.CustomerId,
-                    SubscriptionDetails = initiatePesaPalDto.SubscriptionDetails
-                };
-
-                // Step 4: Submit order to PesaPal
-                var submitResult = await SubmitOrderAsync(orderRequest);
-
-                if (!submitResult.IsSuccess || submitResult.Data == null)
-                {
-                    _logger.LogError("Order submission to PesaPal failed for product {ProductId}", initiatePesaPalDto.ProductId);
-                    return ServiceResult<PesaOrderResponse>.Failure(
-                        submitResult.Error ?? new ServerErrorException("Failed to submit order to PesaPal"));
-                }
-
-                _logger.LogInformation(
-                    "PesaPal payment initiated successfully. Order tracking ID: {OrderTrackingId}",
-                    submitResult.Data.OrderTrackingId);
-
-                return ServiceResult<PesaOrderResponse>.Success(submitResult.Data);
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogError(ex, "Network error during PesaPal payment initiation");
-                return ServiceResult<PesaOrderResponse>.Failure(
-                    new ServerErrorException("Network error connecting to PesaPal"));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error initiating PesaPal payment for product {ProductId}", initiatePesaPalDto.ProductId);
-                return ServiceResult<PesaOrderResponse>.Failure(
-                    new ServerErrorException("An unexpected error occurred while initiating payment"));
-            }
+            });
         }
+
         private async Task<ServiceResult<string>> RegisterNewIPN(string? ipnCallbackUrl)
         {
             try

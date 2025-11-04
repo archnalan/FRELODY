@@ -4,7 +4,7 @@ using FRELODYAPP.Dtos.UserDtos;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using System.ComponentModel.DataAnnotations;
 
-namespace FRELODYAPP.Data
+namespace FRELODYAPIs.Areas.Admin.Interfaces
 {
     public interface IAuthService
     {

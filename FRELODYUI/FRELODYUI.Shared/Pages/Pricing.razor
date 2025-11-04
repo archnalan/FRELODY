@@ -429,6 +429,22 @@
     </div>
 </section>
 
+<!-- Login Modal -->
+@if (showLoginModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1050;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 1rem;">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold">Sign In to Continue</h5>
+                    <button type="button" class="btn-close" @onclick="CloseLoginModal"></button>
+                </div><div class="modal-body p-0 py-3">
+                    <Login ShowPhoneForm="true" FullBody="true" ShowSignUpModal="true" OnLoginSuccess="HandleLoginSuccess"/>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 <!-- PesaPal Payment Modal -->
 @if (showPaymentModal)
 {
@@ -465,10 +481,12 @@
     </div>
 }
 
-<DialogModal IsVisible="_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
+<div style="@(_modalService.IsModalVisible ? "" : "display:none"); z-index:2055">
+    <DialogModal IsVisible="_modalService.IsModalVisible"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseModal"
+                 OnConfirmModal="ConfirmModal" />
+</div>
 
 @code {
     private const string MAX_WIDTH = "70rem";
@@ -477,6 +495,7 @@
     private bool isLoading = true;
     private bool isProcessing = false;
     private bool showPaymentModal = false;
+    private bool showLoginModal = false;
     private bool showAllPlans = false;
     private string paymentRedirectUrl = string.Empty;
     private ProductDto? selectedProduct;
@@ -637,19 +656,9 @@
         var authState = await _globalAuth.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated != true)
         {
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "Sign In Required",
-                Message = "Please sign in to subscribe to a plan.",
-                ButtonText = "Go to Login",
-                HyperlinkText = "Create Account",
-                OptionType = OptionType.Info,
-                Context = new ModalContext
-                {
-                    ActionType = "NavigateToLogin",
-                    Data = "/pricing"
-                }
-            });
+            selectedProduct = product;
+            showLoginModal = true;
+            StateHasChanged();
             return;
         }
 
@@ -691,6 +700,26 @@
         await InitiatePayment(product);
     }
 
+    private async Task HandleLoginSuccess()
+    {
+        // Close login modal
+        showLoginModal = false;
+        StateHasChanged();
+
+        // Proceed with payment if a product was selected
+        if (selectedProduct != null)
+        {
+            await InitiatePayment(selectedProduct);
+        }
+    }
+
+    private void CloseLoginModal()
+    {
+        showLoginModal = false;
+        selectedProduct = null;
+        StateHasChanged();
+    }
+
     private async Task InitiatePayment(ProductDto product)
     {
         isProcessing = true;
@@ -703,7 +732,23 @@
             {
                 throw new Exception("User authentication failed");
             }
-
+            UpdateUserProfileOutDto userData = new();
+            var userDataResult = await _usersApi.GetUserProfile(user.Data.Id!);
+            if (userDataResult.IsSuccessStatusCode)
+            {
+                userData = userDataResult.Content!;
+            }
+            else
+            {
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = "Failed to retrieve user profile. Please try again.",
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+                return;
+            } 
             var amount = product.Price ?? 0;
             var description = GetPaymentDescription(product);
             var countryCode = _currencyDisplay.GetCountryCode();
@@ -711,16 +756,16 @@
             var initiateDto = new InitiatePesaPalDto
             {
                 ProductId = product.Id,
-                CustomerId = user.Data.Id,
+                CustomerId = userData.Id,
                 Amount = amount,
                 Description = description,
                 BillingAddress = new BillingAddress
                 {
-                    EmailAddress = user.Data.Email ?? "",
-                    PhoneNumber = user.Data.UserName ?? "",
+                    EmailAddress = userData.Email ?? "",
+                    PhoneNumber = userData.PhoneNumber ?? "",
                     CountryCode = countryCode,
-                    FirstName = user.Data.FirstName ?? "",
-                    LastName = user.Data.LastName ?? "",
+                    FirstName = userData.FirstName ?? "",
+                    LastName = userData.LastName ?? "",
                     City = "Kampala"
                 },
                 CallbackUrl = $"{_navManager.BaseUri}pricing?payment=success&productId={product.Id}",

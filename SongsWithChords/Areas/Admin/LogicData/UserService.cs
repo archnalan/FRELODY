@@ -10,6 +10,7 @@ using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYSHRD.Dtos.UserDtos;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYAPIs.Areas.Admin.LogicData
 {
@@ -195,6 +196,29 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError("Error while getting all Users: {ex}", ex);
                 return ServiceResult<PaginationDetails<AppUserDto>>.Failure(new Exception(ex.Message));
+            }
+        }
+        #endregion
+
+        #region Update User Phone Number
+        public async Task<ServiceResult<bool>> UpdateUserPhoneNumberAsync(string userId, [Phone]string newPhoneNumber)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return ServiceResult<bool>.Failure(new Exception("User not found."));
+                }
+                user.PhoneNumber = newPhoneNumber;
+                _context.Users.Update(user);
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error while updating user phone number: {ex}", ex);
+                return ServiceResult<bool>.Failure(new Exception("Could not update phone number."));
             }
         }
         #endregion

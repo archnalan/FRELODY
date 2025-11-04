@@ -1,4 +1,4 @@
-using FRELODYAPP.Data;
+using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPP.Dtos.AuthDtos;
 using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Dtos.UserDtos;

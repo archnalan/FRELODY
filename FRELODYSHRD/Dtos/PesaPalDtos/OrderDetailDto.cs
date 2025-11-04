@@ -9,9 +9,9 @@ namespace FRELODYSHRD.Dtos.PesaPalDtos
 {
     public class OrderDetailDto : BaseEntityDto
     {
-        public string OrderId { get; set; } = string.Empty;
-        public string ProductId { get; set; } = string.Empty;
-        public int Quantity { get; set; }
+        public string? OrderId { get; set; }
+        public string? ProductId { get; set; }
+        public int? Quantity { get; set; }
         public decimal? DiscountValue { get; set; }
         public decimal? DiscountPercent { get; set; }
         public decimal? UnitPrice { get; set; }
