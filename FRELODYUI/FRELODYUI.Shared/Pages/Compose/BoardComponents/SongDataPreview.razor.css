@@ -1,10 +1,12 @@
+/* Overlay */
 .song-preview-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: var(--modal-overlay-bg);
+    backdrop-filter: blur(var(--modal-overlay-blur));
     display: none;
     z-index: 1050;
     align-items: flex-end;
@@ -16,32 +18,42 @@
     }
 
 .song-preview-container {
-    background: white;
+    background: var(--modal-content-bg);
+    color: var(--modal-content-color);
     border-radius: 16px 16px 0 0;
     width: 100%;
-    max-height: 70vh;
+    max-height: 80vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--modal-shadow);
     animation: slideUp 0.3s ease-out;
+    border: 1px solid var(--modal-border-color);
 }
 
+/* Header */
 .song-preview-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e9ecef;
-    background: #f8f9fa;
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--modal-border-color);
+    background: var(--modal-header-bg);
     border-radius: 16px 16px 0 0;
+    flex-shrink: 0;
 }
 
 .song-preview-title {
     margin: 0;
     font-weight: 600;
-    color: #212529;
+    color: var(--text-primary);
+    font-size: 1.25rem;
 }
 
+.btn-close {
+    filter: brightness(var(--modal-content-color));
+}
+
+/* Content */
 .song-preview-content {
     flex: 1;
     overflow-y: auto;
@@ -52,9 +64,13 @@
     margin-bottom: 1.5rem;
 }
 
+    .preview-section:last-child {
+        margin-bottom: 0;
+    }
+
 .section-title {
     font-weight: 600;
-    color: #495057;
+    color: var(--text-primary);
     margin-bottom: 0.75rem;
     font-size: 0.875rem;
     text-transform: uppercase;
@@ -63,29 +79,45 @@
 
 .preview-label {
     font-size: 0.75rem;
-    color: #6c757d;
+    color: var(--text-secondary);
     margin-bottom: 0.25rem;
     display: block;
+    font-weight: 500;
 }
 
 .preview-value {
     font-weight: 500;
-    color: #212529;
+    color: var(--text-primary);
+    padding: 0.5rem;
+    background: var(--bg-hover);
+    border-radius: 6px;
 }
 
 .title-value {
-    font-size: 1.1rem;
     font-weight: 600;
 }
 
+/* Classification */
 .classification-item {
     display: flex;
     align-items: flex-start;
-    padding: 0.75rem;
-    background: #f8f9fa;
+    padding: 1rem;
+    background: var(--bg-hover);
     border-radius: 8px;
-    border-left: 3px solid #0d6efd;
+    border-left: 3px solid var(--bg-active);
+    gap: 0.75rem;
+    transition: all 0.2s ease;
 }
+
+    .classification-item:hover {
+        background: var(--modal-border-color);
+    }
+
+    .classification-item i {
+        color: var(--bg-active);
+        font-size: 1.25rem;
+        margin-top: 0.125rem;
+    }
 
 .classification-details {
     flex: 1;
@@ -93,35 +125,52 @@
 
 .classification-main {
     font-weight: 600;
-    color: #212529;
+    color: var(--text-primary);
     margin-bottom: 0.25rem;
+    font-size: 1rem;
 }
 
 .classification-sub {
     font-size: 0.875rem;
-    color: #6c757d;
+    color: var(--text-secondary);
     margin-bottom: 0.25rem;
 }
 
 .classification-meta {
     font-size: 0.75rem;
-    color: #868e96;
+    color: var(--text-muted);
 }
 
 /* Tabs Styling */
 .sections-tabs {
-    background: white;
+    background: var(--modal-content-bg);
     border-radius: 8px;
     overflow: hidden;
+    border: 1px solid var(--modal-border-color);
 }
 
 .nav-tabs-preview {
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid var(--modal-border-color);
     padding: 0 0.5rem;
     flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-medium) var(--bg-hover);
 }
+
+    .nav-tabs-preview::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .nav-tabs-preview::-webkit-scrollbar-track {
+        background: var(--bg-hover);
+    }
+
+    .nav-tabs-preview::-webkit-scrollbar-thumb {
+        background: var(--border-medium);
+        border-radius: 2px;
+    }
 
     .nav-tabs-preview .nav-item {
         margin-bottom: -1px;
@@ -130,59 +179,67 @@
     .nav-tabs-preview .nav-link {
         border: none;
         border-bottom: 2px solid transparent;
-        color: #6c757d;
+        color: var(--text-secondary);
         font-weight: 500;
         padding: 0.75rem 1rem;
         white-space: nowrap;
         background: none;
+        transition: all 0.2s ease;
     }
 
         .nav-tabs-preview .nav-link.active {
-            color: #0d6efd;
-            border-bottom-color: #0d6efd;
+            color: var(--bg-active);
+            border-bottom-color: var(--bg-active);
             background: none;
         }
 
         .nav-tabs-preview .nav-link:hover {
-            color: #0d6efd;
-            border-bottom-color: #dee2e6;
+            color: var(--bg-active);
+            border-bottom-color: var(--border-medium);
         }
 
 .section-content-preview {
-    padding: 1rem 0;
+    padding: 1rem;
     max-height: 300px;
     overflow-y: auto;
 }
 
+/* Song Parts */
 .song-part-preview {
     margin-bottom: 1.5rem;
     padding: 0 0.5rem;
 }
+
+    .song-part-preview:last-child {
+        margin-bottom: 0;
+    }
 
 .part-header {
     display: flex;
     align-items: center;
     margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid #f1f3f4;
+    border-bottom: 1px solid var(--modal-border-color);
 }
 
 .part-name {
     font-weight: 600;
-    color: #495057;
+    color: var(--text-primary);
     text-transform: capitalize;
+    font-size: 0.95rem;
 }
 
 .part-number {
     margin-left: 0.5rem;
-    background: #e9ecef;
-    color: #6c757d;
+    background: var(--bg-active);
+    color: white;
     padding: 0.125rem 0.5rem;
     border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 500;
 }
 
+/* Lyrics */
 .lyric-line-preview {
     display: flex;
     flex-wrap: wrap;
@@ -193,57 +250,89 @@
 .lyric-segment-preview {
     display: flex;
     flex-direction: column;
-    margin-right: 0.75rem;
+    justify-content: end;
+    margin-right: 0.5rem;
     margin-bottom: 0.25rem;
     min-width: 40px;
 }
 
 .chord-preview {
     font-size: 0.75rem;
-    color: #0d6efd;
+    color: var(--bg-active);
     font-weight: 600;
     margin-bottom: 0.125rem;
     line-height: 1;
+    font-family: 'Courier New', monospace;
 }
 
 .lyric-text-preview {
     font-size: 0.9rem;
-    color: #212529;
+    color: var(--text-primary);
     line-height: 1.4;
     min-height: 1.25rem;
 }
 
+/* Actions */
 .song-preview-actions {
     display: flex;
     gap: 0.75rem;
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #e9ecef;
-    background: #f8f9fa;
+    border-top: 1px solid var(--modal-border-color);
+    background: var(--modal-header-bg);
+    flex-shrink: 0;
 }
 
     .song-preview-actions .btn {
         flex: 1;
         padding: 0.75rem;
         font-weight: 500;
+        border-radius: 8px;
+        transition: all 0.2s ease;
     }
 
-/* Desktop Styles */
-@@media (min-width: 768px) {
+    .song-preview-actions .btn-outline-secondary {
+        background: transparent;
+        border: 1px solid var(--border-medium);
+        color: var(--text-secondary);
+    }
+
+        .song-preview-actions .btn-outline-secondary:hover {
+            background: var(--bg-hover);
+            border-color: var(--text-secondary);
+            color: var(--text-primary);
+        }
+
+    .song-preview-actions .btn-primary {
+        background: var(--bg-active);
+        border: 1px solid var(--bg-active);
+        color: white;
+    }
+
+        .song-preview-actions .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+/* Desktop Styles - Centered Modal */
+@media (min-width: 768px) {
     .song-preview-overlay {
         align-items: center;
         justify-content: center;
+        padding: 2rem;
     }
 
     .song-preview-container {
         width: 90%;
-        max-width: 600px;
-        max-height: 80vh;
+        max-width: 700px;
+        max-height: 85vh;
         border-radius: 16px;
         animation: fadeInScale 0.3s ease-out;
     }
 
     .song-preview-header {
-        border-radius: 16px 16px 0 0;
+        padding: 1.5rem 2rem;
+    }
+
+    .song-preview-content {
+        padding: 2rem;
     }
 
     .nav-tabs-preview {
@@ -254,10 +343,21 @@
     .section-content-preview {
         max-height: 400px;
     }
+
+    .song-preview-actions {
+        padding: 1.25rem;
+        border-radius: 0 0 16px 16px;
+        justify-content: flex-end;
+    }
+
+        .song-preview-actions .btn {
+            flex: 0 0 auto;
+            min-width: 120px;
+        }
 }
 
 /* Animations */
-@@keyframes slideUp {
+@keyframes slideUp {
     from {
         transform: translateY(100%);
         opacity: 0;
@@ -269,10 +369,10 @@
     }
 }
 
-@@keyframes fadeInScale {
+@keyframes fadeInScale {
     from {
         opacity: 0;
-        transform: scale(0.9);
+        transform: scale(0.95);
     }
 
     to {
@@ -284,22 +384,40 @@
 /* Scrollbar Styling */
 .song-preview-content::-webkit-scrollbar,
 .section-content-preview::-webkit-scrollbar {
-    width: 4px;
+    width: 6px;
 }
 
 .song-preview-content::-webkit-scrollbar-track,
 .section-content-preview::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 2px;
+    background: var(--bg-hover);
+    border-radius: 3px;
 }
 
 .song-preview-content::-webkit-scrollbar-thumb,
 .section-content-preview::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 2px;
+    background: var(--border-medium);
+    border-radius: 3px;
 }
 
     .song-preview-content::-webkit-scrollbar-thumb:hover,
     .section-content-preview::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
+        background: var(--text-secondary);
+    }
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+}
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-state p {
+        margin: 0;
+        font-size: 0.875rem;
     }

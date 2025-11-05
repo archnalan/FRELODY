@@ -1,0 +1,35 @@
+@using System.Linq
+
+<div class="play-history-chart">
+    @if (Data?.Any() == true)
+    {
+        <div class="chart-bars">
+            @{
+                var maxValue = Data.Values.Max();
+                var sortedData = Data.OrderBy(d => d.Key).Take(7);
+            }
+            @foreach (var item in sortedData)
+            {
+                var heightPercentage = maxValue > 0 ? (item.Value * 100.0 / maxValue) : 0;
+                <div class="bar-container">
+                    <div class="bar-wrapper">
+                        <div class="bar" style="height: @(heightPercentage)%">
+                            <span class="bar-value">@item.Value</span>
+                        </div>
+                    </div>
+                    <div class="bar-label">@item.Key.ToString("MMM dd")</div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-chart">
+            <p class="text-muted">No data available</p>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Dictionary<DateTime, int>? Data { get; set; }
+}

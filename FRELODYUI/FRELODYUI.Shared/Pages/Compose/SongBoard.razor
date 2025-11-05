@@ -37,7 +37,7 @@
 
         <div class="row row-cols-lg-12 g-2 align-items-center">
             <!-- Input 1 -->
-            <div class="col-3 col-md-2">
+            <div class="col-4 col-md-2">
                 <input type="number"
                        @bind="FormattedSongNumber"
                        class="form-control"
@@ -46,7 +46,7 @@
             </div>
 
             <!-- Input 2 -->
-            <div class="col-9 col-md-4">
+            <div class="col-8 col-md-4">
                 <input type="text"
                        @bind="SongTitle"
                        class="form-control"
@@ -54,10 +54,12 @@
             </div>
 
             <!--Input 3 book/Artist-->
-            <BookArtistAdd @ref="bookArtistAddRef"
-                           OnBookCategoryChanged="HandleBookCategoryChanged"
-                           OnArtistAlbumChanged="HandleArtistAlbumChanged"
-                           SongNumber="@SongNumber" />
+            <div class="col-9 col-md-4">
+                <BookArtistAdd @ref="bookArtistAddRef"
+                               OnBookCategoryChanged="HandleBookCategoryChanged"
+                               OnArtistAlbumChanged="HandleArtistAlbumChanged"
+                               SongNumber="@SongNumber" />
+            </div>
 
             <!-- Save Button -->
             <div class="col-3 col-md-2 d-grid">
@@ -367,20 +369,24 @@
         // Map single BookCategory pair if exists
         songData.BookCategory = currentBookCategory != null
             ? new BookCategoryPairViewModel
-            {
-                SongBookId = currentBookCategory.SongBookId,
-                CategoryId = currentBookCategory.CategoryId
-            }
-            : new BookCategoryPairViewModel();
+                {
+                    BookTitle = currentBookCategory.BookTitle,
+                CategoryName = currentBookCategory.CategoryName,
+                    SongBookId = currentBookCategory.SongBookId,
+                    CategoryId = currentBookCategory.CategoryId
+                }
+            : null;
 
         songData.ArtistAlbum = currentArtistAlbum != null
             ? new ArtistAlbumPairViewModel
             {
+                ArtistName = currentArtistAlbum.ArtistName,
+                AlbumTitle = currentArtistAlbum.AlbumTitle,
                 ArtistId = currentArtistAlbum.ArtistId,
                 AlbumId = currentArtistAlbum.AlbumId,
                 TrackNumber = currentArtistAlbum.TrackNumber
             }
-            : new ArtistAlbumPairViewModel();
+            :null;
 
         if (allSegments.Count == 0)
         {
@@ -430,6 +436,7 @@
 
         if (songResult.IsSuccessStatusCode)
         {
+            songData = new SimpleSongCreateDto();
             _modalService.Show(new ModalOptionDto
             {
                 Title = "Song Saved",
