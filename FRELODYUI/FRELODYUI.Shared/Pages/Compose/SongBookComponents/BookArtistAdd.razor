@@ -1,28 +1,16 @@
 
 <div class="d-flex gap-2">
     <!-- Vertical tabs -->
-    <ul class="nav nav-pills flex-column border rounded rounded-3 p-1 gap-1" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link d-flex justify-content-center align-items-center @(activeSelectionTab == "songbook" ? "active" : "")"
-                    data-bs-toggle="tooltip"
-                    title="Song Book"
-                    type="button"
-                    style="width: 2.5rem; height: 2.5rem;"
-                    @onclick='() => SetActiveSelectionTab("songbook")'>
-                <i class="bi bi-book"></i>
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link d-flex justify-content-center align-items-center @(activeSelectionTab == "artist" ? "active" : "")"
-                    data-bs-toggle="tooltip"
-                    title="Artist"
-                    type="button"
-                    style="width: 2.5rem; height: 2.5rem;"
-                    @onclick='() => SetActiveSelectionTab("artist")'>
-                <i class="bi bi-person"></i>
-            </button>
-        </li>
-    </ul>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-primary @(activeSelectionTab == "songbook" ? "active" : "")"
+                @onclick='() => SetActiveSelectionTab("songbook")'>
+            <i class="bi bi-book"></i>
+        </button>
+        <button type="button" class="btn btn-outline-primary @(activeSelectionTab == "artist" ? "active" : "")"
+                @onclick='() => SetActiveSelectionTab("artist")'>
+            <i class="bi bi-person"></i>
+        </button>
+    </div>
 
     <!-- Tab Content -->
     <div class="flex-grow-1 tab-content">
@@ -30,18 +18,7 @@
         @if (activeSelectionTab == "songbook")
         {
             <div class="d-flex flex-column justify-content-end h-100">
-                <!-- Current Book-Category Pair -->
-                @if (currentBookCategory != null)
-                {
-                    <div class="mb-2">
-                        <div class="badge bg-primary d-inline-flex align-items-center">
-                            <span class="small">@currentBookCategory.BookTitle @(currentBookCategory.CategoryName != null ? $"/ {currentBookCategory.CategoryName}" : "")</span>
-                            <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
-                                    @onclick="ClearBookCategory"></button>
-                        </div>
-                    </div>
-                }
-
+                
                 <!-- Add New Book-Category Pair -->
                 @if (string.IsNullOrEmpty(selectedSongBook?.Id))
                 {
@@ -54,15 +31,20 @@
                     <div class="d-flex gap-1 align-items-center">
                         <button type="button" class="btn btn-sm btn-link text-truncate flex-shrink-1"
                                 style="max-width: 7rem;"
-                                @onclick="ChangeBookSelection">
+                                @onclick="ClearBookCategory">
                             <strong>@GetTruncatedTitle(selectedSongBook.Title)</strong>
-                        </button>
+                        </button>                       
                         <div class="flex-grow-1">
                             <CategoriesDropdown SelectedCategory="@selectedCategory"
                                                 SelectedCategoryChanged="HandleCategoryChanged"
                                                 SongBookId="@selectedSongBook.Id"
                                                 TabIndex="10" />
                         </div>
+                        @if (currentBookCategory != null)
+                        {
+                            <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
+                                    @onclick="ClearBookCategory"></button>
+                        }
                     </div>
                 }
             </div>
@@ -72,19 +54,7 @@
         @if (activeSelectionTab == "artist")
         {
             <div class="d-flex flex-column justify-content-end h-100">
-                <!-- Current Artist-Album Pair -->
-                @if (currentArtistAlbum != null)
-                {
-                    <div class="mb-2">
-                        <div class="badge bg-info d-inline-flex align-items-center">
-                            <span class="small">@currentArtistAlbum.ArtistName @(currentArtistAlbum.AlbumTitle != null ? $"/ {currentArtistAlbum.AlbumTitle}" : "")</span>
-                            <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
-                                    @onclick="ClearArtistAlbum"></button>
-                        </div>
-                    </div>
-                }
-
-                <!-- Add New Artist-Album Pair -->
+                 <!-- Add New Artist-Album Pair -->
                 @if (string.IsNullOrEmpty(selectedArtist?.Id))
                 {
                     <ArtistDropdown @ref="artistDropdownRef"
@@ -96,7 +66,7 @@
                     <div class="d-flex gap-1 align-items-center">
                         <button type="button" class="btn btn-sm btn-link text-truncate flex-shrink-1"
                                 style="max-width: 7rem;"
-                                @onclick="ChangeArtistSelection">
+                                @onclick="ClearArtistAlbum">
                             <strong>@GetTruncatedTitle(selectedArtist.Name)</strong>
                         </button>
                         <div class="flex-grow-1">
@@ -106,6 +76,11 @@
                                            TabIndex="10" />
                         </div>
                     </div>
+                    @if (currentArtistAlbum != null)
+                    {
+                        <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
+                                @onclick="ClearArtistAlbum"></button>
+                    }
                 }
             </div>
         }
@@ -142,22 +117,12 @@
         // Clear selections and notify parent when switching tabs
         if (tab == "songbook")
         {
-            // Clear artist/album data
-            selectedArtist = null;
-            selectedAlbum = null;
-            currentArtistAlbum = null;
-            await OnArtistAlbumChanged.InvokeAsync(null);
+            await ClearBookCategory();
         }
         else if (tab == "artist")
         {
-            // Clear songbook/category data
-            selectedSongBook = null;
-            selectedCategory = null;
-            currentBookCategory = null;
-            await OnBookCategoryChanged.InvokeAsync(null);
+            await ClearArtistAlbum();
         }
-
-        StateHasChanged();
     }
 
     public async Task SetSongBookCategoryPair(BookCategoryPairViewModel? pair)
@@ -249,10 +214,6 @@
 
             // Notify parent immediately
             await OnBookCategoryChanged.InvokeAsync(currentBookCategory);
-
-            // Reset for next potential entry
-            selectedSongBook = null;
-            selectedCategory = null;
         }
 
         await InvokeAsync(StateHasChanged);

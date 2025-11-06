@@ -8,7 +8,7 @@
 <div class="min-vh-100 d-flex align-items-center justify-content-center">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-11 col-sm-8 col-md-6 col-lg-5 col-xl-4">
+            <div class="@(FullBody ? "col-12" : "col-11 col-sm-8 col-md-6 col-lg-5 col-xl-4")">
                 <!-- Register Card -->
                 <div class="card shadow-lg border-0" style="border-radius: 1rem;">
                     <div class="card-body p-4 p-sm-5">
@@ -193,6 +193,10 @@
 </div>
 
 @code {
+    [Parameter] public bool FullBody { get; set; } = false;
+    [Parameter] public EventCallback<TenantDto?> OnRegisterSuccess { get; set; }
+    [Parameter]public EventCallback<bool> GoBackToSignInModal  { get; set; }
+
     private TenantCreateDto registerModel = new();
     private string password = "";
     private string confirmPassword = "";
@@ -218,16 +222,23 @@
             }
 
             var response = await _tenantsApi.CreateTenant(registerModel, password);
-            
+
             if (response.IsSuccessStatusCode && response.Content != null)
             {
                 _logger.LogInformation("Tenant registered successfully");
                 successMessage = "Registration successful! You can now log in.";
                 StateHasChanged();
-                
+
                 await Task.Delay(2000); // Brief delay to show success message
                 var userEmail = isPersonalMode ? registerModel.UserEmail : registerModel.Email;
-                NavigateToLogin(userEmail);
+                if (OnRegisterSuccess.HasDelegate)
+                {
+                    await OnRegisterSuccess.InvokeAsync(response.Content);
+                }
+                else
+                {
+                    NavigateToLogin(userEmail);                    
+                }
             }
             else
             {
@@ -267,14 +278,21 @@
 
     private void NavigateToLogin(string? email = null)
     {
-        if (!string.IsNullOrEmpty(email))
+        if (GoBackToSignInModal.HasDelegate)
         {
-            _navManager.NavigateTo($"/login?email={Uri.EscapeDataString(email)}");
+            GoBackToSignInModal.InvokeAsync(true);
         }
         else
         {
-            _navManager.NavigateTo("/login");
-        }
+            if (!string.IsNullOrEmpty(email))
+            {
+                _navManager.NavigateTo($"/login?email={Uri.EscapeDataString(email)}");
+            }
+            else
+            {
+                _navManager.NavigateTo("/login");
+            }            
+        }       
     }
 
     private void ClearMessages()

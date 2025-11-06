@@ -33,18 +33,15 @@ namespace FRELODYLIB.Migrations
                     b.Property<string>("ArtistId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("ArtistId1")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("CreatedBy")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -79,8 +76,6 @@ namespace FRELODYLIB.Migrations
 
                     b.HasIndex("ArtistId");
 
-                    b.HasIndex("ArtistId1");
-
                     b.HasIndex("DateCreated");
 
                     b.HasIndex("DateModified");
@@ -114,11 +109,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -173,11 +168,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -240,11 +235,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -309,11 +304,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<DateTime?>("EndedAt")
                         .HasColumnType("datetime2");
@@ -389,11 +384,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Difficulty")
                         .HasColumnType("nvarchar(max)");
@@ -445,11 +440,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("FilePath")
                         .IsRequired()
@@ -504,11 +499,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -570,11 +565,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -646,11 +641,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -714,11 +709,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("History")
                         .HasMaxLength(255)
@@ -824,11 +819,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
@@ -911,11 +906,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -976,11 +971,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -1062,11 +1057,11 @@ namespace FRELODYLIB.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -1172,11 +1167,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("datetime2");
@@ -1314,11 +1309,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Email")
                         .HasMaxLength(100)
@@ -1377,6 +1372,237 @@ namespace FRELODYLIB.Migrations
                     b.ToTable("UserFeedback");
                 });
 
+            modelBuilder.Entity("FRELODYLIB.Models.Order", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("Access")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("CustomerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool?>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTimeOffset?>("OrderDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("OrderNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("TotalAmout")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Access");
+
+                    b.HasIndex("DateCreated");
+
+                    b.HasIndex("DateModified");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("ModifiedBy");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Orders");
+                });
+
+            modelBuilder.Entity("FRELODYLIB.Models.OrderDetail", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("Access")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DetailNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("DiscountPercent")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal?>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool?>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("OrderId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal?>("TotalPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Access");
+
+                    b.HasIndex("DateCreated");
+
+                    b.HasIndex("DateModified");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("ModifiedBy");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("OrderDetails");
+                });
+
+            modelBuilder.Entity("FRELODYLIB.Models.Payment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("Access")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset?>("CompletedDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ConfirmationCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTimeOffset?>("CreatedDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool?>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MerchantReference")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("OrderId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("OrderTrackingId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymentAccount")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RawResponse")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Access");
+
+                    b.HasIndex("DateCreated");
+
+                    b.HasIndex("DateModified");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("ModifiedBy");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Payments");
+                });
+
             modelBuilder.Entity("FRELODYLIB.Models.Playlist", b =>
                 {
                     b.Property<string>("Id")
@@ -1393,11 +1619,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Description")
                         .HasMaxLength(255)
@@ -1456,6 +1682,74 @@ namespace FRELODYLIB.Migrations
                     b.ToTable("Playlists");
                 });
 
+            modelBuilder.Entity("FRELODYLIB.Models.Product", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("Access")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Currency")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Features")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool?>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("IsPopular")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("Period")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Access");
+
+                    b.HasIndex("DateCreated");
+
+                    b.HasIndex("DateModified");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("ModifiedBy");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Products");
+                });
+
             modelBuilder.Entity("FRELODYLIB.Models.Setting", b =>
                 {
                     b.Property<string>("Id")
@@ -1480,11 +1774,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -1577,11 +1871,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<bool?>("IsDeleted")
                         .HasColumnType("bit");
@@ -1605,17 +1899,11 @@ namespace FRELODYLIB.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("SongId1")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("TenantId")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("UserId1")
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
@@ -1634,13 +1922,9 @@ namespace FRELODYLIB.Migrations
 
                     b.HasIndex("PlayedAt");
 
-                    b.HasIndex("SongId1");
-
                     b.HasIndex("TenantId");
 
                     b.HasIndex("UserId");
-
-                    b.HasIndex("UserId1");
 
                     b.HasIndex("SongId", "UserId");
 
@@ -1659,11 +1943,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset>("FavoritedAt")
                         .HasColumnType("datetimeoffset");
@@ -1730,11 +2014,11 @@ namespace FRELODYLIB.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateCreated")
+                        .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset?>("DateModified")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset>("DateScheduled")
                         .HasColumnType("datetimeoffset");
@@ -1748,9 +2032,6 @@ namespace FRELODYLIB.Migrations
 
                     b.Property<string>("PlaylistId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("PlaylistId1")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("SongId")
@@ -1781,8 +2062,6 @@ namespace FRELODYLIB.Migrations
                     b.HasIndex("ModifiedBy");
 
                     b.HasIndex("PlaylistId");
-
-                    b.HasIndex("PlaylistId1");
 
                     b.HasIndex("TenantId");
 
@@ -1928,14 +2207,10 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYAPP.Models.Album", b =>
                 {
-                    b.HasOne("FRELODYAPP.Models.Artist", null)
+                    b.HasOne("FRELODYAPP.Models.Artist", "Artist")
                         .WithMany("Albums")
                         .HasForeignKey("ArtistId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("FRELODYAPP.Models.Artist", "Artist")
-                        .WithMany()
-                        .HasForeignKey("ArtistId1");
 
                     b.HasOne("FRELODYAPP.Models.Tenant", null)
                         .WithMany()
@@ -2156,7 +2431,59 @@ namespace FRELODYLIB.Migrations
                     b.Navigation("Song");
                 });
 
+            modelBuilder.Entity("FRELODYLIB.Models.Order", b =>
+                {
+                    b.HasOne("FRELODYAPP.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("FRELODYLIB.Models.OrderDetail", b =>
+                {
+                    b.HasOne("FRELODYLIB.Models.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FRELODYLIB.Models.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FRELODYAPP.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("FRELODYLIB.Models.Payment", b =>
+                {
+                    b.HasOne("FRELODYLIB.Models.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FRELODYAPP.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("FRELODYLIB.Models.Playlist", b =>
+                {
+                    b.HasOne("FRELODYAPP.Models.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("FRELODYLIB.Models.Product", b =>
                 {
                     b.HasOne("FRELODYAPP.Models.Tenant", null)
                         .WithMany()
@@ -2184,29 +2511,21 @@ namespace FRELODYLIB.Migrations
 
             modelBuilder.Entity("FRELODYLIB.Models.SongPlayHistory", b =>
                 {
-                    b.HasOne("FRELODYAPP.Models.Song", null)
+                    b.HasOne("FRELODYAPP.Models.Song", "Song")
                         .WithMany()
                         .HasForeignKey("SongId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("FRELODYAPP.Models.Song", "Song")
-                        .WithMany()
-                        .HasForeignKey("SongId1");
 
                     b.HasOne("FRELODYAPP.Models.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("FRELODYAPP.Models.SubModels.User", null)
+                    b.HasOne("FRELODYAPP.Models.SubModels.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
-
-                    b.HasOne("FRELODYAPP.Models.SubModels.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId1");
 
                     b.Navigation("Song");
 
@@ -2240,14 +2559,10 @@ namespace FRELODYLIB.Migrations
             modelBuilder.Entity("FRELODYLIB.Models.SongUserPlaylist", b =>
                 {
                     b.HasOne("FRELODYLIB.Models.Playlist", "SongPlaylist")
-                        .WithMany()
+                        .WithMany("SongPlaylists")
                         .HasForeignKey("PlaylistId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("FRELODYLIB.Models.Playlist", null)
-                        .WithMany("SongPlaylists")
-                        .HasForeignKey("PlaylistId1");
 
                     b.HasOne("FRELODYAPP.Models.Song", "Song")
                         .WithMany()

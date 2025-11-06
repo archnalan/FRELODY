@@ -36,10 +36,40 @@
         }
 
         <div class="row row-cols-lg-12 g-2 align-items-center">
-            <BookArtistAdd @ref="bookArtistAddRef"
-                           OnBookCategoryChanged="HandleBookCategoryChanged"
-                           OnArtistAlbumChanged="HandleArtistAlbumChanged"
-                           SongNumber="@SongNumber" />
+            <!-- Input 1 -->
+            <div class="col-4 col-md-2">
+                <input type="number"
+                       @bind="FormattedSongNumber"
+                       class="form-control"
+                       placeholder="Song #"
+                       min="1" />
+            </div>
+
+            <!-- Input 2 -->
+            <div class="col-8 col-md-4">
+                <input type="text"
+                       @bind="SongTitle"
+                       class="form-control"
+                       placeholder="Song Title" />
+            </div>
+
+            <!--Input 3 book/Artist-->
+            <div class="col-9 col-md-4">
+                <BookArtistAdd @ref="bookArtistAddRef"
+                               OnBookCategoryChanged="HandleBookCategoryChanged"
+                               OnArtistAlbumChanged="HandleArtistAlbumChanged"
+                               SongNumber="@SongNumber" />
+            </div>
+
+            <!-- Save Button -->
+            <div class="col-3 col-md-2 d-grid">
+                <button type="button"
+                        class="btn btn-outline-primary"
+                        @onclick="HandleSongSave">
+                    <span class="me-2 d-none d-md-inline">Save Song</span>
+                    <i class="bi bi-clipboard-check"></i>
+                </button>
+            </div>
         </div>
 
         @if (initialPartsItems.Any())
@@ -62,6 +92,12 @@
     }
     
 </div>
+<SongDataPreview @ref="songPreviewRef"
+                 IsVisible="showPreview"
+                 SongData="songData"
+                 OnCancel="HandlePreviewCancel"
+                 OnSave="HandlePreviewSave" />
+
 <DialogModal IsVisible="@_modalService.IsModalVisible"
              Modal="@_modalService.CurrentModal"
              OnCloseModal="CloseModal"
@@ -92,6 +128,8 @@
     private bool isLoading = true;
     private BookCategoryPairViewModel? currentBookCategory = null;
     private ArtistAlbumPairViewModel? currentArtistAlbum = null;
+    private SongDataPreview? songPreviewRef;
+    private bool showPreview = false;
 
     private IDisposable? _locationChangingRegistration;
 
@@ -331,20 +369,24 @@
         // Map single BookCategory pair if exists
         songData.BookCategory = currentBookCategory != null
             ? new BookCategoryPairViewModel
-            {
-                SongBookId = currentBookCategory.SongBookId,
-                CategoryId = currentBookCategory.CategoryId
-            }
-            : new BookCategoryPairViewModel();
+                {
+                    BookTitle = currentBookCategory.BookTitle,
+                CategoryName = currentBookCategory.CategoryName,
+                    SongBookId = currentBookCategory.SongBookId,
+                    CategoryId = currentBookCategory.CategoryId
+                }
+            : null;
 
         songData.ArtistAlbum = currentArtistAlbum != null
             ? new ArtistAlbumPairViewModel
             {
+                ArtistName = currentArtistAlbum.ArtistName,
+                AlbumTitle = currentArtistAlbum.AlbumTitle,
                 ArtistId = currentArtistAlbum.ArtistId,
                 AlbumId = currentArtistAlbum.AlbumId,
                 TrackNumber = currentArtistAlbum.TrackNumber
             }
-            : new ArtistAlbumPairViewModel();
+            :null;
 
         if (allSegments.Count == 0)
         {
@@ -365,6 +407,22 @@
             return;
         }
 
+        showPreview = true;
+        StateHasChanged();
+    }
+    private async Task HandlePreviewCancel()
+    {
+        showPreview = false;
+        StateHasChanged();
+    }
+
+    private async Task HandlePreviewSave()
+    {
+        showPreview = false;
+        await HandleSongPreview(songData);
+    }
+    private async Task HandleSongPreview(SimpleSongCreateDto songData)
+    {
         Refit.IApiResponse<SongDto> songResult;
         if (string.IsNullOrEmpty(SongId) || SongId == "new")
         {
@@ -378,6 +436,7 @@
 
         if (songResult.IsSuccessStatusCode)
         {
+            songData = new SimpleSongCreateDto();
             _modalService.Show(new ModalOptionDto
             {
                 Title = "Song Saved",

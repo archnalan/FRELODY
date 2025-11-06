@@ -2,6 +2,7 @@
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
+using FRELODYLIB.Models;
 using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.SubDtos;
@@ -54,6 +55,7 @@ namespace FRELODYAPP.Data.Infrastructure
 
                     }
 
+                    await SeedProductsAsync(dbContext, tenantId, userId);
                     // More seeding methods here as needed
                     // await SeedCategoriesAsync(dbContext);
                     // await SeedChordsAsync(dbContext);
@@ -358,6 +360,150 @@ namespace FRELODYAPP.Data.Infrastructure
             await dbContext.SaveChangesAsync();
 
             _logger.LogInformation("Attached Amazing Grace as hymn 108 to SDA Hymnal.");
+        }
+
+        private async Task SeedProductsAsync(SongDbContext dbContext, string tenantId, string userId)
+        {
+            _logger.LogInformation("Checking if products need seeding...");
+
+            // Check if products already exist
+            if (await dbContext.Products.AnyAsync())
+            {
+                _logger.LogInformation("Products already exist in the database.");
+                return;
+            }
+
+            _logger.LogInformation("Seeding products...");
+
+            decimal FREE_FOREVER = 0; // Free
+            decimal CREATOR_MONTHLY = 30000; // Monthly subscription
+            decimal CREATOR_ONE_TIME = 250000; // One-time payment
+            decimal CREATOR_YEARLY = CREATOR_MONTHLY*12*0.8m; // Yearly subscription with 20% discount
+            decimal STUDIO_MONTHLY = 100000; // Monthly subscription for studios    
+
+            var products = new List<Product>
+    {
+        new Product
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = "Starter",
+            Description = "For individuals trying FRELODY",
+            Price = FREE_FOREVER,
+            Currency = "UGX",
+            Period = BillingPeriod.forever,
+            IsPopular = false,
+            Features = new List<Feature>
+            {
+                Feature.UnlimitedSongAcccess,
+                Feature.SongManagement
+            },
+            TenantId = tenantId,
+            CreatedBy = userId,
+            Access = Access.Public,
+            DateCreated = DateTimeOffset.UtcNow
+        },
+        new Product
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = "Creator Monthly",
+            Description = "For growing creators and freelancers - Monthly subscription",
+            Price = CREATOR_MONTHLY,
+            Currency = "UGX",
+            Period = BillingPeriod.monthly,
+            IsPopular = false,
+            Features = new List<Feature>
+            {
+                Feature.UnlimitedSongCreations,
+                Feature.UnlimitedSongAcccess,
+                Feature.SongManagement,
+                Feature.ChordManagement,
+                Feature.PdfExport,
+                Feature.AiAssistedComposition
+            },
+            TenantId = tenantId,
+            CreatedBy = userId,
+            Access = Access.Public,
+            DateCreated = DateTimeOffset.UtcNow
+        },
+        new Product
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = "Creator One-Time",
+            Description = "For creators who prefer one-time payment - Lifetime access",
+            Price = CREATOR_ONE_TIME,
+            Currency = "UGX",
+            Period = BillingPeriod.forever,
+            IsPopular = true, // Most popular
+            Features = new List<Feature>
+            {
+                Feature.UnlimitedSongCreations,
+                Feature.UnlimitedSongAcccess,
+                Feature.SongManagement,
+                Feature.ChordManagement,
+                Feature.PdfExport,
+                Feature.AiAssistedComposition
+            },
+            TenantId = tenantId,
+            CreatedBy = userId,
+            Access = Access.Public,
+            DateCreated = DateTimeOffset.UtcNow
+        },
+        new Product
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = "Creator Yearly",
+            Description = "For growing creators and freelancers - Annual subscription (Save 20%)",
+            Price = CREATOR_YEARLY,
+            Currency = "UGX",
+            Period = BillingPeriod.yearly,
+            IsPopular = false,
+            Features = new List<Feature>
+            {
+                Feature.UnlimitedSongCreations,
+                Feature.UnlimitedSongAcccess,
+                Feature.SongManagement,
+                Feature.ChordManagement,
+                Feature.PdfExport,
+                Feature.AiAssistedComposition
+            },
+            TenantId = tenantId,
+            CreatedBy = userId,
+            Access = Access.Public,
+            DateCreated = DateTimeOffset.UtcNow
+        },
+        new Product
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = "Studio",
+            Description = "For teams needing collaboration and controls",
+            Price = STUDIO_MONTHLY,
+            Currency = "UGX",
+            Period = BillingPeriod.monthly,
+            IsPopular = false,
+            Features = new List<Feature>
+            {
+                Feature.UnlimitedSongCreations,
+                Feature.UnlimitedSongAcccess,
+                Feature.DedicatedSupport,
+                Feature.SongManagement,
+                Feature.ChordManagement,
+                Feature.UserManagement,
+                Feature.PdfExport,
+                Feature.BulkPdfImport,
+                Feature.AiAssistedComposition,
+                Feature.Refunds
+            },
+            TenantId = tenantId,
+            CreatedBy = userId,
+            Access = Access.Public,
+            DateCreated = DateTimeOffset.UtcNow
+        }
+    };
+
+            await dbContext.Products.AddRangeAsync(products);
+            await dbContext.SaveChangesAsync();
+
+            _logger.LogInformation($"Successfully seeded {products.Count} products.");
         }
     }
 }

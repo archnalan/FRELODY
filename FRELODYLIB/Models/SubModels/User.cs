@@ -25,9 +25,9 @@ namespace FRELODYAPP.Models.SubModels
 
         [NotMapped]
         public List<string>? Roles { get; set; }        
-        public DateTime? DateCreated { get; set; }
+        public DateTimeOffset? DateCreated { get; set; }
 
-        public DateTime? DateModified { get; set; }
+        public DateTimeOffset? DateModified { get; set; }
 
         public UserType? UserType { get; set; }
 

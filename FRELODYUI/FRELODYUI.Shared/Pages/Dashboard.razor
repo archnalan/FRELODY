@@ -1,0 +1,547 @@
+﻿@page "/dashboard"
+@using FRELODYSHRD.Dtos
+@using FRELODYSHRD.Dtos.HybridDtos
+@using FRELODYAPP.Dtos.UserDtos
+@using FRELODYUI.Shared.Components
+@inject ILogger<Dashboard> _logger
+@implements IDisposable
+
+<div class="dashboard-container">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center vh-100">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading dashboard...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Welcome Header -->
+        <div class="welcome-section mb-4">
+            <div class="container-fluid">
+                <div class="row align-items-center">
+                    <div class="col-12 col-md-8">
+                        <h2 class="welcome-title mb-2">
+                            Welcome back, <span class="user-name">@userProfile.FirstName</span>! 🎵
+                        </h2>
+                        <p class="welcome-subtitle text-muted mb-0">
+                            Here's what's happening with your music today
+                        </p>
+                    </div>
+                    <div class="col-12 col-md-4 text-md-end mt-3 mt-md-0">
+                        <div class="quick-stats">
+                            <div class="stat-badge">
+                                <i class="bi bi-music-note-list me-2"></i>
+                                <span class="fw-bold">@totalSongs</span> Songs
+                            </div>
+                            <div class="stat-badge ms-2">
+                                <i class="bi bi-collection-play me-2"></i>
+                                <span class="fw-bold">@totalPlaylists</span> Playlists
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats Cards -->
+        <div class="container-fluid mb-4">
+            <div class="row g-3">
+                <!-- Total Plays Card -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="stat-card stat-card-primary">
+                        <div class="stat-icon">
+                            <i class="bi bi-play-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-value">@(statistics?.TotalPlays ?? 0)</h3>
+                            <p class="stat-label">Total Plays</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Unique Songs Card -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="stat-card stat-card-success">
+                        <div class="stat-icon">
+                            <i class="bi bi-music-note-beamed"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-value">@(statistics?.UniqueSongs ?? 0)</h3>
+                            <p class="stat-label">Unique Songs</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Favorites Card -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="stat-card stat-card-danger">
+                        <div class="stat-icon">
+                            <i class="bi bi-heart-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-value">@favoriteSongsCount</h3>
+                            <p class="stat-label">Favorites</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Most Played Card -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="stat-card stat-card-info">
+                        <div class="stat-icon">
+                            <i class="bi bi-trophy"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-value-small">@(statistics?.MostPlayedSongTitle ?? "N/A")</h3>
+                            <p class="stat-label">Most Played</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="container-fluid">
+            <div class="row g-4">
+                <!-- Left Column: Charts -->
+                <div class="col-12 col-lg-8">
+                    <!-- Play History Chart -->
+                    <div class="dashboard-card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-graph-up me-2"></i>Play History
+                            </h5>
+                            <div class="card-actions">
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadPlayStatistics">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            @if (statistics?.PlaysByDate?.Any() == true)
+                            {
+                                <div class="chart-container">
+                                    <PlayHistoryChart Data="@statistics.PlaysByDate" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="empty-state">
+                                    <i class="bi bi-graph-up fs-1 text-muted"></i>
+                                    <p class="text-muted mt-2">No play history available yet</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Recently Played Songs -->
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-clock-history me-2"></i>Recently Played
+                            </h5>
+                            <a href="/user-profile" class="card-link">View All</a>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (recentPlays?.Any() == true)
+                            {
+                                <div class="song-list">
+                                    @foreach (var play in recentPlays.Take(5))
+                                    {
+                                        <div class="song-item" @onclick="() => PlaySong(play.SongId)">
+                                            <div class="song-icon">
+                                                <i class="bi bi-music-note"></i>
+                                            </div>
+                                            <div class="song-details">
+                                                <h6 class="song-title mb-0">@play.SongTitle</h6>
+                                                <small class="song-meta text-muted">
+                                                    @play.PlayedAt.ToLocalTime().ToString("MMM dd, hh:mm tt")
+                                                </small>
+                                            </div>
+                                            <button class="btn btn-sm btn-play" @onclick:stopPropagation="true" @onclick="() => PlaySong(play.SongId)">
+                                                <i class="bi bi-play-fill"></i>
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="empty-state py-4">
+                                    <i class="bi bi-music-note-list fs-1 text-muted"></i>
+                                    <p class="text-muted mt-2">No recently played songs</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Playlists & Actions -->
+                <div class="col-12 col-lg-4">
+                    <!-- Quick Actions -->
+                    <div class="dashboard-card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-lightning-fill me-2"></i>Quick Actions
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="quick-actions-grid">
+                                <button class="action-btn action-btn-primary" @onclick="@(() => NavigateTo("/compose"))">
+                                    <i class="bi bi-plus-circle"></i>
+                                    <span>New Song</span>
+                                </button>
+                                <button class="action-btn action-btn-success" @onclick="CreateNewPlaylist">
+                                    <i class="bi bi-collection-play"></i>
+                                    <span>New Playlist</span>
+                                </button>
+                                <button class="action-btn action-btn-info" @onclick="@(() => NavigateTo("/songs-library"))">
+                                    <i class="bi bi-music-note-list"></i>
+                                    <span>Explore Library</span>
+                                </button>
+                                <button class="action-btn action-btn-warning" @onclick="@(() => NavigateTo("/chords"))">
+                                    <i class="bi bi-sliders"></i>
+                                    <span>Chords</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Playlists -->
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-collection me-2"></i>Your Playlists
+                            </h5>
+                            <a href="/playlists" class="card-link">View All</a>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (playlists?.Any() == true)
+                            {
+                                <div class="playlist-list">
+                                    @foreach (var playlist in playlists.Take(5))
+                                    {
+                                        <div class="playlist-item" @onclick="@(() => NavigateTo($"/playlists/{playlist.Playlist.Id}"))">
+                                            <div class="playlist-icon">
+                                                <i class="bi bi-folder-fill"></i>
+                                            </div>
+                                            <div class="playlist-details">
+                                                <h6 class="playlist-title mb-0">@playlist.Playlist.Title</h6>
+                                                <small class="playlist-meta text-muted">
+                                                    @playlist.Songs.Count @(playlist.Songs.Count == 1 ? "song" : "songs")
+                                                </small>
+                                            </div>
+                                            <div class="playlist-action">
+                                                <i class="bi bi-chevron-right"></i>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="empty-state py-4">
+                                    <i class="bi bi-folder fs-1 text-muted"></i>
+                                    <p class="text-muted mt-2 mb-3">No playlists yet</p>
+                                    <button class="btn btn-primary btn-sm" @onclick="CreateNewPlaylist">
+                                        <i class="bi bi-plus-circle me-1"></i>Create Playlist
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Most Played Songs -->
+                    <div class="dashboard-card mt-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-fire me-2"></i>Top Songs
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (mostPlayedSongs?.Any() == true)
+                            {
+                                <div class="top-songs-list">
+                                    @{
+                                        var rank = 1;
+                                    }
+                                    @foreach (var song in mostPlayedSongs.Take(5))
+                                    {
+                                        <div class="top-song-item">
+                                            <div class="song-rank rank-@rank">@rank</div>
+                                            <div class="song-details flex-grow-1">
+                                                <h6 class="song-title mb-0">@song.Key</h6>
+                                                <small class="text-muted">@song.Value plays</small>
+                                            </div>
+                                        </div>
+                                        rank++;
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="empty-state py-4">
+                                    <i class="bi bi-star fs-1 text-muted"></i>
+                                    <p class="text-muted mt-2">No top songs yet</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modals -->
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    // User data
+    private UpdateUserProfileOutDto userProfile = new();
+    private SongPlayStatisticsDto? statistics;
+    private List<SongPlayHistoryDto> recentPlays = new();
+    private List<PlaylistSongs> playlists = new();
+    private Dictionary<string, int> mostPlayedSongs = new();
+
+    // State
+    private bool isLoading = true;
+    private int totalSongs;
+    private int totalPlaylists;
+    private int favoriteSongsCount;
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+
+            // Get current user
+            var user = await _globalAuth.GetAuthenticatedUserAsync();
+            if (user.IsSuccess && user.Data != null)
+            {
+                currentUserId = user.Data.Id;
+                await LoadDashboardData();
+            }
+            else
+            {
+                ShowAuthenticationRequired();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing dashboard");
+            ShowErrorModal("Failed to load dashboard");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            // Load all data in parallel
+            await Task.WhenAll(
+                LoadUserProfile(),
+                LoadPlayStatistics(),
+                LoadRecentPlays(),
+                LoadPlaylists(),
+                LoadMostPlayedSongs(),
+                LoadFavoritesCount()
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading dashboard data");
+        }
+    }
+
+    private async Task LoadUserProfile()
+    {
+        try
+        {
+            var response = await _usersApi.GetUserProfile(currentUserId);
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                userProfile = response.Content;
+                totalSongs = userProfile.TotalSongs;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading user profile");
+        }
+    }
+
+    private async Task LoadPlayStatistics()
+    {
+        try
+        {
+            var response = await _playHistoryApi.GetPlayStatistics(
+                currentUserId,
+                DateTime.UtcNow.AddMonths(-1),
+                DateTime.UtcNow
+            );
+
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                statistics = response.Content;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading play statistics");
+        }
+    }
+
+    private async Task LoadRecentPlays()
+    {
+        try
+        {
+            var response = await _playHistoryApi.GetRecentPlays(currentUserId, 10);
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                recentPlays = response.Content;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading recent plays");
+        }
+    }
+
+    private async Task LoadPlaylists()
+    {
+        try
+        {
+            var response = await _playlistsApi.GetUserPlaylists(currentUserId);
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                playlists = response.Content;
+                totalPlaylists = playlists.Count;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading playlists");
+        }
+    }
+
+    private async Task LoadMostPlayedSongs()
+    {
+        try
+        {
+            var response = await _playHistoryApi.GetMostPlayedSongs(currentUserId, 5);
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                mostPlayedSongs = response.Content;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading most played songs");
+        }
+    }
+
+    private async Task LoadFavoritesCount()
+    {
+        try
+        {
+            var response = await _songsApi.GetFavoriteSongs();
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                favoriteSongsCount = response.Content.Data?.Count ?? 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading favorites count");
+        }
+    }
+
+    private void PlaySong(string songId)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _playHistoryApi.LogSongPlay(songId, "Dashboard");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to log song play from dashboard");
+            }
+        });
+
+        NavigateTo($"/songs/{songId}");
+    }
+
+    private void CreateNewPlaylist()
+    {
+        NavigateTo("/playlists");
+    }
+
+    private void NavigateTo(string url)
+    {
+        _navManager.NavigateTo(url);
+    }
+
+    private void ShowAuthenticationRequired()
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Login Required",
+            Message = "Please log in to view your dashboard.",
+            HyperlinkText = "Go to Login",
+            ButtonText = "Close",
+            OptionType = OptionType.Info,
+            Context = new ModalContext
+            {
+                ActionType = "NavigateToLogin",
+                Data = "/login"
+            }
+        });
+    }
+
+    private void ShowErrorModal(string message)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Error",
+            Message = message,
+            ButtonText = "OK",
+            OptionType = OptionType.Error
+        });
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "NavigateToLogin")
+        {
+            _navManager.NavigateTo("/login");
+        }
+
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        // Cleanup if needed
+    }
+}

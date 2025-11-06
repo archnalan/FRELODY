@@ -1,0 +1,264 @@
+﻿@using FRELODYSHRD.Dtos.SubDtos
+@implements IDisposable
+
+<div class="song-preview-overlay @(IsVisible ? "show" : "")" @onclick="HandleBackdropClick">
+    <div class="song-preview-container" @onclick:stopPropagation="true">
+        <div class="song-preview-header">
+            <h4 class="song-preview-title">Preview</h4>
+            <button class="btn-close" @onclick="HandleCancel" aria-label="Close"></button>
+        </div>
+
+        <div class="song-preview-content">
+            <!-- Basic Song Info -->
+            <div class="preview-section">
+                <div class="row g-3">
+                    @if (SongData?.SongNumber.HasValue == true)
+                    {
+                        <div class="col-12 col-md-4">
+                            <label class="preview-label">Song Number</label>
+                            <div class="preview-value">@SongData.SongNumber.Value.ToString("D3")</div>
+                        </div>
+                    }
+                    <div class="@(SongData?.SongNumber.HasValue == true ? "col-12 col-md-8" : "col-12")">
+                        <label class="preview-label">Title</label>
+                        <div class="preview-value title-value">@(SongData?.Title ?? "Untitled")</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Songbook/Category or Artist/Album -->
+            @if (HasBookCategory || HasArtistAlbum)
+            {
+                <div class="preview-section">
+                    @if (HasBookCategory)
+                    {
+                        <div class="classification-item">
+                            <i class="bi bi-book"></i>
+                            <div class="classification-details">
+                                <div class="classification-main">
+                                    <i class="bi bi-collection me-1"></i>@BookTitle
+                                </div>
+                                @if (!string.IsNullOrEmpty(CategoryName))
+                                {
+                                    <div class="classification-sub">
+                                        <i class="bi bi-tag me-1"></i>@CategoryName
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else if (HasArtistAlbum)
+                    {
+                        <div class="classification-item">
+                            <i class="bi bi-music-note-beamed"></i>
+                            <div class="classification-details">
+                                <div class="classification-main">
+                                    <i class="bi bi-person me-1"></i>@ArtistName
+                                </div>
+                                @if (!string.IsNullOrEmpty(AlbumTitle))
+                                {
+                                    <div class="classification-sub">
+                                        <i class="bi bi-disc me-1"></i>@AlbumTitle
+                                    </div>
+                                }
+                                @if (TrackNumber > 0)
+                                {
+                                    <div class="classification-meta">
+                                        <i class="bi bi-hash"></i>Track @TrackNumber
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- Song Sections Tabs -->
+            @if (HasSongSections)
+            {
+                <div class="preview-section">
+                    <div class="sections-tabs">
+                        <ul class="nav nav-tabs nav-tabs-preview">
+                            @foreach (var part in SongParts)
+                            {
+                                <li class="nav-item">
+                                    <button class="nav-link @(activePartIndex == part.Index ? "active" : "")"
+                                            @onclick="() => SetActivePartTab(part.Index)">
+                                        @part.SectionName
+                                        @if (part.SectionNumber > 0)
+                                        {
+                                            <span class="ms-1">@part.SectionNumber</span>
+                                        }
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+
+                        <div class="section-content-preview">
+                            @foreach (var part in SongParts)
+                            {
+                                <div class="@(activePartIndex == part.Index ? "d-block" : "d-none")">
+                                    <div class="song-part-preview">
+                                        <div class="part-content">
+                                            @foreach (var line in GetPartLines(part.Segments))
+                                            {
+                                                <div class="lyric-line-preview">
+                                                    @foreach (var segment in line)
+                                                    {
+                                                        <div class="lyric-segment-preview">
+                                                            @if (!string.IsNullOrEmpty(segment.ChordName))
+                                                            {
+                                                                <div class="chord-preview">
+                                                                    @segment.ChordName
+                                                                </div>
+                                                            }
+                                                            <div class="lyric-text-preview">
+                                                                @segment.Lyric
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="preview-section">
+                    <div class="empty-state">
+                        <i class="bi bi-music-note-list"></i>
+                        <p>No song structure available</p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="song-preview-actions">
+            <button class="btn btn-outline-secondary" @onclick="HandleCancel">
+                Cancel
+            </button>
+            <button class="btn btn-primary" @onclick="HandleSave">
+                Save
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public SimpleSongCreateDto? SongData { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    private int activePartIndex = 0;
+    private bool _disposed = false;
+
+    protected override void OnInitialized()
+    {
+        InitializeActiveTab();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            InitializeActiveTab();
+        }
+    }
+
+    private void InitializeActiveTab()
+    {
+        if (SongParts.Any())
+        {
+            activePartIndex = 0;
+        }
+    }
+
+    private bool HasBookCategory => SongData?.BookCategory != null &&
+        !string.IsNullOrEmpty(SongData.BookCategory.SongBookId);
+
+    private bool HasArtistAlbum => SongData?.ArtistAlbum != null &&
+        !string.IsNullOrEmpty(SongData.ArtistAlbum.ArtistId);
+
+    private bool HasSongSections => SongData?.SongLyrics?.Any() == true;
+
+    private string BookTitle => SongData?.BookCategory?.BookTitle ?? "Unknown Book";
+    private string CategoryName => SongData?.BookCategory?.CategoryName ?? string.Empty;
+    private string ArtistName => SongData?.ArtistAlbum?.ArtistName ?? "Unknown Artist";
+    private string AlbumTitle => SongData?.ArtistAlbum?.AlbumTitle ?? string.Empty;
+    private int TrackNumber => SongData?.ArtistAlbum?.TrackNumber ?? 0;
+
+    private List<SongPartPreview> SongParts
+    {
+        get
+        {
+            if (SongData?.SongLyrics == null || !SongData.SongLyrics.Any())
+                return new List<SongPartPreview>();
+
+            // Group by PartName and PartNumber to create individual tabs for each part
+            var parts = SongData.SongLyrics
+                .GroupBy(s => new { s.PartName, s.PartNumber })
+                .OrderBy(g => SongData.SongLyrics.Where(s => s.PartName == g.Key.PartName && s.PartNumber == g.Key.PartNumber).Min(s => s.LineNumber))
+                .Select((group, index) => new SongPartPreview
+                {
+                    Index = index,
+                    SectionName = group.Key.PartName.ToString(),
+                    SectionNumber = group.Key.PartNumber,
+                    Segments = group.OrderBy(s => s.LineNumber)
+                                   .ThenBy(s => s.LyricOrder)
+                                   .ToList()
+                })
+                .ToList();
+
+            return parts;
+        }
+    }
+
+    private List<List<SegmentCreateDto>> GetPartLines(List<SegmentCreateDto> segments)
+    {
+        return segments.GroupBy(s => s.LineNumber)
+                      .OrderBy(g => g.Key)
+                      .Select(g => g.OrderBy(s => s.LyricOrder).ToList())
+                      .ToList();
+    }
+
+    private void SetActivePartTab(int index)
+    {
+        activePartIndex = index;
+        StateHasChanged();
+    }
+
+    private async Task HandleCancel()
+    {
+        if (OnCancel.HasDelegate)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+
+    private async Task HandleSave()
+    {
+        if (OnSave.HasDelegate)
+        {
+            await OnSave.InvokeAsync();
+        }
+    }
+
+    private async Task HandleBackdropClick()
+    {
+        await HandleCancel();
+    }
+
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _disposed = true;
+        }
+    }
+}

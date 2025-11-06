@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.IdentityModel.JsonWebTokens;
+using FRELODYSHRD.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,13 +31,24 @@ var connectionString = builder.Configuration.GetConnectionString("SongData") ?? 
 builder.Services.AddDbContext<SongDbContext>(options =>
 	options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+    .AddEnvironmentVariables()
+    .AddUserSecrets<Program>();
 builder.Services.AddDatabaseSeeder();
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddHttpContextAccessor();
-
+builder.Services.AddHttpClient();
+builder.Services.AddMemoryCache();
+// Register services
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IPesaPalService, PesaPalService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddSingleton<ICurrencyConverter, CurrencyConverter>();
 builder.Services.AddTransient<ITenantProvider, TenantProvider>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IPlaylistService,PlaylistService>();

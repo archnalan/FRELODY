@@ -61,7 +61,7 @@ namespace FRELODYAPP.Data
             try
             {
                 emailDto.emailSenderSecret = emailDto.emailSenderSecret ?? "123qwe*";
-                emailDto.emailSenderAccount = emailDto.emailSenderAccount ?? "no-reply@kampalacentraladventist.com";
+                emailDto.emailSenderAccount = emailDto.emailSenderAccount ?? "archnalan@gmail.com";
                 _emailService.SendEmail(emailDto);
             }
             catch (Exception ex)

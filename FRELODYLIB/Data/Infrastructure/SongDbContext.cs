@@ -4,6 +4,7 @@ using FRELODYAPP.Models.SubModels;
 using FRELODYLIB.Models;
 using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYSHRD.ModelTypes;
+using iText.StyledXmlParser.Jsoup.Nodes;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,7 @@ namespace FRELODYAPP.Data.Infrastructure
         private readonly ITenantProvider _tenantProvider;
         private readonly string _tenantId;
         private readonly string _userId;
-        private readonly bool _isSuperAdmin;
+        private bool _isSuperAdmin;
 
         public SongDbContext(DbContextOptions<SongDbContext> options, ITenantProvider tenantProvider)
             : base(options)
@@ -25,7 +26,7 @@ namespace FRELODYAPP.Data.Infrastructure
             _tenantProvider = tenantProvider;
             _userId = _tenantProvider.GetUserId();
             _tenantId = _tenantProvider.GetTenantId();
-            _isSuperAdmin = _tenantProvider.IsSuperAdmin();
+            _isSuperAdmin = _tenantProvider.IsSuperAdmin(_userId);
         }
         public DbSet<Tenant> Tenants { get; set; }
         public DbSet<Playlist> Playlists { get; set; }
@@ -43,6 +44,10 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<Setting> Settings { get; set; }
         public DbSet<Artist> Artists { get; set; } = default!;
         public DbSet<Album> Albums { get; set; } = default!;
+        public DbSet<Product> Products { get; set; }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OrderDetail> OrderDetails { get; set; }
+        public DbSet<Payment> Payments { get; set; }
         public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
         public DbSet<ShareLink> ShareLinks { get; set; }
         public DbSet<ChatSession> ChatSessions { get; set; }
@@ -54,7 +59,7 @@ namespace FRELODYAPP.Data.Infrastructure
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-
+            _isSuperAdmin = _tenantProvider.IsSuperAdmin(_userId);
             // Configure global query filters for entities implementing IBaseEntity
             builder.Entity<Playlist>().HasQueryFilter(x =>
                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
@@ -125,6 +130,18 @@ namespace FRELODYAPP.Data.Infrastructure
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Tenant>().HasQueryFilter(x =>
                     (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Order>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<OrderDetail>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Product>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<Payment>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
 
             // Configure Song and its children
             builder.Entity<Song>()
@@ -181,11 +198,10 @@ namespace FRELODYAPP.Data.Infrastructure
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Album>()
-               .HasOne<Artist>()
-               .WithMany(a => a.Albums)
-               .HasForeignKey(al => al.ArtistId)
-               .IsRequired(false)
-               .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(a => a.Artist)
+                .WithMany(artist => artist.Albums)
+                .HasForeignKey(a => a.ArtistId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Song>()
                 .HasOne<Album>()
@@ -214,12 +230,12 @@ namespace FRELODYAPP.Data.Infrastructure
 
             builder.Entity<SongPlayHistory>(b =>
             {
-                b.HasOne<Song>()
+                b.HasOne(h => h.Song)
                  .WithMany()
                  .HasForeignKey(h => h.SongId)
                  .OnDelete(DeleteBehavior.Cascade);
 
-                b.HasOne<User>()
+                b.HasOne(h => h.User)
                  .WithMany()
                  .HasForeignKey(h => h.UserId)
                  .OnDelete(DeleteBehavior.Cascade);
@@ -310,6 +326,18 @@ namespace FRELODYAPP.Data.Infrastructure
                 .HasConversion<string>();
             });
 
+            builder.Entity<OrderDetail>(od=>
+            {
+                od.HasOne<Product>()
+                 .WithMany()
+                 .HasForeignKey(d => d.ProductId)
+                 .OnDelete(DeleteBehavior.Cascade);
+                od.HasOne<Order>()
+                 .WithMany()
+                 .HasForeignKey(d => d.OrderId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
             builder.Entity<SongUserRating>(b =>
             {
                 b.HasOne<Song>()
@@ -326,16 +354,6 @@ namespace FRELODYAPP.Data.Infrastructure
 
             builder.Entity<SongUserPlaylist>(b =>
             {
-                b.HasOne(suc => suc.Song)
-                 .WithMany()
-                 .HasForeignKey(suc => suc.SongId)
-                 .OnDelete(DeleteBehavior.Cascade);
-
-                b.HasOne(suc => suc.SongPlaylist)
-                 .WithMany()
-                 .HasForeignKey(suc => suc.PlaylistId)
-                 .OnDelete(DeleteBehavior.Cascade);
-
                 b.HasIndex(suc => new { suc.SongId, suc.PlaylistId, suc.TenantId })
                  .IsUnique();
 
@@ -352,9 +370,48 @@ namespace FRELODYAPP.Data.Infrastructure
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
+            builder.Entity<Payment>(p =>
+            {
+                p.HasOne(p => p.Order)
+                .WithMany()
+                .HasForeignKey(p => p.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+                p.Property(e => e.Status)
+                .HasConversion<string>();
+            });
+
             builder.Entity<ChatSession>()
                 .Property(e => e.Status)
                 .HasConversion<string>();
+
+        builder.Entity<Order>()
+            .Property(o => o.TotalAmout)
+            .HasColumnType("decimal(18,2)");
+
+        builder.Entity<OrderDetail>()
+            .Property(od => od.DiscountPercent)
+            .HasColumnType("decimal(5,2)");
+
+        builder.Entity<OrderDetail>()
+            .Property(od => od.DiscountValue)
+            .HasColumnType("decimal(18,2)");
+
+        builder.Entity<OrderDetail>()
+            .Property(od => od.TotalPrice)
+            .HasColumnType("decimal(18,2)");
+
+        builder.Entity<OrderDetail>()
+            .Property(od => od.UnitPrice)
+            .HasColumnType("decimal(18,2)");
+
+        builder.Entity<Payment>()
+            .Property(p => p.Amount)
+            .HasColumnType("decimal(18,2)");
+
+        builder.Entity<Product>()
+            .Property(p => p.Price)
+            .HasColumnType("decimal(18,2)");
 
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
@@ -395,6 +452,7 @@ namespace FRELODYAPP.Data.Infrastructure
 
         public override int SaveChanges()
         {
+            _isSuperAdmin = _tenantProvider.IsSuperAdmin(_userId);
             UpdateTimestamps();
             return base.SaveChanges();
         }
@@ -417,7 +475,12 @@ namespace FRELODYAPP.Data.Infrastructure
                     entity.Entity.ModifiedBy = _userId;
                     if (string.IsNullOrEmpty(entity.Entity.TenantId) && !_isSuperAdmin)
                     {
-                        entity.Entity.TenantId = _tenantId;
+                        if(!string.IsNullOrEmpty(_tenantId))
+                            entity.Entity.TenantId = _tenantId;
+                    }
+                    else
+                    {
+                        entity.Entity.TenantId = null;
                     }
                     entity.Entity.CreatedBy = _userId;
                 }
