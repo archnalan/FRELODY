@@ -12,6 +12,8 @@ namespace FRELODYSHRD.Dtos.CreateDtos
     {
         public string Title { get; set; }
         public int? SongNumber { get; set; }
+        public bool? IsRecoveryCopy { get; set; }
+        public SongRecoveryDto? RecoveryDto { get; set; }
         public BookCategoryPairViewModel? BookCategory { get; set; }
         public ArtistAlbumPairViewModel? ArtistAlbum { get; set; }
         public Dictionary<SongSection, int>? PartRepeatCounts { get; set; } // section key, repeat count value

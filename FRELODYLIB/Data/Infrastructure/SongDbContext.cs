@@ -55,6 +55,7 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<SongPlayHistory> SongPlayHistories { get; set; }
         public DbSet<SongUserFavorite> SongUserFavorites { get; set; }
         public DbSet<SongUserPlaylist> SongUserPlaylists { get; set; }
+        public DbSet<SongRecovery> SongRecoveries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -62,31 +63,40 @@ namespace FRELODYAPP.Data.Infrastructure
             _isSuperAdmin = _tenantProvider.IsSuperAdmin(_userId);
             // Configure global query filters for entities implementing IBaseEntity
             builder.Entity<Playlist>().HasQueryFilter(x =>
-                   (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+                   (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null 
+                   || x.Access == Access.Public) && x.Access != Access.Protected
                    && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongBook>().HasQueryFilter(x =>
-                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null 
+                    || x.Access == Access.Public) && x.Access != Access.Protected
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Category>().HasQueryFilter(x =>
-                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null 
+                     || x.Access == Access.Public) && x.Access != Access.Protected
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Song>().HasQueryFilter(x =>
-                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null 
+                    || x.Access == Access.Public) && x.Access != Access.Protected
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<SongPart>().HasQueryFilter(x =>
-                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null 
+                    || x.Access == Access.Public) && x.Access != Access.Protected
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<LyricLine>().HasQueryFilter(x =>
-                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null 
+                     || x.Access == Access.Public) && x.Access != Access.Protected
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<LyricSegment>().HasQueryFilter(x =>
-                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null 
+                    || x.Access == Access.Public ) && x.Access != Access.Protected
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Artist>().HasQueryFilter(x =>
-               (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+               (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null 
+               || x.Access == Access.Public) && x.Access != Access.Protected
                && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Album>().HasQueryFilter(x =>
-                (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null || x.Access == Access.Public)
+                (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null 
+                || x.Access == Access.Public) && x.Access != Access.Protected
                 && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Setting>().HasQueryFilter(x =>
                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
@@ -140,6 +150,9 @@ namespace FRELODYAPP.Data.Infrastructure
                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                     && (x.IsDeleted == false || x.IsDeleted == null));
             builder.Entity<Payment>().HasQueryFilter(x =>
+                    (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
+                    && (x.IsDeleted == false || x.IsDeleted == null));
+            builder.Entity<SongRecovery>().HasQueryFilter(x =>
                     (_isSuperAdmin || x.TenantId == _tenantId || x.TenantId == null)
                     && (x.IsDeleted == false || x.IsDeleted == null));
 
@@ -380,6 +393,14 @@ namespace FRELODYAPP.Data.Infrastructure
                 p.Property(e => e.Status)
                 .HasConversion<string>();
             });
+
+            builder.Entity<SongRecovery>(sr =>
+            {
+                    sr.HasOne<Song>()
+                    .WithMany()
+                    .HasForeignKey(r => r.SongId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                });
 
             builder.Entity<ChatSession>()
                 .Property(e => e.Status)

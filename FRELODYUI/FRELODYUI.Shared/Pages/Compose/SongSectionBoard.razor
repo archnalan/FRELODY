@@ -261,6 +261,9 @@
     {
         try
         {
+            var segmentsInLine = Segments?.Where(s => s.LineNumber == afterLine).ToList();
+            if (afterLine > 0 && segmentsInLine?.Count <= 0) return;
+
             var prev = TryGetRowRef(afterLine);
             if (prev is not null)
                 await prev.ClosePrevFormAsync();

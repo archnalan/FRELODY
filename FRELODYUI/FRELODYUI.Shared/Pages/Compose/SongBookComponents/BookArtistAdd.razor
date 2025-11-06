@@ -246,10 +246,6 @@
 
             // Notify parent immediately
             await OnArtistAlbumChanged.InvokeAsync(currentArtistAlbum);
-
-            // Reset for next potential entry
-            selectedArtist = null;
-            selectedAlbum = null;
         }
 
         await InvokeAsync(StateHasChanged);

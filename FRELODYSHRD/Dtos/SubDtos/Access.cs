@@ -10,6 +10,7 @@ namespace FRELODYSHRD.Dtos.SubDtos
     {
         Private = 0,
         Shared = 1,
-        Public = 2
+        Public = 2,
+        Protected = 3
     }
 }

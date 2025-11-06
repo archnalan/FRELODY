@@ -1,6 +1,7 @@
 ﻿using FRELODYAPP.Dtos;
 using FRELODYAPP.Dtos.SubDtos;
 using FRELODYLIB.ServiceHandler;
+using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.SubDtos;
 using Refit;
@@ -46,6 +47,15 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Get("/api/songs/is-song-favorited")]
         Task<IApiResponse<bool>> IsSongFavorited([Query] string songId, [Query] string? userId = null);
+        
+        [Get("/api/songs/get-song-details-by-recovery-id")]
+        Task<IApiResponse<SimpleSongCreateDto>> GetSongDetailsByRecoveryId([Query] string recoveryId);
+        
+        [Get("/api/songs/get-recovery-songs")]
+        Task<IApiResponse<PaginationDetails<SongRecoveryDto>>> GetRecoverySongs([Query] string? userId = null, [Query] int? offset = 0, [Query] int? limit = 10);
+        
+        [Delete("/api/songs/delete-recovery-song-item")]
+        Task<IApiResponse<bool>> DeleteRecoverySongItem([Query] string recoveryId);
 
         [Delete("/api/songs/delete-song")]
         Task<IApiResponse<bool>> DeleteSong([Query] string songId);

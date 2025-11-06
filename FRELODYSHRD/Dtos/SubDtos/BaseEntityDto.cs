@@ -6,7 +6,7 @@ namespace FRELODYAPP.Dtos.SubDtos
 {
     public class BaseEntityDto : IBaseEntityDto
     {
-        public string Id { get; set; }
+        public string? Id { get; set; }
         public DateTimeOffset? DateCreated { get; set; }
         public DateTimeOffset? DateModified { get; set; }
         public Access? Access { get; set; }

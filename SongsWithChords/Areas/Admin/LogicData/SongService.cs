@@ -8,9 +8,11 @@ using FRELODYLIB.Interfaces;
 using FRELODYLIB.Models;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYSHRD.ModelTypes;
+using FRELODYUI.Shared.Models;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -203,6 +205,33 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                      };
                     await _context.Songs.AddAsync(song);
                     await _context.SaveChangesAsync();
+
+                    if(songDto.IsRecoveryCopy == true && songDto.RecoveryDto != null &&
+                        !string.IsNullOrEmpty(songDto.RecoveryDto.RecoveryName))
+                    {
+                        song.Access = Access.Protected;
+                        if (!string.IsNullOrEmpty(songDto.RecoveryDto.Id)) 
+                        {
+                            var existingRecovery = await _context.SongRecoveries
+                                .FirstOrDefaultAsync(r => r.Id == songDto.RecoveryDto.Id);
+                            if (existingRecovery != null)
+                            {
+                                existingRecovery.RecoveryName = songDto.RecoveryDto.RecoveryName;
+                                existingRecovery.RecoveryTimeStamp = songDto.RecoveryDto.RecoveryTimeStamp;
+                                _context.SongRecoveries.Update(existingRecovery);
+                                await _context.SaveChangesAsync();
+                            }
+                        }
+                        var recovery = new SongRecovery
+                        {
+                            SongId = song.Id,
+                            RecoveryName = songDto.RecoveryDto.RecoveryName,
+                            RecoveryTimeStamp = songDto.RecoveryDto?.RecoveryTimeStamp,
+                            Access = Access.Private,
+                        };
+                        await _context.SongRecoveries.AddAsync(recovery);
+                        await _context.SaveChangesAsync();
+                    }
 
                     if (songDto.SongLyrics == null || !songDto.SongLyrics.Any())
                     {
@@ -420,6 +449,183 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         }
         #endregion
 
+        #region Get Song Details By RecoveryId
+        public async Task<ServiceResult<SimpleSongCreateDto>> GetSongDetailsByRecoveryId(string recoveryId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(recoveryId))
+                    return ServiceResult<SimpleSongCreateDto>.Failure(
+                        new BadRequestException("Invalid recovery ID."));
+
+                var recovery = await _context.SongRecoveries
+                    .FirstOrDefaultAsync(r => r.Id == recoveryId);
+
+                if (recovery == null)
+                {
+                    return ServiceResult<SimpleSongCreateDto>.Failure(
+                        new NotFoundException("Recovery not found."));
+                }
+
+                var song = await _context.Songs
+                    .Where(s => s.Id == recovery.SongId)
+                    .Include(s => s.SongParts.OrderBy(v => v.PartNumber))
+                        .ThenInclude(v => v.LyricLines.OrderBy(ll => ll.LyricLineOrder))
+                            .ThenInclude(ll => ll.LyricSegments.OrderBy(ls => ls.LyricOrder))
+                                .ThenInclude(ls => ls.Chord)
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync();
+
+                if (song == null)
+                {
+                    return ServiceResult<SimpleSongCreateDto>.Failure(
+                        new NotFoundException("Song details not found for the given recovery ID."));
+                }
+
+                // Transform to SimpleSongCreateDto format
+                var simpleSongDto = new SimpleSongCreateDto
+                {
+                    Title = song.Title,
+                    SongNumber = song.SongNumber,
+                    IsRecoveryCopy = false, // This is being loaded from recovery, not creating a new one
+                    RecoveryDto = recovery.Adapt<SongRecoveryDto>()
+                };
+
+                // Flatten all segments into a single collection
+                var allSegments = new List<SegmentCreateDto>();
+                var partRepeatCounts = new Dictionary<SongSection, int>();
+                var lineRepeatCounts = new Dictionary<int, int>();
+
+                if (song.SongParts != null && song.SongParts.Any())
+                {
+                    foreach (var part in song.SongParts.OrderBy(p => p.PartNumber))
+                    {
+                        // Capture part repeat counts
+                        if (part.RepeatCount > 0)
+                        {
+                                partRepeatCounts[(SongSection)part.PartName] = (int)part.RepeatCount;
+                        }
+
+                        if (part.LyricLines != null && part.LyricLines.Any())
+                        {
+                            foreach (var line in part.LyricLines.OrderBy(l => l.LyricLineOrder))
+                            {
+                                // Capture line repeat counts
+                                if (line.RepeatCount > 0)
+                                {
+                                    lineRepeatCounts[(int)line.LyricLineOrder] = (int)line.RepeatCount;
+                                }
+
+                                if (line.LyricSegments != null && line.LyricSegments.Any())
+                                {
+                                    foreach (var segment in line.LyricSegments.OrderBy(s => s.LyricOrder))
+                                    {
+                                        allSegments.Add(new SegmentCreateDto
+                                        {
+                                            Id = segment.Id,
+                                            Lyric = segment.Lyric ?? string.Empty,
+                                            ChordId = segment.ChordId,
+                                            ChordName = segment.Chord?.ChordName,
+                                            ChordAlignment = segment.ChordAlignment,
+                                            LineNumber = segment.LineNumber,
+                                            PartNumber = part.PartNumber,
+                                            PartName = part.PartName ?? SongSection.Verse,
+                                            LyricOrder = segment.LyricOrder
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                simpleSongDto.SongLyrics = allSegments;
+                simpleSongDto.PartRepeatCounts = partRepeatCounts.Any() ? partRepeatCounts : null;
+                simpleSongDto.LineRepeatCounts = lineRepeatCounts.Any() ? lineRepeatCounts : null;
+
+                // Load BookCategory if exists
+                if (!string.IsNullOrEmpty(song.CategoryId))
+                {
+                    var category = await _context.Categories
+                        .FirstOrDefaultAsync(c => c.Id == song.CategoryId);
+                    if (category != null)
+                    {
+                        simpleSongDto.BookCategory = new BookCategoryPairViewModel
+                        {
+                            SongBookId = category.SongBookId ?? string.Empty,
+                            CategoryId = category.Id,
+                            CategoryName = category.Name
+                        };
+                        var songBook = await _context.SongBooks
+                            .FirstOrDefaultAsync(sb => sb.Id == category.SongBookId);
+                        if (songBook != null)
+                        {
+                            simpleSongDto.BookCategory.SongBookId = songBook.Id;
+                            simpleSongDto.BookCategory.BookTitle = songBook.Title;
+                        }
+                    }
+                }
+                else if (!string.IsNullOrEmpty(song.SongBookId))
+                {
+                    var songBook = await _context.SongBooks
+                        .FirstOrDefaultAsync(sb => sb.Id == song.SongBookId);
+                    if (songBook != null)
+                    {
+                        simpleSongDto.BookCategory = new BookCategoryPairViewModel
+                        {
+                            SongBookId = songBook.Id,
+                            BookTitle = songBook.Title
+                        };
+                    }
+                }
+
+                // Load ArtistAlbum if exists
+                if (!string.IsNullOrEmpty(song.AlbumId))
+                {
+                    var album = await _context.Albums
+                        .FirstOrDefaultAsync(a => a.Id == song.AlbumId);
+
+                    if (album != null)
+                    {
+                        simpleSongDto.ArtistAlbum = new ArtistAlbumPairViewModel
+                        {
+                            ArtistId = album.ArtistId ?? string.Empty,
+                            AlbumId = album.Id,
+                            AlbumTitle = album.Title,
+                            TrackNumber = 1 // Default, as original entity doesn't store track number
+                        };
+                        var artist = await _context.Artists
+                            .FirstOrDefaultAsync(a => a.Id == album.ArtistId);
+                        if (artist != null)
+                        {
+                            simpleSongDto.ArtistAlbum.ArtistName = artist.Name;
+                        }
+                    }
+                }
+                else if (!string.IsNullOrEmpty(song.ArtistId))
+                {
+                    var artist = await _context.Artists
+                        .FirstOrDefaultAsync(a => a.Id == song.ArtistId);
+                    if (artist != null)
+                    {
+                        simpleSongDto.ArtistAlbum = new ArtistAlbumPairViewModel
+                        {
+                            ArtistId = artist.Id,
+                            ArtistName = artist.Name
+                        };
+                    }
+                }
+
+                return ServiceResult<SimpleSongCreateDto>.Success(simpleSongDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetSongDetailsByRecoveryId");
+                return ServiceResult<SimpleSongCreateDto>.Failure(ex);
+            }
+        }
+        #endregion
+
         #region Update Song
         public async Task<ServiceResult<SongDto>> UpdateSong(string id, SimpleSongCreateDto songDto)
         {
@@ -477,6 +683,33 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             albumExists = await _context.Albums
                                 .AnyAsync(a => a.Id == songDto.ArtistAlbum.AlbumId
                                 && a.ArtistId == songDto.ArtistAlbum.ArtistId);
+                    }
+
+                    if (songDto.IsRecoveryCopy == true && songDto.RecoveryDto != null &&
+                        !string.IsNullOrEmpty(songDto.RecoveryDto.RecoveryName))
+                    {
+                        song.Access = Access.Protected;
+                        if (!string.IsNullOrEmpty(songDto.RecoveryDto.Id))
+                        {
+                            var existingRecovery = await _context.SongRecoveries
+                                .FirstOrDefaultAsync(r => r.Id == songDto.RecoveryDto.Id);
+                            if (existingRecovery != null)
+                            {
+                                existingRecovery.RecoveryName = songDto.RecoveryDto.RecoveryName;
+                                existingRecovery.RecoveryTimeStamp = songDto.RecoveryDto.RecoveryTimeStamp;
+                                _context.SongRecoveries.Update(existingRecovery);
+                                await _context.SaveChangesAsync();
+                            }
+                        }
+                        var recovery = new SongRecovery
+                        {
+                            SongId = song.Id,
+                            RecoveryName = songDto.RecoveryDto.RecoveryName,
+                            RecoveryTimeStamp = songDto.RecoveryDto?.RecoveryTimeStamp,
+                            Access = Access.Private,
+                        };
+                        await _context.SongRecoveries.AddAsync(recovery);
+                        await _context.SaveChangesAsync();
                     }
 
                     // If no lyrics to update, just save the song changes
@@ -860,6 +1093,68 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking if song {SongId} is favorited", songId);
+                return ServiceResult<bool>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Get Recovery Songs
+        public async Task<ServiceResult<PaginationDetails<SongRecoveryDto>>> GetRecoverySongsAsync(string? userId = null, int? offset= 0, int? limit = 10)
+        {
+            try
+            {
+                userId ??= _userId;
+                if (string.IsNullOrEmpty(userId))
+                    return ServiceResult<PaginationDetails<SongRecoveryDto>>.Failure(new BadRequestException("User must be authenticated."));
+                
+                offset = Math.Max(0, offset ?? 0);
+                limit = Math.Min(limit ?? 0, 100);
+                var songs = await _context.SongRecoveries
+                    .Where(f => f.CreatedBy == _userId &&
+                    f.IsDeleted != true)
+                    .OrderByDescending(f => f.RecoveryTimeStamp)
+                    .Select(s => new SongRecoveryDto
+                    {
+                        Id = s.Id,
+                        SongId = s.SongId,
+                        RecoveryName = s.RecoveryName,
+                        RecoveryTimeStamp = s.RecoveryTimeStamp,
+                    })
+                    .IgnoreQueryFilters()
+                    .ToPaginatedResultAsync(offset.Value, limit.Value);
+                return ServiceResult<PaginationDetails<SongRecoveryDto>>.Success(songs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetRecoverySongs");
+                return ServiceResult<PaginationDetails<SongRecoveryDto>>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Delete Recovery Song Item
+        public async Task<ServiceResult<bool>> DeleteRecoverySongItemAsync(string recoveryId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(recoveryId))
+                {
+                    return ServiceResult<bool>.Failure(
+                        new BadRequestException("Recovery ID is required."));
+                }
+                var recoveryItem = await _context.SongRecoveries
+                    .FirstOrDefaultAsync(s => s.Id == recoveryId);
+
+                if (recoveryItem == null) return ServiceResult<bool>.Failure(
+                    new NotFoundException("Recovery item not found."));
+                
+                recoveryItem.IsDeleted = true;
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in DeleteRecoverySongItem");
                 return ServiceResult<bool>.Failure(ex);
             }
         }

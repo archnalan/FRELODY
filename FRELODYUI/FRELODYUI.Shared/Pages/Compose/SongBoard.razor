@@ -1,16 +1,16 @@
 ﻿@page "/compose"
 @using Microsoft.AspNetCore.WebUtilities
+@using System.Text.Json
 @attribute [Authorize(Roles = $"{nameof(UserRoles.Editor)},{nameof(UserRoles.Contributor)}")]
 @implements IDisposable
 @inject ILogger<SongBoard> _logger
 
-<div class="w-100 d-flex flex-column justify-content-center"
-     style="max-width: 65rem;justify-self: center;">
-	<h3 class="fw-bold text-center mb-3">Song Editor</h3>
+<div class="song-board-container">
+    <h3 class="song-board-title">Song Editor</h3>
     @if (isLoading)
     {
-        <div class="d-flex justify-content-center my-5">
-            <div class="spinner-border text-primary" role="status">
+        <div class="song-board-spinner">
+            <div class="spinner-border" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
         </div>
@@ -19,23 +19,27 @@
     {
         @if (cacheData != null)
         {
-            <div class="alert alert-info d-flex align-items-center justify-content-between mb-3" role="alert">
-                <div>
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Session Recovery:</strong> Unsaved changes detected. Would you like to restore your previous work?
+            <div class="song-board-alert" role="alert">
+                <div class="alert-content">
+                    <i class="bi bi-info-circle"></i>
+                    <div>
+                        <strong>Session Recovery:</strong> Unsaved changes detected. Would you like to restore your previous work?
+                    </div>
                 </div>
-                <div>
-                    <button type="button" class="btn btn-sm btn-primary me-2" @onclick="RestoreFromCache">
-                        <i class="bi bi-arrow-clockwise me-1"></i>Restore
+                <div class="alert-actions">
+                    <button type="button" class="btn btn-sm song-board-btn-primary" @onclick="RestoreFromCache">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        <span>Restore</span>
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="DiscardCache">
-                        <i class="bi bi-x-circle me-1"></i>Discard
+                    <button type="button" class="btn btn-sm song-board-btn-secondary" @onclick="DiscardCache">
+                        <i class="bi bi-x-circle"></i>
+                        <span>Discard</span>
                     </button>
                 </div>
             </div>
         }
 
-        <div class="row row-cols-lg-12 g-2 align-items-center">
+        <div class="row row-cols-lg-12 g-2 align-items-center song-board-input-row">
             <!-- Input 1 -->
             <div class="col-4 col-md-2">
                 <input type="number"
@@ -64,9 +68,9 @@
             <!-- Save Button -->
             <div class="col-3 col-md-2 d-grid">
                 <button type="button"
-                        class="btn btn-outline-primary"
+                        class="btn song-board-btn-primary"
                         @onclick="HandleSongSave">
-                    <span class="me-2 d-none d-md-inline">Save Song</span>
+                    <span class="d-none d-md-inline">Save Song</span>
                     <i class="bi bi-clipboard-check"></i>
                 </button>
             </div>
@@ -74,23 +78,25 @@
 
         @if (initialPartsItems.Any())
         {
-            <TabsComponent @ref="TabsComponentRef"
-                           InitialItems="initialPartsItems"
-                           ItemsCountLimit="MAX_SECTIONS"
-                           OnTabAdd="HandleTabAdd"
-                           RenderTab="RenderVerseTab"
-                           OnTabSort="HandleTabSort"
-                           OnTabRemoved="HandleTabRemove"
-                           ActiveTabInfoChanged ="HandleActiveTabInfoChanged"/>
+            <div class="song-board-tabs-container">
+                <TabsComponent @ref="TabsComponentRef"
+                               InitialItems="initialPartsItems"
+                               ItemsCountLimit="MAX_SECTIONS"
+                               OnTabAdd="HandleTabAdd"
+                               RenderTab="RenderVerseTab"
+                               OnTabSort="HandleTabSort"
+                               OnTabRemoved="HandleTabRemove"
+                               ActiveTabInfoChanged="HandleActiveTabInfoChanged" />
+            </div>
         }
         else
         {
-            <div class="alert alert-warning mt-2">
-                No sections found. Click to <span class="btn-link" style="cursor:pointer" @onclick="InitializeNewContent">add a new section</span>
+            <div class="song-board-warning">
+                No sections found. Click to <span class="btn-link" @onclick="InitializeNewContent">add a new section</span>
             </div>
         }
     }
-    
+
 </div>
 <SongDataPreview @ref="songPreviewRef"
                  IsVisible="showPreview"
@@ -106,6 +112,9 @@
 @code {
     [Parameter]
     public string? SongId { get; set; }
+    [Parameter]
+    public string? RecoverId { get; set; }
+
     const int MAX_SECTIONS = 25;
     private string SongTitle = "My New Song";
     private int SongNumber = 1;   
@@ -160,13 +169,26 @@
             {
                 SongId = songIdValues.FirstOrDefault();
             }
+            else if(query.TryGetValue("recoverId", out var recoverIdValues))
+            {
+                RecoverId = recoverIdValues.FirstOrDefault();
+            }
             var cachedData = await _storageService
                     .GetItemAsync<SimpleSongCreateDto>("songDraft");
             if (cachedData != null)
             {
                 cacheData = cachedData;
             }
-            if (string.IsNullOrEmpty(SongId))
+            if (!string.IsNullOrEmpty(RecoverId))
+            {
+                var response = await _songsApi.GetSongDetailsByRecoveryId(RecoverId);
+                if (response.IsSuccessStatusCode)
+                {
+                    songData = response.Content!;
+                    await InitializeFromRecoveryData(songData);
+                }            
+            }
+            else if (string.IsNullOrEmpty(SongId))
             {
                 InitializeNewContent();
             }
@@ -358,6 +380,104 @@
         AllPartsSegments[1] = new List<SegmentCreateDto>();
     }
 
+    private async Task InitializeFromRecoveryData(SimpleSongCreateDto recoveryData)
+    {
+        try
+        {
+            ClearCurrentState();
+
+            SongTitle = recoveryData.Title ?? "My New Song";
+            SongNumber = recoveryData.SongNumber ?? 1;
+
+            // Set book category if present
+            if (recoveryData.BookCategory != null)
+            {
+                currentBookCategory = recoveryData.BookCategory;
+                if (bookArtistAddRef != null)
+                {
+                    await bookArtistAddRef.SetActiveSelectionTab("songbook");
+                    await bookArtistAddRef.SetSongBookCategoryPair(currentBookCategory);
+                }
+            }
+            // Set artist album if present
+            else if (recoveryData.ArtistAlbum != null)
+            {
+                currentArtistAlbum = recoveryData.ArtistAlbum;
+                if (bookArtistAddRef != null)
+                {
+                    await bookArtistAddRef.SetActiveSelectionTab("artist");
+                    await bookArtistAddRef.SetArtistAlbumPair(currentArtistAlbum);
+                }
+            }
+
+            // Process segments and build UI structure
+            if (recoveryData.SongLyrics != null && recoveryData.SongLyrics.Any())
+            {
+                // Group segments by part number
+                var groupedSegments = recoveryData.SongLyrics
+                    .GroupBy(s => s.PartNumber)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // Rebuild AllPartsSegments
+                foreach (var partNum in groupedSegments.Keys.OrderBy(k => k))
+                {
+                    AllPartsSegments[partNum] = groupedSegments[partNum];
+                }
+
+                // Rebuild initialPartsItems from scratch
+                var newTabItems = new List<TabItem>();
+
+                foreach (var partNum in AllPartsSegments.Keys.OrderBy(k => k))
+                {
+                    var firstSegment = AllPartsSegments[partNum].FirstOrDefault();
+                    var sectionName = firstSegment?.PartName.ToString() ?? nameof(SongSection.Verse);
+
+                    // Create a new tab item with proper closure
+                    var currentPartNum = partNum; // Capture for closure
+
+                    newTabItems.Add(new TabItem
+                    {
+                        Id = currentPartNum,
+                        SectionName = sectionName,
+                        SectionNumber = currentPartNum,
+                        DisplayOrder = newTabItems.Count + 1,
+                        Content = builder =>
+                        {
+                            builder.OpenComponent<SongSectionBoard>(0);
+                            builder.AddAttribute(1, "SectionId", currentPartNum);
+                            builder.AddAttribute(2, "OnSegmentsUpdate",
+                                EventCallback.Factory.Create<List<SegmentCreateDto>>(
+                                    this, segments => HandleVerseUpdate(currentPartNum, segments)));
+                            builder.AddAttribute(3, "Segments", AllPartsSegments[currentPartNum]);
+                            builder.AddAttribute(4, "ActiveTab", activeTabItem);
+                            builder.CloseComponent();
+                        }
+                    });
+                }
+
+                initialPartsItems = newTabItems;
+            }
+            else
+            {
+                InitializeNewContent();
+            }
+
+            _tabsManager.TabsComponentKey = Guid.NewGuid().ToString();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing from recovery data");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Recovery Error",
+                Message = "An error occurred while loading recovered data. Please try again.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
+    }
+
     private async Task HandleSongSave()
     {
         var allSegments = AllPartsSegments.Values.SelectMany(v => v).ToList();
@@ -437,6 +557,7 @@
         if (songResult.IsSuccessStatusCode)
         {
             songData = new SimpleSongCreateDto();
+            await _storageService.RemoveItemAsync("songDraft");
             _modalService.Show(new ModalOptionDto
             {
                 Title = "Song Saved",
@@ -1081,10 +1202,25 @@
         initialPartsItems.Clear();
     }
 
-    private void DiscardCache()
+    private async Task DiscardCache()
     {
+        var recoveryId = cacheData?.RecoveryDto?.SongId;
+        if (!string.IsNullOrEmpty(recoveryId))
+        {
+            var removeResponse = await _songsApi.DeleteRecoverySongItem(recoveryId);
+            if(removeResponse.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Removed recovery song item with ID: {RecoveryId}", recoveryId);
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(removeResponse);
+                _logger.LogError("Failed to remove recovery song item {RecoveryId}: {Error}",
+                    recoveryId, errorMessage);
+            }
+        }
         cacheData = null;
-        _storageService.RemoveItemAsync("songDraft");
+        await _storageService.RemoveItemAsync("songDraft");
         StateHasChanged();
     }
 
@@ -1110,6 +1246,8 @@
                     BookCategory = currentBookCategory != null
                         ? new BookCategoryPairViewModel
                         {
+                            BookTitle = currentBookCategory.BookTitle,
+                            CategoryName = currentBookCategory.CategoryName,
                             SongBookId = currentBookCategory.SongBookId,
                             CategoryId = currentBookCategory.CategoryId
                         }
@@ -1117,12 +1255,23 @@
                     ArtistAlbum = currentArtistAlbum != null
                         ? new ArtistAlbumPairViewModel
                         {
+                            ArtistName = currentArtistAlbum.ArtistName,
+                            AlbumTitle = currentArtistAlbum.AlbumTitle,
                             ArtistId = currentArtistAlbum.ArtistId,
                             AlbumId = currentArtistAlbum.AlbumId
                         }
                         : null
                 };
 
+                draftData.IsRecoveryCopy = true;
+                draftData.RecoveryDto = new SongRecoveryDto
+                {
+                    RecoveryName = $"{draftData.Title} - {DateTime.Now:G}",
+                    RecoveryTimeStamp = DateTime.Now,
+                    SongId = SongId,
+                };
+
+                var draftResponse = await _songsApi.CreateSong(draftData);
                 await _storageService.SetItemAsync("songDraft", draftData);
                 _logger.LogInformation("Saved draft before navigation");
             }

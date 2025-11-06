@@ -2,6 +2,7 @@
 using FRELODYAPP.Dtos.SubDtos;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.SubDtos;
 
@@ -21,5 +22,8 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<bool>> DeleteSong(string songId);
         Task<ServiceResult<PaginationDetails<ComboBoxDto>>> GetFavoriteSongs(string? userId = null, int? offset = 0, int? limit = 10);
         Task<ServiceResult<bool>> IsSongFavorited(string songId,string? userId = null);
+        Task<ServiceResult<SimpleSongCreateDto>> GetSongDetailsByRecoveryId(string recoveryId);
+        Task<ServiceResult<PaginationDetails<SongRecoveryDto>>> GetRecoverySongsAsync(string? userId = null, int? offset = 0, int? limit = 10);
+        Task<ServiceResult<bool>> DeleteRecoverySongItemAsync(string recoveryId);
     }
 }

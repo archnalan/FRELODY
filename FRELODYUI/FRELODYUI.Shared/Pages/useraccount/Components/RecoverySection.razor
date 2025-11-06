@@ -1,0 +1,315 @@
+@using FRELODYSHRD.Dtos.SubDtos
+@inject ILogger<RecoverySection> _logger
+
+<div class="recovery-section">
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading recovery items...</span>
+            </div>
+        </div>
+    }
+    else if (recoveryItems?.Any() == true)
+    {
+        <!-- Recovery Items Header -->
+        <div class="recovery-header mb-3">
+            <h5 class="recovery-title mb-1">
+                <i class="bi bi-shield-check me-2"></i>Recovery Items
+            </h5>
+            <p class="recovery-subtitle text-muted mb-0">
+                Automatically saved drafts from your editing sessions
+            </p>
+        </div>
+
+        <!-- Recovery Items List -->
+        <div class="recovery-list">
+            @foreach (var item in recoveryItems)
+            {
+                <div class="recovery-item">
+                    <div class="recovery-item-content">
+                        <div class="recovery-item-header">
+                            <h6 class="recovery-item-title mb-1">@item.RecoveryName</h6>
+                            <small class="recovery-item-date text-muted">
+                                <i class="bi bi-clock me-1"></i>
+                                @item.RecoveryTimeStamp?.ToLocalTime().ToString("MMM dd, yyyy hh:mm tt")
+                            </small>
+                        </div>
+                    </div>
+                    <div class="recovery-item-actions">
+                        <button class="btn btn-sm btn-outline-primary me-2"
+                                @onclick="() => PreviewSong(item)"
+                                title="Preview this draft">
+                            <i class="bi bi-tv"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary me-2" 
+                                @onclick="() => HandleRestore(item)"
+                                title="Restore this draft">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                @onclick="() => HandleDelete(item)"
+                                title="Delete this draft">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Pagination -->
+        @if (totalItems > limit)
+        {
+            <div class="recovery-pagination mt-3">
+                <button class="btn btn-sm btn-outline-secondary" 
+                        @onclick="LoadPrevious" 
+                        disabled="@(offset == 0)">
+                    <i class="bi bi-chevron-left"></i> Previous
+                </button>
+                <span class="pagination-info">
+                    Showing @(offset + 1) - @Math.Min(offset + limit, totalItems) of @totalItems
+                </span>
+                <button class="btn btn-sm btn-outline-secondary" 
+                        @onclick="LoadNext" 
+                        disabled="@(!hasMore)">
+                    Next <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+        }
+    }
+    else
+    {
+        <!-- Empty State -->
+        <div class="recovery-empty-state">
+            <i class="bi bi-inbox fs-1 text-muted"></i>
+            <p class="text-muted mt-3 mb-0">No recovery items found</p>
+            <small class="text-muted">Your draft backups will appear here</small>
+        </div>
+    }
+</div>
+<!-- Song Data Preview -->
+<SongDataPreview @ref="songPreviewRef"
+                 IsVisible="showPreview"
+                 IsRecovery="true"
+                 SongData="songData"
+                 OnCancel="HandlePreviewCancel"
+                 OnSave="HandlePreviewRestore" />
+
+<!-- Confirmation Modal -->
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    [Parameter] public string? UserId { get; set; }
+
+    private List<SongRecoveryDto> recoveryItems = new();
+    private bool IsLoading = true;
+    private int offset = 0;
+    private int limit = 10;
+    private int totalItems = 0;
+    private bool hasMore = false;
+    private SongRecoveryDto? itemToDelete;
+    private SongDataPreview? songPreviewRef;
+    private bool showPreview = false;
+    private SimpleSongCreateDto? songData;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRecoveryItems();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(UserId))
+        {
+            await LoadRecoveryItems();
+        }
+    }
+
+    private async Task LoadRecoveryItems()
+    {
+        try
+        {
+            IsLoading = true;
+            var response = await _songsApi.GetRecoverySongs(UserId, offset, limit);
+
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                recoveryItems = response.Content.Data ?? new List<SongRecoveryDto>();
+                totalItems = response.Content.TotalSize;
+                hasMore = response.Content.HasMore;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _logger.LogError("Failed to load recovery items: {Error}", errorMessage);
+                recoveryItems = new List<SongRecoveryDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading recovery items");
+            ShowErrorModal("Failed to load recovery items. Please try again.");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task LoadNext()
+    {
+        if (hasMore)
+        {
+            offset += limit;
+            await LoadRecoveryItems();
+        }
+    }
+
+    private async Task LoadPrevious()
+    {
+        if (offset > 0)
+        {
+            offset = Math.Max(0, offset - limit);
+            await LoadRecoveryItems();
+        }
+    }
+
+    private async Task HandleRestore(SongRecoveryDto item)
+    {
+        try
+        {
+            // Navigate to compose page with recovery ID
+            _navManager.NavigateTo($"/compose?recoveryId={item.Id}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error restoring recovery item {RecoveryId}", item.Id);
+            ShowErrorModal("Failed to restore draft. Please try again.");
+        }
+    }
+
+    private void HandleDelete(SongRecoveryDto item)
+    {
+        itemToDelete = item;
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Delete Recovery Item",
+            Message = $"Are you sure you want to delete this recovery item: '{item.RecoveryName}'? ",
+            DangerText = "This action cannot be undone.",
+            ButtonText = "Delete",
+            OptionType = OptionType.Error,
+            Context = new ModalContext
+            {
+                ActionType = "DeleteRecoveryItem",
+                Data = item.Id
+            }
+        });
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "DeleteRecoveryItem" && itemToDelete != null)
+        {
+            try
+            {
+                var response = await _songsApi.DeleteRecoverySongItem(itemToDelete.Id!);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    recoveryItems.Remove(itemToDelete);
+                    totalItems--;
+                    ShowSuccessModal("Recovery item deleted successfully.");
+                }
+                else
+                {
+                    var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                    ShowErrorModal($"Failed to delete recovery item: {errorMessage}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting recovery item {RecoveryId}", itemToDelete.Id);
+                ShowErrorModal("Failed to delete recovery item. Please try again.");
+            }
+            finally
+            {
+                itemToDelete = null;
+            }
+        }
+
+        await CloseModal();
+    }
+
+    private async Task PreviewSong(SongRecoveryDto item)
+    {
+        try
+        {
+            var response = await _songsApi.GetSongDetailsByRecoveryId(item.Id);
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                songData = response.Content;                
+                showPreview = true;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                ShowErrorModal($"Failed to load draft data: {errorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error previewing recovery item {RecoveryId}", item.Id);
+            ShowErrorModal("Failed to load draft data. Please try again.");
+        }
+    }
+
+    private async Task HandlePreviewCancel()
+    {
+        showPreview = false;
+        StateHasChanged();
+    }
+
+    private async Task HandlePreviewRestore()
+    {
+        showPreview = false;
+        if (songData != null)
+        {
+            _navManager.NavigateTo($"/compose?recoverId={songData.RecoveryDto?.Id}");
+        }
+        else
+        {
+            ShowErrorModal("Failed to restore draft. Please try again.");
+        }
+    }
+
+    private async Task CloseModal()
+    {
+        _modalService.Close();
+        await Task.CompletedTask;
+    }
+
+    private void ShowSuccessModal(string message)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Success",
+            Message = message,
+            ButtonText = "OK",
+            OptionType = OptionType.Success
+        });
+    }
+
+    private void ShowErrorModal(string message)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Error",
+            Message = message,
+            ButtonText = "OK",
+            OptionType = OptionType.Error
+        });
+    }
+}
