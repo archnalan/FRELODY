@@ -17,6 +17,7 @@ using Mapster;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 
 namespace FRELODYAPIs.Areas.Admin.LogicData
 {
@@ -1121,7 +1122,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         RecoveryTimeStamp = s.RecoveryTimeStamp,
                     })
                     .IgnoreQueryFilters()
-                    .ToPaginatedResultAsync(offset.Value, limit.Value);
+                    .ToPaginatedResultAsync(offset.Value, limit.Value, orderByColumn: "RecoveryTimeStamp", sortAscending: false);
+
                 return ServiceResult<PaginationDetails<SongRecoveryDto>>.Success(songs);
             }
             catch (Exception ex)
@@ -1163,26 +1165,46 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #region Soft Delete Song 
         public async Task<ServiceResult<bool>> DeleteSong(string songId)
         {
-            try
+            using (var transaction = await _context.Database.BeginTransactionAsync())
             {
-                if (string.IsNullOrEmpty(songId))
+                try
                 {
-                    return ServiceResult<bool>.Failure(
-                        new BadRequestException("Song ID is required."));
+                    if (string.IsNullOrEmpty(songId))
+                    {
+                        return ServiceResult<bool>.Failure(
+                            new BadRequestException("Song ID is required."));
+                    }
+                    var song = await _context.Songs
+                     .Where(s => s.Id == songId)
+                    .Include(s => s.SongParts!)
+                        .ThenInclude(sp => sp.LyricLines!)
+                            .ThenInclude(ll => ll.LyricSegments!)
+                    .FirstOrDefaultAsync();
+                    if (song == null) return ServiceResult<bool>.Failure(
+                        new NotFoundException("Song not found."));
+                    song.IsDeleted = true;
+                    foreach (var songPart in song.SongParts ?? new List<SongPart>())
+                    {
+                        songPart.IsDeleted = true;
+                        foreach (var lyricLine in songPart.LyricLines ?? new List<LyricLine>())
+                        {
+                            lyricLine.IsDeleted = true;
+                            foreach (var lyricSegment in lyricLine.LyricSegments ?? new List<LyricSegment>())
+                            {
+                                lyricSegment.IsDeleted = true;
+                            }
+                        }
+                    }
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return ServiceResult<bool>.Success(true);
                 }
-                var song = await _context.Songs
-                    .FirstOrDefaultAsync(s => s.Id == songId);
-                if (song == null) return ServiceResult<bool>.Failure(
-                    new NotFoundException("Song not found."));
-                song.IsDeleted = true;
-                song.ModifiedBy = _userId;
-                await _context.SaveChangesAsync();
-                return ServiceResult<bool>.Success(true);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in DeleteSong");
-                return ServiceResult<bool>.Failure(ex);
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error in DeleteSong");
+                    return ServiceResult<bool>.Failure(ex);
+                }
             }
         }
         #endregion

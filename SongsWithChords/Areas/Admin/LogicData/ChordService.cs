@@ -242,6 +242,12 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             var chord = await _context.Chords.FindAsync(id);
             if (chord == null) return ServiceResult<bool>.Failure(new
                 NotFoundException($"Chord with ID: {id} does not exist."));
+
+            var isChordInUse = await _context.LyricSegments
+                .AnyAsync(sc => sc.ChordId == id);
+
+            if (isChordInUse) return ServiceResult<bool>.Failure(new
+                ConflictException($"Chord is in use and cannot be deleted."));
             try
             {
                 chord.IsDeleted = true;

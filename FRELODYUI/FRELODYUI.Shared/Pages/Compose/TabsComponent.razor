@@ -493,9 +493,10 @@
         _modalService.Show(new ModalOptionDto
         {
             Title = "Remove Section",
-            Message = "Are you sure you want to remove this section? All section data will be lost!",
+            Message = "Are you sure you want to remove this section?",
+            DangerText = "All section data will be lost!",
             ButtonText = "Remove",
-            OptionType = OptionType.Confirmation,
+            OptionType = OptionType.Warning,
             Context = new ModalContext
             {
                ActionType = "RemoveTab",

@@ -13,7 +13,7 @@
     </div>
 
     <!-- Tab Content -->
-    <div class="flex-grow-1 tab-content">
+    <div class="flex-grow-1 tab-content border rounded-3 p-1">
         <!-- Songbook Flow -->
         @if (activeSelectionTab == "songbook")
         {
@@ -42,7 +42,7 @@
                         </div>
                         @if (currentBookCategory != null)
                         {
-                            <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
+                            <button type="button" class="btn-close btn-close mx-2" style="font-size: 0.6rem;"
                                     @onclick="ClearBookCategory"></button>
                         }
                     </div>
@@ -75,12 +75,12 @@
                                            ArtistId="@selectedArtist.Id"
                                            TabIndex="10" />
                         </div>
+                        @if (currentArtistAlbum != null)
+                        {
+                            <button type="button" class="btn-close btn mx-2" style="font-size: 0.6rem;"
+                                    @onclick="ClearArtistAlbum"></button>
+                        }
                     </div>
-                    @if (currentArtistAlbum != null)
-                    {
-                        <button type="button" class="btn-close btn-close-white ms-2" style="font-size: 0.6rem;"
-                                @onclick="ClearArtistAlbum"></button>
-                    }
                 }
             </div>
         }

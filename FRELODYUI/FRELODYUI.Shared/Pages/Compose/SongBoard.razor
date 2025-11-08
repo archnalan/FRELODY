@@ -27,11 +27,15 @@
                     </div>
                 </div>
                 <div class="alert-actions">
-                    <button type="button" class="btn btn-sm song-board-btn-primary" @onclick="RestoreFromCache">
+                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="PreviewCache">
+                        <i class="bi bi-tv"></i>
+                        <span>Preview</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" @onclick="RestoreFromCache">
                         <i class="bi bi-arrow-clockwise"></i>
                         <span>Restore</span>
                     </button>
-                    <button type="button" class="btn btn-sm song-board-btn-secondary" @onclick="DiscardCache">
+                    <button type="button" class="btn btn-sm btn-danger" @onclick="DiscardCache">
                         <i class="bi bi-x-circle"></i>
                         <span>Discard</span>
                     </button>
@@ -69,7 +73,7 @@
             <div class="col-3 col-md-2 d-grid">
                 <button type="button"
                         class="btn song-board-btn-primary"
-                        @onclick="HandleSongSave">
+                        @onclick="()=>HandleSongSave()">
                     <span class="d-none d-md-inline">Save Song</span>
                     <i class="bi bi-clipboard-check"></i>
                 </button>
@@ -100,9 +104,10 @@
 </div>
 <SongDataPreview @ref="songPreviewRef"
                  IsVisible="showPreview"
-                 SongData="songData"
+                 IsRecovery="isRecoveryPreview"
+                 SongData="@(isRecoveryPreview ? cacheData : songData)"
                  OnCancel="HandlePreviewCancel"
-                 OnSave="HandlePreviewSave" />
+                 OnSave="HandlePreviewConfirm" />
 
 <DialogModal IsVisible="@_modalService.IsModalVisible"
              Modal="@_modalService.CurrentModal"
@@ -139,6 +144,8 @@
     private ArtistAlbumPairViewModel? currentArtistAlbum = null;
     private SongDataPreview? songPreviewRef;
     private bool showPreview = false;
+    private bool isRecoveryPreview = false;
+    private bool isSuccessRedirect = false;
 
     private IDisposable? _locationChangingRegistration;
 
@@ -380,7 +387,7 @@
         AllPartsSegments[1] = new List<SegmentCreateDto>();
     }
 
-    private async Task InitializeFromRecoveryData(SimpleSongCreateDto recoveryData)
+    private async Task<bool> InitializeFromRecoveryData(SimpleSongCreateDto recoveryData)
     {
         try
         {
@@ -464,6 +471,7 @@
 
             _tabsManager.TabsComponentKey = Guid.NewGuid().ToString();
             await InvokeAsync(StateHasChanged);
+            return true;
         }
         catch (Exception ex)
         {
@@ -475,10 +483,19 @@
                 ButtonText = "Close",
                 OptionType = OptionType.Error
             });
+            return false;
         }
     }
 
-    private async Task HandleSongSave()
+    private async Task PreviewCache()
+    {
+        if (cacheData == null) return;
+        isRecoveryPreview = true;
+        showPreview = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleSongSave(bool? skipPreview=false)
     {
         var allSegments = AllPartsSegments.Values.SelectMany(v => v).ToList();
 
@@ -507,7 +524,11 @@
                 TrackNumber = currentArtistAlbum.TrackNumber
             }
             :null;
-
+        if (skipPreview == true)
+        {
+            await PerformSongSave(songData);
+            return;
+        }
         if (allSegments.Count == 0)
         {
             _modalService.Show(new ModalOptionDto
@@ -530,33 +551,42 @@
         showPreview = true;
         StateHasChanged();
     }
+
     private async Task HandlePreviewCancel()
     {
         showPreview = false;
+        isRecoveryPreview = false;
         StateHasChanged();
     }
 
-    private async Task HandlePreviewSave()
+    private async Task HandlePreviewConfirm()
     {
         showPreview = false;
-        await HandleSongPreview(songData);
+        if (isRecoveryPreview)
+        {
+            await RestoreFromCache();
+        }
+        else
+        {
+            await PerformSongSave(songData);
+        }
     }
-    private async Task HandleSongPreview(SimpleSongCreateDto songData)
+
+    private async Task PerformSongSave(SimpleSongCreateDto songSaveData)
     {
         Refit.IApiResponse<SongDto> songResult;
         if (string.IsNullOrEmpty(SongId) || SongId == "new")
         {
             SongId = null;
-            songResult = await _songsApi.CreateSong(songData);
+            songResult = await _songsApi.CreateSong(songSaveData);
         }
         else
         {
-            songResult = await _songsApi.UpdateSong(SongId, songData);
+            songResult = await _songsApi.UpdateSong(SongId, songSaveData);
         }
 
         if (songResult.IsSuccessStatusCode)
         {
-            songData = new SimpleSongCreateDto();
             await _storageService.RemoveItemAsync("songDraft");
             _modalService.Show(new ModalOptionDto
             {
@@ -1002,15 +1032,25 @@
         if (_modalService.CurrentModal.Context?.ActionType == "SongSaved")
         {
             _modalService.Close();
-            _navManager.NavigateTo("/songs-list");
+            isSuccessRedirect = true;
+            _navManager.NavigateTo("/songs-library");
         }
         else if (_modalService.CurrentModal.Context?.ActionType == "RestoreFromCache")
         {
             // Save current work first
-            await HandleSongSave();
+            await HandleSongSave(true);
             _modalService.Close();
             // Then restore from cache
-            await PerformCacheRestore();
+            if (cacheData != null)
+            {
+                bool success = await InitializeFromRecoveryData(cacheData);
+                if (success)
+                {
+                    cacheData = null;
+                    await _storageService.RemoveItemAsync("songDraft");
+                }
+
+            }
         }
         else
         {
@@ -1023,7 +1063,15 @@
         if (_modalService.CurrentModal?.Context?.ActionType == "RestoreFromCache" &&
                 _modalService.CurrentModal?.Context?.Data.ToString() == "HasCurrentWork")
         {
-            await PerformCacheRestore();
+            if (cacheData != null)
+            {
+                bool success = await InitializeFromRecoveryData(cacheData);
+                if (success)
+                {
+                    cacheData = null;
+                    await _storageService.RemoveItemAsync("songDraft");
+                }
+            }
         }
         _modalService.Close();
         await Task.CompletedTask;
@@ -1052,141 +1100,14 @@
             });
             return;
         }
-
-        await PerformCacheRestore();
-    }
-
-    private async Task PerformCacheRestore()
-    {
-        if (cacheData == null) return;
-
-        try
+        if (cacheData != null)
         {
-            ClearCurrentState();
-
-            SongTitle = cacheData.Title;
-            //SongNumber = cacheData.SongNumber ?? 1;
-
-            // Restore book category with proper titles
-            if (cacheData.BookCategory != null)
+            bool success = await InitializeFromRecoveryData(cacheData);
+            if (success)
             {
-                var bookResponse = await _songsBooksApi.GetSongBookById(cacheData.BookCategory.SongBookId);
-                var bookTitle = bookResponse.IsSuccessStatusCode ? bookResponse.Content?.Title : "Unknown Book";
-                string? categoryName = null;
-                if (!string.IsNullOrEmpty(cacheData.BookCategory.CategoryId))
-                {
-                    var catResponse = await _categoriesApi.GetCategoryById(cacheData.BookCategory.CategoryId);
-                    categoryName = catResponse.IsSuccessStatusCode ? catResponse.Content?.Name : null;
-                }
-                currentBookCategory = new BookCategoryPairViewModel
-                    {
-                        SongBookId = cacheData.BookCategory.SongBookId,
-                        BookTitle = bookTitle ?? "Unknown",
-                        CategoryId = cacheData.BookCategory.CategoryId,
-                        CategoryName = categoryName,
-                    };
-                // Set active tab to songbook if we have book categories
-                //activeSelectionTab = "songbook";
-                if (bookArtistAddRef != null)
-                {
-                    await bookArtistAddRef.SetActiveSelectionTab("songbook");
-                    await bookArtistAddRef.SetSongBookCategoryPair(currentBookCategory);
-                }
-            }                
-            else if (cacheData.ArtistAlbum != null)// Restore artist album with proper names
-            {
-                var artistResponse = await _artistsApi.GetArtistById(cacheData.ArtistAlbum.ArtistId);
-                var artistName = artistResponse.IsSuccessStatusCode ? artistResponse.Content?.Name : "Unknown Artist";
-                string? albumTitle = null;
-                if (!string.IsNullOrEmpty(cacheData.ArtistAlbum.AlbumId))
-                {
-                    var albumResponse = await _albumsApi.GetAlbumById(cacheData.ArtistAlbum.AlbumId);
-                    albumTitle = albumResponse.IsSuccessStatusCode ? albumResponse.Content?.Title : null;
-                }
-                currentArtistAlbum = new ArtistAlbumPairViewModel
-                {
-                    ArtistId = cacheData.ArtistAlbum.ArtistId,
-                    ArtistName = artistName,
-                    AlbumId = cacheData.ArtistAlbum.AlbumId,
-                    AlbumTitle = albumTitle,
-                    TrackNumber = cacheData.ArtistAlbum.TrackNumber
-                };
-
-                if( bookArtistAddRef != null)
-                {
-                    await bookArtistAddRef.SetActiveSelectionTab("artist");
-                    await bookArtistAddRef.SetArtistAlbumPair(currentArtistAlbum);
-                }
+                cacheData = null;
+                await _storageService.RemoveItemAsync("songDraft");
             }
-
-            // Restore segments and rebuild the entire UI structure
-            if (cacheData.SongLyrics != null && cacheData.SongLyrics.Any())
-            {
-                // Group segments by part number
-                var groupedSegments = cacheData.SongLyrics
-                    .GroupBy(s => s.PartNumber)
-                    .ToDictionary(g => g.Key, g => g.ToList());
-
-                // Rebuild AllPartsSegments
-                foreach (var partNum in groupedSegments.Keys.OrderBy(k => k))
-                {
-                    AllPartsSegments[partNum] = groupedSegments[partNum];
-                }
-
-                // Rebuild initialPartsItems from scratch
-                var newTabItems = new List<TabItem>();
-
-                foreach (var partNum in AllPartsSegments.Keys.OrderBy(k => k))
-                {
-                    var firstSegment = AllPartsSegments[partNum].FirstOrDefault();
-                    var sectionName = firstSegment?.PartName.ToString() ?? nameof(SongSection.Verse);
-
-                    // Create a new tab item with proper closure
-                    var currentPartNum = partNum; // Capture for closure
-
-                    newTabItems.Add(new TabItem
-                    {
-                        Id = currentPartNum,
-                        SectionName = sectionName,
-                        SectionNumber = currentPartNum,
-                        DisplayOrder = newTabItems.Count + 1,
-                        Content = builder =>
-                        {
-                            builder.OpenComponent<SongSectionBoard>(0);
-                            builder.AddAttribute(1, "SectionId", currentPartNum);
-                            builder.AddAttribute(2, "OnSegmentsUpdate",
-                                EventCallback.Factory.Create<List<SegmentCreateDto>>(
-                                    this, segments => HandleVerseUpdate(currentPartNum, segments)));
-                            builder.AddAttribute(3, "Segments", AllPartsSegments[currentPartNum]);
-                            builder.AddAttribute(4, "ActiveTab", activeTabItem);
-                            builder.CloseComponent();
-                        }
-                    });
-                }
-
-                initialPartsItems = newTabItems;
-            }
-            else
-            {
-                InitializeNewContent();
-            }
-
-            // Clear cache
-            cacheData = null;
-            await _storageService.RemoveItemAsync("songDraft");
-            _tabsManager.TabsComponentKey = Guid.NewGuid().ToString();
-            await InvokeAsync(StateHasChanged);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during cache restoration");
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "Restoration Error",
-                Message = "An error occurred while restoring your work. Please try again.",
-                ButtonText = "Close",
-                OptionType = OptionType.Error
-            });
         }
     }
 
@@ -1227,9 +1148,10 @@
     private async ValueTask HandleLocationChanging(LocationChangingContext context)
     {
         // Check if there's unsaved work
-        var hasUnsavedWork = currentBookCategory != null ||
+        var hasUnsavedWork = !isSuccessRedirect &&
+                            (currentBookCategory != null ||
                              currentArtistAlbum != null ||
-                             AllPartsSegments.Values.Any(segments => segments.Any());
+                             AllPartsSegments.Values.Any(segments => segments.Any()));
 
         if (hasUnsavedWork)
         {
@@ -1280,13 +1202,11 @@
                 _logger.LogError(ex, "Error saving draft during navigation");
             }
         }
-    }
-        
+    }        
 
     public void Dispose()
     {
         _tabsManager.OnRelocateLine -= HandleRelocateLineRequest;
         _locationChangingRegistration?.Dispose();
     }
-
 }

@@ -63,12 +63,15 @@
                             @onclick="CloseModal">
                         Cancel
                     </button>
-                    <button class="btn btn-primary"
-                            style="width:7rem"
-                            @onclick="ConfirmOption"
-                            disabled="@IsLoading">
-                        @(Modal.ButtonText ?? "Confirm")
-                    </button>
+                    @if (!(Modal.HideActionConfirmBtn == true))
+                    {
+                        <button class="btn btn-primary"
+                                style="width:7rem"
+                                @onclick="ConfirmOption"
+                                disabled="@IsLoading">
+                            @(Modal.ButtonText ?? "Confirm")
+                        </button>
+                    }
                 }
                 else
                 {

@@ -8,7 +8,7 @@
 @inject ILogger<ChordChartCreate> _logger
 @implements IDisposable
 
-<div class="container-fluid vh-100 d-flex justify-content-center overflow-y-scroll bg-secondary position-relative">
+<div class="container-fluid vh-100 d-flex justify-content-center overflow-y-scroll position-relative">
     <div class="@GetInnerContainerClass()" style="height:fit-content">
         <div class="ms-2">
             <button class="btn btn-outline-primary" @onclick="GoBack">
@@ -451,7 +451,7 @@
                     ? $"Chord chart updated successfully"
                     : $"Chord chart created successfully";
 
-                _navManager.NavigateTo($"/chord-charts?success={Uri.EscapeDataString(successMessage)}");
+                _navManager.NavigateTo($"/chords?success={Uri.EscapeDataString(successMessage)}");
             }
             else
             {
