@@ -20,54 +20,87 @@
         sort: !!sort,
         forceFallback: true,
         handle: handle || undefined,
-        onUpdate: (event) => {
-            // Revert the DOM to match the .NET state
-            if (event.from) {
-                const restoreBefore = event.from.children[event.oldDraggableIndex] || null;
-                event.from.insertBefore(event.item, restoreBefore);
+
+        // Add these options to allow nested interactions
+        draggable: `> :not(${filter})`, // Only make non-filtered items draggable
+        preventOnFilter: true,
+
+        // Custom check to allow nested element interactions
+        onStart: function (evt) {
+            // Check if the actual dragged element is filtered
+            const isFiltered = evt.item.matches(filter);
+            if (isFiltered) {
+                evt.sortable.cancel(); // Cancel the drag if it's a filtered element
             }
-            // Notify .NET to update its model and re-render
-            component.invokeMethodAsync('OnUpdateJS', event.oldDraggableIndex, event.newDraggableIndex);
+        },
+
+        onUpdate: (event) => {
+            // Only process if the dragged element is not filtered
+            if (!event.item.matches(filter)) {
+                if (event.from) {
+                    const restoreBefore = event.from.children[event.oldDraggableIndex] || null;
+                    event.from.insertBefore(event.item, restoreBefore);
+                }
+                component.invokeMethodAsync('OnUpdateJS', event.oldDraggableIndex, event.newDraggableIndex);
+            }
         },
         onAdd: (event) => {
-            const fromId = (event.from && event.from.id) ? event.from.id : '';
-            // Revert DOM (don't let it stay in target)
-            if (event.to) {
-                const restoreBefore = event.to.children[event.newDraggableIndex] || null;
-                event.to.insertBefore(event.item, restoreBefore);  // Wait, no: for add, revert by moving back to from?
-                // Actually, for consistency, move back to original position in from
-                if (event.from) {
-                    const originalBefore = event.from.children[event.oldDraggableIndex] || null;
-                    event.from.insertBefore(event.item, originalBefore);
+            // Only process if the dragged element is not filtered
+            if (!event.item.matches(filter)) {
+                const fromId = (event.from && event.from.id) ? event.from.id : '';
+                if (event.to) {
+                    const restoreBefore = event.to.children[event.newDraggableIndex] || null;
+                    event.to.insertBefore(event.item, restoreBefore);
                 }
             }
         },
         onRemove: (event) => {
-            const toId = (event.to && event.to.id) ? event.to.id : '';
-            const isDeleteZone = toId.startsWith('remove-button-');
+            // Only process if the dragged element is not filtered
+            if (!event.item.matches(filter)) {
+                const toId = (event.to && event.to.id) ? event.to.id : '';
+                const isDeleteZone = toId.startsWith('remove-button-');
 
-            if (isDeleteZone) {
-                // No revert for delete; let SongSectionBoard handle removal via HandleRemoveDrop
-                component.invokeMethodAsync('OnRemoveJS', event.oldDraggableIndex, -1);
-                return;
-            }
-           
-            if (event.pullMode === 'clone') {
-                if (event.clone && event.clone.remove) event.clone.remove();
-            }
+                if (isDeleteZone) {
+                    component.invokeMethodAsync('OnRemoveJS', event.oldDraggableIndex, -1);
+                    return;
+                }
 
-            // Revert DOM in source list for cross-list moves (Blazor is source of truth)
-            if (event.from) {
-                const restoreBefore = event.from.children[event.oldDraggableIndex] || null;
-                event.from.insertBefore(event.item, restoreBefore);
-            }
+                if (event.pullMode === 'clone') {
+                    if (event.clone && event.clone.remove) event.clone.remove();
+                }
 
-            // Notify .NET to update source and target lists
-            component.invokeMethodAsync('OnRemoveJS', event.oldDraggableIndex, event.newDraggableIndex);
+                if (event.from) {
+                    const restoreBefore = event.from.children[event.oldDraggableIndex] || null;
+                    event.from.insertBefore(event.item, restoreBefore);
+                }
+
+                component.invokeMethodAsync('OnRemoveJS', event.oldDraggableIndex, event.newDraggableIndex);
+            }
         }
     });
 
-    // Initialize external remove buttons as drop zones
+    // Add event listeners to allow interaction with nested elements in filtered containers
+    if (filter) {
+        const filteredElements = el.querySelectorAll(filter);
+        filteredElements.forEach(container => {
+            // Allow events to propagate from nested interactive elements
+            const interactiveElements = container.querySelectorAll('input, button, select, textarea, [tabindex]');
+            interactiveElements.forEach(element => {
+                element.addEventListener('mousedown', (e) => {
+                    e.stopPropagation(); // Prevent the event from reaching SortableJS
+                });
+
+                element.addEventListener('touchstart', (e) => {
+                    e.stopPropagation(); // Prevent the event from reaching SortableJS
+                });
+
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent the event from reaching SortableJS
+                });
+            });
+        });
+    }
+
     initializeRemoveButtons(group, component);
 }
 
