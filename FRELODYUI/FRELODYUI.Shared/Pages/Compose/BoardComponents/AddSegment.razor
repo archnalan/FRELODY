@@ -2,7 +2,7 @@
 
 @if (FormOpen)
 {
-    <div class="add-segment-form-container" style="@TextBoxSize">
+    <div class="add-segment-form-container no-drag" style="@TextBoxSize">
         <form class="add-segment-form" @onsubmit="HandleSubmit">
             <div class="add-segment-inputs">                
                <ChordsDropdown TabIndex="@(_baseTabIndex + 1)"
@@ -31,7 +31,7 @@
 }
 else
 {
-    <button class="add-segment-btn @(FocusedLine ? "add-segment-btn--focused" : "")"
+    <button class="add-segment-btn no-drag @(FocusedLine ? "add-segment-btn--focused" : "")"
             style="@TextBoxSize"
             @onclick="OpenForm">
         <i class="bi bi-plus"></i>

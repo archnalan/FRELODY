@@ -1,0 +1,56 @@
+﻿@page "/sticky-layout"
+
+<div class="container-fluid vh-100 overflow-auto position-relative">
+    <!-- Left Column (A and B stacked) -->
+    <div id="elementA" class="w-25 bg-primary text-white d-flex align-items-center justify-content-center mb-2"
+         style="height: var(--element-height);">
+        A
+    </div>
+
+    <div id="elementB" class="position-sticky top-0 bg-warning text-dark d-flex align-items-center justify-content-center"
+         style="height: var(--element-height); width: 75%;">
+        B
+    </div>
+
+    <!-- Right Circle C -->
+    <div id="elementC" class="position-fixed top-0 end-0 d-flex align-items-center justify-content-center"
+         style="width: var(--circle-size); height: var(--element-height); right: 0; margin-left:auto;">
+        <div class="rounded-circle bg-info text-white d-flex align-items-center justify-content-center"
+             style="width: var(--circle-size); height: var(--circle-size);">
+            C
+        </div>
+    </div>
+    <!-- Scrollable Body (D) -->
+    <div id="elementD" class="flex-grow-1 overflow-auto p-3 bg-light">
+        @for (int i = 1; i <= 50; i++)
+        {
+            <div class="mb-3 p-3 border rounded bg-white shadow-sm">
+                <h6>Section @i</h6>
+                <p>This is scrollable content inside element D.</p>
+            </div>
+        }
+    </div>
+</div>
+<style>
+    :root {
+        --element-height: 60px;
+        --circle-size: 60px;
+    }
+
+    /* Transition container that shrinks as A scrolls away */
+    #elementD {
+        scroll-behavior: smooth;
+    }
+
+    #elementC {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    /* Optional: smooth transitions */
+    #elementA, #elementB, #elementC {
+        transition: all 0.4s ease;
+    }
+
+</style>

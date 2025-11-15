@@ -29,6 +29,19 @@
             // Notify .NET to update its model and re-render
             component.invokeMethodAsync('OnUpdateJS', event.oldDraggableIndex, event.newDraggableIndex);
         },
+        onAdd: (event) => {
+            const fromId = (event.from && event.from.id) ? event.from.id : '';
+            // Revert DOM (don't let it stay in target)
+            if (event.to) {
+                const restoreBefore = event.to.children[event.newDraggableIndex] || null;
+                event.to.insertBefore(event.item, restoreBefore);  // Wait, no: for add, revert by moving back to from?
+                // Actually, for consistency, move back to original position in from
+                if (event.from) {
+                    const originalBefore = event.from.children[event.oldDraggableIndex] || null;
+                    event.from.insertBefore(event.item, originalBefore);
+                }
+            }
+        },
         onRemove: (event) => {
             const toId = (event.to && event.to.id) ? event.to.id : '';
             const isDeleteZone = toId.startsWith('remove-button-');
@@ -38,7 +51,7 @@
                 component.invokeMethodAsync('OnRemoveJS', event.oldDraggableIndex, -1);
                 return;
             }
-
+           
             if (event.pullMode === 'clone') {
                 if (event.clone && event.clone.remove) event.clone.remove();
             }
@@ -53,5 +66,41 @@
             component.invokeMethodAsync('OnRemoveJS', event.oldDraggableIndex, event.newDraggableIndex);
         }
     });
+
+    // Initialize external remove buttons as drop zones
+    initializeRemoveButtons(group, component);
+}
+
+function initializeRemoveButtons(group, component) {
+    const removeButtons = document.querySelectorAll('[id^="remove-button-"]');
+    removeButtons.forEach(button => {
+        if (!button.classList.contains('sortable-initialized')) {
+            new Sortable(button, {
+                group: {
+                    name: group,
+                    pull: false,
+                    put: true
+                },
+                sort: false,
+                animation: 0,  // Disable animation for remove zones to prevent fast snap
+                onAdd: function (evt) {
+                    const segmentId = evt.item.getAttribute('data-id');
+                    // Revert DOM immediately (snap back without animation)
+                    if (evt.from) {
+                        const restoreBefore = evt.from.children[evt.oldDraggableIndex] || null;
+                        evt.from.insertBefore(evt.item, restoreBefore);
+                    }
+                    // Notify .NET to show confirmation dialog
+                    component.invokeMethodAsync('OnDropToRemoveJS', segmentId);
+                }
+            });
+            button.classList.add('sortable-initialized');
+        }
+    });
+}
+
+// Export function to allow re-initialization when buttons are added/removed
+export function reinitializeRemoveButtons(group, component) {
+    initializeRemoveButtons(group, component);
 }
 

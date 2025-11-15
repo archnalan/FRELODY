@@ -2,7 +2,7 @@
 @using FRELODYSHRD.ModelTypes
 @inject ILogger<Segment> _logger
 
-<div class="segment-container @GetSegmentStateClass()">
+<div class="segment-container @GetSegmentStateClass() @(Editing ? "no-drag" : "")">
     @if (Editing)
     {
         <AddSegment @ref="addSegmentRef"

@@ -5,7 +5,7 @@
 @implements IDisposable
 @inject ILogger<SongBoard> _logger
 
-<div class="song-board-container">
+<div @key="songBoardKey" class="song-board-container">
     <h3 class="song-board-title">Song Editor</h3>
     @if (isLoading)
     {
@@ -148,6 +148,7 @@
     private bool isSuccessRedirect = false;
 
     private IDisposable? _locationChangingRegistration;
+    private string songBoardKey = Guid.NewGuid().ToString();
 
     private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
                   Segments="@AllPartsSegments.GetValueOrDefault(id, new List<SegmentCreateDto>())"
@@ -1108,6 +1109,7 @@
                 cacheData = null;
                 await _storageService.RemoveItemAsync("songDraft");
             }
+            songBoardKey = Guid.NewGuid().ToString();
         }
     }
 

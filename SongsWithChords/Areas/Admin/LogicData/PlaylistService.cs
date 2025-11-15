@@ -619,255 +619,292 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 var firstWordPattern = hasMultipleWords ? $"%{searchWords[0]}%" : null;
                 var secondWordPattern = hasMultipleWords && searchWords.Length > 1 ? $"%{searchWords[1]}%" : null;
                 var sql = @"
-            WITH SearchResults AS (
-                -- Title matches (highest priority)
-                SELECT 
-                    s.Id,
-                    s.Title,
-                    s.SongNumber,
-                    s.Slug,
-                    s.SongPlayLevel,
-                    s.WrittenDateRange,
-                    s.WrittenBy,
-                    s.History,
-                    c.Name AS CategoryName,
-                    sb.Title AS SongBookTitle,
-                    sb.Slug AS SongBookSlug,
-                    sb.Id AS SongBookId,
-                    sb.Description AS SongBookDescription,
-                    c.Id AS CategoryId,
-                    c.CategorySlug,
-                    p.Title AS PlaylistTitle,
-                    p.Curator AS PlaylistCurator,
-                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
-                    100 AS RelevanceScore,
-                    'title' AS MatchType,
-                    s.Title AS MatchSnippet
-                FROM Songs s
-                LEFT JOIN Categories c ON s.CategoryId = c.Id
-                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
-                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
-                    AND suf.UserId = @UserId
-                    AND suf.IsDeleted = 0
-                WHERE s.Title LIKE @SearchPattern
-
-                UNION ALL
-
-                -- Enhanced Lyric matches with aggregated lines
-                SELECT DISTINCT
-                    s.Id,
-                    s.Title,
-                    s.SongNumber,
-                    s.Slug,
-                    s.SongPlayLevel,
-                    s.WrittenDateRange,
-                    s.WrittenBy,
-                    s.History,
-                    c.Name AS CategoryName,
-                    sb.Title AS SongBookTitle,
-                    sb.Slug AS SongBookSlug,
-                    sb.Id AS SongBookId,
-                    sb.Description AS SongBookDescription,
-                    c.Id AS CategoryId,
-                    c.CategorySlug,
-                    p.Title AS PlaylistTitle,
-                    p.Curator AS PlaylistCurator,
-                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
-                    CASE 
-                        WHEN aggregated_line.AggregatedLyrics LIKE @SearchPattern THEN 90
-                        ELSE 85
-                    END AS RelevanceScore,
-                    'lyrics' AS MatchType,
-                    CONCAT(
+                        WITH SearchResults AS (
+                    -- Title matches (highest priority)
+                    SELECT 
+                        s.Id,
+                        s.Title,
+                        s.SongNumber,
+                        s.Slug,
+                        s.SongPlayLevel,
+                        s.WrittenDateRange,
+                        s.WrittenBy,
+                        s.History,
+                        c.Name AS CategoryName,
+                        sb.Title AS SongBookTitle,
+                        sb.Slug AS SongBookSlug,
+                        sb.Id AS SongBookId,
+                        sb.Description AS SongBookDescription,
+                        c.Id AS CategoryId,
+                        c.CategorySlug,
+                        p.Title AS PlaylistTitle,
+                        p.Curator AS PlaylistCurator,
+                        al.Id AS AlbumId,
+                        al.Title AS AlbumTitle,
+                        ar.Id AS ArtistId,
+                        ar.Name AS ArtistName,
+                        CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
+                        100 AS RelevanceScore,
+                        'title' AS MatchType,
+                        s.Title AS MatchSnippet
+                    FROM Songs s
+                    LEFT JOIN Categories c ON s.CategoryId = c.Id
+                    LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                    LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
+                    LEFT JOIN Albums al ON s.AlbumId = al.Id
+                    LEFT JOIN Artists ar ON s.ArtistId = ar.Id
+                    LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                        AND suf.UserId = @UserId
+                        AND suf.IsDeleted = 0
+                    WHERE s.Title LIKE @SearchPattern
+                
+                    UNION ALL
+                
+                    -- Enhanced Lyric matches with aggregated lines
+                    SELECT DISTINCT
+                        s.Id,
+                        s.Title,
+                        s.SongNumber,
+                        s.Slug,
+                        s.SongPlayLevel,
+                        s.WrittenDateRange,
+                        s.WrittenBy,
+                        s.History,
+                        c.Name AS CategoryName,
+                        sb.Title AS SongBookTitle,
+                        sb.Slug AS SongBookSlug,
+                        sb.Id AS SongBookId,
+                        sb.Description AS SongBookDescription,
+                        c.Id AS CategoryId,
+                        c.CategorySlug,
+                        p.Title AS PlaylistTitle,
+                        p.Curator AS PlaylistCurator,
+                        al.Id AS AlbumId,
+                        al.Title AS AlbumTitle,
+                        ar.Id AS ArtistId,
+                        ar.Name AS ArtistName,
+                        CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
                         CASE 
-                            WHEN CHARINDEX(@SearchTerm, aggregated_line.AggregatedLyrics) > 30 
-                            THEN '...' 
-                            ELSE ''
-                        END,
-                        SUBSTRING(
-                            aggregated_line.AggregatedLyrics,
+                            WHEN aggregated_line.AggregatedLyrics LIKE @SearchPattern THEN 90
+                            ELSE 85
+                        END AS RelevanceScore,
+                        'lyrics' AS MatchType,
+                        CONCAT(
                             CASE 
                                 WHEN CHARINDEX(@SearchTerm, aggregated_line.AggregatedLyrics) > 30 
-                                THEN CHARINDEX(@SearchTerm, aggregated_line.AggregatedLyrics) - 30 
-                                ELSE 1 
+                                THEN '...' 
+                                ELSE ''
                             END,
-                            80
-                        )
-                    ) AS MatchSnippet
-                FROM Songs s
-                INNER JOIN SongParts sp ON s.Id = sp.SongId
-                INNER JOIN LyricLines ll ON sp.Id = ll.PartId
-                INNER JOIN (
+                            SUBSTRING(
+                                aggregated_line.AggregatedLyrics,
+                                CASE 
+                                    WHEN CHARINDEX(@SearchTerm, aggregated_line.AggregatedLyrics) > 30 
+                                    THEN CHARINDEX(@SearchTerm, aggregated_line.AggregatedLyrics) - 30 
+                                    ELSE 1 
+                                END,
+                                80
+                            )
+                        ) AS MatchSnippet
+                    FROM Songs s
+                    INNER JOIN SongParts sp ON s.Id = sp.SongId
+                    INNER JOIN LyricLines ll ON sp.Id = ll.PartId
+                    INNER JOIN (
+                        SELECT 
+                            ls.LyricLineId,
+                            STRING_AGG(ls.Lyric, ' ') WITHIN GROUP (ORDER BY ls.LyricOrder) AS AggregatedLyrics
+                        FROM LyricSegments ls
+                        GROUP BY ls.LyricLineId
+                    ) aggregated_line ON ll.Id = aggregated_line.LyricLineId
+                    LEFT JOIN Categories c ON s.CategoryId = c.Id
+                    LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                    LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
+                    LEFT JOIN Albums al ON s.AlbumId = al.Id
+                    LEFT JOIN Artists ar ON s.ArtistId = ar.Id
+                    LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                        AND suf.UserId = @UserId
+                        AND suf.IsDeleted = 0
+                    WHERE aggregated_line.AggregatedLyrics LIKE @SearchPattern
+                
+                    UNION ALL
+                
+                    -- Category name matches (medium priority)
                     SELECT 
-                        ls.LyricLineId,
-                        STRING_AGG(ls.Lyric, ' ') WITHIN GROUP (ORDER BY ls.LyricOrder) AS AggregatedLyrics
-                    FROM LyricSegments ls
-                    GROUP BY ls.LyricLineId
-                ) aggregated_line ON ll.Id = aggregated_line.LyricLineId
-                LEFT JOIN Categories c ON s.CategoryId = c.Id
-                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
-                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
-                    AND suf.UserId = @UserId
-                    AND suf.IsDeleted = 0
-                WHERE aggregated_line.AggregatedLyrics LIKE @SearchPattern
-
-                UNION ALL
-
-                -- Category name matches (medium priority)
+                        s.Id,
+                        s.Title,
+                        s.SongNumber,
+                        s.Slug,
+                        s.SongPlayLevel,
+                        s.WrittenDateRange,
+                        s.WrittenBy,
+                        s.History,
+                        c.Name AS CategoryName,
+                        sb.Title AS SongBookTitle,
+                        sb.Slug AS SongBookSlug,
+                        sb.Id AS SongBookId,
+                        sb.Description AS SongBookDescription,
+                        c.Id AS CategoryId,
+                        c.CategorySlug,
+                        p.Title AS PlaylistTitle,
+                        p.Curator AS PlaylistCurator,
+                        al.Id AS AlbumId,
+                        al.Title AS AlbumTitle,
+                        ar.Id AS ArtistId,
+                        ar.Name AS ArtistName,
+                        CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
+                        80 AS RelevanceScore,
+                        'category' AS MatchType,
+                        c.Name AS MatchSnippet
+                    FROM Songs s
+                    LEFT JOIN Categories c ON s.CategoryId = c.Id
+                    LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                    LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
+                    LEFT JOIN Albums al ON s.AlbumId = al.Id
+                    LEFT JOIN Artists ar ON s.ArtistId = ar.Id
+                    LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                        AND suf.UserId = @UserId
+                        AND suf.IsDeleted = 0
+                    WHERE c.Name LIKE @SearchPattern
+                
+                    UNION ALL
+                
+                    -- SongBook title matches (medium priority)
+                    SELECT 
+                        s.Id,
+                        s.Title,
+                        s.SongNumber,
+                        s.Slug,
+                        s.SongPlayLevel,
+                        s.WrittenDateRange,
+                        s.WrittenBy,
+                        s.History,
+                        c.Name AS CategoryName,
+                        sb.Title AS SongBookTitle,
+                        sb.Slug AS SongBookSlug,
+                        sb.Id AS SongBookId,
+                        sb.Description AS SongBookDescription,
+                        c.Id AS CategoryId,
+                        c.CategorySlug,
+                        p.Title AS PlaylistTitle,
+                        p.Curator AS PlaylistCurator,
+                        al.Id AS AlbumId,
+                        al.Title AS AlbumTitle,
+                        ar.Id AS ArtistId,
+                        ar.Name AS ArtistName,
+                        CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
+                        70 AS RelevanceScore,
+                        'book' AS MatchType,
+                        sb.Title AS MatchSnippet
+                    FROM Songs s
+                    LEFT JOIN Categories c ON s.CategoryId = c.Id
+                    LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                    LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
+                    LEFT JOIN Albums al ON s.AlbumId = al.Id
+                    LEFT JOIN Artists ar ON s.ArtistId = ar.Id
+                    LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                        AND suf.UserId = @UserId
+                        AND suf.IsDeleted = 0
+                    WHERE sb.Title LIKE @SearchPattern
+                
+                    UNION ALL
+                
+                    -- Playlist title matches (low priority)
+                    SELECT 
+                        s.Id,
+                        s.Title,
+                        s.SongNumber,
+                        s.Slug,
+                        s.SongPlayLevel,
+                        s.WrittenDateRange,
+                        s.WrittenBy,
+                        s.History,
+                        c.Name AS CategoryName,
+                        sb.Title AS SongBookTitle,
+                        sb.Slug AS SongBookSlug,
+                        sb.Id AS SongBookId,
+                        sb.Description AS SongBookDescription,
+                        c.Id AS CategoryId,
+                        c.CategorySlug,
+                        p.Title AS PlaylistTitle,
+                        p.Curator AS PlaylistCurator,
+                        al.Id AS AlbumId,
+                        al.Title AS AlbumTitle,
+                        ar.Id AS ArtistId,
+                        ar.Name AS ArtistName,
+                        CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
+                        60 AS RelevanceScore,
+                        'Playlist' AS MatchType,
+                        p.Title AS MatchSnippet
+                    FROM Songs s
+                    LEFT JOIN Categories c ON s.CategoryId = c.Id
+                    LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                    LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
+                    LEFT JOIN Albums al ON s.AlbumId = al.Id
+                    LEFT JOIN Artists ar ON s.ArtistId = ar.Id
+                    LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                        AND suf.UserId = @UserId
+                        AND suf.IsDeleted = 0
+                    WHERE p.Title LIKE @SearchPattern
+                
+                    UNION ALL
+                
+                    -- Author/Writer matches (lowest priority)
+                    SELECT 
+                        s.Id,
+                        s.Title,
+                        s.SongNumber,
+                        s.Slug,
+                        s.SongPlayLevel,
+                        s.WrittenDateRange,
+                        s.WrittenBy,
+                        s.History,
+                        c.Name AS CategoryName,
+                        sb.Title AS SongBookTitle,
+                        sb.Slug AS SongBookSlug,
+                        sb.Id AS SongBookId,
+                        sb.Description AS SongBookDescription,
+                        c.Id AS CategoryId,
+                        c.CategorySlug,
+                        p.Title AS playlistTitle,
+                        p.Curator AS playlistCurator,
+                        al.Id AS AlbumId,
+                        al.Title AS AlbumTitle,
+                        ar.Id AS ArtistId,
+                        ar.Name AS ArtistName,
+                        CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
+                        50 AS RelevanceScore,
+                        'author' AS MatchType,
+                        COALESCE(s.WrittenBy, sb.Author) AS MatchSnippet
+                    FROM Songs s
+                    LEFT JOIN Categories c ON s.CategoryId = c.Id
+                    LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                    LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
+                    LEFT JOIN Albums al ON s.AlbumId = al.Id
+                    LEFT JOIN Artists ar ON s.ArtistId = ar.Id
+                    LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
+                        AND suf.UserId = @UserId
+                        AND suf.IsDeleted = 0
+                    WHERE (s.WrittenBy LIKE @SearchPattern OR sb.Author LIKE @SearchPattern)
+                ),
+                RankedResults AS (
+                    SELECT *,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY Id 
+                               ORDER BY RelevanceScore DESC
+                           ) as MatchRank
+                    FROM SearchResults
+                )
                 SELECT 
-                    s.Id,
-                    s.Title,
-                    s.SongNumber,
-                    s.Slug,
-                    s.SongPlayLevel,
-                    s.WrittenDateRange,
-                    s.WrittenBy,
-                    s.History,
-                    c.Name AS CategoryName,
-                    sb.Title AS SongBookTitle,
-                    sb.Slug AS SongBookSlug,
-                    sb.Id AS SongBookId,
-                    sb.Description AS SongBookDescription,
-                    c.Id AS CategoryId,
-                    c.CategorySlug,
-                    p.Title AS PlaylistTitle,
-                    p.Curator AS PlaylistCurator,
-                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
-                    80 AS RelevanceScore,
-                    'category' AS MatchType,
-                    c.Name AS MatchSnippet
-                FROM Songs s
-                LEFT JOIN Categories c ON s.CategoryId = c.Id
-                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
-                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
-                    AND suf.UserId = @UserId
-                    AND suf.IsDeleted = 0
-                WHERE c.Name LIKE @SearchPattern
-
-                UNION ALL
-
-                -- SongBook title matches (medium priority)
-                SELECT 
-                    s.Id,
-                    s.Title,
-                    s.SongNumber,
-                    s.Slug,
-                    s.SongPlayLevel,
-                    s.WrittenDateRange,
-                    s.WrittenBy,
-                    s.History,
-                    c.Name AS CategoryName,
-                    sb.Title AS SongBookTitle,
-                    sb.Slug AS SongBookSlug,
-                    sb.Id AS SongBookId,
-                    sb.Description AS SongBookDescription,
-                    c.Id AS CategoryId,
-                    c.CategorySlug,
-                    p.Title AS PlaylistTitle,
-                    p.Curator AS PlaylistCurator,
-                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
-                    70 AS RelevanceScore,
-                    'book' AS MatchType,
-                    sb.Title AS MatchSnippet
-                FROM Songs s
-                LEFT JOIN Categories c ON s.CategoryId = c.Id
-                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
-                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
-                    AND suf.UserId = @UserId
-                    AND suf.IsDeleted = 0
-                WHERE sb.Title LIKE @SearchPattern
-
-                UNION ALL
-
-                -- Playlist title matches (low priority)
-                SELECT 
-                    s.Id,
-                    s.Title,
-                    s.SongNumber,
-                    s.Slug,
-                    s.SongPlayLevel,
-                    s.WrittenDateRange,
-                    s.WrittenBy,
-                    s.History,
-                    c.Name AS CategoryName,
-                    sb.Title AS SongBookTitle,
-                    sb.Slug AS SongBookSlug,
-                    sb.Id AS SongBookId,
-                    sb.Description AS SongBookDescription,
-                    c.Id AS CategoryId,
-                    c.CategorySlug,
-                    p.Title AS PlaylistTitle,
-                    p.Curator AS PlaylistCurator,
-                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
-                    60 AS RelevanceScore,
-                    'Playlist' AS MatchType,
-                    p.Title AS MatchSnippet
-                FROM Songs s
-                LEFT JOIN Categories c ON s.CategoryId = c.Id
-                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
-                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
-                    AND suf.UserId = @UserId
-                    AND suf.IsDeleted = 0
-                WHERE p.Title LIKE @SearchPattern
-
-                UNION ALL
-
-                -- Author/Writer matches (lowest priority)
-                SELECT 
-                    s.Id,
-                    s.Title,
-                    s.SongNumber,
-                    s.Slug,
-                    s.SongPlayLevel,
-                    s.WrittenDateRange,
-                    s.WrittenBy,
-                    s.History,
-                    c.Name AS CategoryName,
-                    sb.Title AS SongBookTitle,
-                    sb.Slug AS SongBookSlug,
-                    sb.Id AS SongBookId,
-                    sb.Description AS SongBookDescription,
-                    c.Id AS CategoryId,
-                    c.CategorySlug,
-                    p.Title AS playlistTitle,
-                    p.Curator AS playlistCurator,
-                    CASE WHEN suf.Id IS NOT NULL THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IsFavorite,
-                    50 AS RelevanceScore,
-                    'author' AS MatchType,
-                    COALESCE(s.WrittenBy, sb.Author) AS MatchSnippet
-                FROM Songs s
-                LEFT JOIN Categories c ON s.CategoryId = c.Id
-                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
-                LEFT JOIN SongUserFavorites suf ON suf.SongId = s.Id 
-                    AND suf.UserId = @UserId
-                    AND suf.IsDeleted = 0
-                WHERE (s.WrittenBy LIKE @SearchPattern OR sb.Author LIKE @SearchPattern)
-              ),
-            RankedResults AS (
-                SELECT *,
-                       ROW_NUMBER() OVER (
-                           PARTITION BY Id 
-                           ORDER BY RelevanceScore DESC
-                       ) as MatchRank
-                FROM SearchResults
-            )
-            SELECT 
-                Id, Title, SongNumber, Slug, SongPlayLevel, WrittenDateRange, 
-                WrittenBy, History, CategoryName, SongBookTitle, SongBookSlug, 
-                SongBookId, SongBookDescription, CategoryId, CategorySlug, 
-                IsFavorite, RelevanceScore, MatchType, MatchSnippet,
-                PlaylistTitle, PlaylistCurator
-            FROM RankedResults
-            WHERE MatchRank = 1
-            ORDER BY RelevanceScore DESC, Title ASC
-            OFFSET @Offset ROWS 
-            FETCH NEXT @Limit ROWS ONLY";
+                    Id, Title, SongNumber, Slug, SongPlayLevel, WrittenDateRange, 
+                    WrittenBy, History, CategoryName, SongBookTitle, SongBookSlug, 
+                    SongBookId, SongBookDescription, CategoryId, CategorySlug, 
+                    IsFavorite, RelevanceScore, MatchType, MatchSnippet,
+                    PlaylistTitle, PlaylistCurator,
+                    AlbumId, AlbumTitle, ArtistId, ArtistName
+                FROM RankedResults
+                WHERE MatchRank = 1
+                ORDER BY RelevanceScore DESC, Title ASC
+                OFFSET @Offset ROWS 
+                FETCH NEXT @Limit ROWS ONLY";
 
                 var parameters = new List<SqlParameter>
             {
@@ -902,36 +939,44 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 // Get total count for pagination
                 var countSql = @"
-            SELECT COUNT(DISTINCT Combined.Id) AS Value
-            FROM (
-                SELECT s.Id FROM Songs s WHERE s.Title LIKE @SearchPattern
-                UNION
-                SELECT DISTINCT s.Id FROM Songs s
-                INNER JOIN SongParts sp ON s.Id = sp.SongId
-                INNER JOIN LyricLines ll ON sp.Id = ll.PartId
-                INNER JOIN LyricSegments ls ON ll.Id = ls.LyricLineId
-                WHERE ls.Lyric LIKE @SearchPattern
-                UNION
-                SELECT s.Id FROM Songs s
-                LEFT JOIN Categories c ON s.CategoryId = c.Id
-                WHERE c.Name LIKE @SearchPattern
-                UNION
-                SELECT s.Id FROM Songs s
-                LEFT JOIN Categories c ON s.CategoryId = c.Id
-                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                WHERE sb.Title LIKE @SearchPattern
-                UNION
-                SELECT s.Id FROM Songs s
-                LEFT JOIN Categories c ON s.CategoryId = c.Id
-                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
-                WHERE p.Title LIKE @SearchPattern
-                UNION
-                SELECT s.Id FROM Songs s
-                LEFT JOIN Categories c ON s.CategoryId = c.Id
-                LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
-                WHERE s.WrittenBy LIKE @SearchPattern OR sb.Author LIKE @SearchPattern
-            ) AS Combined";
+                SELECT COUNT(DISTINCT Combined.Id) AS Value
+                FROM (
+                    SELECT s.Id FROM Songs s WHERE s.Title LIKE @SearchPattern
+                    UNION
+                    SELECT DISTINCT s.Id FROM Songs s
+                    INNER JOIN SongParts sp ON s.Id = sp.SongId
+                    INNER JOIN LyricLines ll ON sp.Id = ll.PartId
+                    INNER JOIN LyricSegments ls ON ll.Id = ls.LyricLineId
+                    WHERE ls.Lyric LIKE @SearchPattern
+                    UNION
+                    SELECT s.Id FROM Songs s
+                    LEFT JOIN Categories c ON s.CategoryId = c.Id
+                    WHERE c.Name LIKE @SearchPattern
+                    UNION
+                    SELECT s.Id FROM Songs s
+                    LEFT JOIN Categories c ON s.CategoryId = c.Id
+                    LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                    WHERE sb.Title LIKE @SearchPattern
+                    UNION
+                    SELECT s.Id FROM Songs s
+                    LEFT JOIN Categories c ON s.CategoryId = c.Id
+                    LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                    LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
+                    WHERE p.Title LIKE @SearchPattern
+                    UNION
+                    SELECT s.Id FROM Songs s
+                    LEFT JOIN Categories c ON s.CategoryId = c.Id
+                    LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
+                    WHERE s.WrittenBy LIKE @SearchPattern OR sb.Author LIKE @SearchPattern
+                    UNION
+                    SELECT s.Id FROM Songs s
+                    LEFT JOIN Albums al ON s.AlbumId = al.Id
+                    WHERE al.Title LIKE @SearchPattern
+                    UNION
+                    SELECT s.Id FROM Songs s
+                    LEFT JOIN Artists ar ON s.ArtistId = ar.Id
+                    WHERE ar.Name LIKE @SearchPattern
+                ) AS Combined"; 
 
                 var totalCount = await _context.Database
                     .SqlQueryRaw<int>(countSql,

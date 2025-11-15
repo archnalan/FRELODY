@@ -35,7 +35,7 @@
     public EventCallback<(int oldIndex, int newIndex)> OnUpdate { get; set; }
 
     [Parameter]
-    public EventCallback<(int oldIndex, int newIndex)> OnRemove { get; set; }
+    public EventCallback<(int oldIndex, int newIndex, string? toId)> OnRemove { get; set; }
 
     [Parameter]
     public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -64,36 +64,59 @@
     [Parameter]
     public string? Style { get; set; }
 
+    [Parameter] 
+    public EventCallback<string> OnDropToRemove { get; set; }
+
     private DotNetObjectReference<SortableList<T>>? selfReference;
+
+    private IJSObjectReference? module;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             selfReference = DotNetObjectReference.Create(this);
-            var module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/FRELODYUI.Shared/Pages/Common/SortableList.razor.js");
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/FRELODYUI.Shared/Pages/Common/SortableList.razor.js");
             await module.InvokeAsync<string>("init", Id, Group, Pull, Put, Sort, Handle, Filter, selfReference, Class, Style);
+        }
+        else
+        {
+            // Re-initialize remove buttons on each render (in case new ones were added)
+            if (module != null)
+            {
+                await module.InvokeVoidAsync("reinitializeRemoveButtons", Group, selfReference);
+            }
         }
     }
 
     [JSInvokable]
     public void OnUpdateJS(int oldIndex, int newIndex)
     {
-        // invoke the OnUpdate event passing in the oldIndex and the newIndex
         OnUpdate.InvokeAsync((oldIndex, newIndex));
     }
 
     [JSInvokable]
-    public void OnRemoveJS(int oldIndex, int newIndex)
+    public void OnRemoveJS(int oldIndex, int newIndex, string? toId = null)
     {
-        if (newIndex == -1)
+        if (toId != null && toId.StartsWith("sortable-segments-"))  // Cross-row move
         {
-            // Delete: Remove from Items (filteredSegments in Row will sync via parent)
-            // But since we remove by ID in HandleRemoveDrop, optional: Invoke a callback if needed
+            OnRemove.InvokeAsync((oldIndex, newIndex, toId));
+        }
+        else if (newIndex == -1)  // Delete (but deletes are handled separately)
+        {
             return;
         }
-        // remove the item from the list
-        OnRemove.InvokeAsync((oldIndex, newIndex));
+        else
+        {
+            OnRemove.InvokeAsync((oldIndex, newIndex,null));
+        }
+    }
+
+    [JSInvokable]
+    public void OnDropToRemoveJS(string segmentId)
+    {
+        // Notify parent that segment should be removed
+        OnDropToRemove.InvokeAsync(segmentId);
     }
 
     public void Dispose() => selfReference?.Dispose();

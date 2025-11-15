@@ -25,8 +25,11 @@
                   Items="filteredSegments"
                   OnUpdate="@SortSegments"
                   Context="segment"
+                  OnDropToRemove="@HandleDropToRemove" 
                   Class="d-flex flex-wrap w-100 gap-1"
-                  Style="@textBoxSize">
+                  Style="@textBoxSize"
+                  Filter=".no-drag" 
+                  OnRemove="@HandleCrossRowMove">
         <SortableItemTemplate>
             <div data-id="@segment.Id" @ondblclick="() => HandleDoubleClick(segment)">
                 <Segment @ref="segmentRefs[segment.Id]"
@@ -63,6 +66,7 @@
     [Parameter] public EventCallback<List<ChordDto>> OnChordsUpdate { get; set; }
     [Parameter] public EventCallback<SegmentCreateDto?> OnEditingSegmentChanged { get; set; }
     [Parameter] public EventCallback<int> OnFocusLineRequest { get; set; }
+    [Parameter] public EventCallback<string> OnDropToRemove { get; set; }
 
     private TabItem? ActiveTab { get; set; }
     private Dictionary<string, Segment> segmentRefs = new();
@@ -337,5 +341,59 @@
     {
         showDropdown = visible;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleDropToRemove(string segmentId)
+    {
+        if (OnDropToRemove.HasDelegate)
+        {
+            await OnDropToRemove.InvokeAsync(segmentId);
+        }
+    }
+
+    private void HandleCrossRowMove((int oldIndex, int newIndex, string? toId) args)
+    {
+        if (args.toId == null) return;  // Not cross-row
+
+        var targetLine = int.Parse(args.toId.Replace("sortable-segments-", ""));
+        if (targetLine == Line)  // Same row, treat as update
+        {
+            SortSegments((args.oldIndex, args.newIndex));
+            return;
+        }
+
+        // Get moving segment
+        var movingSegment = filteredSegments[args.oldIndex];
+
+        // Remove from source and renumber
+        filteredSegments.RemoveAt(args.oldIndex);
+        for (int i = 0; i < filteredSegments.Count; i++)
+            filteredSegments[i].LyricOrder = i + 1;
+
+        // Update global Segments (replace with updated source segments)
+        var updatedSegments = Segments.Where(s => s.LineNumber != Line)
+                                      .Concat(filteredSegments)
+                                      .ToList();
+
+        // Add to target: Insert at newIndex with updated LineNumber and LyricOrder
+        movingSegment.LineNumber = targetLine;
+        movingSegment.LyricOrder = args.newIndex + 1;  // 1-based
+
+        // To insert properly, we'd ideally fetch target's current segments and insert,
+        // but since Segments is global, add it and sort/renumber all for target line
+        updatedSegments.Add(movingSegment);
+
+        // Renumber target line's orders
+        var targetSegments = updatedSegments.Where(s => s.LineNumber == targetLine)
+                                            .OrderBy(s => s.LyricOrder).ToList();
+        for (int i = 0; i < targetSegments.Count; i++)
+            targetSegments[i].LyricOrder = i + 1;
+
+        // Update global with renumbered target
+        updatedSegments = updatedSegments.Where(s => s.LineNumber != targetLine)
+                                          .Concat(targetSegments).ToList();
+
+        OnSegmentsUpdate.InvokeAsync(updatedSegments);
+        OnFocusLineRequest.InvokeAsync(targetLine);  // Focus the target row
     }
 }

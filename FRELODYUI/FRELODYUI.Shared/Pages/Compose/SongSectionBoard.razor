@@ -1,6 +1,6 @@
 ﻿@inject ILogger<SongSectionBoard> _logger
 
-<div class="h-100 w-100 overflow-auto">
+<div class="h-100 w-100">
     @if (lines.Count > 0)
     {
         <p class="small ms-3 mt-3 mb-0">Each segment can be assigned a chord.</p>
@@ -32,7 +32,8 @@
                  OnSegmentsUpdate="HandleSegmentsUpdate"
                  OnChordsUpdate="HandleChordsUpdate"
                  OnEditingSegmentChanged="HandleEditingSegmentChanged"
-                 OnFocusLineRequest="HandleFocusLineRequested"/>
+                 OnFocusLineRequest="HandleFocusLineRequested"
+                 OnDropToRemove="HandleDropToRemove" />
 
             @if (focusedRow == line)
             {
@@ -44,7 +45,8 @@
                     </button>
                     <button class="@($"btn btn-sm btn-outline-danger rounded-top-0 rounded-start-0 {(isOver ? "bg-danger text-white" : "")}")"
                             id="@($"remove-button-{line}")"
-                            data-line="@line">
+                            data-line="@line"
+                            @onclick="async () => ShowDeleteDialog(line)">
                         <i class="bi bi-fire"></i>
                         <span class="small">Remove</span>
                     </button>
@@ -80,10 +82,8 @@
     private SegmentCreateDto? editingSegment = null;
     private bool isOver = false;
     private int lineToDelete;
-    private DotNetObjectReference<SongSectionBoard>? selfRef;
     private int prevLinesCount;
     private int? prevFocusedRow;
-    private IJSObjectReference? _module;
     private async Task HandleFocusLineRequested(int line)
         => await SetFocusedRow(line);
 
@@ -120,9 +120,6 @@
         {
             if (firstRender)
             {
-                _module = await JsRt.InvokeAsync<IJSObjectReference>("import", "./_content/FRELODYUI.Shared/Pages/Compose/SongSectionBoard.razor.js");
-                selfRef = DotNetObjectReference.Create(this);
-                await _module.InvokeVoidAsync("initRemoveZones", selfRef);
                 prevLinesCount = lines.Count;
                 prevFocusedRow = focusedRow;
             }
@@ -133,8 +130,6 @@
 
                 if (linesChanged || focusChanged)
                 {
-                    _module ??= await JsRt.InvokeAsync<IJSObjectReference>("import", "./_content/FRELODYUI.Shared/Pages/Compose/SongSectionBoard.razor.js");
-                    await _module.InvokeVoidAsync("initRemoveZones", selfRef);
                     prevLinesCount = lines.Count;
                     prevFocusedRow = focusedRow;
                 }
@@ -186,6 +181,7 @@
 
         PruneRowRefs();
     }
+
     private async Task HandleRemoveEmptyLineRequest(int sectionId, int lineNumber)
     {
         if (sectionId == SectionId)
@@ -422,11 +418,16 @@
 
     private void DeleteLine(int line)
     {
+        var deletedIndex = lines.IndexOf(line);
+
         Segments?.RemoveAll(s => s.LineNumber == line);
         trackLines.Remove(line);
         RenumberLines();
 
-        focusedRow = trackLines.Count > 0 ? trackLines[0] : null;
+        if (deletedIndex > 0 && lines.Count > deletedIndex - 1)
+            focusedRow = lines[deletedIndex - 1];
+        else if (lines.Count > 0)
+            focusedRow = lines[0];
 
         editingSegment = null;
         lineToDelete = 0;
@@ -436,8 +437,14 @@
     private void HandleDragOver() => isOver = true;
     private void HandleDragLeave() => isOver = false;
 
-    [JSInvokable]
-    public async Task HandleRemoveDrop(int line, string segmentId)
+    // [JSInvokable]
+    // public async Task HandleRemoveDrop(int line, string segmentId)
+    // {
+    //     // Redirect to the new handler
+    //     await HandleDropToRemove(segmentId);
+    // }
+
+    private async Task HandleDropToRemove(string segmentId)
     {
         var segment = Segments?.FirstOrDefault(s => s.Id == segmentId);
         if (segment != null)
@@ -448,14 +455,14 @@
                 SubTitle = "Are you sure you want to delete this segment?",
                 Message = $"The segment with lyric '{segment.Lyric}' will be deleted.",
                 DangerText = "This action is irreversible!",
-                ButtonText = "OK",
+                ButtonText = "Delete",
                 OptionType = OptionType.Confirmation,
                 Context = new ModalContext
                 {
                     ActionType = "DeleteSegment",
                     Data = segmentId
                 }
-            }); 
+            });
             StateHasChanged();
         }
     }
@@ -470,12 +477,31 @@
         else if (_modalService.CurrentModal?.Context?.ActionType == "DeleteSegment")
         {
             var segmentId = _modalService.CurrentModal.Context.Data?.ToString();
+            var affectedLine = Segments?.FirstOrDefault(s => s.Id == segmentId)?.LineNumber ?? 0;
+            await CloseModal();
+
             Segments?.RemoveAll(s => s.Id == segmentId);
             if (editingSegment?.Id == segmentId) editingSegment = null;
 
-            // Update everything
-            HandleSegmentsUpdate(Segments);  // This updates lines, invokes OnSegmentsUpdate
+            var affectedRow = TryGetRowRef(affectedLine);
+            if (affectedRow != null)
+            {
+                await affectedRow.ClosePrevFormAsync();
+            }
 
+            if (Segments != null && Segments.Count > 0)
+            {
+                HandleSegmentsUpdate(Segments);
+            }
+            else
+            {
+                Segments = new();
+            }
+
+            if (focusedRow.HasValue)
+            {
+                await SetFocusedRow(focusedRow.Value); 
+            }
         }
         await CloseModal();
     }
@@ -493,15 +519,7 @@
         {
             _tabsManager.OnRemoveEmptyLine -= HandleRemoveEmptyLineRequest;
             _tabsManager.OnAddLineToSection -= HandleAddLineToSection;
-            if (_module is not null)
-            {
-                await _module.DisposeAsync();
-            }
         }
         catch { /* ignore */ }
-        finally
-        {
-            selfRef?.Dispose();
-        }
     }
 }

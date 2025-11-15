@@ -1,7 +1,8 @@
 ﻿
 <div class="dropend" style="width: 100%;">
     <div class="position-relative">
-        <input class="form-control form-control-sm pe-4"
+        <input @ref="inputElement"
+                class="form-control form-control-sm pe-4"
                type="text"
                tabindex="@TabIndex" 
                placeholder="add chord..."
@@ -68,11 +69,19 @@
     private bool showCustomizeModal = false;
     private List<ChordDto> AvailableChords { get; set; } = new();
     private List<ChordDto> filteredChords = new();
+    private ElementReference inputElement;
 
     protected async override Task OnInitializedAsync()
     {
         searchTerm = SelectedChord.ChordName ?? "";
         await LoadChords();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (showDropdown)
+        {
+            await inputElement.FocusAsync();
+        }
     }
 
     private async Task LoadChords()
