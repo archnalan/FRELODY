@@ -53,7 +53,7 @@
                     </button>
                     <ul class="dropdown-menu">
                         <li>
-                                <a class="dropdown-item" href="/sticky-layout">
+                                <a class="dropdown-item" href="/">
                                 <i class="bi bi-house-door"></i>Home
                             </a>
                         </li>
@@ -70,10 +70,10 @@
                         <li class="form-check form-switch mx-3">
                             <input class="form-check-input" type="checkbox" role="switch" id="switchCheckChecked"
                                    checked="@(!isDarkTheme)" @onchange="ToggleTheme">
-                            <label class="form-check-label" for="switchCheckChecked">Theme</label>
+                            <label class="form-check-label" for="switchCheckChecked" @onclick:preventDefault>Theme</label>
                         </li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><button class="dropdown-item text-danger border-0 bg-transparent w-100 text-start" @onclick="LogoutUser">
+                        <li><button class="dropdown-item text-danger border-0 bg-transparent w-100 text-start" @onclick="TriggerLogout">
                             <i class="bi bi-box-arrow-right"></i>Log out
                         </button></li>
                     </ul>
@@ -91,6 +91,11 @@
     </nav>
 </div>
 
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
 @code {
     private bool isDarkTheme = false;
 
@@ -102,6 +107,19 @@
             isDarkTheme = savedTheme == "dark";
             await ApplyTheme(savedTheme);
         }
+    }
+
+    private void TriggerLogout()
+    {
+        var modalOptions = new ModalOptionDto
+        {
+            Title = "Confirm Logout",
+            Message = "Are you sure you want to log out?",
+            ButtonText = "Logout",
+            OptionType = OptionType.Warning,
+            Context = new ModalContext { ActionType = "LogoutUser" }
+        };
+        _modalService.Show(modalOptions);
     }
 
     private async Task LogoutUser()
@@ -123,7 +141,24 @@
         await JsRt.InvokeVoidAsync("eval",
             $"document.documentElement.setAttribute('data-bs-theme', '{theme}')");
     }
-
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "LogoutUser")
+        {
+            await LogoutUser();
+        }
+        else
+        {
+            _modalService.Close();
+        }
+        await CloseModal();
+    }
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
 }
 
 <script>

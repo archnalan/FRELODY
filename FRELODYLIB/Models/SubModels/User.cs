@@ -1,4 +1,5 @@
-﻿using FRELODYSHRD.Dtos.UserDtos;
+﻿using FRELODYSHRD.Constants;
+using FRELODYSHRD.Dtos.UserDtos;
 using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -40,6 +41,8 @@ namespace FRELODYAPP.Models.SubModels
         public string? ModifiedBy { get; set; }
 
         public string? TenantId { get; set; }
+
+        public BillingStatus? BillingStatus { get; set; } 
     }
 
 }
