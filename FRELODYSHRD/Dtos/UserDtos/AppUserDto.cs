@@ -16,6 +16,7 @@ namespace FRELODYSHRD.Dtos.UserDtos
         [Required]
         public string? LastName { get; set; }
 
+        public string? Email { get; set; }
         public string? FullName => FirstName + " " + LastName;
         public string? Initials => 
             (string.IsNullOrWhiteSpace(FirstName) ? "" : FirstName[0].ToString()) + 

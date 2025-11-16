@@ -118,6 +118,10 @@ builder.Services.AddRefitClient<IProductsApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddRefitClient<ISmtpSenderApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

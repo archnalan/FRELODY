@@ -1,10 +1,57 @@
+.stepper {
+    counter-reset: step;
+}
+
+.step {
+    position: relative;
+}
+
+    .step::before {
+        counter-increment: step;
+        content: counter(step);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        background: #e0e0e0;
+        color: #fff;
+        font-weight: bold;
+        margin: 0 auto;
+    }
+
+    .step.active::before {
+        background: #667eea;
+    }
+
+    .step.completed::before {
+        background: #28a745;
+        content: "\2713"; /* Checkmark */
+    }
+
+    .step:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 1rem;
+        left: calc(50% + 1rem);
+        width: calc(100% - 2rem);
+        height: 2px;
+        background: #e0e0e0;
+    }
+
+    .step.active ~ .step::after,
+    .step.completed ~ .step::after {
+        background: #e0e0e0;
+    }
+
+    .step.completed:not(:last-child)::after {
+        background: #28a745;
+    }
+
 label.required::after {
     content: " *";
     color: red;
-}
-.hover-shadow:hover {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    transition: box-shadow 0.2s ease-in-out;
 }
 
 .form-control:focus,
@@ -32,10 +79,6 @@ label.required::after {
 .card {
     transition: transform 0.2s ease-in-out;
 }
-
-    .card:hover {
-        transform: translateY(-2px);
-    }
 
 .input-group-text {
     background-color: #f8f9fa;

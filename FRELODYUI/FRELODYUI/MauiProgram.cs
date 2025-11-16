@@ -120,6 +120,10 @@ namespace FRELODYUI
                             .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                             .AddHttpMessageHandler<AuthHeaderHandler>();
 
+            builder.Services.AddRefitClient<ISmtpSenderApi>()
+                            .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                            .AddHttpMessageHandler<AuthHeaderHandler>();
+
             builder.Services.AddMauiBlazorWebView();
 
 #if DEBUG

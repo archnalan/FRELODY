@@ -62,7 +62,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #endregion
 
         #region Edit User Profile
-        public async Task<ServiceResult<UpdateUserProfileOutDto>> EditUserProfile(EditUserProfile dto)
+        public async Task<ServiceResult<UpdateUserProfileOutDto>> EditUserProfile(UpdateUserProfile dto)
         {
             try
             {

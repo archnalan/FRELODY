@@ -23,6 +23,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.IdentityModel.JsonWebTokens;
 using FRELODYSHRD.Services;
+using FRELODYLIB.ServiceHandler;
+using FRELODYLIB.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -98,11 +98,11 @@
 
 @code {
     [Parameter] public UpdateUserProfileOutDto? UserProfile { get; set; }
-    [Parameter] public EventCallback<EditUserProfile> OnSave { get; set; }
+    [Parameter] public EventCallback<UpdateUserProfile> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool IsSubmitting { get; set; }
 
-    private EditUserProfile editModel = new();
+    private UpdateUserProfile editModel = new();
     private string profilePreview = "";
     private string coverPreview = "";
 
@@ -115,7 +115,7 @@
             {
                 userName = userName.Split('@')[0];
             }
-            editModel = new EditUserProfile
+            editModel = new UpdateUserProfile
             {
                 Id = UserProfile.Id,
                 FirstName = UserProfile.FirstName,

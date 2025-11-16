@@ -12,7 +12,7 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<UpdateUserProfileOutDto>> GetUserProfile([Query] string userId);
 
         [Put("/api/users/edit-user-profile")]
-        Task<IApiResponse<UpdateUserProfileOutDto>> EditUserProfile([Body] EditUserProfile updateUserProfileInDto);
+        Task<IApiResponse<UpdateUserProfileOutDto>> EditUserProfile([Body] UpdateUserProfile updateUserProfileInDto);
 
         [Get("/api/users/search-users-for-combo-boxes")]
         Task<IApiResponse<PaginationDetails<ComboBoxDto>>> SearchUsersForComboBoxes(

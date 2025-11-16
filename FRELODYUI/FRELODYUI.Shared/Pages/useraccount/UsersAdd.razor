@@ -3,6 +3,7 @@
 @inject ILogger<UsersAdd> _logger
 @inject IAuthApi _authApi
 @inject IUsersApi _usersApi
+@inject ISmtpSenderApi _smtpSender
 
 <PageTitle>@(IsEditMode ? "Edit User" : "Create User")</PageTitle>
 
@@ -26,7 +27,6 @@
                 <button type="button" class="btn-close" @onclick="() => error = string.Empty"></button>
             </div>
         }
-
         @if (!string.IsNullOrEmpty(successMessage))
         {
             <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
@@ -35,17 +35,25 @@
             </div>
         }
 
-        <!-- Profile Information Form -->
+        <!-- Stepper -->
+        <div class="stepper d-flex justify-content-between mb-5">
+            @foreach (var step in steps)
+            {
+                <div class="step flex-fill text-center position-relative">
+                    <div class="step-circle mx-auto @(currentStep > step.Key ? "completed" : (currentStep == step.Key ? "active" : ""))">
+                        @step.Key
+                    </div>
+                    <div class="step-label mt-2">@step.Value</div>
+                </div>
+            }
+        </div>
+
+        <!-- Multi-Step Form -->
         <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-light border-bottom">
-                <h5 class="mb-0 text-primary">
-                    <i class="bi bi-person-circle me-2"></i>Profile Information
-                </h5>
-            </div>
             <div class="card-body p-4">
-                <EditForm Model="profileModel" OnValidSubmit="HandleProfileSubmit">
+                <EditForm EditContext="editContext">
                     <DataAnnotationsValidator />
-                    
+
                     @if (IsEditMode && !string.IsNullOrEmpty(profileModel.Id))
                     {
                         <div class="mb-3">
@@ -54,176 +62,52 @@
                         </div>
                     }
 
-                    <!-- Organization (SuperAdmin only) -->
-                    @if (currentUser != null && currentUser.UserType == UserType.SuperAdmin)
+                    @if (currentStep == StepAccountSetup && !IsEditMode)
                     {
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold">
-                                <i class="bi bi-building me-1"></i>Organization
-                            </label>
-                            <select class="form-select" @bind="profileModel.TenantId">
-                                <option value="">Select a company</option>
-                                @foreach (var tenant in tenants)
-                                {
-                                    <option value="@tenant.Id">@tenant.TenantName</option>
-                                }
-                            </select>
+                        <!-- Step 1: Account Setup (Create Mode Only) -->
+                        <h5 class="mb-4 text-primary"><i class="bi bi-lock me-2"></i>Account Setup</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-12">
+                                <label for="email" class="form-label fw-semibold">
+                                    <i class="bi bi-envelope me-1"></i>Email <span class="text-danger">*</span>
+                                </label>
+                                <InputText id="email" @bind-Value="profileModel.Email" class="form-control" type="email" placeholder="user@example.com" />
+                                <ValidationMessage For="@(() => profileModel.Email)" class="text-danger small" />
+                            </div>
                         </div>
-                    }
-
-                    <!-- Basic Information -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label for="firstName" class="form-label fw-semibold">
-                                First Name <span class="text-danger">*</span>
-                            </label>
-                            <InputText id="firstName" @bind-Value="profileModel.FirstName" class="form-control" placeholder="Enter first name" />
-                            <ValidationMessage For="@(() => profileModel.FirstName)" class="text-danger small" />
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-12">
+                                <label for="userName" class="form-label fw-semibold">
+                                    <i class="bi bi-person me-1"></i>Username <span class="text-danger">*</span>
+                                </label>
+                                <InputText id="userName" @bind-Value="profileModel.UserName" class="form-control" placeholder="username" />
+                                <ValidationMessage For="@(() => profileModel.UserName)" class="text-danger small" />
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label for="lastName" class="form-label fw-semibold">
-                                Last Name <span class="text-danger">*</span>
-                            </label>
-                            <InputText id="lastName" @bind-Value="profileModel.LastName" class="form-control" placeholder="Enter last name" />
-                            <ValidationMessage For="@(() => profileModel.LastName)" class="text-danger small" />
-                        </div>
-                    </div>
-
-                    <!-- Account Credentials -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label for="email" class="form-label fw-semibold">
-                                <i class="bi bi-envelope me-1"></i>Email <span class="text-danger">*</span>
-                            </label>
-                            <InputText id="email" @bind-Value="profileModel.Email" class="form-control" type="email" placeholder="user@example.com" disabled="@IsEditMode" />
-                            <ValidationMessage For="@(() => profileModel.Email)" class="text-danger small" />
-                            @if (IsEditMode)
-                            {
-                                <small class="text-muted">Email cannot be changed</small>
-                            }
-                        </div>
-                        <div class="col-md-6">
-                            <label for="userName" class="form-label fw-semibold">
-                                <i class="bi bi-person me-1"></i>Username <span class="text-danger">*</span>
-                            </label>
-                            <InputText id="userName" @bind-Value="profileModel.UserName" class="form-control" placeholder="username" />
-                            <ValidationMessage For="@(() => profileModel.UserName)" class="text-danger small" />
-                        </div>
-                    </div>
-
-                    <!-- Contact Information -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label for="phoneNumber" class="form-label fw-semibold">
-                                <i class="bi bi-telephone me-1"></i>Phone Number
-                            </label>
-                            <InputText id="phoneNumber" @bind-Value="profileModel.PhoneNumber" class="form-control" placeholder="+1 (555) 000-0000" />
-                            <ValidationMessage For="@(() => profileModel.PhoneNumber)" class="text-danger small" />
-                        </div>
-                        <div class="col-md-6">
-                            <label for="profession" class="form-label fw-semibold">
-                                <i class="bi bi-briefcase me-1"></i>Profession
-                            </label>
-                            <InputText id="profession" @bind-Value="profileModel.Profession" class="form-control" placeholder="e.g., Software Developer" />
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label for="address" class="form-label fw-semibold">
-                            <i class="bi bi-geo-alt me-1"></i>Address
-                        </label>
-                        <InputText id="address" @bind-Value="profileModel.Address" class="form-control" placeholder="Street address, city, state, ZIP" />
-                        <ValidationMessage For="@(() => profileModel.Address)" class="text-danger small" />
-                    </div>
-
-                    <div class="mb-4">
-                        <label for="aboutMe" class="form-label fw-semibold">
-                            <i class="bi bi-info-circle me-1"></i>About Me
-                        </label>
-                        <InputTextArea id="aboutMe" @bind-Value="profileModel.AboutMe" class="form-control" rows="4" placeholder="Tell us about yourself..." />
-                        <ValidationMessage For="@(() => profileModel.AboutMe)" class="text-danger small" />
-                    </div>
-
-                    <!-- Roles Section -->
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-shield-check me-1"></i>Assigned Roles
-                        </label>
-                        <div class="row g-2">
-                            @foreach (var role in availableRoles)
-                            {
-                                <div class="col-md-4">
-                                    <div class="form-check p-3 border rounded hover-shadow">
-                                        <input class="form-check-input" type="checkbox" 
-                                               id="role_@role"
-                                               checked="@(profileModel.AssignedRoles?.Contains(role) == true)"
-                                               @onchange="@((ChangeEventArgs e) => ToggleRole(role, (bool)e.Value!))" />
-                                        <label class="form-check-label w-100" for="role_@role">
-                                            @role
-                                        </label>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </div>
-
-                    <ValidationSummary class="text-danger" />
-
-                    <div class="d-flex justify-content-end gap-2 mt-4">
-                        <button type="button" class="btn btn-outline-secondary px-4" @onclick="NavigateBack" disabled="@isSubmittingProfile">
-                            <i class="bi bi-x-circle me-1"></i>Cancel
-                        </button>
-                        <button type="submit" class="btn btn-primary px-4" disabled="@isSubmittingProfile">
-                            @if (isSubmittingProfile)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
-                            }
-                            <i class="bi bi-@(isSubmittingProfile ? "" : (IsEditMode ? "save" : "plus-circle")) me-1"></i>
-                            @(IsEditMode ? "Update Profile" : "Create User")
-                        </button>
-                    </div>
-                </EditForm>
-            </div>
-        </div>
-
-        <!-- Password Section (Create Mode or Separate Update) -->
-        @if (!IsEditMode)
-        {
-            <!-- Password for New User -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-light border-bottom">
-                    <h5 class="mb-0 text-primary">
-                        <i class="bi bi-key me-2"></i>Set Password
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    <EditForm Model="passwordModel" OnValidSubmit="HandlePasswordSubmit">
-                        <DataAnnotationsValidator />
-                        
-                        <div class="row g-3">
+                        <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <label for="password" class="form-label fw-semibold">
                                     Password <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
-                                    <InputText id="password" @bind-Value="passwordModel.Password" 
-                                               class="form-control" 
-                                               type="@(showPassword ? "text" : "password")" 
+                                    <InputText id="password" @bind-Value="profileModel.Password"
+                                               class="form-control"
+                                               type="@(showPassword ? "text" : "password")"
                                                placeholder="Enter password" />
                                     <button class="btn btn-outline-secondary" type="button" @onclick="TogglePasswordVisibility">
                                         <i class="bi bi-@(showPassword ? "eye-slash" : "eye")"></i>
                                     </button>
                                 </div>
-                                <ValidationMessage For="@(() => passwordModel.Password)" class="text-danger small" />
+                                <ValidationMessage For="@(() => profileModel.Password)" class="text-danger small" />
                                 <small class="text-muted">Minimum 4 characters</small>
                             </div>
                             <div class="col-md-6">
                                 <label for="confirmPassword" class="form-label fw-semibold">
                                     Confirm Password <span class="text-danger">*</span>
                                 </label>
-                                <InputText id="confirmPassword" @bind-Value="confirmPassword" 
-                                           class="form-control" 
-                                           type="@(showPassword ? "text" : "password")" 
+                                <InputText id="confirmPassword" @bind-Value="confirmPassword"
+                                           class="form-control"
+                                           type="@(showPassword ? "text" : "password")"
                                            placeholder="Re-enter password" />
                                 @if (!string.IsNullOrEmpty(passwordMismatchError))
                                 {
@@ -231,55 +115,187 @@
                                 }
                             </div>
                         </div>
-                    </EditForm>
-                </div>
-            </div>
-        }
-        else
-        {
-            <!-- Change Password Section (Edit Mode) -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-light border-bottom d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 text-primary">
-                        <i class="bi bi-shield-lock me-2"></i>Change Password
-                    </h5>
-                    @if (!showPasswordFields)
-                    {
-                        <button class="btn btn-sm btn-outline-primary" @onclick="() => showPasswordFields = true">
-                            <i class="bi bi-key me-1"></i>Change Password
-                        </button>
                     }
-                </div>
-                @if (showPasswordFields)
+
+                    @if (currentStep == StepEmailVerify && !IsEditMode)
+                    {
+                        <!-- Email Verification Step -->
+                        <h5 class="mb-4 text-primary"><i class="bi bi-envelope-check me-2"></i>Email Verification</h5>
+                        <p>We have sent a 6-digit verification code to <strong>@profileModel.Email</strong>. Please enter it below.</p>
+                        <div class="mb-4">
+                            <label for="emailCode" class="form-label fw-semibold">Verification Code <span class="text-danger">*</span></label>
+                            <InputText id="emailCode" @bind-Value="enteredEmailCode" class="form-control" placeholder="Enter 6-digit code" maxlength="6" />
+                        </div>
+                        <small class="text-muted">Didn't receive the code? <button type="button" class="btn btn-link p-0" @onclick="ResendEmailCode">Resend</button></small>
+                    }
+
+                    @if (currentStep == StepProfileDetails)
+                    {
+                        <!-- Step: Profile Details -->
+                        <h5 class="mb-4 text-primary"><i class="bi bi-person-circle me-2"></i>Profile Details</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="firstName" class="form-label fw-semibold">
+                                    First Name <span class="text-danger">*</span>
+                                </label>
+                                <InputText id="firstName" @bind-Value="profileModel.FirstName" class="form-control" placeholder="Enter first name" />
+                                <ValidationMessage For="@(() => profileModel.FirstName)" class="text-danger small" />
+                            </div>
+                            <div class="col-md-6">
+                                <label for="lastName" class="form-label fw-semibold">
+                                    Last Name <span class="text-danger">*</span>
+                                </label>
+                                <InputText id="lastName" @bind-Value="profileModel.LastName" class="form-control" placeholder="Enter last name" />
+                                <ValidationMessage For="@(() => profileModel.LastName)" class="text-danger small" />
+                            </div>
+                        </div>
+                        @if (IsEditMode)
+                        {
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label fw-semibold">
+                                        <i class="bi bi-envelope me-1"></i>Email <span class="text-danger">*</span>
+                                    </label>
+                                    <InputText id="email" @bind-Value="profileModel.Email" class="form-control" type="email" placeholder="user@example.com" disabled="true" />
+                                    <small class="text-muted">Email cannot be changed</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="userName" class="form-label fw-semibold">
+                                        <i class="bi bi-person me-1"></i>Username <span class="text-danger">*</span>
+                                    </label>
+                                    <InputText id="userName" @bind-Value="profileModel.UserName" class="form-control" placeholder="username" />
+                                    <ValidationMessage For="@(() => profileModel.UserName)" class="text-danger small" />
+                                </div>
+                            </div>
+                        }
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="phoneNumber" class="form-label fw-semibold">
+                                    <i class="bi bi-telephone me-1"></i>Phone Number
+                                </label>
+                                <InputText id="phoneNumber" @bind-Value="profileModel.PhoneNumber" class="form-control" placeholder="+1 (555) 000-0000" />
+                                <ValidationMessage For="@(() => profileModel.PhoneNumber)" class="text-danger small" />
+                            </div>
+                            <div class="col-md-6">
+                                <label for="profession" class="form-label fw-semibold">
+                                    <i class="bi bi-briefcase me-1"></i>Profession
+                                </label>
+                                <InputText id="profession" @bind-Value="profileModel.Profession" class="form-control" placeholder="e.g., Software Developer" />
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label for="address" class="form-label fw-semibold">
+                                <i class="bi bi-geo-alt me-1"></i>Address
+                            </label>
+                            <InputText id="address" @bind-Value="profileModel.Address" class="form-control" placeholder="Street address, city, state, ZIP" />
+                            <ValidationMessage For="@(() => profileModel.Address)" class="text-danger small" />
+                        </div>
+                        <div class="mb-4">
+                            <label for="aboutMe" class="form-label fw-semibold">
+                                <i class="bi bi-info-circle me-1"></i>About Me
+                            </label>
+                            <InputTextArea id="aboutMe" @bind-Value="profileModel.AboutMe" class="form-control" rows="4" placeholder="Tell us about yourself..." />
+                            <ValidationMessage For="@(() => profileModel.AboutMe)" class="text-danger small" />
+                        </div>
+                    }
+
+                    @if (currentStep == StepPhoneVerify && !IsEditMode)
+                    {
+                        <!-- Phone Verification Step -->
+                        <h5 class="mb-4 text-primary"><i class="bi bi-phone me-2"></i>Phone Verification</h5>
+                        @if (!string.IsNullOrEmpty(profileModel.PhoneNumber))
+                        {
+                            <p>We have sent a 6-digit verification code to <strong>@profileModel.PhoneNumber</strong> via email (TODO: implement SMS). Please enter it below.</p>
+                            <div class="mb-4">
+                                <label for="phoneCode" class="form-label fw-semibold">Verification Code <span class="text-danger">*</span></label>
+                                <InputText id="phoneCode" @bind-Value="enteredPhoneCode" class="form-control" placeholder="Enter 6-digit code" maxlength="6" />
+                            </div>
+                            <small class="text-muted">Didn't receive the code? <button type="button" class="btn btn-link p-0" @onclick="ResendPhoneCode">Resend</button></small>
+                        }
+                        else
+                        {
+                            <p>No phone number provided. Click next to continue.</p>
+                        }
+                    }
+
+                    @if (currentStep == StepAccessControl)
+                    {
+                        <!-- Step: Access Control -->
+                        <h5 class="mb-4 text-primary"><i class="bi bi-shield-check me-2"></i>Access Control</h5>
+                        @if (currentUser != null && currentUser.UserType == UserType.SuperAdmin)
+                        {
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-building me-1"></i>Organization
+                                </label>
+                                <select class="form-select" @bind="profileModel.TenantId">
+                                    <option value="">Select a company</option>
+                                    @foreach (var tenant in tenants)
+                                    {
+                                        <option value="@tenant.Id">@tenant.TenantName</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-shield-check me-1"></i>Assigned Roles
+                            </label>
+                            <div class="row g-2">
+                                @foreach (var role in availableRoles)
+                                {
+                                    <div class="col-md-4">
+                                        <div class="form-check p-3 border rounded hover-shadow">
+                                            <input class="form-check-input" type="checkbox" id="role-@role" checked="@profileModel.AssignedRoles?.Contains(role)" @onchange="(e) => ToggleRole(role, (bool)e.Value)" />
+                                            <label class="form-check-label ms-2" for="role-@role">@role</label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Navigation Buttons -->
+                    <div class="d-flex justify-content-between mt-4">
+                        @if (currentStep > 1)
+                        {
+                            <button type="button" class="btn btn-outline-secondary" @onclick="PreviousStep" disabled="@(isSubmittingProfile || isChangingPassword)">
+                                <i class="bi bi-arrow-left me-1"></i> Previous
+                            </button>
+                        }
+                        @if (currentStep < steps.Count)
+                        {
+                            <button type="button" class="btn btn-primary ms-auto" @onclick="NextStep" disabled="@(isSubmittingProfile || isChangingPassword)">
+                                Next <i class="bi bi-arrow-right me-1"></i>
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-primary ms-auto" @onclick="HandleProfileSubmit" disabled="@(isSubmittingProfile || isChangingPassword)">
+                                @if (isSubmittingProfile)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bi bi-save me-1"></i> @(IsEditMode ? "Update Profile" : "Create User")
+                            </button>
+                        }
+                    </div>
+                </EditForm>
+
+                @if (IsEditMode && currentStep == StepProfileDetails && showPasswordFields)
                 {
-                    <div class="card-body p-4">
+                    <div class="mt-5">
+                        <h5 class="mb-4 text-primary"><i class="bi bi-key me-2"></i>Change Password</h5>
                         <EditForm Model="passwordChangeModel" OnValidSubmit="HandlePasswordChange">
                             <DataAnnotationsValidator />
-                            
-                            <div class="mb-3">
-                                <label for="currentPassword" class="form-label fw-semibold">
-                                    Current Password <span class="text-danger">*</span>
-                                </label>
-                                <div class="input-group">
-                                    <InputText id="currentPassword" @bind-Value="passwordChangeModel.OldPassword" 
-                                               class="form-control" 
-                                               type="@(showPassword ? "text" : "password")" 
-                                               placeholder="Enter current password" />
-                                    <button class="btn btn-outline-secondary" type="button" @onclick="TogglePasswordVisibility">
-                                        <i class="bi bi-@(showPassword ? "eye-slash" : "eye")"></i>
-                                    </button>
-                                </div>
-                                <ValidationMessage For="@(() => passwordChangeModel.OldPassword)" class="text-danger small" />
-                            </div>
-
                             <div class="row g-3 mb-4">
                                 <div class="col-md-6">
                                     <label for="newPassword" class="form-label fw-semibold">
                                         New Password <span class="text-danger">*</span>
                                     </label>
-                                    <InputText id="newPassword" @bind-Value="passwordChangeModel.Password" 
-                                               class="form-control" 
-                                               type="@(showPassword ? "text" : "password")" 
+                                    <InputText id="newPassword" @bind-Value="passwordChangeModel.Password"
+                                               class="form-control"
+                                               type="@(showPassword ? "text" : "password")"
                                                placeholder="Enter new password" />
                                     <ValidationMessage For="@(() => passwordChangeModel.Password)" class="text-danger small" />
                                 </div>
@@ -287,9 +303,9 @@
                                     <label for="confirmNewPassword" class="form-label fw-semibold">
                                         Confirm New Password <span class="text-danger">*</span>
                                     </label>
-                                    <InputText id="confirmNewPassword" @bind-Value="confirmNewPassword" 
-                                               class="form-control" 
-                                               type="@(showPassword ? "text" : "password")" 
+                                    <InputText id="confirmNewPassword" @bind-Value="confirmNewPassword"
+                                               class="form-control"
+                                               type="@(showPassword ? "text" : "password")"
                                                placeholder="Re-enter new password" />
                                     @if (!string.IsNullOrEmpty(passwordMismatchError))
                                     {
@@ -297,9 +313,7 @@
                                     }
                                 </div>
                             </div>
-
                             <ValidationSummary class="text-danger mb-3" />
-
                             <div class="d-flex justify-content-end gap-2">
                                 <button type="button" class="btn btn-outline-secondary" @onclick="CancelPasswordChange" disabled="@isChangingPassword">
                                     Cancel
@@ -317,10 +331,9 @@
                     </div>
                 }
             </div>
-        }
+        </div>
     </div>
 </div>
-
 @code {
     [Parameter] public string? UserId { get; set; }
 
@@ -334,32 +347,78 @@
     private string confirmPassword = string.Empty;
     private string confirmNewPassword = string.Empty;
     private string passwordMismatchError = string.Empty;
-
-    private UpdateUserProfile profileModel = new();
-    private CreatePasswordModel passwordModel = new();
+    private string emailCode = string.Empty;
+    private string enteredEmailCode = string.Empty;
+    private string phoneCode = string.Empty;
+    private string enteredPhoneCode = string.Empty;
+    private int currentStep = 1;
+    private int StepAccountSetup;
+    private int StepEmailVerify;
+    private int StepProfileDetails;
+    private int StepPhoneVerify;
+    private int StepAccessControl;
+    private Dictionary<int, string> steps = new();
+    private CreateUserProfile profileModel = new();
     private ResetPasswordDto passwordChangeModel = new();
     private List<string> availableRoles = new(UserRoles.AllRoles);
     private List<TenantDto> tenants = new();
     private UserClaimsDto? currentUser = new();
+    private EditContext? editContext;
+    private EmailAddressAttribute emailValidator = new();
 
     protected override async Task OnInitializedAsync()
     {
+        editContext = new EditContext(profileModel);
         currentUser = await _globalAuth.GetLoggedInUserAsync();
         await LoadTenants();
-        
+
         if (IsEditMode)
         {
             await LoadUser();
+            steps = new Dictionary<int, string>
+            {
+                {1, "Profile Details"},
+                {2, "Access Control"}
+            };
+            StepProfileDetails = 1;
+            StepAccessControl = 2;
         }
         else
         {
             // Initialize with default values for new user
-            profileModel = new UpdateUserProfile
+            profileModel = new CreateUserProfile
             {
                 AssignedRoles = new List<string> { "User" }
             };
-            passwordModel = new CreatePasswordModel();
+
+            steps = new Dictionary<int, string>
+            {
+                {1, "Account Setup"},
+                {2, "Email Verification"},
+                {3, "Profile Details"},
+                {4, "Phone Verification"},
+                {5, "Access Control"}
+            };
+            StepAccountSetup = 1;
+            StepEmailVerify = 2;
+            StepProfileDetails = 3;
+            StepPhoneVerify = 4;
+            StepAccessControl = 5;
         }
+        //test details
+        profileModel = new CreateUserProfile
+        {
+            FirstName = "John",
+            LastName = "Doe",
+            Email = "johndoe@example.com",
+            UserName = "johndoe",
+            PhoneNumber = "+1 (555) 123-4567",
+            Address = "123 Main St, Anytown, USA",
+            AboutMe = "A passionate developer with a love for coding.",
+            Profession = "Software Developer",
+            AssignedRoles = new List<string> { "User" }
+        };
+
     }
 
     protected override async Task OnParametersSetAsync()
@@ -380,7 +439,7 @@
             if (response.IsSuccessStatusCode && response.Content != null)
             {
                 var userProfile = response.Content;
-                profileModel = new UpdateUserProfile
+                profileModel = new CreateUserProfile
                 {
                     Id = userProfile.Id,
                     FirstName = userProfile.FirstName,
@@ -394,7 +453,7 @@
                     AssignedRoles = userProfile.AssignedRoles ?? new(),
                     TenantId = userProfile.TenantId
                 };
-                
+
                 // Initialize password change model with user email
                 passwordChangeModel = new ResetPasswordDto
                 {
@@ -435,16 +494,37 @@
 
     private async Task HandleProfileSubmit()
     {
+        error = string.Empty;
+        passwordMismatchError = string.Empty;
+        if (editContext == null || !editContext.Validate())
+        {
+            error = "Please fill in all required fields correctly.";
+            return;
+        }
+
         try
         {
-            error = string.Empty;
             isSubmittingProfile = true;
 
             if (IsEditMode)
             {
-                // Update existing user profile
-                var response = await _usersApi.EditUserProfile(profileModel);
-                
+                var profileEdit = new UpdateUserProfile
+                {
+                    Id = profileModel.Id,
+                    FirstName = profileModel.FirstName,
+                    LastName = profileModel.LastName,
+                    PhoneNumber = profileModel.PhoneNumber,
+                    Address = profileModel.Address,
+                    AboutMe = profileModel.AboutMe,
+                    Profession = profileModel.Profession,
+                    ProfilePicUrl = profileModel.ProfilePicUrl,
+                    CoverPhotoUrl = profileModel.CoverPhotoUrl,
+                    AssignedRoles = profileModel.AssignedRoles,
+                    TenantId = profileModel.TenantId
+                };
+
+                var response = await _usersApi.EditUserProfile(profileEdit);
+
                 if (response.IsSuccessStatusCode)
                 {
                     successMessage = "Profile updated successfully!";
@@ -459,13 +539,13 @@
             else
             {
                 // Validate password for new user
-                if (string.IsNullOrEmpty(passwordModel.Password))
+                if (string.IsNullOrEmpty(profileModel.Password))
                 {
                     error = "Password is required for new users.";
                     return;
                 }
 
-                if (passwordModel.Password != confirmPassword)
+                if (profileModel.Password != confirmPassword)
                 {
                     passwordMismatchError = "Passwords do not match.";
                     return;
@@ -478,7 +558,7 @@
                     LastName = profileModel.LastName,
                     Email = profileModel.Email ?? string.Empty,
                     UserName = profileModel.UserName ?? string.Empty,
-                    Password = passwordModel.Password,
+                    Password = profileModel.Password,
                     PhoneNumber = profileModel.PhoneNumber,
                     Address = profileModel.Address,
                     AboutMe = profileModel.AboutMe,
@@ -487,9 +567,9 @@
                     AssignedRoles = profileModel.AssignedRoles,
                     TenantId = profileModel.TenantId
                 };
-                
+
                 var response = await _authApi.CreateUser(createUserDto);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     successMessage = "User created successfully!";
@@ -514,12 +594,6 @@
         }
     }
 
-    private async Task HandlePasswordSubmit()
-    {
-        // This is handled in HandleProfileSubmit for new users
-        await Task.CompletedTask;
-    }
-
     private async Task HandlePasswordChange()
     {
         try
@@ -536,7 +610,7 @@
             }
 
             var response = await _authApi.ResetPassword(passwordChangeModel);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 successMessage = "Password changed successfully!";
@@ -577,7 +651,7 @@
     private void ToggleRole(string role, bool isSelected)
     {
         profileModel.AssignedRoles ??= new List<string>();
-        
+
         if (isSelected)
         {
             if (!profileModel.AssignedRoles.Contains(role))
@@ -591,17 +665,179 @@
         }
     }
 
+    private async Task NextStep()
+    {
+        error = string.Empty;
+        passwordMismatchError = string.Empty;
+
+        if (!IsEditMode)
+        {
+            if (currentStep == StepAccountSetup)
+            {
+                if (string.IsNullOrEmpty(profileModel.Email) || !emailValidator.IsValid(profileModel.Email))
+                {
+                    error = "Please provide a valid email address.";
+                    return;
+                }
+                if (string.IsNullOrEmpty(profileModel.UserName))
+                {
+                    error = "Username is required.";
+                    return;
+                }
+                if (string.IsNullOrEmpty(profileModel.Password) || profileModel.Password.Length < 4)
+                {
+                    error = "Password must be at least 4 characters.";
+                    return;
+                }
+                if (profileModel.Password != confirmPassword)
+                {
+                    passwordMismatchError = "Passwords do not match.";
+                    return;
+                }
+                await SendVerificationCodeToEmail();
+                currentStep++;
+                return;
+            }
+            else if (currentStep == StepEmailVerify)
+            {
+                if (enteredEmailCode != emailCode)
+                {
+                    error = "Invalid verification code.";
+                    return;
+                }
+                enteredEmailCode = string.Empty;
+                currentStep++;
+                return;
+            }
+            else if (currentStep == StepProfileDetails)
+            {
+                if (string.IsNullOrEmpty(profileModel.FirstName))
+                {
+                    error = "First name is required.";
+                    return;
+                }
+                if (string.IsNullOrEmpty(profileModel.LastName))
+                {
+                    error = "Last name is required.";
+                    return;
+                }
+                if (!string.IsNullOrEmpty(profileModel.PhoneNumber))
+                {
+                    await SendVerificationCodeToPhone();
+                }
+                currentStep++;
+                return;
+            }
+            else if (currentStep == StepPhoneVerify)
+            {
+                if (!string.IsNullOrEmpty(profileModel.PhoneNumber) && enteredPhoneCode != phoneCode)
+                {
+                    error = "Invalid verification code.";
+                    return;
+                }
+                enteredPhoneCode = string.Empty;
+                currentStep++;
+                return;
+            }
+        }
+        else
+        {
+            if (currentStep == StepProfileDetails)
+            {
+                if (string.IsNullOrEmpty(profileModel.FirstName))
+                {
+                    error = "First name is required.";
+                    return;
+                }
+                if (string.IsNullOrEmpty(profileModel.LastName))
+                {
+                    error = "Last name is required.";
+                    return;
+                }
+                currentStep++;
+                return;
+            }
+        }
+
+        currentStep++;
+    }
+
+    private void PreviousStep()
+    {
+        error = string.Empty;
+        passwordMismatchError = string.Empty;
+        currentStep--;
+    }
+
+    private async Task SendVerificationCodeToEmail()
+    {
+        try
+        {
+            var random = new Random();
+            emailCode = random.Next(100000, 999999).ToString();
+
+            var emailDto = new EmailDto(true)
+            {
+                ToEmail = profileModel.Email,
+                Subject = "Email Verification Code",
+                Body = $"Your 6-digit verification code is: {emailCode}<br/><br/>This code will expire in 10 minutes."
+            };
+
+            var result = await _smtpSender.SendMail(emailDto);
+            if (!result.IsSuccessStatusCode)
+            {
+                error = "Failed to send verification code. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending email verification code");
+            error = "An error occurred while sending the verification code.";
+        }
+    }
+
+    private async Task ResendEmailCode()
+    {
+        await SendVerificationCodeToEmail();
+        successMessage = "Verification code resent successfully.";
+    }
+
+    private async Task SendVerificationCodeToPhone()
+    {
+        try
+        {
+            var random = new Random();
+            phoneCode = random.Next(100000, 999999).ToString();
+
+            // TODO: Implement actual SMS sending here. For now, sending via email as placeholder.
+            var emailDto = new EmailDto(true)
+            {
+                ToEmail = profileModel.Email,
+                Subject = "Phone Verification Code",
+                Body = $"Your 6-digit phone verification code is: {phoneCode}<br/><br/>This code will expire in 10 minutes. (Sent via email as SMS is not implemented yet)."
+            };
+
+            var result = await _smtpSender.SendMail(emailDto);
+            if (!result.IsSuccessStatusCode)
+            {
+                error = "Failed to send verification code. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending phone verification code");
+            error = "An error occurred while sending the verification code.";
+        }
+    }
+
+    private async Task ResendPhoneCode()
+    {
+        await SendVerificationCodeToPhone();
+        successMessage = "Verification code resent successfully.";
+    }
+
     private async void NavigateBack()
     {
         await JsRt.InvokeVoidAsync("goBack");
     }
-
-    // Helper class for password creation
-    public class CreatePasswordModel
-    {
-        [Required]
-        [MinLength(4, ErrorMessage = "Password must be at least 4 characters")]
-        public string Password { get; set; } = string.Empty;
-    }
 }
-

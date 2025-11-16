@@ -6,6 +6,7 @@ using FRELODYAPP.Dtos.UserDtos;
 using FRELODYAPP.Extensions;
 using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
+using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Dtos.UserDtos;
 using Google.Apis.Auth;
@@ -91,10 +92,13 @@ namespace FRELODYAPP.Data
                     return ServiceResult<string>.Failure(new ForbiddenException("Not Authorized Origin"));
                 }
 
+                var emailResult = await _emailSmtpService.SendPasswordResetEmailAsync(emailAddress, requestUrl);
+                if (!emailResult.IsSuccess)
+                {
+                    _logger.LogError("Failed to send password reset email: {Error}", emailResult.Error);
+                    return ServiceResult<string>.Failure(new ServerErrorException("Failed to send reset email"));
+                }
                 var user = await _userManager.FindByEmailAsync(emailAddress);
-                if (user == null) return ServiceResult<string>.Failure(new NotFoundException("User does not exist"));
-                _emailSmtpService.sendPasswordResetEmail(user, requestUrl);
-
                 //log security event
                 await _securityUtilityService.LogSecurityEvent(user.Id,
                 "PasswordResetInitiated",
@@ -276,12 +280,12 @@ namespace FRELODYAPP.Data
                     if (user.TenantId == null && user.UserType != UserType.SuperAdmin) return ServiceResult<LoginResponseDto>.Failure(
                         new BadRequestException($"Invalid Tenant. contact {_config["ApplicationInfo:SupportEmail"]} for support"));
 
-                    if( !string.IsNullOrEmpty(userLogin.PhoneNumber))
+                    if (!string.IsNullOrEmpty(userLogin.PhoneNumber))
                     {
                         var phoneUpdateResult = await _userService.UpdateUserPhoneNumberAsync(user.Id, userLogin.PhoneNumber);
                         if (!phoneUpdateResult.IsSuccess)
                         {
-                           return ServiceResult<LoginResponseDto>.Failure(phoneUpdateResult.Error);
+                            return ServiceResult<LoginResponseDto>.Failure(phoneUpdateResult.Error);
                         }
                     }
 
@@ -300,9 +304,9 @@ namespace FRELODYAPP.Data
 
                     // Send email notification (async)
                     await SendLoginNotification(user);
-                    
+
                     //TODO: Check Browser cookie for new devices before sending Email!
-                    
+
                     return ServiceResult<LoginResponseDto>.Success(token);
                 }
             }
@@ -347,7 +351,7 @@ namespace FRELODYAPP.Data
                 );
 
                 await SendLoginNotification(user);
-                
+
                 return ServiceResult<LoginResponseDto>.Success(token);
 
             }
@@ -367,7 +371,11 @@ namespace FRELODYAPP.Data
             emailDto.ToEmail = userFromDb.Email;
             emailDto.Body = $"A new login into your account with {_config["ApplicationInfo:Name"]} has been detetected at {DateTime.UtcNow}UTC. If this wasn't you, You can take some steps to secure your account such as changing your account password with us or contacting us for help. <br/><br/>If this was you, then you can Ignore this message.<br/><br/>{_config["ApplicationInfo:SupportUrl"]} ";
 
-            _emailSmtpService.SendMail(emailDto);
+            var emailResult = await _emailSmtpService.SendMailAsync(emailDto);
+            if (!emailResult.IsSuccess)
+            {
+                _logger.LogError("Failed to send login notification email: {Error}", emailResult.Error);
+            }
 
             //return Login token
             return ServiceResult<LoginResponseDto>.Success(token);
@@ -383,7 +391,7 @@ namespace FRELODYAPP.Data
 
             //submethod to allow breakpoint hitting in an arrow function
             async Task<ServiceResult<CreateUserResponseDto>> CreateUserWithRoleAsync([Required] CreateUserDto createUserDto)
-            {                
+            {
 
                 using (var scope = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable))
                 {
@@ -396,14 +404,14 @@ namespace FRELODYAPP.Data
 
                         if (usernameExists)
                         {
-                            await HandleUserNameConflict(createUserDto,_tenantId);
+                            await HandleUserNameConflict(createUserDto, _tenantId);
                         }
 
                         User newUser = createUserDto.Adapt<User>();
                         var result = await _userManager.CreateAsync(newUser, createUserDto.Password);
                         if (result.Succeeded)
                         {
-                            if(createUserDto.AssignedRoles == null)
+                            if (createUserDto.AssignedRoles == null)
                             {
                                 createUserDto.AssignedRoles = new List<string> { "User" };
                             }
@@ -441,12 +449,12 @@ namespace FRELODYAPP.Data
                     {
                         if (IsDuplicateUsernameException(ex))
                         {
-                           return await HandleUserNameConflict(createUserDto, _tenantId);
+                            return await HandleUserNameConflict(createUserDto, _tenantId);
                         }
                         _logger.LogError("Error while creating user. {ex}", ex);
                         return ServiceResult<CreateUserResponseDto>.Failure(new ServerErrorException("Error while creating user. Please try again later"));
                     }
-                    
+
                 }
             }
         }
@@ -624,7 +632,7 @@ namespace FRELODYAPP.Data
                     objFromDb.AboutMe = updateUserProfile.AboutMe;
                     objFromDb.Contact = updateUserProfile.PhoneNumber;
                     objFromDb.Address = updateUserProfile.Address;
-                    objFromDb.UserName = updateUserProfile.UserName;
+                    //objFromDb.UserName = updateUserProfile.UserName;
 
                     //TODO: Updating an Email
 
@@ -896,8 +904,8 @@ namespace FRELODYAPP.Data
             {
                 user = await _context.Users.IgnoreQueryFilters()
                     .FirstOrDefaultAsync(u => u.UserName == userLogin.Email);
-                
-                if(user == null && _securityUtilityService.NormalizePhoneNumber(userLogin.Email).Length > 5)
+
+                if (user == null && _securityUtilityService.NormalizePhoneNumber(userLogin.Email).Length > 5)
                 {
                     var normalizedPhone = _securityUtilityService.NormalizePhoneNumber(userLogin.Email);
                     user = await _context.Users.IgnoreQueryFilters()
@@ -1042,9 +1050,7 @@ namespace FRELODYAPP.Data
                        $"If this wasn't you, please secure your account with {_config["ApplicationInfo:Name"]}  by changing your password. " +
                        $"Contact support if needed.<br/><br/>{_config["ApplicationInfo:SupportUrl"]}"
             };
-            _emailSmtpService.SendMail(emailDto);
-            //Task.Run(() => _emailSmtpController.SendMail(emailDto));
-            await Task.CompletedTask;
+            await _emailSmtpService.SendMailAsync(emailDto);
         }
         public class ResultObject
         {

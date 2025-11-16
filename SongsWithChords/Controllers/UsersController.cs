@@ -35,7 +35,7 @@ namespace FRELODYAPIs.Controllers
 
         [HttpPut]
         [ProducesResponseType(typeof(UpdateUserProfileOutDto), 200)]
-        public async Task<IActionResult> EditUserProfile([FromBody] EditUserProfile updateUserProfileInDto)
+        public async Task<IActionResult> EditUserProfile([FromBody] UpdateUserProfile updateUserProfileInDto)
         {
             var result = await _userService.EditUserProfile(updateUserProfileInDto);
             if (!result.IsSuccess)

@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYAPP.Dtos.UserDtos
 {
-    public class EditUserProfile
+    public class UpdateUserProfile
     {
         public string? Id { get; set; }
         [Required]
@@ -22,7 +22,7 @@ namespace FRELODYAPP.Dtos.UserDtos
         public List<string>? AssignedRoles { get; set; }
 
     }
-    public class UpdateUserProfile : EditUserProfile
+    public class CreateUserProfile : UpdateUserProfile
     {
 
         [Required]
