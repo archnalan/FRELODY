@@ -4,6 +4,7 @@
 @inject IAuthApi _authApi
 @inject IUsersApi _usersApi
 @inject ISmtpSenderApi _smtpSender
+@implements IDisposable
 
 <PageTitle>@(IsEditMode ? "Edit User" : "Create User")</PageTitle>
 
@@ -40,10 +41,35 @@
             @foreach (var step in steps)
             {
                 <div class="step flex-fill text-center position-relative">
-                    <div class="step-circle mx-auto @(currentStep > step.Key ? "completed" : (currentStep == step.Key ? "active" : ""))">
-                        @step.Key
-                    </div>
-                    <div class="step-label mt-2">@step.Value</div>
+                    @if (step.Key < currentStep || (step.Key == currentStep + 1 && CanNavigateToStep(step.Key)))
+                    {
+                        <button class="step-circle mx-auto @GetStepCircleClass(step.Key) btn p-0 border-0 bg-transparent"
+                                @onclick="() => NavigateToStep(step.Key)"
+                                disabled="@(!CanNavigateToStep(step.Key))">
+                            @if (currentStep > step.Key)
+                            {
+                                <i class="bi bi-check text-white"></i>
+                            }
+                            else
+                            {
+                                @step.Key
+                            }
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="step-circle mx-auto @GetStepCircleClass(step.Key)">
+                            @if (currentStep > step.Key)
+                            {
+                                <i class="bi bi-check text-white"></i>
+                            }
+                            else
+                            {
+                                @step.Key
+                            }
+                        </div>
+                    }
+                    <div class="step-label mt-2 @GetStepLabelClass(step.Key)">@step.Value</div>
                 </div>
             }
         </div>
@@ -126,7 +152,19 @@
                             <label for="emailCode" class="form-label fw-semibold">Verification Code <span class="text-danger">*</span></label>
                             <InputText id="emailCode" @bind-Value="enteredEmailCode" class="form-control" placeholder="Enter 6-digit code" maxlength="6" />
                         </div>
-                        <small class="text-muted">Didn't receive the code? <button type="button" class="btn btn-link p-0" @onclick="ResendEmailCode">Resend</button></small>
+                        <small class="text-muted">
+                            Didn't receive the code?
+                            <button type="button" class="btn btn-link p-0 ms-1" @onclick="ResendEmailCode" disabled="@(emailResendCountdown > 0)">
+                                @if (emailResendCountdown > 0)
+                                {
+                                    @($"Resend in {emailResendCountdown}s")
+                                }
+                                else
+                                {
+                                    @("Resend")
+                                }
+                            </button>
+                        </small>
                     }
 
                     @if (currentStep == StepProfileDetails)
@@ -210,7 +248,19 @@
                                 <label for="phoneCode" class="form-label fw-semibold">Verification Code <span class="text-danger">*</span></label>
                                 <InputText id="phoneCode" @bind-Value="enteredPhoneCode" class="form-control" placeholder="Enter 6-digit code" maxlength="6" />
                             </div>
-                            <small class="text-muted">Didn't receive the code? <button type="button" class="btn btn-link p-0" @onclick="ResendPhoneCode">Resend</button></small>
+                            <small class="text-muted">
+                                Didn't receive the code?
+                                <button type="button" class="btn btn-link p-0 ms-1" @onclick="ResendPhoneCode" disabled="@(phoneResendCountdown > 0)">
+                                    @if (phoneResendCountdown > 0)
+                                    {
+                                        @($"Resend in {phoneResendCountdown}s")
+                                    }
+                                    else
+                                    {
+                                        @("Resend")
+                                    }
+                                </button>
+                            </small>
                         }
                         else
                         {
@@ -334,6 +384,12 @@
         </div>
     </div>
 </div>
+
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
 @code {
     [Parameter] public string? UserId { get; set; }
 
@@ -365,6 +421,11 @@
     private UserClaimsDto? currentUser = new();
     private EditContext? editContext;
     private EmailAddressAttribute emailValidator = new();
+
+    private int emailResendCountdown = 0;
+    private int phoneResendCountdown = 0;
+    private Timer? emailResendTimer;
+    private Timer? phoneResendTimer;
 
     protected override async Task OnInitializedAsync()
     {
@@ -706,6 +767,7 @@
                     return;
                 }
                 enteredEmailCode = string.Empty;
+                successMessage = string.Empty;
                 currentStep++;
                 return;
             }
@@ -725,6 +787,11 @@
                 {
                     await SendVerificationCodeToPhone();
                 }
+                else
+                {
+                    currentStep++;
+                }
+                successMessage = string.Empty;
                 currentStep++;
                 return;
             }
@@ -769,6 +836,38 @@
         currentStep--;
     }
 
+    private bool CanNavigateToStep(int targetStep)
+    {
+        // Allow navigation to previous steps and the immediate next step
+        return targetStep <= currentStep || targetStep == currentStep + 1;
+    }
+
+    private void NavigateToStep(int targetStep)
+    {
+        if (CanNavigateToStep(targetStep))
+        {
+            error = string.Empty;
+            passwordMismatchError = string.Empty;
+            currentStep = targetStep;
+        }
+    }
+
+    private string GetStepCircleClass(int step)
+    {
+        if (currentStep > step)
+            return "completed";
+        if (currentStep == step)
+            return "active";
+        return "";
+    }
+
+    private string GetStepLabelClass(int step)
+    {
+        if (step <= currentStep)
+            return "fw-semibold text-dark";
+        return "text-muted";
+    }
+
     private async Task SendVerificationCodeToEmail()
     {
         try
@@ -780,13 +879,18 @@
             {
                 ToEmail = profileModel.Email,
                 Subject = "Email Verification Code",
-                Body = $"Your 6-digit verification code is: {emailCode}<br/><br/>This code will expire in 10 minutes."
+                Body = $"Your 6-digit verification code is: <h2>{emailCode}</h2><br/>This code will expire in 5 minutes."
             };
 
             var result = await _smtpSender.SendMail(emailDto);
             if (!result.IsSuccessStatusCode)
             {
                 error = "Failed to send verification code. Please try again.";
+            }
+            else
+            {
+                successMessage = "Verification code sent successfully.";
+                StartEmailResendTimer();
             }
         }
         catch (Exception ex)
@@ -798,8 +902,11 @@
 
     private async Task ResendEmailCode()
     {
-        await SendVerificationCodeToEmail();
-        successMessage = "Verification code resent successfully.";
+        error = string.Empty;
+        if (emailResendCountdown == 0)
+        {
+            await SendVerificationCodeToEmail();
+        }
     }
 
     private async Task SendVerificationCodeToPhone()
@@ -814,13 +921,17 @@
             {
                 ToEmail = profileModel.Email,
                 Subject = "Phone Verification Code",
-                Body = $"Your 6-digit phone verification code is: {phoneCode}<br/><br/>This code will expire in 10 minutes. (Sent via email as SMS is not implemented yet)."
+                Body = $"Your 6-digit verification code is: <h2>{phoneCode}</h2><br/>This code will expire in 5 minutes."
             };
 
             var result = await _smtpSender.SendMail(emailDto);
             if (!result.IsSuccessStatusCode)
             {
                 error = "Failed to send verification code. Please try again.";
+            }
+            else
+            {
+                StartPhoneResendTimer();
             }
         }
         catch (Exception ex)
@@ -836,8 +947,87 @@
         successMessage = "Verification code resent successfully.";
     }
 
+    private void StartEmailResendTimer()
+    {
+        emailResendCountdown = 45;
+        emailResendTimer?.Dispose();
+        emailResendTimer = new Timer(
+            callback: _ =>
+            {
+                emailResendCountdown--;
+                if (emailResendCountdown <= 0)
+                {
+                    emailResendTimer?.Dispose();
+                }
+                InvokeAsync(StateHasChanged);
+            },
+            state: null,
+            dueTime: TimeSpan.FromSeconds(1),
+            period: TimeSpan.FromSeconds(1)
+        );
+    }
+
+    private void StartPhoneResendTimer()
+    {
+        phoneResendCountdown = 45;
+        phoneResendTimer?.Dispose();
+        phoneResendTimer = new Timer(
+            callback: _ =>
+            {
+                phoneResendCountdown--;
+                if (phoneResendCountdown <= 0)
+                {
+                    phoneResendTimer?.Dispose();
+                }
+                InvokeAsync(StateHasChanged);
+            },
+            state: null,
+            dueTime: TimeSpan.FromSeconds(1),
+            period: TimeSpan.FromSeconds(1)
+        );
+    }
+
     private async void NavigateBack()
     {
-        await JsRt.InvokeVoidAsync("goBack");
+        if (currentStep > 1)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Unsaved Changes",
+                Message = "You have unsaved changes. Are you sure you want to leave without saving?",
+                DangerText = "This action cannot be undone.",
+                ButtonText = "Yes, Leave",
+                OptionType = OptionType.Warning,
+                Context = new ModalContext { ActionType = "navigateBack" }
+            });
+        }
+        else
+        {
+            await JsRt.InvokeVoidAsync("goBack");
+        }
+    }
+
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal?.Context?.ActionType == "navigateBack")
+        {
+            _modalService.Close();
+            await JsRt.InvokeVoidAsync("goBack");
+        }
+        // Handle confirmation logic here
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        emailResendTimer?.Dispose();
+        phoneResendTimer?.Dispose();
     }
 }

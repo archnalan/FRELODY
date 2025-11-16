@@ -10,6 +10,7 @@ using MimeKit.Text;
 using System.ComponentModel.DataAnnotations;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace FRELODYLIB.ServiceHandler
 {
@@ -26,6 +27,8 @@ namespace FRELODYLIB.ServiceHandler
 
         public async Task<ServiceResult<bool>> SendEmailAsync(EmailDto emailDto, CancellationToken cancellationToken = default)
         {
+            var json = System.Text.Json.JsonSerializer.Serialize(emailDto);
+            Console.WriteLine($"EmailService.SendEmailAsync called with: {json}");
             if (emailDto == null)
                 return ServiceResult<bool>.Failure(new ArgumentNullException(nameof(emailDto)));
 
@@ -41,7 +44,7 @@ namespace FRELODYLIB.ServiceHandler
             var smtpSection = _configuration.GetSection("SmtpCredentials:Default");
             var host = smtpSection["Host"] ?? "plesk7400.is.cc";
             var port = smtpSection.GetValue<int>("Port", 587);
-            var enableSsl = smtpSection.GetValue<bool>("EnableSsl", true);
+            var enableSsl = smtpSection.GetValue<bool>("EnableSsl", false);
             var timeoutMs = smtpSection.GetValue<int>("TimeoutMs", 30_000);
 
             var email = new MimeMessage();
@@ -64,7 +67,9 @@ namespace FRELODYLIB.ServiceHandler
 
                 await smtp.ConnectAsync(host, port, enableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None, cancellationToken);
 
-                if (!string.IsNullOrWhiteSpace(emailDto.emailSenderAccount) && !string.IsNullOrWhiteSpace(emailDto.emailSenderSecret))
+                if (!string.IsNullOrWhiteSpace(emailDto.emailSenderAccount) &&
+                    !string.IsNullOrWhiteSpace(emailDto.emailSenderSecret) &&
+                    !(host == "localhost" && port == 1025))
                 {
                     await smtp.AuthenticateAsync(emailDto.emailSenderAccount, emailDto.emailSenderSecret, cancellationToken);
                 }

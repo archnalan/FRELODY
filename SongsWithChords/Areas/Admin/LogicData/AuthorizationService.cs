@@ -6,6 +6,7 @@ using FRELODYAPP.Dtos.UserDtos;
 using FRELODYAPP.Extensions;
 using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
+using FRELODYLIB.Interfaces;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Dtos.UserDtos;
@@ -37,7 +38,7 @@ namespace FRELODYAPP.Data
         private readonly UserManager<User> _userManager;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly SongDbContext _context;
-        private readonly SmtpSenderService _emailSmtpService;
+        private readonly ISmtpSenderService _emailSmtpService;
         private readonly ILogger<AuthorizationService> _logger;
         private readonly ITenantProvider _tenantProvider;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -50,7 +51,7 @@ namespace FRELODYAPP.Data
 
         public AuthorizationService(IConfiguration config, SongDbContext context,
             SignInManager<User> signInManager, UserManager<User> userManager,
-            IWebHostEnvironment webHostEnvironment, SmtpSenderService emailSmtpService,
+            IWebHostEnvironment webHostEnvironment, ISmtpSenderService emailSmtpService,
             ILogger<AuthorizationService> logger, ITenantProvider tenantProvider,
             IHttpContextAccessor httpContextAccessor, RoleManager<IdentityRole> roleManager,
             FileValidationService fileValidationService, SecurityUtilityService securityUtilityService, TokenService tokenService, IUserService userService)
@@ -1046,7 +1047,7 @@ namespace FRELODYAPP.Data
             {
                 Subject = "A new Login has been detected",
                 ToEmail = user.Email,
-                Body = $"A new login into your account was detected at {DateTime.UtcNow}UTC. " +
+                Body = $"A new login into your account was detected at {DateTime.UtcNow.ToLocalTime().ToString("MM-dd-yyyy hh:mm tt")}. " +
                        $"If this wasn't you, please secure your account with {_config["ApplicationInfo:Name"]}  by changing your password. " +
                        $"Contact support if needed.<br/><br/>{_config["ApplicationInfo:SupportUrl"]}"
             };
