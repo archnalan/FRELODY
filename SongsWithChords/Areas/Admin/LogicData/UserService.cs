@@ -51,6 +51,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 {
                     return ServiceResult<UpdateUserProfileOutDto>.Failure(new Exception("User not found."));
                 }
+                var totalSongs = await _context.Songs.CountAsync(s => s.CreatedBy == userId);
+                user.TotalSongs = totalSongs;
                 return ServiceResult<UpdateUserProfileOutDto>.Success(user);
             }
             catch (Exception ex)

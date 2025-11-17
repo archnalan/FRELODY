@@ -35,7 +35,7 @@
                         <i class="bi bi-arrow-clockwise"></i>
                         <span>Restore</span>
                     </button>
-                    <button type="button" class="btn btn-sm btn-danger" @onclick="DiscardCache">
+                    <button type="button" class="btn btn-sm btn-danger" @onclick="TryDiscardCache">
                         <i class="bi bi-x-circle"></i>
                         <span>Discard</span>
                     </button>
@@ -1036,6 +1036,11 @@
             isSuccessRedirect = true;
             _navManager.NavigateTo("/songs-library");
         }
+        else if( _modalService.CurrentModal.Context?.ActionType == "DiscardCache")
+        {
+            await DiscardCache();
+            _modalService.Close();
+        }
         else if (_modalService.CurrentModal.Context?.ActionType == "RestoreFromCache")
         {
             // Save current work first
@@ -1123,6 +1128,23 @@
         currentArtistAlbum = null;
         AllPartsSegments.Clear();
         initialPartsItems.Clear();
+    }
+
+    private void TryDiscardCache()
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Discard Draft",
+            Message = "Are you sure you want to discard the saved draft?",
+            DangerText = "This action cannot be undone.",
+            ButtonText = "Discard",
+            OptionType = OptionType.Warning,
+            Context = new ModalContext
+            {
+                ActionType = "DiscardCache",
+                Data = "UserConfirmed"
+            }
+        });
     }
 
     private async Task DiscardCache()

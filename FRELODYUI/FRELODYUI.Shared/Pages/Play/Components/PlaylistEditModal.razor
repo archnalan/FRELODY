@@ -27,23 +27,40 @@
                                           rows="3" placeholder="Optional description..." />
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Theme/Category</label>
-                            <InputText class="form-control" @bind-Value="Collection.Theme" 
-                                      placeholder="e.g., Worship, Christmas, Youth" />
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-6">
+                                <label>Theme (Optional)</label>
+                                <InputText class="form-control"
+                                           @bind-Value="@Collection.Theme"
+                                           autocomplete="off"
+                                           placeholder="Enter theme..." />
+                                <small class="text-muted">e.g., Gospel, Country ...</small>
+                                <div style="min-height:1.5rem">
+                                    <ValidationMessage For="@(() => Collection.Theme)" />
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label>Scheduled Date (Optional)</label>
+                                <InputDate class="form-control"
+                                           @bind-Value="@Collection.PlaylistDate" />
+                                <small class="text-muted">When do you plan to use this?</small>
+                                <div style="min-height:1.5rem">
+                                    <ValidationMessage For="@(() => Collection.PlaylistDate)" />
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Curator</label>
-                            <InputText class="form-control" @bind-Value="Collection.Curator" 
-                                      placeholder="Your name or team name" />
-                        </div>
-
                         <div class="form-check mb-3">
+                            @if (!isPremiumUser)
+                            {
+                                <i class="bi bi-stars icon-premium"
+                                data-bs-toggle="tooltip"
+                                title="Premium Feature"></i>
+                            }
                             <input type="checkbox" class="form-check-input" id="isPublicCheck" 
                                    checked="@(Collection.IsPublic ?? false)" 
-                                   @onchange="@((ChangeEventArgs e) => Collection.IsPublic = (bool?)e.Value)" />
-                            <label class="form-check-label" for="isPublicCheck">
+                                   @onchange="@((ChangeEventArgs e) => Collection.IsPublic = (bool?)e.Value)"
+                                   disabled="@(!isPremiumUser)" />
+                            <label class="form-check-label" for="isPublicCheck">                               
                                 Make this playlist public
                             </label>
                         </div>
@@ -70,9 +87,12 @@
     [Parameter] public PlaylistDto Collection { get; set; } = new();
     [Parameter] public EventCallback<PlaylistDto> OnSave { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
+    private bool isPremiumUser;
 
     private async Task HandleSave()
     {
+        var resp = await _globalAuth.IsPremiumUser();
+        isPremiumUser = resp.IsSuccess && resp.Data;
         await SavePlaylist(Collection);
     }
 

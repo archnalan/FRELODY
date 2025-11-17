@@ -11,6 +11,7 @@
         {
             if (Error == null) return 200;
 			if (Error is NotFoundException) return 404;
+            if (Error is KeyNotFoundException) return 404;
 			if (Error is BadRequestException) return 400;
 			if (Error is ConflictException) return 409;
             if (Error is UnAuthorizedException) return 401;

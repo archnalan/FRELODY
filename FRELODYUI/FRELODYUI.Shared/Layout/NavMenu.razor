@@ -13,7 +13,11 @@
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
-                        <span class="bi bi-card-list-nav-menu" aria-hidden="true"></span> Dashboard
+                        <span class="bi bi-card-list-nav-menu" aria-hidden="true"></span> 
+                        Dashboard
+                        <span class="ms-auto compose-alert-dot"
+                                  data-bs-toggle="tooltip"
+                                  title="Popular"></span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
@@ -28,7 +32,11 @@
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="compose" Match="NavLinkMatch.Prefix">
-                        <span class="bi bi-pencil-square-nav-menu" aria-hidden="true"></span> Compose
+                            <span class="bi bi-pencil-square-nav-menu" aria-hidden="true"></span> 
+                            Compose
+                            <span class="ms-auto compose-alert-dot"
+                                  data-bs-toggle="tooltip"
+                                  title="Popular"></span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
@@ -36,14 +44,39 @@
                             <span class="bi bi-sliders-nav-menu" aria-hidden="true"></span> Chords
                     </NavLink>
                 </div>
+                    @if (isPremiumUser)
+                    {
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="/song/import" Match="NavLinkMatch.Prefix">
+                                <span class="bi bi-download-nav-menu" aria-hidden="true"></span>                              
+                                Song Import
+                            </NavLink>
+                        </div>
+
+                    }
+                    else
+                    {
+                        <div class="nav-item px-3">
+                            <span class="ms-3 disabled text-muted"
+                                  style="cursor: pointer;">
+                                <span class="bi bi-download-nav-menu"
+                                      aria-hidden="true"></span>
+                                Song Import
+                            </span>
+                            <i class="bi bi-stars icon-premium"
+                                            data-bs-toggle="tooltip"
+                                            title="Premium Feature"></i>
+                        </div>
+                    }
+                   
                 @{
                     var firstName = context.User.FindFirst("FirstName")?.Value;
                     var lastName = context.User.FindFirst("LastName")?.Value;
                     var fullName = firstName + " " + lastName;
-                    var displayName = fullName.Length > 10 ? fullName.Substring(0, 10) + "..." : fullName;
+                    var displayName = fullName.Length > 15 ? fullName.Substring(0, 15) + "..." : fullName;
                 }
                 <div class="nav-item px-3 dropdown dropup mt-auto">
-                    <button class="nav-link dropdown-toggle w-100 text-start d-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button class="nav-link dropdown-toggle w-100 d-flex justify-content-between align-items-center" data-bs-toggle="dropdown" aria-expanded="false">
                         <div class="user-avatar-circle me-2">
                             <span>
                                     @(firstName?.FirstOrDefault())@(lastName?.FirstOrDefault())
@@ -62,11 +95,26 @@
                                 <i class="bi bi-person"></i>View Profile
                             </a>
                         </li>
-                        <li>
-                            <a class="dropdown-item" href="/users">
-                                <i class="bi bi-people"></i>Accounts
-                            </a>
-                        </li>
+                        @if (isPremiumUser)
+                        {
+                            <li>
+                                <a class="dropdown-item" href="/users">
+                                    <i class="bi bi-people"></i>Accounts
+                                </a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="my-2">
+                                <span class="ms-3 disabled text-muted"
+                                      style="cursor: pointer;">
+                                    <i class="bi bi-people"></i>Accounts
+                                </span>
+                                <i class="bi bi-stars icon-premium"
+                                   data-bs-toggle="tooltip"
+                                   title="Premium Feature"></i>
+                            </li>
+                        }
                         <li class="form-check form-switch mx-3">
                             <input class="form-check-input" type="checkbox" role="switch" id="switchCheckChecked"
                                    checked="@(!isDarkTheme)" @onchange="ToggleTheme">
@@ -98,9 +146,13 @@
 
 @code {
     private bool isDarkTheme = false;
+    private bool isPremiumUser;
 
     protected override async Task OnInitializedAsync()
     {
+        var resp = await _globalAuth.IsPremiumUser();
+        isPremiumUser = resp.IsSuccess && resp.Data;
+
         var savedTheme = await _storageService.GetItemAsync<string>("Theme");
         if (!string.IsNullOrEmpty(savedTheme))
         {

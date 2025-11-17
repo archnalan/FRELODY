@@ -43,6 +43,7 @@ html, body {
     --gradient-primary-end: #764ba2;
     --gradient-primary-hover-start: #5a6fd8;
     --gradient-primary-hover-end: #6a4190;
+    --color-premium-gold: #d4af37;
 }
 
 [data-bs-theme="dark"] {
@@ -84,6 +85,7 @@ html, body {
     --gradient-primary-end: #764ba2;
     --gradient-primary-hover-start: #5a6fd8;
     --gradient-primary-hover-end: #6a4190;
+    --color-premium-gold: #f5c84c;
 }
 
 /*a, .btn-link {
@@ -161,3 +163,11 @@ h1:focus {
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
 }
+
+.icon-premium {
+    color: var(--color-premium-gold);
+}
+
+    .icon-premium:hover {
+        text-shadow: 0 0 4px rgba(212, 175, 55, 0.6);
+    }

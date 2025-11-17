@@ -1,12 +1,13 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
+﻿using FRELODYAPP.Dtos.AuthDtos;
+using FRELODYAPP.Dtos.UserDtos;
+using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Constants;
+using FRELODYSHRD.Dtos.UserDtos;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Text.Json;
-using FRELODYAPP.Dtos.AuthDtos;
-using FRELODYLIB.ServiceHandler.ResultModels;
-using FRELODYAPP.Dtos.UserDtos;
-using FRELODYSHRD.Dtos.UserDtos;
 
 namespace FRELODYUI.Shared.Services
 {
@@ -105,7 +106,7 @@ namespace FRELODYUI.Shared.Services
             {
                 _logger.LogError(ex, "Error in MarkUserAsAuthenticated");
                 await ClearSessionAsync();
-                return ServiceResult<bool>.Failure(ex);
+                return ServiceResult<bool>.Failure(new Exception("Could not mark user as authenticated"));
             }
         }
 
@@ -131,7 +132,7 @@ namespace FRELODYUI.Shared.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in GetAuthenticatedUser");
-                return ServiceResult<UserClaimsDto>.Failure(ex);
+                return ServiceResult<UserClaimsDto>.Failure(new Exception("Could not get authenticated user"));
             }
         }
 
@@ -157,7 +158,7 @@ namespace FRELODYUI.Shared.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in GetUserClaimsFromToken");
-                return ServiceResult<ClaimsPrincipal>.Failure(ex);
+                return ServiceResult<ClaimsPrincipal>.Failure(new Exception("Could not get user claims from token"));
             }
         }
 
@@ -177,7 +178,28 @@ namespace FRELODYUI.Shared.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in MarkUserAsLoggedOut");
-                return ServiceResult<bool>.Failure(ex);
+                return ServiceResult<bool>.Failure(new Exception("Could not log out user"));
+            }
+        }
+
+        public async Task<ServiceResult<bool>> IsPremiumUser()
+        {
+            try
+            {
+                var user = await GetAuthenticatedUserAsync();
+                if (user.IsSuccess && user.Data != null)
+                {
+                    var billingStatus = user.Data.BillingStatus;
+                    return ServiceResult<bool>.Success(billingStatus == BillingStatus.PremiumTrial
+                    || billingStatus == BillingStatus.ActiveLifetime
+                    || billingStatus == BillingStatus.ActiveRecurring);
+                }
+                return ServiceResult<bool>.Success(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in IsPremiumUser");
+                return ServiceResult<bool>.Failure(new Exception("Could not determine premium status"));
             }
         }
 
@@ -216,7 +238,7 @@ namespace FRELODYUI.Shared.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error reading session from storage");
-                return ServiceResult<LoginResponseDto>.Failure(ex);
+                return ServiceResult<LoginResponseDto>.Failure(new Exception("Could not read session from storage"));
             }
         }
 
@@ -230,7 +252,7 @@ namespace FRELODYUI.Shared.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error saving session to storage");
-                return ServiceResult<bool>.Failure(ex);
+                return ServiceResult<bool>.Failure(new Exception("Could not save session to storage"));
             }
         }
 
@@ -268,7 +290,7 @@ namespace FRELODYUI.Shared.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting claims identity from token");
-                return ServiceResult<ClaimsIdentity>.Failure(ex);
+                return ServiceResult<ClaimsIdentity>.Failure(new Exception("Could not get claims identity from token"));
             }
         }
 
@@ -282,7 +304,7 @@ namespace FRELODYUI.Shared.Services
                     return ServiceResult<UserClaimsDto>.Failure(claimsResult.Error);
                 }
 
-                var userClaim = claimsResult.Data.FirstOrDefault(c => 
+                var userClaim = claimsResult.Data.FirstOrDefault(c =>
                     c.Type.Equals("user", StringComparison.OrdinalIgnoreCase));
 
                 if (userClaim == null || string.IsNullOrEmpty(userClaim.Value))
@@ -303,7 +325,7 @@ namespace FRELODYUI.Shared.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error extracting user claims from token");
-                return ServiceResult<UserClaimsDto>.Failure(ex);
+                return ServiceResult<UserClaimsDto>.Failure(new Exception("Could not extract user claims from token"));
             }
         }
 
@@ -340,7 +362,7 @@ namespace FRELODYUI.Shared.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error parsing claims from JWT");
-                return ServiceResult<IEnumerable<Claim>>.Failure(ex);
+                return ServiceResult<IEnumerable<Claim>>.Failure(new Exception("Could not parse claims from JWT"));
             }
         }
 
@@ -423,7 +445,7 @@ namespace FRELODYUI.Shared.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating claims identity");
-                return ServiceResult<ClaimsIdentity>.Failure(ex);
+                return ServiceResult<ClaimsIdentity>.Failure(new Exception("Could not create claims identity"));
             }
         }
 

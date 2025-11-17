@@ -3,10 +3,14 @@
     <!-- Vertical tabs -->
     <div class="btn-group" role="group">
         <button type="button" class="btn btn-outline-primary @(activeSelectionTab == "songbook" ? "active" : "")"
+                data-bs-toggle="tooltip"
+                title="Add Songbook"
                 @onclick='() => SetActiveSelectionTab("songbook")'>
             <i class="bi bi-book"></i>
         </button>
-        <button type="button" class="btn btn-outline-primary @(activeSelectionTab == "artist" ? "active" : "")"
+        <button type="button" class="btn btn-outline-primary @(activeSelectionTab == "artist" ? "active" : "")" 
+                data-bs-toggle="tooltip"
+                title="Add Artist"
                 @onclick='() => SetActiveSelectionTab("artist")'>
             <i class="bi bi-person"></i>
         </button>

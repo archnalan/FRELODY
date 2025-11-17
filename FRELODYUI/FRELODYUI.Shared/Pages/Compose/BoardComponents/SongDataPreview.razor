@@ -110,8 +110,8 @@
                                                         <div class="lyric-segment-preview">
                                                             @if (!string.IsNullOrEmpty(segment.ChordName))
                                                             {
-                                                                <div class="chord-preview">
-                                                                    @segment.ChordName
+                                                                <div class="w-100 d-flex @GetChordAlignmentClass(segment.ChordAlignment) ">
+                                                                    <span class="chord-preview">@segment.ChordName</span>
                                                                 </div>
                                                             }
                                                             <div class="lyric-text-preview">
@@ -227,6 +227,18 @@
 
             return parts;
         }
+    }
+
+    private string GetChordAlignmentClass(Alignment? align)
+    {
+        return align switch
+        {
+            Alignment.Left => "justify-content-start",
+            Alignment.Center => "justify-content-center",
+            Alignment.Right => "justify-content-end",
+            Alignment.Justify => "justify-content-between",
+            _ => "justify-content-start"
+        };
     }
 
     private List<List<SegmentCreateDto>> GetPartLines(List<SegmentCreateDto> segments)
