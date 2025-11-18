@@ -92,6 +92,16 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpPut]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> MarkSongAccessStatus([FromQuery] string songId, [FromQuery]Access accessLevel)
+        {
+            var result = await _songService.MarkSongAccessStatus(songId, accessLevel);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            return Ok(result.Data);
+        }
+
+        [HttpPut]
         [Authorize]
         [ProducesResponseType(typeof(SongDto), 200)]
         public async Task<IActionResult> UpdateSong(string id, [FromBody] SimpleSongCreateDto songDto)

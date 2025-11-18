@@ -43,6 +43,8 @@ namespace FRELODYAPP.Models.SubModels
         public string? TenantId { get; set; }
 
         public BillingStatus? BillingStatus { get; set; } 
+
+        public DateTimeOffset? LastLoginDate { get; set; }
     }
 
 }

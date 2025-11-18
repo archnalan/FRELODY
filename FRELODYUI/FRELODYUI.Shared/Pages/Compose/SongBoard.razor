@@ -107,7 +107,9 @@
                  IsRecovery="isRecoveryPreview"
                  SongData="@(isRecoveryPreview ? cacheData : songData)"
                  OnCancel="HandlePreviewCancel"
-                 OnSave="HandlePreviewConfirm" />
+                 OnSave="HandlePreviewConfirm" 
+                 EnableAccessEdit="@(!string.IsNullOrEmpty(SongId))"
+                 OnMarkPrivateAccess="HandleMarkPrivateAccess" />
 
 <DialogModal IsVisible="@_modalService.IsModalVisible"
              Modal="@_modalService.CurrentModal"
@@ -1025,6 +1027,24 @@
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleMarkPrivateAccess(bool? isPrivate)
+    {
+        if (!string.IsNullOrEmpty(SongId))
+        {
+            var access = isPrivate.HasValue && isPrivate.Value ? Access.Private : Access.Public;
+            var response = await _songsApi.MarkSongAccessStatus(SongId, access);
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Song {SongId} access updated to {Access}", SongId, access);
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                ShowError("Access Update Error", errorMessage);
+            }
+        }
     }
 
     private async Task ConfirmModal()

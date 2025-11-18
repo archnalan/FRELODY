@@ -1,25 +1,35 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using FRELODYAPP.Data.Infrastructure;
+using FRELODYLIB.Models;
+using FRELODYLIB.ServiceHandler.ResultModels;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Net;
-using FRELODYLIB.ServiceHandler.ResultModels;
 
 namespace FRELODYAPP.Data
 {
     public class SecurityUtilityService
     {
+        private readonly SongDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly ILogger<SecurityUtilityService> _logger;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMemoryCache _cache;
 
         public SecurityUtilityService(
             IConfiguration configuration,
             ILogger<SecurityUtilityService> logger,
-            IMemoryCache cache)
+            IMemoryCache cache,
+            SongDbContext context,
+            IHttpContextAccessor httpContextAccessor)
         {
             _configuration = configuration;
             _logger = logger;
             _cache = cache;
+            _context = context;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public bool CheckRateLimit(string key, int maxAttempts, TimeSpan period)
@@ -120,6 +130,93 @@ namespace FRELODYAPP.Data
             {
                 _logger.LogError(ex, "Failed to log security event");
             }
+        }
+
+        public async Task<ServiceResult<string>> LogUserLogin(string userId, string? deviceInfo = null)
+        {
+            try
+            {
+                var loginHistory = new UserLoginHistory
+                {
+                    UserId = userId,
+                    LoginTime = DateTimeOffset.UtcNow,
+                    DeviceInfo = deviceInfo ?? GetDeviceInfo(),
+                    IpAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString(),
+                    IsActiveSession = true
+                };
+
+                await _context.UserLoginHistories.AddAsync(loginHistory);
+                await _context.SaveChangesAsync();
+
+                // Update user's last login time
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null)
+                {
+                    user.LastLoginDate = DateTimeOffset.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+
+                return ServiceResult<string>.Success(loginHistory.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error logging user login for user {UserId}", userId);
+                return ServiceResult<string>.Failure(new ServerErrorException("Failed to log login"));
+            }
+        }
+
+        public async Task<ServiceResult<bool>> LogUserLogout(string userId)
+        {
+            try
+            {
+                var activeLogin = await _context.UserLoginHistories
+                    .Where(x => x.UserId == userId && x.IsActiveSession)
+                    .OrderByDescending(x => x.LoginTime)
+                    .FirstOrDefaultAsync();
+
+                if (activeLogin != null)
+                {
+                    activeLogin.IsActiveSession = false;
+                    activeLogin.LastLogoutTime = DateTimeOffset.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error logging user logout for user {UserId}", userId);
+                return ServiceResult<bool>.Failure(new ServerErrorException("Failed to log logout"));
+            }
+        }
+
+        public async Task<ServiceResult<DateTimeOffset?>> GetLastLoginTime(string userId)
+        {
+            try
+            {
+                var lastLogin = await _context.UserLoginHistories
+                    .Where(x => x.UserId == userId && !x.IsActiveSession)
+                    .OrderByDescending(x => x.LoginTime)
+                    .Select(x => (DateTimeOffset?)x.LoginTime)
+                    .FirstOrDefaultAsync();
+
+                return ServiceResult<DateTimeOffset?>.Success(lastLogin);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting last login time for user {UserId}", userId);
+                return ServiceResult<DateTimeOffset?>.Failure(new ServerErrorException("Failed to get last login time"));
+            }
+        }
+
+        private string GetDeviceInfo()
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null) return "Unknown";
+
+            var userAgent = context.Request.Headers["User-Agent"].ToString();
+            // You can parse user agent here or use a library
+            return userAgent.Length > 200 ? userAgent.Substring(0, 200) : userAgent;
         }
     }   
 }

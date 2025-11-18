@@ -35,7 +35,10 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Put("/api/songs/mark-song-favorite-status")]
         Task<IApiResponse<bool>> MarkSongFavoriteStatus([Query] string songId, [Query] bool favorite);
-        
+       
+        [Put("/api/songs/mark-song-access-status")]
+        Task<IApiResponse<bool>> MarkSongAccessStatus([Query] string songId, [Query] Access accessLevel); 
+
         [Put("/api/songs/rate-song")]
         Task<IApiResponse<bool>> RateSong([Query] string songId, [Query] decimal rating);
 

@@ -904,6 +904,32 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         }
         #endregion
 
+        #region Mark Song Access status
+        public async Task<ServiceResult<bool>> MarkSongAccessStatus(string songId, Access access)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(songId))
+                {
+                    return ServiceResult<bool>.Failure(
+                        new BadRequestException("Song ID is required."));
+                }
+                var song = await _context.Songs.FirstOrDefaultAsync(s => s.Id == songId);
+                if (song == null)
+                    return ServiceResult<bool>.Failure(new NotFoundException("Song not found."));
+                song.Access = access;
+                song.ModifiedBy = _userId;
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in MarkSongAccessStatus {SongId}", songId);
+                return ServiceResult<bool>.Failure(ex);
+            }
+        }
+        #endregion
+
         #region Set Song Rating
         public async Task<ServiceResult<CanRateDto>> CanUserRateSong(string songId)
         {
