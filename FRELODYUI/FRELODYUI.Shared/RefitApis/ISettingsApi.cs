@@ -23,6 +23,9 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Post("/api/settings/create-or-update-user-settings")]
         Task<IApiResponse<SettingDto>> CreateOrUpdateUserSettings([Body] SettingDto settingDto);
+        
+        [Post("/api/settings/toggle-notifications")]
+        Task<IApiResponse<SettingDto>> ToggleNotifications([Query] string userId, [Query] bool enable);
 
         [Delete("/api/settings/delete-setting")]
         Task<IApiResponse<bool>> DeleteSetting([Query] string settingId);

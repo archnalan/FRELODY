@@ -306,6 +306,8 @@ namespace FRELODYAPP.Data
                     // Send email notification (async)
                     await SendLoginNotification(user);
 
+                    await _securityUtilityService.LogUserLogin(user.Id);
+
                     //TODO: Check Browser cookie for new devices before sending Email!
 
                     return ServiceResult<LoginResponseDto>.Success(token);

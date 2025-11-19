@@ -13,5 +13,6 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<SettingDto>> UpdateSetting(string settingId, SettingDto settingDto);
         Task<ServiceResult<SettingDto>> CreateOrUpdateUserSettings(SettingDto settingDto);
         Task<ServiceResult<bool>> DeleteSetting(string settingId);
+        Task<ServiceResult<SettingDto>> ToggleNotifications(string userId, bool enable);
     }
 }

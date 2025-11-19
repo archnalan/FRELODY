@@ -76,6 +76,7 @@ builder.Services.AddScoped<ISmtpSenderService,SmtpSenderService>();
 builder.Services.AddScoped<FileValidationService>();
 builder.Services.AddScoped<SecurityUtilityService>();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<ContentChangeTrackingService>();
 builder.Services.AddIdentity<User, IdentityRole>
             (options =>
             {

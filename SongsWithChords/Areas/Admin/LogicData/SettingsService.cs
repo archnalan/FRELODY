@@ -93,13 +93,12 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 if (!string.IsNullOrEmpty(userId))
                 {
                     setting = await _context.Settings
-                        .FirstOrDefaultAsync(s => s.CreatedBy == userId && s.IsDeleted != true);
+                        .FirstOrDefaultAsync(s => s.CreatedBy == userId);
                 }
 
                 if (setting == null)
                 {
-                    setting = await _context.Settings
-                        .FirstOrDefaultAsync(s => s.IsDeleted != true);
+                    setting = await _context.Settings.FirstOrDefaultAsync();
                 }
 
                 if (setting == null)
@@ -117,9 +116,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         ChordDisplay = ChordDisplay.Above,
                         ChordDifficulty = ChordDifficulty.Easy,
                         PlayLevel = PlayLevel.Easy,
-                        CreatedBy = userId,
-                        DateCreated = DateTime.UtcNow,
-                        IsDeleted = false
+                        ShowNotifications = true,
                     };
 
                     _context.Settings.Add(defaultSetting);
@@ -202,8 +199,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     existingSetting.ChordDisplay = settingDto.ChordDisplay;
                     existingSetting.ChordDifficulty = settingDto.ChordDifficulty;
                     existingSetting.PlayLevel = settingDto.PlayLevel;
-                    existingSetting.DateModified = DateTime.UtcNow;
-                    existingSetting.ModifiedBy = userId;
+                    existingSetting.ShowNotifications = settingDto.ShowNotifications;
 
                     _context.Settings.Update(existingSetting);
                     await _context.SaveChangesAsync();
@@ -222,6 +218,39 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 _logger.LogError("An error occurred while creating or updating user settings for user {UserId}. {Error}", settingDto.CreatedBy, ex);
                 return ServiceResult<SettingDto>.Failure(
                     new ServerErrorException("An error occurred while saving user settings."));
+            }
+        }
+        #endregion
+
+        #region Notification Toggle
+        public async Task<ServiceResult<SettingDto>> ToggleNotifications(string userId, bool enable)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return ServiceResult<SettingDto>.Failure(
+                        new BadRequestException("User ID is required"));
+                }
+                var existingSetting = await _context.Settings
+                    .FirstOrDefaultAsync(s => s.CreatedBy == userId && s.IsDeleted != true);
+                
+                if (existingSetting == null)
+                {
+                    return ServiceResult<SettingDto>.Failure(
+                        new NotFoundException($"Settings not found for user. User ID: {userId}"));
+                }
+                existingSetting.ShowNotifications = enable;
+                _context.Settings.Update(existingSetting);
+                await _context.SaveChangesAsync();
+                var updatedSettingDto = existingSetting.Adapt<SettingDto>();
+                return ServiceResult<SettingDto>.Success(updatedSettingDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("An error occurred while toggling notifications for user {UserId}. {Error}", userId, ex);
+                return ServiceResult<SettingDto>.Failure(
+                    new ServerErrorException("An error occurred while updating notification settings."));
             }
         }
         #endregion
@@ -262,8 +291,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 existingSetting.ChordDisplay = settingDto.ChordDisplay;
                 existingSetting.ChordDifficulty = settingDto.ChordDifficulty;
                 existingSetting.PlayLevel = settingDto.PlayLevel;
-                existingSetting.DateModified = DateTime.UtcNow;
-                existingSetting.ModifiedBy = settingDto.ModifiedBy;
 
                 _context.Settings.Update(existingSetting);
                 await _context.SaveChangesAsync();
@@ -302,7 +329,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 // Soft delete by setting IsDeleted to true
                 existingSetting.IsDeleted = true;
-                existingSetting.DateModified = DateTime.UtcNow;
                 
                 _context.Settings.Update(existingSetting);
                 await _context.SaveChangesAsync();

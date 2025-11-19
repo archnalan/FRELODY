@@ -33,6 +33,7 @@ builder.Services.AddScoped<IStorageService, WebStorageService>();
 builder.Services.AddScoped<ChordLyricExtrator>();
 builder.Services.AddScoped<TabManagementService>();
 builder.Services.AddScoped<HeroDataService>();
+builder.Services.AddScoped<UserSettingsService>();
 builder.Services.AddScoped<GlobalAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
                 provider.GetRequiredService<GlobalAuthStateProvider>());
@@ -119,6 +120,10 @@ builder.Services.AddRefitClient<IProductsApi>()
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<ISmtpSenderApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddRefitClient<IContentChangeTrackingApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 

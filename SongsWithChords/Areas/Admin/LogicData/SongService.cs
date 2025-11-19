@@ -8,9 +8,11 @@ using FRELODYLIB.Interfaces;
 using FRELODYLIB.Models;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.SubDtos;
+using FRELODYSHRD.Models.ViewModels;
 using FRELODYSHRD.ModelTypes;
 using FRELODYUI.Shared.Models;
 using Mapster;
@@ -29,12 +31,15 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         private readonly ITenantProvider _tenantProvider;
         private readonly string _userId;
         private readonly ILogger<SongService> _logger;
-        public SongService(SongDbContext context, ILogger<SongService> logger, ITenantProvider tenantProvider)
+        private readonly ContentChangeTrackingService _changeTrackingService;
+
+        public SongService(SongDbContext context, ILogger<SongService> logger, ITenantProvider tenantProvider, ContentChangeTrackingService changeTrackingService)
         {
             _context = context;
             _logger = logger;
             _tenantProvider = tenantProvider;
             _userId = _tenantProvider.GetUserId();
+            _changeTrackingService = changeTrackingService;
         }
 
         #region Get Songs
@@ -340,6 +345,21 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     }
 
                     await _context.SaveChangesAsync();
+                    var changeLogDto = new ChangeLogDto
+                    {
+                        EntityType = EntityLogType.Song,
+                        EntityId = song.Id,
+                        ChangeType = ChangeLogType.Created,
+                        ChangedByUserId = _userId,
+                        ChangeDetails = new
+                        {
+                            Title = song.Title,
+                            SongNumber = song.SongNumber,
+                            IsPublic = song.Access == Access.Public
+                        }
+                    };
+                    await _changeTrackingService.LogContentChange(changeLogDto);
+
                     await transaction.CommitAsync();
 
                     var createdSong = await GetSongById(song.Id);
@@ -844,6 +864,21 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     song.Revision++;
 
                     await _context.SaveChangesAsync();
+                    var changeLogDto = new ChangeLogDto
+                    {
+                        EntityType = EntityLogType.Song,
+                        EntityId = song.Id,
+                        ChangeType = ChangeLogType.Updated,
+                        ChangedByUserId = _userId,
+                        ChangeDetails = new
+                        {
+                            Title = song.Title,
+                            SongNumber = song.SongNumber,
+                            IsPublic = song.Access == Access.Public
+                        }
+                    };
+                    await _changeTrackingService.LogContentChange(changeLogDto);
+
                     await transaction.CommitAsync();
 
                     var updatedSong = await GetSongById(song.Id);

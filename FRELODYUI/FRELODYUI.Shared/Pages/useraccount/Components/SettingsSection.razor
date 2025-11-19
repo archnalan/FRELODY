@@ -1,3 +1,4 @@
+@inject ILogger<SettingsSection> _logger
 
 <div class="row">
     <div class="col-lg-8 mx-auto">
@@ -19,10 +20,14 @@
                     </h5>
                 </div>
                 <div class="card-body">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" @bind="showNotification" role="switch" id="switchCheck">
+                        <label class="form-check-label" for="switchCheck">Notify me about new songs and updates</label>
+                    </div>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Theme</label>
-                            <select class="form-select" @bind="settingsModel.Theme">
+                            <select class="form-select" @bind="userSettings.Theme">
                                 @foreach (var theme in Enum.GetValues<Theme>())
                                 {
                                     <option value="@theme">@theme</option>
@@ -32,10 +37,52 @@
                         
                         <div class="col-md-6">
                             <label class="form-label">Song Display Mode</label>
-                            <select class="form-select" @bind="settingsModel.SongDisplay">
+                            <select class="form-select" @bind="userSettings.SongDisplay">
                                 @foreach (var display in Enum.GetValues<SongDisplay>())
                                 {
                                     <option value="@display">@GetDisplayName(display)</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chord Settings -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-music-note me-2"></i>Chord Preferences
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Chord Display</label>
+                            <select class="form-select" @bind="userSettings.ChordDisplay">
+                                @foreach (var display in Enum.GetValues<ChordDisplay>())
+                                {
+                                    <option value="@display">@GetChordDisplayName(display)</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Preferred Difficulty</label>
+                            <select class="form-select" @bind="userSettings.ChordDifficulty">
+                                @foreach (var difficulty in Enum.GetValues<ChordDifficulty>())
+                                {
+                                    <option value="@difficulty">@GetDifficultyName(difficulty)</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Play Level</label>
+                            <select class="form-select" @bind="userSettings.PlayLevel">
+                                @foreach (var level in Enum.GetValues<PlayLevel>())
+                                {
+                                    <option value="@level">@GetPlayLevelName(level)</option>
                                 }
                             </select>
                         </div>
@@ -54,7 +101,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Chord Font</label>
-                            <select class="form-select" @bind="settingsModel.ChordFont">
+                            <select class="form-select" @bind="userSettings.ChordFont">
                                 <option value="Arial">Arial</option>
                                 <option value="Helvetica">Helvetica</option>
                                 <option value="Times New Roman">Times New Roman</option>
@@ -65,7 +112,7 @@
                         
                         <div class="col-md-6">
                             <label class="form-label">Chord Font Size</label>
-                            <select class="form-select" @bind="settingsModel.ChordFontSize">
+                            <select class="form-select" @bind="userSettings.ChordFontSize">
                                 <option value="12">12px</option>
                                 <option value="14">14px</option>
                                 <option value="16">16px</option>
@@ -77,7 +124,7 @@
                         
                         <div class="col-md-6">
                             <label class="form-label">Lyric Font</label>
-                            <select class="form-select" @bind="settingsModel.LyricFont">
+                            <select class="form-select" @bind="userSettings.LyricFont">
                                 <option value="Arial">Arial</option>
                                 <option value="Helvetica">Helvetica</option>
                                 <option value="Times New Roman">Times New Roman</option>
@@ -88,7 +135,7 @@
                         
                         <div class="col-md-6">
                             <label class="form-label">Lyric Font Size</label>
-                            <select class="form-select" @bind="settingsModel.LyricFontSize">
+                            <select class="form-select" @bind="userSettings.LyricFontSize">
                                 <option value="14">14px</option>
                                 <option value="16">16px</option>
                                 <option value="18">18px</option>
@@ -101,51 +148,9 @@
                 </div>
             </div>
 
-            <!-- Chord Settings -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-music-note me-2"></i>Chord Preferences
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Chord Display</label>
-                            <select class="form-select" @bind="settingsModel.ChordDisplay">
-                                @foreach (var display in Enum.GetValues<ChordDisplay>())
-                                {
-                                    <option value="@display">@GetChordDisplayName(display)</option>
-                                }
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Preferred Difficulty</label>
-                            <select class="form-select" @bind="settingsModel.ChordDifficulty">
-                                @foreach (var difficulty in Enum.GetValues<ChordDifficulty>())
-                                {
-                                    <option value="@difficulty">@GetDifficultyName(difficulty)</option>
-                                }
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Play Level</label>
-                            <select class="form-select" @bind="settingsModel.PlayLevel">
-                                @foreach (var level in Enum.GetValues<PlayLevel>())
-                                {
-                                    <option value="@level">@GetPlayLevelName(level)</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Save Button -->
             <div class="d-flex justify-content-end">
-                <button class="btn btn-primary" @onclick="SaveSettings" disabled="@IsSaving">
+                <button class="btn btn-primary" @onclick="SaveUserSettings" disabled="@IsSaving">
                     @if (IsSaving)
                     {
                         <i class="spinner-border spinner-border-sm me-2"></i>
@@ -156,48 +161,101 @@
         }
     </div>
 </div>
+<!-- Modals -->
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
 
 @code {
-    [Parameter] public SettingDto? UserSettings { get; set; }
-    [Parameter] public EventCallback<SettingDto> OnSettingsChanged { get; set; }
-    [Parameter] public EventCallback OnSaveSettings { get; set; }
-    [Parameter] public bool IsLoading { get; set; }
-    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public string UserId { get; set; } = string.Empty;
 
-    private SettingDto settingsModel = new();
+    private SettingDto userSettings { get; set; } = new();
+    private bool IsSaving { get; set; }
+    private bool IsLoading { get; set; }
+    private bool showNotification = false;
+    private bool isLoadingSettings = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        if (UserSettings != null)
+        await LoadUserSettings();
+    }
+
+    private async Task LoadUserSettings()
+    {
+        try
         {
-            settingsModel = new SettingDto
+            isLoadingSettings = true;
+            var response = await _settingsApi.GetUserSettings(UserId);
+
+            if (response.IsSuccessStatusCode && response.Content != null)
             {
-                Id = UserSettings.Id,
-                ChordFont = UserSettings.ChordFont,
-                LyricFont = UserSettings.LyricFont,
-                ChordFontSize = UserSettings.ChordFontSize,
-                LyricFontSize = UserSettings.LyricFontSize,
-                SongDisplay = UserSettings.SongDisplay,
-                Theme = UserSettings.Theme,
-                ChordDisplay = UserSettings.ChordDisplay,
-                ChordDifficulty = UserSettings.ChordDifficulty,
-                PlayLevel = UserSettings.PlayLevel
-            };
+                userSettings = response.Content;
+                showNotification = userSettings.ShowNotifications ?? false;
+            }
+            else
+            {
+                // Create default settings if none exist
+                userSettings = new SettingDto
+                {
+                    ChordFont = "Arial",
+                    LyricFont = "Arial",
+                    ChordFontSize = "14",
+                    LyricFontSize = "16",
+                    SongDisplay = SongDisplay.LyricsAndChords,
+                    Theme = Theme.Light,
+                    ChordDisplay = ChordDisplay.Above,
+                    ChordDifficulty = ChordDifficulty.Medium,
+                    PlayLevel = PlayLevel.Medium
+                };
+            }
         }
-    }
-
-    protected override void OnParametersSet()
-    {
-        if (UserSettings != null && settingsModel.Id != UserSettings.Id)
+        catch (Exception ex)
         {
-            OnInitialized();
+            _logger.LogError(ex, "Error loading user settings");
+        }
+        finally
+        {
+            isLoadingSettings = false;
         }
     }
 
-    private async Task SaveSettings()
+    private async Task SaveUserSettings()
     {
-        await OnSettingsChanged.InvokeAsync(settingsModel);
-        await OnSaveSettings.InvokeAsync();
+        try
+        {
+            IsSaving = true;
+            userSettings.ShowNotifications = showNotification;
+            userSettings.CreatedBy = UserId;
+            var response = await _settingsApi.CreateOrUpdateUserSettings(userSettings);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Success",
+                    SubTitle = "Settings saved successfully!",
+                    Message = "Changes apply on restart",
+                    ButtonText = "OK",
+                    OptionType = OptionType.Success,
+                    Context = new ModalContext { ActionType = "Success" }
+                });
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                ShowErrorModal($"Failed to save settings: {errorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving settings");
+            ShowErrorModal("Failed to save settings");
+        }
+        finally
+        {
+            IsSaving = false;
+        }
     }
 
     private string GetDisplayName(SongDisplay display) => display switch
@@ -230,4 +288,28 @@
         PlayLevel.Advanced => "Advanced",
         _ => level.ToString()
     };
+
+    private async Task ConfirmModal()
+    {
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    private void ShowErrorModal(string message)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Error",
+            Message = message,
+            ButtonText = "OK",
+            OptionType = OptionType.Error,
+            Context = new ModalContext { ActionType = "Error" }
+        });
+    }
 }

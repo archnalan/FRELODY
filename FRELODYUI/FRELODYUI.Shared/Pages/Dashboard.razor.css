@@ -624,3 +624,45 @@
     .dashboard-container::-webkit-scrollbar-thumb:hover {
         background: var(--text-secondary);
     }
+
+/* Activity Notification */
+.activity-notification .alert {
+    border-left: 4px solid var(--bg-active);
+    background: var(--bg-hover);
+    border-radius: 8px;
+}
+
+.activity-stats .badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+}
+
+/* Marketing/Notification Styles */
+.marketing-card {
+    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
+    color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.marketing-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.marketing-icon {
+    font-size: 2rem;
+    opacity: 0.9;
+}
+
+.marketing-text h4 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.marketing-text p {
+    margin: 0.25rem 0 0;
+    opacity: 0.9;
+}

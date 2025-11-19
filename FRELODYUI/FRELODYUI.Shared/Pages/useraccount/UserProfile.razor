@@ -105,12 +105,7 @@
                 @if (activeTab == "settings")
                 {
                     <div class="tab-pane fade show active">
-                        <SettingsSection 
-                            UserSettings="@userSettings"
-                            OnSettingsChanged="HandleSettingsChange"
-                            OnSaveSettings="SaveUserSettings"
-                            IsLoading="@isLoadingSettings"
-                            IsSaving="@isSavingSettings" />
+                        <SettingsSection UserId="@userId" />                           
                     </div>
                 }
 
@@ -153,7 +148,6 @@
     private string theme = "light";
     private bool isLoading = true;
     private bool isLoadingLibrary = false;
-    private bool isLoadingSettings = false;
     private bool isSavingSettings = false;
     private bool isEditingProfile = false;
     private bool isSubmittingProfile = false;
@@ -221,8 +215,6 @@
                     TotalSongs = 42
                 };
             }
-
-            await LoadUserSettings();
         }
         catch (Exception ex)
         {
@@ -232,44 +224,6 @@
         finally
         {
             isLoading = false;
-        }
-    }
-
-    private async Task LoadUserSettings()
-    {
-        try
-        {
-            isLoadingSettings = true;
-            var response = await _settingsApi.GetUserSettings(userId);
-
-            if (response.IsSuccessStatusCode && response.Content != null)
-            {
-                userSettings = response.Content;
-            }
-            else
-            {
-                // Create default settings if none exist
-                userSettings = new SettingDto
-                {
-                    ChordFont = "Arial",
-                    LyricFont = "Arial",
-                    ChordFontSize = "14",
-                    LyricFontSize = "16",
-                    SongDisplay = SongDisplay.LyricsAndChords,
-                    Theme = Theme.Light,
-                    ChordDisplay = ChordDisplay.Above,
-                    ChordDifficulty = ChordDifficulty.Medium,
-                    PlayLevel = PlayLevel.Medium
-                };
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error loading user settings");
-        }
-        finally
-        {
-            isLoadingSettings = false;
         }
     }
 
@@ -413,44 +367,6 @@
     {
         userSettings = settings;
         StateHasChanged();
-    }
-
-    private async Task SaveUserSettings()
-    {
-        try
-        {
-            isSavingSettings = true;
-            
-            IApiResponse<SettingDto> response;
-            
-            if (string.IsNullOrEmpty(userSettings.Id))
-            {
-                response = await _settingsApi.CreateSetting(userSettings);
-            }
-            else
-            {
-                response = await _settingsApi.UpdateSetting(userSettings);
-            }
-
-            if (response.IsSuccessStatusCode)
-            {
-                ShowSuccessModal("Settings saved successfully!");
-            }
-            else
-            {
-                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
-                ShowErrorModal($"Failed to save settings: {errorMessage}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error saving settings");
-            ShowErrorModal("Failed to save settings");
-        }
-        finally
-        {
-            isSavingSettings = false;
-        }
     }
 
     private async Task HandleLibrarySearch(string searchQuery)

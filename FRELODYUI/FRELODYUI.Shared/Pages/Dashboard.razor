@@ -20,6 +20,38 @@
         <!-- Welcome Header -->
         <div class="welcome-section mb-4">
             <div class="container-fluid">
+                <div class="activity-notification mb-3">
+                    @if (activitySummary != null && showAlert)
+                    {
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <button type="button" class="btn-close" @onclick="DismissActivityNotification"></button>
+                            <h6 class="alert-heading">📈 Activity since your last visit</h6>
+                            <div class="activity-stats">
+                                <span class="badge bg-success me-2">@activitySummary.NewSongsCount new songs</span>
+                                <span class="badge bg-warning me-2">@activitySummary.UpdatedSongsCount updated songs</span>
+                                <span class="badge bg-info">@activitySummary.NewPlaylistsCount new playlists</span>
+                            </div>
+                            @if (activitySummary.NewPublicSongs.Any())
+                            {
+                                <div class="mt-2">
+                                    <small class="text-muted">Trending new songs:</small>
+                                    <div class="mt-1">
+                                        @foreach (var song in activitySummary.NewPublicSongs.Take(3))
+                                        {
+                                            <span class="badge bg-light text-dark me-1">@song.Title</span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @bind="hideNotification" id="checkDefault">
+                                <label class="form-check-label" for="checkDefault">
+                                    Do not show Again?
+                                </label>
+                            </div>
+                        </div>
+                    }
+                </div>
                 <div class="row align-items-center">
                     <div class="col-12 col-md-8">
                         <h2 class="welcome-title mb-2">
@@ -41,7 +73,7 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>              
             </div>
         </div>
 
@@ -316,6 +348,11 @@
     private int favoriteSongsCount;
     private string? currentUserId;
 
+    private DashboardActivitySummary? activitySummary;
+    private bool hideNotification;
+    private bool showAlert = true;
+    private SettingDto? currentUserSetting;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -328,6 +365,10 @@
             {
                 currentUserId = user.Data.Id;
                 await LoadDashboardData();
+                await LoadActivitySummary();
+                var response = await _settingsApi.GetUserSettings(currentUserId);
+                currentUserSetting = response.IsSuccessStatusCode ? response.Content : null;
+                showAlert = currentUserSetting?.ShowNotifications ?? false;
             }
             else
             {
@@ -362,6 +403,27 @@
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading dashboard data");
+        }
+    }
+
+    private async Task LoadActivitySummary()
+    {
+        if(string.IsNullOrEmpty(currentUserId)) return;            
+        try
+        {
+            var response = await _contentChangeTrackingApi.GetActivitySinceLastLogin(currentUserId);
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                var activity= response.Content;
+                if (activity.NewPublicSongs.Count > 0
+                    || activity.UpdatedSongsCount > 0
+                    || activity.NewPlaylistsCount > 0)
+                    activitySummary = activity;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading activity summary");
         }
     }
 
@@ -521,6 +583,22 @@
             ButtonText = "OK",
             OptionType = OptionType.Error
         });
+    }
+
+    private async Task DismissActivityNotification()
+    {
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            bool enable = !hideNotification;
+            var resp = await _settingsApi.ToggleNotifications(currentUserId, enable);
+            if (resp.IsSuccessStatusCode)
+            {
+                await _userSettings.ReloadCurrentUserSettings(currentUserId);
+            }
+        }            
+        activitySummary = null;
+        // Optionally save dismissal preference to user preferences
+        StateHasChanged();
     }
 
     private async Task ConfirmModal()

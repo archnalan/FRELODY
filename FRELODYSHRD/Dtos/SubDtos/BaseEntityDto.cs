@@ -9,15 +9,21 @@ namespace FRELODYAPP.Dtos.SubDtos
         public string? Id { get; set; }
         public DateTimeOffset? DateCreated { get; set; }
         public DateTimeOffset? DateModified { get; set; }
+        public string? CreatedBy { get; set; }
+        public string? ModifiedBy { get; set; }
+        public bool? IsDeleted { get; set; }
         public Access? Access { get; set; }
-
-        [StringLength(255)]
         public virtual string? TenantId { get; set; }
     }
     public interface IBaseEntityDto
     {
-        DateTimeOffset? DateCreated { get; set; }
-        DateTimeOffset? DateModified { get; set; }
-        string? TenantId { get; set; }
+        public string? Id { get; set; }
+        public DateTimeOffset? DateCreated { get; set; }
+        public DateTimeOffset? DateModified { get; set; }
+        public Access? Access { get; set; }
+        public bool? IsDeleted { get; set; }
+        public string? CreatedBy { get; set; }
+        public string? ModifiedBy { get; set; }
+        public string? TenantId { get; set; }
     }
 }

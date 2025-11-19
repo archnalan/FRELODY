@@ -228,6 +228,13 @@ namespace FRELODYUI.Shared.Services
             }
             return null;
         }
+
+        public async Task<string?> GetCurrentUserId()
+        {
+            var user = await GetLoggedInUserAsync();
+            return user?.Id;
+        }
+
         private async Task<ServiceResult<LoginResponseDto>> GetSessionFromStorageAsync()
         {
             try

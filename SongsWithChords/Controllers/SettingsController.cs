@@ -90,6 +90,18 @@ namespace FRELODYAPIs.Controllers
             }
             return Ok(result.Data);
         }
+                
+        [HttpPost]
+        [ProducesResponseType(typeof(SettingDto), 200)]
+        public async Task<IActionResult> ToggleNotifications([FromQuery] string userId, [FromQuery] bool enable)
+        {
+            var result = await _settingsService.ToggleNotifications(userId, enable);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
+            return Ok(result.Data);
+        }
 
         [HttpDelete]
         [ProducesResponseType(typeof(bool), 200)]

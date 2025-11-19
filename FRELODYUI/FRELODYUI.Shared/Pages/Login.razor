@@ -272,7 +272,11 @@ else
                     _logger.LogInformation("User logged in successfully");
                     successMessage = "Login successful! Redirecting...";
                     StateHasChanged();
-
+                    var userId = await _globalAuth.GetCurrentUserId();
+                    if(!string.IsNullOrEmpty(userId))
+                    {
+                        await _userSettings.LoadUserSettingsAsync(userId);
+                    }
                     await Task.Delay(1000); // Brief delay to show success message
 
                     if (OnLoginSuccess.HasDelegate)
