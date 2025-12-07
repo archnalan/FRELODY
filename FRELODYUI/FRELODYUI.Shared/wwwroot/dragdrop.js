@@ -15,3 +15,13 @@ window.getDragData = function (key) {
         return event.dataTransfer.getData(key);
     };
 };
+
+function initializeCarousel(carouselId, dotNetHelper) {
+    const carousel = document.getElementById(carouselId);
+    if (carousel) {
+        carousel.addEventListener('slid.bs.carousel', function (event) {
+            const activeIndex = event.to;
+            dotNetHelper.invokeMethodAsync('OnSlideChanged', activeIndex);
+        });
+    }
+}

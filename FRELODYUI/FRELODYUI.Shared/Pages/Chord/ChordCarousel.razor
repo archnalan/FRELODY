@@ -9,7 +9,6 @@
             @for (int i = 0; i < Charts.Count; i++)
             {
                 var chart = Charts[i];
-                _currentChartIndex = i;
                 <div class="carousel-item @(i == 0 ? "active" : "")">
                     <div class="d-flex justify-content-center align-items-center position-relative">
                         <img src="@DisplayChart(chart)"
@@ -114,6 +113,8 @@ else
     private ChordChartEditDto? CurrentChart => Charts.Count > 0 && _currentChartIndex >= 0 && _currentChartIndex < Charts.Count
        ? Charts[_currentChartIndex]
        : null;
+    private DotNetObjectReference<ChordCarousel>? _dotNetRef;
+    private IJSObjectReference? _carouselModule;
 
     protected override async Task OnInitializedAsync()
     {
@@ -135,6 +136,22 @@ else
         {
             isLoading = false;
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && Charts.Count > 0)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JsRt.InvokeVoidAsync("initializeCarousel", "chordCarousel", _dotNetRef);
+        }
+    }
+
+    [JSInvokable]
+    public void OnSlideChanged(int newIndex)
+    {
+        _currentChartIndex = newIndex;
+        StateHasChanged();
     }
 
     public async Task LoadCharts(string chordId)
@@ -326,5 +343,8 @@ else
         StateHasChanged();
     }
 
-
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+    }
 }
