@@ -140,7 +140,7 @@ namespace FRELODYAPP.Data
         }
 
         //OAuth
-        public async Task<ServiceResult<LoginResponseDto>> ExternalLoginCallback(string code, string tenantId)
+        public async Task<ServiceResult<LoginResponseDto>> ExternalLoginCallback(string? code = null)
         {
             var client = new HttpClient();
             var uri = new Uri("https://oauth2.googleapis.com/token");
@@ -178,7 +178,7 @@ namespace FRELODYAPP.Data
                     // Update token generation to use TokenService
                     if (userFromDb != null)
                     {
-                        var tokens = await _tokenService.GenerateTokens(userFromDb, tenantId);
+                        var tokens = await _tokenService.GenerateTokens(userFromDb, _tenantId);
                         await _securityUtilityService.LogSecurityEvent(
                             userFromDb.Id,
                             "ExternalLogin",
@@ -195,7 +195,7 @@ namespace FRELODYAPP.Data
                         if (userFromDb != null)
                         {
                             result = await _userManager.AddLoginAsync(userFromDb, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
-                            return await LoginUserNoPassword(userFromDb, tenantId);
+                            return await LoginUserNoPassword(userFromDb, _tenantId);
                         }
                         //Created user
                         var newUser = new User()
@@ -206,6 +206,7 @@ namespace FRELODYAPP.Data
                             LastName = objFromGoogle.Name.Split(" ")?[1],
                             EmailConfirmed = objFromGoogle.EmailVerified,
                             ProfilePicUrl = objFromGoogle.Picture,
+                            TenantId = Guid.NewGuid().ToString()
 
                         };
                         var strategy = _context.Database.CreateExecutionStrategy();
@@ -222,7 +223,7 @@ namespace FRELODYAPP.Data
                                 {
                                     //if all is well
                                     scope.Commit();
-                                    return await LoginUserNoPassword(newUser, tenantId);
+                                    return await LoginUserNoPassword(newUser, _tenantId);
                                 }
 
                                 var outputErrors = new List<string>();
@@ -241,7 +242,7 @@ namespace FRELODYAPP.Data
                     else
                     {
                         //User already exisit as external login. sign in
-                        return await LoginUserNoPassword(userFromDb, tenantId);
+                        return await LoginUserNoPassword(userFromDb, _tenantId);
                     }
 
 

@@ -28,7 +28,6 @@
                   OnDropToRemove="@HandleDropToRemove" 
                   Class="d-flex flex-wrap w-100 gap-1"
                   Style="@textBoxSize"
-                  Filter=".no-drag" 
                   OnRemove="@HandleCrossRowMove">
         <SortableItemTemplate>
             <div data-id="@segment.Id" @ondblclick="() => HandleDoubleClick(segment)">
@@ -278,6 +277,9 @@
             case LineAction.Switch:
                 SwitchLine(lineArgs.CurrentLine, lineArgs.TargetLine);
                 break;
+            case LineAction.Duplicate:
+                DuplicateLine(lineArgs.CurrentLine, lineArgs.TargetLine);
+                break;
             case LineAction.Relocate:
                 //MoveLine(lineArgs.CurrentLine, lineArgs.TargetLine);
                 break;
@@ -327,6 +329,44 @@
 
         OnSegmentsUpdate.InvokeAsync(updated);
         OnFocusLineRequest.InvokeAsync(targetLine);
+    }
+
+    private void DuplicateLine(int currentLine, int afterLine)
+    {
+        var updated = Segments.ToList();
+
+        // Get all segments from the current line
+        var sourceSegments = updated
+            .Where(s => s.LineNumber == currentLine)
+            .OrderBy(s => s.LyricOrder)
+            .ToList();
+
+        if (!sourceSegments.Any()) return;
+
+        // Shift lines after afterLine down by 1 to make room
+        foreach (var seg in updated.Where(s => s.LineNumber > afterLine))
+            seg.LineNumber++;
+
+        // Create duplicated segments
+        var duplicatedSegments = sourceSegments.Select(seg => new SegmentCreateDto
+        {
+            Id = Guid.NewGuid().ToString(),
+            Lyric = seg.Lyric,
+            ChordId = seg.ChordId,
+            ChordName = seg.ChordName,
+            ChordAlignment = seg.ChordAlignment,
+            LineNumber = afterLine + 1,
+            PartNumber = seg.PartNumber,
+            PartName = seg.PartName,
+            LyricOrder = seg.LyricOrder,
+            AddNextSegment = false
+        }).ToList();
+
+        // Add duplicated segments to the updated list
+        updated.AddRange(duplicatedSegments);
+
+        OnSegmentsUpdate.InvokeAsync(updated);
+        OnFocusLineRequest.InvokeAsync(afterLine + 1);
     }
 
     private async void ToggleDropdown(bool show)

@@ -163,11 +163,11 @@
                 </div>
                 break;
             case ViewMode.Playlists:
-                <SongPlaylist ShowActions="false"/>
+                <SongPlaylist @ref="songPlaylistRef" ShowActions="false" ActiveView="activeView" />
                 break;
             default:
                 <div class="row" style="z-index:0">
-                    <SongListView @ref="songListViewRef" />
+                    <SongListView @ref="songListViewRef"  />
                 </div>
                 break;
         }
@@ -198,6 +198,7 @@
     private ActiveView activeView = ActiveView.Expanded;
     private SongList? songListRef;
     private SongListView? songListViewRef;
+    private SongPlaylist? songPlaylistRef;
 
     // UI input vs applied search term
     private string searchQuery = string.Empty;
@@ -226,6 +227,7 @@
         if (activeResult.IsCompleted)
         {
             activeView = activeResult.Result;
+            await SetActiveView(activeView);
         }
 
         if (ShowSearch) 
@@ -272,6 +274,11 @@
                 await songListRef.SetActiveView(view);
                 //await songListRef.SetViewMode(viewMode);
 
+            }
+            if (songPlaylistRef != null)
+            {
+
+                await songPlaylistRef.ApplyViewState(view);
             }
             await _storageService.SetItemAsync("ActiveView", view);
         }

@@ -50,9 +50,9 @@ namespace FRELODYAPIs.Controllers
         [HttpPost]
         [AllowAnonymous]
         [ProducesResponseType(typeof(LoginResponseDto), 200)]
-        public async Task<IActionResult> ExternalLoginCallback([FromBody] ExternalLoginDto ExternalLogin)
+        public async Task<IActionResult> ExternalLoginCallback()
         {
-            var result = await _authorizationDAL.ExternalLoginCallback(ExternalLogin.Code, ExternalLogin.TenantId);
+            var result = await _authorizationDAL.ExternalLoginCallback();
             if (!result.IsSuccess)
             {
                 return StatusCode(result.StatusCode, result.Error);

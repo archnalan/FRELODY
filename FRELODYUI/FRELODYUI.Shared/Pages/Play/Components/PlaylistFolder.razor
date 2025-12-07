@@ -85,7 +85,7 @@
                 </div>
                 }
                 
-                <span class="toggle-icon">
+                <span class="toggle-icon" @onclick="@(()=>IsExpanded = !IsExpanded)">
                     @if (IsExpanded)
                     {
                         <i class="bi bi-chevron-up"></i>

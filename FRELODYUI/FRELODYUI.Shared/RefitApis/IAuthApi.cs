@@ -15,7 +15,7 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<CreateUserResponseDto>> CreateUser([Body] CreateUserDto createUserDto);
 
         [Post("/api/authorization/external-login-callback")]
-        Task<IApiResponse<LoginResponseDto>> ExternalLoginCallback([Body] ExternalLoginDto externalLogin);
+        Task<IApiResponse<LoginResponseDto>> ExternalLoginCallback();
 
         [Get("/api/authorization/get-user-profile")]
         Task<IApiResponse<UpdateUserProfileOutDto>> GetUserProfile([Query] string id = null, [Query] string userName = null);

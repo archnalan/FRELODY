@@ -132,6 +132,7 @@
 @code {
     [Parameter] public string? CollectionId { get; set; }
     [Parameter] public bool ShowActions { get; set; } = true;
+    [Parameter] public ActiveView ActiveView { get; set; } = ActiveView.Collapsed;
 
     private List<PlaylistSongs> collections = new();
     private bool isLoading = true;
@@ -173,6 +174,7 @@
         {
             expandedCollections.Add(CollectionId);
         }
+        await ApplyViewState(ActiveView);
     }
 
     private async Task LoadPlaylists()
@@ -193,6 +195,7 @@
             if (response.IsSuccessStatusCode && response.Content != null)
             {
                 collections = response.Content;
+                await ApplyViewState(ActiveView);
             }
             else
             {
@@ -217,6 +220,33 @@
             await CloseModal();
             StateHasChanged();
         }
+    }
+
+    public async Task ApplyViewState(ActiveView? view = ActiveView.Collapsed)
+    {
+        if (view == ActiveView.Expanded)
+        {
+            // Expand all playlists
+            foreach (var collection in collections)
+            {
+                if (!string.IsNullOrEmpty(collection.Playlist.Id))
+                {
+                    expandedCollections.Add(collection.Playlist.Id);
+                }
+            }
+        }
+        else if (view == ActiveView.Collapsed)
+        {
+            // Collapse all playlists (except if specifically navigated to)
+            var specificId = CollectionId;
+            expandedCollections.Clear();
+            if (!string.IsNullOrEmpty(specificId))
+            {
+                expandedCollections.Add(specificId);
+            }
+        }
+        StateHasChanged();
+        await Task.CompletedTask;
     }
 
     private void ToggleCollection(string collectionId)

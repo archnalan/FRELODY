@@ -437,6 +437,11 @@
                 userProfile = response.Content;
                 totalSongs = userProfile.TotalSongs;
             }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                ShowErrorModal(errorMessage ?? "Failed to load user profile");
+            }
         }
         catch (Exception ex)
         {

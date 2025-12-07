@@ -517,7 +517,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             
         WHERE
             (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
-            AND s.Access != @ProtectedAccess
+            AND (s.Access != @ProtectedAccess OR s.Access IS NULL)
             AND (
                 @IsSuperAdmin = 1 
                 OR s.TenantId = @TenantId 
@@ -582,7 +582,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
         WHERE
             (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
-            AND s.Access != @ProtectedAccess
+            AND (s.Access != @ProtectedAccess OR s.Access IS NULL)
             AND (
                 @IsSuperAdmin = 1 
                 OR s.TenantId = @TenantId 

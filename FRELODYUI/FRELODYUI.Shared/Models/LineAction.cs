@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace FRELODYUI.Shared.Models
 {
 
-    public enum LineAction { None, Move, Switch, Relocate }
+    public enum LineAction { None, Move, Switch, Relocate, Duplicate }
 
     public class LineActionDto
     {

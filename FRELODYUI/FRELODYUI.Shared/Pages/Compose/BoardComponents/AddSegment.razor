@@ -4,8 +4,9 @@
 {
     <div class="add-segment-form-container no-drag" style="@TextBoxSize">
         <form class="add-segment-form" @onsubmit="HandleSubmit">
-            <div class="add-segment-inputs">                
-               <ChordsDropdown TabIndex="@(_baseTabIndex + 1)"
+            <div class="add-segment-inputs">
+                <ChordsDropdown @ref="ChordsDropdownRef"
+                               TabIndex="@(_baseTabIndex + 1)"
                                SelectedChord="SelectedChord" 
                                SelectedChordChanged="HandleChordSelected" />
                 <input @ref="lyricInput"
@@ -58,6 +59,7 @@ else
     private SegmentCreateDto _newSegment = new();
     private string _segmentText = string.Empty;
     private bool isInitialized = false;
+    private ChordsDropdown? ChordsDropdownRef;
 
     protected override void OnParametersSet()
     {
@@ -84,7 +86,7 @@ else
         {
             shouldFocusInput = false;
             await JsRt.InvokeVoidAsync("focusInputAndSetCursorToEnd", lyricInput);
-        
+
             _baseTabIndex = await JsRt.InvokeAsync<int>("getTabIndexOrDefault", lyricInput);
             StateHasChanged();
         }
@@ -117,6 +119,25 @@ else
 
     private async Task HandleSubmit()
     {
+        if (ChordsDropdownRef != null)
+        {
+            var chordName = ChordsDropdownRef.searchTerm;
+            if (!string.IsNullOrEmpty(chordName) && RegexPatterns.ChordRegex.IsMatch(chordName))
+            {
+                bool addChord = await ChordsDropdownRef.HandleChordSaved(new ChordDto
+                {
+                    ChordName = chordName
+                });
+                if (addChord)
+                {
+                    StateHasChanged();
+                }
+                else
+                {
+                    return;
+                }
+            }
+        }
         if(string.IsNullOrWhiteSpace(_segmentText) 
         && string.IsNullOrEmpty(SelectedChord.ChordName))
         {

@@ -16,6 +16,13 @@
            <i class="bi bi-arrow-left-right me-2"></i> Switch 
            <i class="bi @(currentSubmenu == LineAction.Switch ? "bi-caret-right-fill" : "bi-caret-right") float-end"></i>
        </li>
+         <li class="dropdown-item fw-semibold"
+           style="cursor:pointer"
+           @onclick="() => ToggleSubmenu(LineAction.Duplicate)"
+           @onclick:stopPropagation>
+           <i class="bi bi-files me-2"></i> Duplicate
+           <i class="bi @(currentSubmenu == LineAction.Duplicate ? "bi-caret-right-fill" : "bi-caret-right") float-end"></i>
+       </li>
         <li class="dropdown-item fw-semibold"
            style="cursor:pointer"
            @onclick="() => ToggleSubmenu(LineAction.Relocate)"
@@ -24,7 +31,7 @@
            <i class="bi @(currentSubmenu == LineAction.Relocate ? "bi-caret-right-fill" : "bi-caret-right") float-end"></i>
        </li>
    </ul>
-   @if (showDropdown)
+    @if (showDropdown)
    {
        <div class="dropdown-menu show p-0"
             style="position:absolute; top:0; left:100%; width:200px; max-height:320px; overflow-y:auto; z-index:6">
@@ -52,17 +59,18 @@
                     <span><i class="bi bi-plus me-2"></i>Add New Section</span>
                 </div>
             }
-           else if (currentSubmenu == LineAction.Move || currentSubmenu == LineAction.Switch)
+           else if (currentSubmenu == LineAction.Move || currentSubmenu == LineAction.Switch || currentSubmenu == LineAction.Duplicate)
             {
                  @foreach (var ln in AllLines)
                  {
                      var isCurrent = ln == CurrentLine;
-                     <div class="dropdown-item d-flex justify-content-between align-items-center @(isCurrent ? "disabled text-muted" : "")"
-                          style="cursor:@(isCurrent ? "not-allowed" : "pointer")"
-                          @onclick="@(isCurrent ? ()=>{} : () => ActionConfirmed(currentSubmenu, ln))"
+                     var isDisabled = currentSubmenu == LineAction.Duplicate ? false : isCurrent;
+                     <div class="dropdown-item d-flex justify-content-between align-items-center @(isDisabled ? "disabled text-muted" : "")"
+                          style="cursor:@(isDisabled ? "not-allowed" : "pointer")"
+                          @onclick="@(isDisabled ? ()=>{} : () => ActionConfirmed(currentSubmenu, ln))"
                            @onclick:stopPropagation>
-                          <span>Line @ln.ToString("00")</span>
-                          @if (isCurrent)
+                          <span>@(currentSubmenu == LineAction.Duplicate ? $"After Line {ln:00}" : $"Line {ln:00}")</span>
+                          @if (isCurrent && currentSubmenu != LineAction.Duplicate)
                           {
                               <span class="badge bg-secondary">Current</span>
                           }

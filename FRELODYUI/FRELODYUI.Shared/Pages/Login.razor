@@ -317,23 +317,7 @@ else
         try
         {
             ClearMessages();
-
-            // Redirect to Google OAuth
-            // var googleAuthUrl = "https://accounts.google.com/oauth/authorize?" +
-            //     "client_id=YOUR_GOOGLE_CLIENT_ID&" +
-            //     "redirect_uri=YOUR_REDIRECT_URI&" +
-            //     "response_type=code&" +
-            //     "scope=openid%20email%20profile";
-
-            // _navManager.NavigateTo(googleAuthUrl, forceLoad: true);
-            //show modal for future implementation
-            _modalService.Show( new ModalOptionDto
-            {
-                Title = "Google Login",
-                Message = "Google login will be available soon.",
-                OptionType = OptionType.Info,
-                ButtonText = "OK"
-            });
+            await _authApi.ExternalLoginCallback();
         }
         catch (Exception ex)
         {

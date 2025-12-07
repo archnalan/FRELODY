@@ -64,7 +64,7 @@
     [Parameter] public EventCallback<ChordDto> SelectedChordChanged { get; set; }
     [Parameter] public int TabIndex { get; set; } = 0;
 
-    private string searchTerm = "";
+    public string searchTerm = "";
     private bool showDropdown = false;
     private bool showCustomizeModal = false;
     private List<ChordDto> AvailableChords { get; set; } = new();
@@ -165,7 +165,7 @@
         showCustomizeModal = false;
     }
 
-    private async Task HandleChordSaved(ChordDto newChord)
+    public async Task<bool> HandleChordSaved(ChordDto newChord)
     {
         newChord = AvailableChords.FirstOrDefault(c => 
                    c.ChordName.Trim().ToLower() == newChord.ChordName.Trim().ToLower()) 
@@ -193,7 +193,7 @@
                         Data = errorMessage
                     }
                 });
-                return;
+                return false;
             }
             newChord = new ChordDto
                 {
@@ -208,6 +208,7 @@
         // Select the new chord
         await SelectChord(newChord);
         CloseCustomizeModal();
+        return true;
     }
 
     private async Task ConfirmModal()

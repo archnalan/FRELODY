@@ -10,7 +10,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
     {
         Task<ServiceResult<string>> AddUserToRoleAsync(string userId, string roleName);
         Task<ServiceResult<CreateUserResponseDto>> CreateUser([Required] CreateUserDto createUserDto);
-        Task<ServiceResult<LoginResponseDto>> ExternalLoginCallback(string code, string tenantId);
+        Task<ServiceResult<LoginResponseDto>> ExternalLoginCallback(string? code = null);
         Task<ServiceResult<UpdateUserProfileOutDto>> GetUserProfile(string id = null, string userName = null);
         Task<ServiceResult<List<ComboBoxDto>>> GetUsersForComboBoxes();
         Task<ServiceResult<string>> InitiatePasswordReset(string emailAddress);

@@ -2,7 +2,7 @@
 @using FRELODYSHRD.ModelTypes
 @inject ILogger<Segment> _logger
 
-<div class="segment-container @GetSegmentStateClass() @(Editing ? "no-drag" : "")">
+<div class="segment-container @GetSegmentStateClass()">
     @if (Editing)
     {
         <AddSegment @ref="addSegmentRef"
@@ -144,20 +144,20 @@
     {
         var classes = new List<string>();
 
-        if (FocusedLine)
-        {
-            classes.Add("segment-container--focused");
-        }
+        // if (FocusedLine)
+        // {
+        //     classes.Add("segment-container--focused");
+        // }
 
-        if (Editing)
-        {
-            classes.Add("segment-container--editing");
-        }
+        // if (Editing)
+        // {
+        //     classes.Add("segment-container--editing");
+        // }
 
-        if (string.IsNullOrEmpty(Content?.Lyric) && string.IsNullOrEmpty(ChordName))
-        {
-            classes.Add("segment-empty");
-        }
+        // if (string.IsNullOrEmpty(Content?.Lyric) && string.IsNullOrEmpty(ChordName))
+        // {
+        //     classes.Add("segment-empty");
+        // }
 
         return string.Join(" ", classes);
     }
