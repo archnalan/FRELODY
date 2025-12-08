@@ -1,0 +1,69 @@
+@* Step 1: Chord Details - Select chord and fret position *@
+@using FRELODYUI.Shared.Pages.Compose.ChordComponents
+
+<div class="wizard-step-content">
+    <div class="step-header">
+        <div class="step-icon">
+            <i class="bi bi-music-note-beamed"></i>
+        </div>
+        <h3 class="step-title">Chord Details</h3>
+        <p class="step-description">Select the chord and specify the fret position for this chart</p>
+    </div>
+
+    <div class="step-body">
+        <!-- Chord Selection -->
+        <div class="form-group">
+            <label class="form-label" for="chordSelect">
+                <i class="bi bi-music-note-beamed label-icon"></i>
+                Chord <span class="required-indicator">*</span>
+            </label>
+            <div class="input-with-action">
+                <InputSelect @bind-Value="@FormModel.ChordId" 
+                           class="form-input form-select" 
+                           id="chordSelect">
+                    @if (SelectedChord != null && !string.IsNullOrEmpty(SelectedChord.Id))
+                    {
+                        <option value="@SelectedChord.Id">@SelectedChord.ChordName</option>
+                    }
+                    else
+                    {
+                        <option value="">Select a chord</option>
+                    }
+
+                    @foreach (var chord in Chords.Where(c => c.Id != SelectedChord?.Id))
+                    {
+                        <option value="@chord.Id">@chord.ChordName</option>
+                    }
+                </InputSelect>
+                <button type="button" class="action-button" @onclick="OpenCreateChordModal" title="Create new chord">
+                    <i class="bi bi-file-earmark-plus"></i>
+                    <span>New Chord</span>
+                </button>
+            </div>
+            <ValidationMessage For="@(() => FormModel.ChordId)" class="validation-message" />
+        </div>
+
+        <!-- Fret Position -->
+        <div class="form-group">
+            <label class="form-label" for="fretPosition">
+                <i class="bi bi-hash label-icon"></i>
+                Fret Position
+            </label>
+            <InputNumber @bind-Value="@FormModel.FretPosition" 
+                       class="form-input" 
+                       id="fretPosition"
+                       min="1" 
+                       max="24"
+                       placeholder="Enter fret number (1-24)" />
+            <small class="form-help-text">Position on the fretboard where this chord is played (optional)</small>
+            <ValidationMessage For="@(() => FormModel.FretPosition)" class="validation-message" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public ChordChartDto FormModel { get; set; } = new();
+    [Parameter] public List<ChordDto> Chords { get; set; } = new();
+    [Parameter] public ChordDto SelectedChord { get; set; } = new();
+    [Parameter] public EventCallback OpenCreateChordModal { get; set; }
+}

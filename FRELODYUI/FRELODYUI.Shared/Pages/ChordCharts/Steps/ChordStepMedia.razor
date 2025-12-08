@@ -1,0 +1,147 @@
+@* Step 2: Media Uploads - Chart image and audio sample *@
+@using Microsoft.AspNetCore.Components.Forms
+
+<div class="wizard-step-content">
+    <div class="step-header">
+        <div class="step-icon">
+            <i class="bi bi-file-earmark-image"></i>
+        </div>
+        <h3 class="step-title">Media Files</h3>
+        <p class="step-description">Upload a chord chart image and optionally an audio sample <span class="required-indicator">*</span></p>
+    </div>
+
+    <div class="step-body">
+        <!-- Chart Image Upload -->
+        <div class="form-group">
+            <label class="form-label" for="chartImageUpload">
+                <i class="bi bi-file-earmark-image label-icon"></i>
+                Chord Chart Image <span class="required-indicator">*</span>
+            </label>
+            
+            <div class="upload-container">
+                @if (string.IsNullOrEmpty(ChartPreview))
+                {
+                    <div class="upload-dropzone">
+                        <InputFile id="chartImageUpload"
+                                 OnChange="@OnChartUpload"
+                                 accept="image/*"
+                                 class="upload-input"
+                                 disabled="@IsUploadingChart" />
+                        <label for="chartImageUpload" class="upload-label @(IsUploadingChart ? "upload-label--disabled" : "")">
+                            @if (IsUploadingChart)
+                            {
+                                <div class="upload-loading">
+                                    <i class="spinner-border spinner-border-sm"></i>
+                                    <span>Uploading chart image...</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <i class="bi bi-cloud-upload upload-icon"></i>
+                                <span class="upload-text">Click to upload or drag and drop</span>
+                                <span class="upload-subtext">PNG, JPG, GIF up to 10MB</span>
+                            }
+                        </label>
+                    </div>
+                }
+                else
+                {
+                    <div class="preview-container">
+                        <button type="button"
+                              class="preview-remove"
+                              @onclick="OnClearChart"
+                              title="Remove image">
+                            <i class="bi bi-x"></i>
+                        </button>
+                        <img src="@ChartPreview"
+                           alt="Chord chart preview"
+                           class="preview-image" />
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(ChartUploadError))
+                {
+                    <div class="upload-error">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <span>@ChartUploadError</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Audio Upload -->
+        <div class="form-group">
+            <label class="form-label" for="audioUpload">
+                <i class="bi bi-music-note label-icon"></i>
+                Audio Sample (Optional)
+            </label>
+            
+            <div class="upload-container">
+                @if (string.IsNullOrEmpty(AudioPreview))
+                {
+                    <div class="upload-dropzone">
+                        <InputFile id="audioUpload"
+                                 OnChange="@OnAudioUpload"
+                                 accept="audio/*"
+                                 class="upload-input"
+                                 disabled="@IsUploadingAudio" />
+                        <label for="audioUpload" class="upload-label @(IsUploadingAudio ? "upload-label--disabled" : "")">
+                            @if (IsUploadingAudio)
+                            {
+                                <div class="upload-loading">
+                                    <i class="spinner-border spinner-border-sm"></i>
+                                    <span>Uploading audio...</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <i class="bi bi-cloud-upload upload-icon"></i>
+                                <span class="upload-text">Click to upload or drag and drop</span>
+                                <span class="upload-subtext">MP3, WAV, OGG up to 50MB</span>
+                            }
+                        </label>
+                    </div>
+                }
+                else
+                {
+                    <div class="audio-preview-container">
+                        <button type="button"
+                              class="preview-remove"
+                              @onclick="OnClearAudio"
+                              title="Remove audio">
+                            <i class="bi bi-x"></i>
+                        </button>
+                        <div class="audio-preview">
+                            <i class="bi bi-file-earmark-music audio-preview-icon"></i>
+                            <audio controls class="audio-player">
+                                <source src="@AudioPreview" />
+                                Your browser does not support this audio format.
+                            </audio>
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(AudioUploadError))
+                {
+                    <div class="upload-error">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <span>@AudioUploadError</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string ChartPreview { get; set; } = "";
+    [Parameter] public string AudioPreview { get; set; } = "";
+    [Parameter] public bool IsUploadingChart { get; set; }
+    [Parameter] public bool IsUploadingAudio { get; set; }
+    [Parameter] public string ChartUploadError { get; set; } = "";
+    [Parameter] public string AudioUploadError { get; set; } = "";
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnChartUpload { get; set; }
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnAudioUpload { get; set; }
+    [Parameter] public EventCallback OnClearChart { get; set; }
+    [Parameter] public EventCallback OnClearAudio { get; set; }
+}

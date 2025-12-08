@@ -1,0 +1,236 @@
+/* ============================================
+   CHORD STEP MEDIA STYLES
+   ============================================ */
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.label-icon {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.required-indicator {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.upload-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.upload-dropzone {
+    position: relative;
+    border: 2px dashed var(--input-border);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    background: var(--input-bg);
+    overflow: hidden;
+}
+
+    .upload-dropzone:hover {
+        border-color: var(--input-border-focus);
+        background: var(--bg-hover);
+    }
+
+.upload-input {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 1;
+}
+
+    .upload-input:disabled {
+        cursor: not-allowed;
+    }
+
+.upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upload-label--disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.upload-icon {
+    font-size: 3rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.upload-text {
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.upload-subtext {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.upload-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--input-border-focus);
+}
+
+    .upload-loading span {
+        font-size: 0.95rem;
+    }
+
+.preview-container {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-hover);
+    border: 2px solid var(--border-light);
+}
+
+.preview-image {
+    width: 100%;
+    height: auto;
+    max-height: 400px;
+    object-fit: contain;
+    display: block;
+}
+
+.preview-remove {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: rgba(220, 38, 38, 0.9);
+    backdrop-filter: blur(8px);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+    .preview-remove:hover {
+        background: rgba(185, 28, 28, 1);
+        transform: scale(1.1);
+    }
+
+    .preview-remove i {
+        font-size: 1.25rem;
+    }
+
+.audio-preview-container {
+    position: relative;
+    border: 2px solid var(--border-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    background: var(--input-bg);
+}
+
+.audio-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+}
+
+.audio-preview-icon {
+    font-size: 2.5rem;
+    color: var(--text-secondary);
+}
+
+.audio-player {
+    width: 100%;
+    max-width: 100%;
+    outline: none;
+}
+
+    .audio-player:focus {
+        outline: 2px solid var(--input-border-focus);
+        border-radius: 4px;
+    }
+
+.upload-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(220, 38, 38, 0.1);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    border-radius: 8px;
+    color: #dc2626;
+    font-size: 0.875rem;
+}
+
+    .upload-error i {
+        font-size: 1rem;
+    }
+
+/* Dark Mode */
+[data-bs-theme="dark"] .upload-dropzone {
+    background: rgba(55, 65, 81, 0.3);
+}
+
+    [data-bs-theme="dark"] .upload-dropzone:hover {
+        background: rgba(55, 65, 81, 0.5);
+    }
+
+[data-bs-theme="dark"] .preview-container,
+[data-bs-theme="dark"] .audio-preview-container {
+    background: rgba(31, 41, 55, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .upload-label {
+        padding: 1.75rem 1rem;
+    }
+
+    .upload-icon {
+        font-size: 2.25rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .upload-text {
+        font-size: 0.9rem;
+    }
+
+    .upload-subtext {
+        font-size: 0.8rem;
+    }
+
+    .preview-image {
+        max-height: 200px;
+    }
+}

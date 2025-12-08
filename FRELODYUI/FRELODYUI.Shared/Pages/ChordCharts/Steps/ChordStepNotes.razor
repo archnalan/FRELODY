@@ -1,0 +1,42 @@
+@* Step 3: Notes - Additional information about the chord chart *@
+@using Microsoft.AspNetCore.Components.Forms
+
+<div class="wizard-step-content">
+    <div class="step-header">
+        <div class="step-icon">
+            <i class="bi bi-card-text"></i>
+        </div>
+        <h3 class="step-title">Additional Information</h3>
+        <p class="step-description">Add helpful notes about this chord position (optional)</p>
+    </div>
+
+    <div class="step-body">
+        <div class="form-group">
+            <label for="description" class="form-label">
+                <i class="bi bi-card-text label-icon"></i>
+                Notes
+            </label>
+            <InputTextArea id="description"
+                         @bind-Value="@FormModel.PositionDescription"
+                         class="form-input form-textarea"
+                         rows="6"
+                         placeholder="Add any notes about this chord chart, fingering tips, or usage suggestions..." />
+            <small class="form-help-text">Optional: Add helpful information about this chord position, fingering techniques, or when to use this voicing</small>
+            <ValidationMessage For="@(() => FormModel.PositionDescription)" class="validation-message" />
+        </div>
+
+        <div class="notes-tips">
+            <div class="tip-card">
+                <i class="bi bi-lightbulb tip-icon"></i>
+                <div class="tip-content">
+                    <strong>Pro Tip:</strong>
+                    <p>Include fingering patterns, difficulty level, or common progressions that use this chord position.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public ChordChartDto FormModel { get; set; } = new();
+}

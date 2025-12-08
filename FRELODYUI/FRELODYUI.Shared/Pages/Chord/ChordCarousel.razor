@@ -13,7 +13,7 @@
                     <div class="d-flex justify-content-center align-items-center position-relative">
                         <img src="@DisplayChart(chart)"
                              alt="@Chord?.ChordName"
-                             class="img-thumbnail bg-light fixed-height-img"
+                             class="img-thumbnail bg-white fixed-height-img"
                              style="background-color: @(Theme == "dark" ? "#ddd" : "")" />
                     </div>
                 </div>
@@ -50,7 +50,7 @@
 
         @if (Charts.Count > 1)
         {
-            <div class="carousel-indicators">
+           @*  <div class="carousel-indicators">
                 @for (int i = 0; i < Charts.Count; i++)
                 {
                     var index = i;
@@ -60,7 +60,7 @@
                             data-bs-target="#chordCarousel"
                             data-bs-slide-to="@i"></button>
                 }
-            </div>
+            </div> *@
             <button class="carousel-control-prev" type="button"
                     @onclick="PreviousChart"
                     data-bs-target="#chordCarousel" data-bs-slide="prev">
