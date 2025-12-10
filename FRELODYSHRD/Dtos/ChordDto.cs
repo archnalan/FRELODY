@@ -5,11 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FRELODYAPP.Dtos;
+using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Interfaces;
 
 namespace FRELODYSHRD.Dtos
 {
-    public class ChordDto
+    public class ChordDto:BaseEntityDto
     {
         public string? Id { get; set; }
 

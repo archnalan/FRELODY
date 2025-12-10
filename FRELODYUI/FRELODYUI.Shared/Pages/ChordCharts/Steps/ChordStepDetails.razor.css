@@ -77,7 +77,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.875rem 1.25rem;
-    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
+    background: linear-gradient(135deg, var(--bg-active), #0056b3);
     color: white;
     border: none;
     border-radius: 8px;
@@ -129,19 +129,259 @@
     font-weight: 600;
 }
 
+/* ============================================
+   CHORD SEARCH DROPDOWN STYLES
+   ============================================ */
+
+.chord-search-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.chord-search-input {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+}
+
+    .chord-search-input.dropdown-open {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        border-bottom-color: transparent;
+    }
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+.clear-search {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+    .clear-search:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--modal-content-bg);
+    border: 2px solid var(--input-border-focus);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    box-shadow: var(--modal-shadow);
+    padding: 0.5rem;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    list-style: none;
+}
+
+    .dropdown-menu.show {
+        display: block;
+    }
+
+.dropdown-item {
+    color: var(--text-primary);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+    .dropdown-item:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+    .dropdown-item.active {
+        background: var(--bg-active);
+        color: white;
+    }
+
+    .dropdown-item.disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+        .dropdown-item.disabled:hover {
+            background: transparent;
+        }
+
+    .dropdown-item i {
+        margin-right: 0.5rem;
+        font-size: 1rem;
+    }
+
+.dropdown-divider {
+    border-top: 1px solid var(--modal-border-color);
+    margin: 0.5rem 0;
+}
+
+/* Scrollbar Styling */
+.dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dropdown-menu::-webkit-scrollbar-track {
+    background: var(--bg-hover);
+    border-radius: 3px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+    background: var(--border-medium);
+    border-radius: 3px;
+}
+
+    .dropdown-menu::-webkit-scrollbar-thumb:hover {
+        background: var(--text-secondary);
+    }
+
+/* ============================================
+   FRET POSITION INPUT GROUP STYLES
+   ============================================ */
+
+.fret-input-group {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    position: relative;
+}
+
+.fret-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    padding: 0;
+    background: linear-gradient(135deg, var(--bg-active), #0056b3);
+    color: white;
+    border: 2px solid var(--input-border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+    .fret-button:hover:not(:disabled) {
+        border-color: var(--input-border-focus);
+        transform: scale(1.05);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        z-index: 1;
+    }
+
+    .fret-button:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+
+    .fret-button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        background: var(--bg-hover);
+        color: var(--text-secondary);
+    }
+
+    .fret-button i {
+        font-size: 1.1rem;
+    }
+
+.fret-decrement {
+    border-radius: 8px 0 0 8px;
+    border-right: none;
+    background: linear-gradient(135deg, var(--gradient-primary-hover-start), var(--gradient-primary-hover-end));
+}
+
+.fret-increment {
+    border-radius: 0 8px 8px 0;
+    border-left: none;
+}
+
+.fret-input {
+    flex: 1;
+    text-align: center;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    font-weight: 600;
+    font-size: 1.125rem;
+    padding: 0.875rem 0.5rem;
+    min-width: 0;
+}
+
+    /* Remove default number input spinners */
+    .fret-input::-webkit-outer-spin-button,
+    .fret-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .fret-input[type=number] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+
+    .fret-input:focus {
+        border-color: var(--input-border-focus);
+        box-shadow: none;
+        z-index: 2;
+    }
+
+    .fret-input::placeholder {
+        font-weight: 400;
+        font-size: 0.95rem;
+    }
+
+/* Focus state for the entire group */
+.fret-input-group:focus-within .fret-button:not(:disabled) {
+    border-color: var(--input-border-focus);
+}
+
+.fret-input-group:focus-within .fret-input {
+    border-color: var(--input-border-focus);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .input-with-action {
         flex-direction: column;
     }
 
-        .input-with-action .form-input {
+        .input-with-action .chord-search-wrapper {
             width: 100%;
         }
 
     .action-button {
         width: 100%;
         justify-content: center;
+    }
+
+    .fret-button {
+        width: 2.75rem;
     }
 }
 
@@ -150,5 +390,25 @@
     .action-button {
         font-size: 0.9rem;
         padding: 0.75rem 0.875rem;
+    }
+
+    .chord-search-input {
+        padding-left: 2.25rem;
+        padding-right: 2.25rem;
+    }
+
+    .search-icon,
+    .clear-search {
+        font-size: 0.9rem;
+    }
+
+    .fret-button {
+        width: 2.5rem;
+        font-size: 1rem;
+    }
+
+    .fret-input {
+        font-size: 1rem;
+        padding: 0.75rem 0.5rem;
     }
 }

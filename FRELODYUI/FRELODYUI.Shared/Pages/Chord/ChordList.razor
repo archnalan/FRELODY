@@ -70,7 +70,6 @@
             {
                 <ChordCard @ref="chordCardRef"
                            OnSetToDelete="SetToDelete"
-                           OnSetOpenConfirm="SetOpenConfirm"
                            OnSetOpenChordEdit="OpenChordEditModal" />
             }
             else
@@ -246,12 +245,8 @@
                     ActionType = "DeleteChord",
                     Data = chord.Id!
                 }
-            });
-    }
-
-    private void SetOpenConfirm(bool show)
-    {
-        showConfirmDeleteModal = show;
+        });
+        showConfirmDeleteModal = true;
     }
 
     private async Task HandleDelete(string chordId)

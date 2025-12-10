@@ -3,24 +3,20 @@
 @inject ILogger<ShareDropdown> _logger
 
 <div class="dropdown position-relative">
-    <button class="btn btn-primary dropdown-toggle"
-            type="button"
-            @onclick="ToggleDropdown"
-            disabled="@isLoading">
-        @if (isLoading)
-        {
-            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-        }
-        else
-        {
-            <i class="bi bi-upload me-1"></i>
-        }
-        Share
-    </button>
-
-    @if (showDropdown)
+    @if (ShowShareDropdown)
     {
         <div class="dropdown-menu show position-absolute" style="top: 100%; left: 0; z-index: 1050;">
+            <button class="dropdown-item d-flex align-items-center" 
+                    type="button"
+                    data-bs-toggle="tooltip"
+                    title="@(string.IsNullOrEmpty(currentUserId) ? "Login..." : "Customize")"
+                    aria-label="edit this song"
+                    @onclick="@(() => CustomizeSong(Song.Id))"
+                    disabled="@(string.IsNullOrEmpty(currentUserId))">
+                <i class="bi bi-pencil-square me-2"></i>
+                <span>Customize</span>
+            </button>
+
             <button class="dropdown-item d-flex align-items-center"
                     type="button"
                     @onclick="HandleShareLink"
@@ -32,8 +28,6 @@
                     <span class="spinner-border spinner-border-sm ms-auto" role="status"></span>
                 }
             </button>
-
-            <div class="dropdown-divider"></div>
 
             <button class="dropdown-item d-flex align-items-center"
                     type="button"
@@ -47,7 +41,6 @@
                 }
             </button>
         </div>
-        <div style="z-index:0" class="modal-backdrop bg-transparent" @onclick="() => showDropdown =false"></div>
     }
 </div>
 
@@ -73,8 +66,10 @@
 @code {
     [Parameter] public SongDto Song { get; set; } = default!;
     [Parameter] public EventCallback OnActionCompleted { get; set; }
+    [Parameter] public EventCallback<string> OnCustomizeSong { get; set; }
+    [Parameter] public bool ShowShareDropdown { get; set; } 
 
-    private bool showDropdown = false;
+    private string? currentUserId;
     private bool isLoading = false;
     private bool isGeneratingLink = false;
     private bool isPrinting = false;
@@ -83,14 +78,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Click outside handler would be nice, but we'll keep it simple for now
+        var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+        if (userResult.IsSuccess && userResult.Data != null)
+        {
+            currentUserId = userResult.Data.Id;
+        }
         await base.OnInitializedAsync();
-    }
-
-    private void ToggleDropdown()
-    {
-        showDropdown = !showDropdown;
-        StateHasChanged();
     }
 
     private async Task HandleShareLink()
@@ -98,7 +91,7 @@
         if (Song == null) return;
 
         isGeneratingLink = true;
-        showDropdown = false;
+        ShowShareDropdown = false;
         StateHasChanged();
 
         try
@@ -154,7 +147,7 @@
         if (Song == null) return;
 
         isPrinting = true;
-        showDropdown = false;
+        ShowShareDropdown = false;
         StateHasChanged();
 
         try
@@ -217,6 +210,14 @@
         StateHasChanged();
     }
 
+    private async Task CustomizeSong(string? songId)
+    {
+        if (OnCustomizeSong.HasDelegate)
+        {
+            await OnCustomizeSong.InvokeAsync(songId);
+        }
+    }
+
     private async Task ConfirmModal()
     {
         if (_modalService.CurrentModal.Context?.ActionType == "GenerateShareLink")
@@ -236,7 +237,7 @@
     // Handle click outside dropdown to close it
     private void HandleClickOutside()
     {
-        showDropdown = false;
+        ShowShareDropdown = false;
         StateHasChanged();
     }
 }

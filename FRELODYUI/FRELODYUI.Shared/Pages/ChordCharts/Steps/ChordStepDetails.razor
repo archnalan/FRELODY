@@ -18,29 +18,69 @@
                 Chord <span class="required-indicator">*</span>
             </label>
             <div class="input-with-action">
-                <InputSelect @bind-Value="@FormModel.ChordId" 
-                           class="form-input form-select" 
-                           id="chordSelect">
-                    @if (SelectedChord != null && !string.IsNullOrEmpty(SelectedChord.Id))
+                <div class="chord-search-wrapper">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text"
+                           class="form-input chord-search-input @(ShowDropdown ? "dropdown-open" : "")"
+                           id="chordSelect"
+                           placeholder="Search or select a chord..."
+                           @bind="SearchQuery"
+                           @bind:event="oninput"
+                           @onfocus="HandleFocus"
+                           @onblur="HandleBlur"
+                           @onkeydown="HandleKeyDown"
+                           @ref="chordInputRef" 
+                           disabled="@IsChordEdit" />
+                    
+                    @if (!string.IsNullOrEmpty(SearchQuery) && ShowDropdown && !IsChordEdit)
                     {
-                        <option value="@SelectedChord.Id">@SelectedChord.ChordName</option>
+                        <button type="button" class="clear-search" @onclick="ClearSearch" @onmousedown:preventDefault>
+                            <i class="bi bi-x"></i>
+                        </button>
                     }
-                    else
+                    
+                    @if (ShowDropdown && FilteredChords.Any() && !IsChordEdit)
                     {
-                        <option value="">Select a chord</option>
+                        <ul class="dropdown-menu show">
+                            @foreach (var (chord, index) in FilteredChords.Select((c, i) => (c, i)))
+                            {
+                                <li>
+                                    <button type="button"
+                                            class="dropdown-item @(index == SelectedIndex ? "active" : "")"
+                                            @onmousedown:preventDefault
+                                            @onclick="() => SelectChord(chord)">
+                                        <i class="bi bi-music-note-list"></i>
+                                        @chord.ChordName
+                                    </button>
+                                </li>
+                            }
+                        </ul>
                     }
-
-                    @foreach (var chord in Chords.Where(c => c.Id != SelectedChord?.Id))
+                    else if (ShowDropdown && !string.IsNullOrEmpty(SearchQuery) && !FilteredChords.Any())
                     {
-                        <option value="@chord.Id">@chord.ChordName</option>
+                        <ul class="dropdown-menu show">
+                            <li class="dropdown-item disabled text-muted">
+                                <i class="bi bi-search"></i>
+                                No matching chords found
+                            </li>
+                        </ul>
                     }
-                </InputSelect>
-                <button type="button" class="action-button" @onclick="OpenCreateChordModal" title="Create new chord">
+                </div>
+                <button type="button" class="action-button"
+                        @onclick="OpenCreateChordModal"
+                        title="Create new chord"
+                        disabled="@IsChordEdit">
                     <i class="bi bi-file-earmark-plus"></i>
                     <span>New Chord</span>
                 </button>
             </div>
             <ValidationMessage For="@(() => FormModel.ChordId)" class="validation-message" />
+            @if (!string.IsNullOrEmpty(ValidationError))
+            {
+                <div class="validation-message">
+                    @ValidationError
+                </div>
+            }
         </div>
 
         <!-- Fret Position -->
@@ -49,14 +89,43 @@
                 <i class="bi bi-hash label-icon"></i>
                 Fret Position
             </label>
-            <InputNumber @bind-Value="@FormModel.FretPosition" 
-                       class="form-input" 
+            <div class="fret-input-group">
+                <button type="button" 
+                        class="fret-button fret-decrement"
+                        @onclick="() => DecrementFret()"
+                        disabled="@(FretValue <= MinFret)"
+                        title="Decrease fret position">
+                    <i class="bi bi-dash-lg"></i>
+                </button>
+                
+                <input type="number"
+                       class="form-input fret-input"
                        id="fretPosition"
-                       min="1" 
-                       max="24"
-                       placeholder="Enter fret number (1-24)" />
-            <small class="form-help-text">Position on the fretboard where this chord is played (optional)</small>
+                       placeholder="1-24"
+                       value="@FretValue"
+                       @oninput="(e) => HandleFretInput(e)"
+                       @onkeydown="(e) => HandleFretKeyDown(e)"
+                       min="@MinFret"
+                       max="@MaxFret" />
+                
+                <button type="button" 
+                        class="fret-button fret-increment"
+                        @onclick="() => IncrementFret()"
+                        disabled="@(FretValue >= MaxFret)"
+                        title="Increase fret position">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+            </div>
+            <small class="form-help-text">
+                Position on the fretboard where this chord is played (1-24)
+            </small>
             <ValidationMessage For="@(() => FormModel.FretPosition)" class="validation-message" />
+            @if (!string.IsNullOrEmpty(FretValidationError))
+            {
+                <div class="validation-message">
+                    @FretValidationError
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -65,5 +134,249 @@
     [Parameter] public ChordChartDto FormModel { get; set; } = new();
     [Parameter] public List<ChordDto> Chords { get; set; } = new();
     [Parameter] public ChordDto SelectedChord { get; set; } = new();
+    [Parameter] public bool IsChordEdit { get; set; }
     [Parameter] public EventCallback OpenCreateChordModal { get; set; }
+    [Parameter] public EventCallback<ChordDto> SelectedChordChanged { get; set; }
+
+    private ElementReference chordInputRef;
+    private string _searchQuery = string.Empty;
+    private string ValidationError = string.Empty;
+    private string FretValidationError = string.Empty;
+    private bool ShowDropdown = false;
+    private int SelectedIndex = -1;
+    private List<ChordDto> FilteredChords = new();
+
+    // Fret Position Properties
+    private const int MinFret = 1;
+    private const int MaxFret = 24;
+    private int? FretValue
+    {
+        get => FormModel.FretPosition;
+        set
+        {
+            if (value.HasValue)
+            {
+                var clampedValue = Math.Clamp(value.Value, MinFret, MaxFret);
+                FormModel.FretPosition = clampedValue;
+                ValidateFret(clampedValue);
+            }
+            else
+            {
+                FormModel.FretPosition = null;
+                FretValidationError = string.Empty;
+            }
+        }
+    }
+
+    private string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (_searchQuery != value)
+            {
+                _searchQuery = value;
+                FilterChords();
+                ValidateInput();
+            }
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (SelectedChord != null && !string.IsNullOrEmpty(SelectedChord.Id))
+        {
+            _searchQuery = SelectedChord.ChordName;
+            FormModel.ChordId = SelectedChord.Id;
+        }
+        FilterChords();
+    }
+
+    private void FilterChords()
+    {
+        if (string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            FilteredChords = Chords.OrderBy(c => c.ChordName).ToList();
+        }
+        else
+        {
+            FilteredChords = Chords
+                .Where(c => c.ChordName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(c => c.ChordName)
+                .ToList();
+        }
+        SelectedIndex = -1;
+    }
+
+    private void ValidateInput()
+    {
+        ValidationError = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            FormModel.ChordId = null;
+            return;
+        }
+
+        if (!FRELODYSHRD.Constants.RegexPatterns.ChordRegex.IsMatch(SearchQuery))
+        {
+            ValidationError = "Invalid chord format. Use format like: C, Am, G7, Dmaj7, etc.";
+            FormModel.ChordId = null;
+            return;
+        }
+
+        var matchingChord = Chords.FirstOrDefault(c => 
+            c.ChordName.Equals(SearchQuery, StringComparison.OrdinalIgnoreCase));
+
+        if (matchingChord != null)
+        {
+            FormModel.ChordId = matchingChord.Id;
+            ValidationError = string.Empty;
+        }
+        else
+        {
+            ValidationError = "Chord must be selected from the list. Use 'New Chord' button to create new chords.";
+            FormModel.ChordId = null;
+        }
+    }
+
+    private void HandleFocus()
+    {
+        ShowDropdown = true;
+        FilterChords();
+    }
+
+    private async Task HandleBlur()
+    {
+        await Task.Delay(200);
+        ShowDropdown = false;
+        ValidateInput();
+        StateHasChanged();
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (!ShowDropdown) return;
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                SelectedIndex = Math.Min(SelectedIndex + 1, FilteredChords.Count - 1);
+                StateHasChanged();
+                break;
+            case "ArrowUp":
+                SelectedIndex = Math.Max(SelectedIndex - 1, 0);
+                StateHasChanged();
+                break;
+            case "Enter":
+                if (SelectedIndex >= 0 && SelectedIndex < FilteredChords.Count)
+                {
+                    SelectChord(FilteredChords[SelectedIndex]);
+                }
+                break;
+            case "Escape":
+                ShowDropdown = false;
+                StateHasChanged();
+                break;
+        }
+    }
+
+    private void SelectChord(ChordDto chord)
+    {
+        SearchQuery = chord.ChordName;
+        FormModel.ChordId = chord.Id;
+        SelectedChord = chord;
+        ShowDropdown = false;
+        ValidationError = string.Empty;
+        SelectedChordChanged.InvokeAsync(chord);
+        StateHasChanged();
+    }
+
+    private void ClearSearch()
+    {
+        SearchQuery = string.Empty;
+        FormModel.ChordId = null;
+        SelectedChord = new();
+        ValidationError = string.Empty;
+        ShowDropdown = true;
+        FilterChords();
+        SelectedChordChanged.InvokeAsync(null);
+        StateHasChanged();
+    }
+
+    private void IncrementFret()
+    {
+        if (!FretValue.HasValue)
+        {
+            FretValue = MinFret;
+        }
+        else if (FretValue < MaxFret)
+        {
+            FretValue++;
+        }
+        StateHasChanged();
+    }
+
+    private void DecrementFret()
+    {
+        if (!FretValue.HasValue)
+        {
+            FretValue = MaxFret;
+        }
+        else if (FretValue > MinFret)
+        {
+            FretValue--;
+        }
+        StateHasChanged();
+    }
+
+    private void HandleFretInput(ChangeEventArgs e)
+    {
+        FretValidationError = string.Empty;
+        
+        if (string.IsNullOrWhiteSpace(e.Value?.ToString()))
+        {
+            FretValue = null;
+            return;
+        }
+
+        if (int.TryParse(e.Value.ToString(), out int value))
+        {
+            if (value < MinFret || value > MaxFret)
+            {
+                FretValidationError = $"Fret position must be between {MinFret} and {MaxFret}";
+            }
+            FretValue = value;
+        }
+        else
+        {
+            FretValidationError = "Please enter a valid number";
+        }
+        StateHasChanged();
+    }
+
+    private void HandleFretKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowUp":
+                IncrementFret();
+                break;
+            case "ArrowDown":
+                DecrementFret();
+                break;
+        }
+    }
+
+    private void ValidateFret(int value)
+    {
+        if (value < MinFret || value > MaxFret)
+        {
+            FretValidationError = $"Fret position must be between {MinFret} and {MaxFret}";
+        }
+        else
+        {
+            FretValidationError = string.Empty;
+        }
+    }
 }

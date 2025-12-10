@@ -77,6 +77,8 @@
                         <ChordStepDetails FormModel="@FormModel"
                                         Chords="@Chords"
                                         SelectedChord="@SelectedChord"
+                                        IsChordEdit="@(!string.IsNullOrEmpty(Id))"
+                                        SelectedChordChanged ="OnSelectedChordChanged"
                                         OpenCreateChordModal="@OpenCreateChordModal" />
                     }
                 </div>
@@ -134,7 +136,7 @@
                           class="btn-secondary wizard-btn-back" 
                           @onclick="GoBack"
                           disabled="@IsSubmitting">
-                        <i class="bi bi-x-circle"></i>
+                        <i class="bi bi-x"></i>
                         <span>Cancel</span>
                     </button>
                 }
@@ -206,7 +208,7 @@
     // Form Data
     private ChordChartDto FormModel = new();
     private List<ChordDto> Chords = new List<ChordDto>();
-    private ChordDto SelectedChord = new();
+    private ChordDto? SelectedChord = null;
     private string HeaderText = "Create";
     private string ChartPreview = "";
     private string AudioPreview = "";
@@ -475,6 +477,15 @@
         if (filePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             return filePath;
         return $"{ApiBaseUrl}/{filePath.TrimStart('/')}";
+    }
+
+    private async Task OnSelectedChordChanged(ChordDto? chord)
+    {
+        SelectedChord = chord;
+        FormModel.ChordId = chord?.Id;
+        StateHasChanged();
+        CanProceedToNextStep();
+        await Task.CompletedTask;
     }
 
     private void ClearChartFile()

@@ -11,7 +11,7 @@
             <div class="col-12 col-md-6 col-lg-3">
                 <div class="card h-100 shadow-sm" style="border-radius:.75rem;">
                     <div class="card-img-top">
-                        <ChordCarousel Chord="chord"/>                      
+                        <ChordCarousel Chord="@chord"/>                      
                     </div>
                     <div class="card-body">
                         <h5 class="card-title">@chord.ChordName</h5>
@@ -53,9 +53,6 @@
 
     [Parameter]
     public EventCallback<ChordDto> OnSetToDelete { get; set; }
-
-    [Parameter]
-    public EventCallback<bool> OnSetOpenConfirm { get; set; }
 
     [Parameter]
     public EventCallback<ChordDto> OnSetOpenChordEdit { get; set; }
@@ -123,7 +120,6 @@
     private void HandleDeleteChord(ChordDto chord)
     {
         OnSetToDelete.InvokeAsync(chord);
-        OnSetOpenConfirm.InvokeAsync(true);
     }
 
     private void NavigateToDetails(string? chordId)

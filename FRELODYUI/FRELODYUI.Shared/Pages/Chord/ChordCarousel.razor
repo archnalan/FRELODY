@@ -4,7 +4,7 @@
 
 @if (Charts.Count > 0)
 {
-    <div id="chordCarousel" class="carousel slide" data-bs-interval="false">
+    <div id="@CarouselId" class="carousel slide chord-carousel @SizeClass" data-bs-interval="false">
         <div class="carousel-inner">
             @for (int i = 0; i < Charts.Count; i++)
             {
@@ -13,7 +13,7 @@
                     <div class="d-flex justify-content-center align-items-center position-relative">
                         <img src="@DisplayChart(chart)"
                              alt="@Chord?.ChordName"
-                             class="img-thumbnail bg-white fixed-height-img"
+                             class="img-thumbnail bg-white chord-chart-img"
                              style="background-color: @(Theme == "dark" ? "#ddd" : "")" />
                     </div>
                 </div>
@@ -21,55 +21,47 @@
         </div>
 
         <!-- Action buttons -->
-        <div class="text-center mt-2">
-            <button class="btn btn-sm btn-outline-primary"
-                    style="scale:0.75" 
-                    data-bs-toggle="tooltip"
-                    title="Add a new chart"
-                    @onclick="@(() => AddChart(Chord?.Id))">
-                <i class="bi bi-plus me-1"></i>
-            </button>
-            @if (CurrentChart != null)
-            {
-                <button class="btn btn-sm btn-outline-secondary mx-2"
+        @if (ShowActions)
+        {
+            <div class="text-center mt-2">
+                <button class="btn btn-sm btn-outline-primary"
                         style="scale:0.75"
                         data-bs-toggle="tooltip"
-                        title="Edit current chart"
-                        @onclick="@(() => EditChart(CurrentChart.Id))">
-                    <i class="bi bi-file-earmark-diff"></i>
+                        title="Add a new chart"
+                        @onclick="@(() => AddChart(Chord?.Id))">
+                    <i class="bi bi-plus me-1"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger"
-                        style="scale:0.75" 
-                        data-bs-toggle="tooltip"
-                        title="Delete current chart"
-                        @onclick="@(() => DeleteChart(CurrentChart.Id))">
-                    <i class="bi bi-file-earmark-x"></i>
-                </button>
-            }
-        </div>
+                @if (CurrentChart != null)
+                {
+                    <button class="btn btn-sm btn-outline-secondary mx-2"
+                            style="scale:0.75"
+                            data-bs-toggle="tooltip"
+                            title="Edit current chart"
+                            @onclick="@(() => EditChart(CurrentChart.Id))">
+                        <i class="bi bi-file-earmark-diff"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger"
+                            style="scale:0.75"
+                            data-bs-toggle="tooltip"
+                            title="Delete current chart"
+                            @onclick="@(() => DeleteChart(CurrentChart.Id))">
+                        <i class="bi bi-file-earmark-x"></i>
+                    </button>
+                }
+            </div>
+        }
 
         @if (Charts.Count > 1)
         {
-           @*  <div class="carousel-indicators">
-                @for (int i = 0; i < Charts.Count; i++)
-                {
-                    var index = i;
-                    <button type="button"
-                            class="@(i == _currentChartIndex ? "active" : "")"
-                            @onclick="@(() => GoToChart(index))"
-                            data-bs-target="#chordCarousel"
-                            data-bs-slide-to="@i"></button>
-                }
-            </div> *@
             <button class="carousel-control-prev" type="button"
                     @onclick="PreviousChart"
-                    data-bs-target="#chordCarousel" data-bs-slide="prev">
+                    data-bs-target="#@CarouselId" data-bs-slide="prev">
                 <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                 <span class="visually-hidden">Previous</span>
             </button>
             <button class="carousel-control-next" type="button"
                     @onclick="NextChart"
-                    data-bs-target="#chordCarousel" data-bs-slide="next">
+                    data-bs-target="#@CarouselId" data-bs-slide="next">
                 <span class="carousel-control-next-icon" aria-hidden="true"></span>
                 <span class="visually-hidden">Next</span>
             </button>
@@ -78,19 +70,22 @@
 }
 else
 {
-    <div class="carousel slide">
+    <div class="carousel slide chord-carousel @SizeClass">
         <div class="d-flex justify-content-center my-2">
             <img src="@PlaceholderImagePath"
                  alt="No chord image to show"
-                 class="img-thumbnail bg-light"
-                 style="max-height: 15rem; border-radius: 0.5em; object-fit: contain; background-color: @(Theme == "dark" ? "#ddd" : "")" />
+                 class="img-thumbnail bg-light chord-chart-img"
+                 style="background-color: @(Theme == "dark" ? "#ddd" : "")" />
         </div>
-        <div class="carousel-indicators text-center mb-2">
-            <button class="btn btn-sm btn-outline-secondary"
-                    @onclick="@(() => AddChart(Chord.Id ?? ""))">
-                <i class="bi bi-plus me-1"></i> Add Chart
-            </button>
-        </div>
+        @if (ShowActions)
+        {
+            <div class="carousel-indicators text-center mb-2">
+                <button class="btn btn-sm btn-outline-secondary"
+                        @onclick="@(() => AddChart(Chord.Id ?? ""))">
+                    <i class="bi bi-plus me-1"></i> Add Chart
+                </button>
+            </div>
+        }
     </div>
 }
 
@@ -101,8 +96,17 @@ else
 
 @code {
     [Parameter]
-    public ChordDto Chord { get; set; } = new();
+    public string ChordId { get; set; } = string.Empty;
+    [Parameter]
+    public ChordDto Chord { get; set; } = default!;
+    [Parameter]
+    public CarouselSize Size { get; set; } = CarouselSize.Medium;
 
+    [Parameter]
+    public bool ShowActions { get; set; } = true;
+
+    [Parameter]
+    public string CarouselId { get; set; } = "chordCarousel";
     private List<ChordChartEditDto> Charts { get; set; } = new();
     private const string PlaceholderImagePath = "/_content/FRELODYUI.Shared/images/no_image_placeholder.png";
     private int _currentChartIndex = 0;
@@ -116,16 +120,30 @@ else
     private DotNetObjectReference<ChordCarousel>? _dotNetRef;
     private IJSObjectReference? _carouselModule;
 
+    private string SizeClass => Size switch
+    {
+        CarouselSize.Small => "carousel-sm",
+        CarouselSize.Medium => "carousel-md",
+        CarouselSize.Large => "carousel-lg",
+        CarouselSize.Popover => "carousel-popover",
+        _ => "carousel-md"
+    };
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
             //ApiBaseUrl = Configuration["ApiSettings:BaseUrl"]?.TrimEnd('/');
-            
+
             //Theme = await _localStorageService.GetItemAsync<string>("theme") ?? "light";
             if (Chord != null && !string.IsNullOrEmpty(Chord.Id))
             {
                 await LoadCharts(Chord.Id);
+            }
+            else if (!string.IsNullOrEmpty(ChordId))
+            {
+                await LoadChord(ChordId);
+                await LoadCharts(ChordId);
             }
         }
         catch (Exception ex)
@@ -147,11 +165,36 @@ else
         }
     }
 
-    [JSInvokable]
-    public void OnSlideChanged(int newIndex)
+    public async Task LoadChord(string chordId)
     {
-        _currentChartIndex = newIndex;
-        StateHasChanged();
+        try
+        {
+            var response = await _chordsApi.GetChordById(chordId);
+            if (response.IsSuccessStatusCode)
+            {
+                Chord = response.Content!;
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "OK",
+                    OptionType = OptionType.Error,
+                    Context = new ModalContext
+                    {
+                        Data = response,
+                        ActionType = "LoadChord"
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading chord");
+        }
     }
 
     public async Task LoadCharts(string chordId)
@@ -340,6 +383,14 @@ else
     {
         await Task.Delay(100);
         _modalService.Close();
+        StateHasChanged();
+    }
+
+
+    [JSInvokable]
+    public void OnSlideChanged(int newIndex)
+    {
+        _currentChartIndex = newIndex;
         StateHasChanged();
     }
 

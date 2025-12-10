@@ -3,45 +3,179 @@
 @using Microsoft.AspNetCore.Components
 @inject ILogger<ChordDetail> Logger
 
-<div class="w-100 h-100 d-flex flex-column justify-content-start align-items-center">
-    <div class="@GetInnerContainerClass()">
-        <div class="d-flex align-items-center text-primary mb-3">
-            <button class="btn btn-link text-decoration-none p-0 me-3" @onclick="NavigateBack">
-                <i class="bi bi-arrow-left fs-3"></i>
+<div class="chord-detail-container">
+    <div class="chord-detail-wrapper">
+        <!-- Header Section -->
+        <div class="detail-header">
+            <button class="back-button" @onclick="NavigateBack">
+                <i class="bi bi-arrow-left"></i>
             </button>
-            <h3 class="text-primary mb-0">
-                Chord Details
-            </h3>
-        </div>
-
-        <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
-            <strong class="mb-2 mb-md-0">Chord:</strong>
-            <span class="text-muted">@chord?.ChordName</span>
-        </div>
-        <hr class="@GetLineClass()" />
-
-        <div class="d-flex flex-column flex-md-row justify-content-between mt-3">
-            <strong class="mb-2 mb-md-0">Difficulty:</strong>
-            <span class="text-primary fw-semibold">@GetDifficultyText(chord?.Difficulty ?? 0)</span>
-        </div>
-        <hr class="@GetLineClass()" />
-
-        <div class="d-flex flex-column mt-3">
-            <strong class="mb-2">Charts:</strong>
-            <div class="w-100 w-md-50 mb-2">
-                <ChordCarousel @ref="chordCarouselRef" Chord="chord" />
-            </div>            
-        </div>
-        <hr class="@GetLineClass()" />
-
-        <div class="d-flex justify-content-end mb-3 mt-4">
-            <button class="btn btn-outline-secondary me-2" @onclick="NavigateBack">
-                Back
-            </button>
-            <button class="btn btn-outline-primary px-4" @onclick="@(() => EditChord())">
-                Edit
+            <div class="header-content">
+                <h1 class="detail-title">Chord Details</h1>
+                <p class="detail-subtitle">View and manage chord information</p>
+            </div>
+            <button class="action-button" @onclick="EditChord">
+                <i class="bi bi-pencil"></i>
+                <span>Edit Chord</span>
             </button>
         </div>
+
+        @if (isLoading)
+        {
+            <div class="loading-state">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Loading chord details...</p>
+            </div>
+        }
+        else if (chord != null)
+        {
+            <div class="detail-content">
+                <!-- Chord Information Section -->
+                <div class="detail-section">
+                    <div class="detail-section-header">
+                        <h2 class="detail-section-title">
+                            <i class="bi bi-music-note-beamed"></i>
+                            Chord Information
+                        </h2>
+                    </div>
+                    <div class="detail-section-body">
+                        <div class="detail-item">
+                            <span class="detail-label">
+                                <i class="bi bi-music-note"></i>
+                                Chord Name
+                            </span>
+                            <span class="detail-value">@chord.ChordName</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">
+                                <i class="bi bi-bar-chart-steps"></i>
+                                Difficulty Level
+                            </span>
+                            <span class="detail-value difficulty-@GetDifficultyClass(chord.Difficulty ?? 0)">
+                                @GetDifficultyText(chord.Difficulty ?? 0)
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">
+                                <i class="bi bi-tag"></i>
+                                Chord Type
+                            </span>
+                            <span class="detail-value">@GetChordTypeText(chord.ChordType)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chord Charts Section -->
+                <div class="detail-section">
+                    <div class="detail-section-header">
+                        <h2 class="detail-section-title">
+                            <i class="bi bi-grid-3x3"></i>
+                            Chord Charts
+                        </h2>
+                        <button type="button" class="add-chart-button" @onclick="() => AddChart(chord.Id)">
+                            <i class="bi bi-plus-circle"></i>
+                            Add Chart
+                        </button>
+                    </div>
+                    <div class="detail-section-body">
+                        <div class="charts-container">
+                            <ChordCarousel @ref="chordCarouselRef" Chord="@chord" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audio Section (if available) -->
+                @if (!string.IsNullOrEmpty(chord.ChordAudioFilePath))
+                {
+                    <div class="detail-section">
+                        <div class="detail-section-header">
+                            <h2 class="detail-section-title">
+                                <i class="bi bi-volume-up"></i>
+                                Audio Sample
+                            </h2>
+                        </div>
+                        <div class="detail-section-body">
+                            <div class="audio-player-container">
+                                <audio controls class="audio-player">
+                                    <source src="@chord.ChordAudioFilePath" />
+                                    Your browser does not support this audio format.
+                                </audio>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Metadata Section -->
+                <div class="detail-section metadata-section">
+                    <div class="detail-section-header">
+                        <h2 class="detail-section-title">
+                            <i class="bi bi-info-circle"></i>
+                            Metadata
+                        </h2>
+                    </div>
+                    <div class="detail-section-body">
+                        <div class="metadata-grid">
+                            @if (chord.DateCreated.HasValue)
+                            {
+                                <div class="metadata-item">
+                                    <i class="bi bi-calendar-plus"></i>
+                                    <div class="metadata-content">
+                                        <span class="metadata-label">Created</span>
+                                        <span class="metadata-value">@chord.DateCreated.Value.ToString("MMM dd, yyyy")</span>
+                                    </div>
+                                </div>
+                            }
+                            @if (chord.DateModified.HasValue)
+                            {
+                                <div class="metadata-item">
+                                    <i class="bi bi-calendar-check"></i>
+                                    <div class="metadata-content">
+                                        <span class="metadata-label">Modified</span>
+                                        <span class="metadata-value">@chord.DateModified.Value.ToString("MMM dd, yyyy")</span>
+                                    </div>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(chord.Id))
+                            {
+                                <div class="metadata-item">
+                                    <i class="bi bi-key"></i>
+                                    <div class="metadata-content">
+                                        <span class="metadata-label">Chord ID</span>
+                                        <span class="metadata-value metadata-id">@chord.Id.Substring(0, Math.Min(8, chord.Id.Length))...</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="detail-actions">
+                    <button class="btn-secondary" @onclick="NavigateBack">
+                        <i class="bi bi-arrow-left"></i>
+                        Back to List
+                    </button>
+                    <button class="btn-primary" @onclick="EditChord">
+                        <i class="bi bi-pencil"></i>
+                        Edit Chord
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="bi bi-exclamation-circle"></i>
+                <h3>Chord Not Found</h3>
+                <p>The chord you're looking for doesn't exist or has been removed.</p>
+                <button class="btn-primary" @onclick="NavigateBack">
+                    <i class="bi bi-arrow-left"></i>
+                    Return to Chords
+                </button>
+            </div>
+        }
     </div>
 </div>
 
@@ -64,12 +198,9 @@
     public string? Id { get; set; }
 
     private ChordDto? chord;
-    private List<ChordChartEditDto> charts = new();
-    private List<ChordChartEditDto> filteredCharts = new();
-    private string theme = "light";
     private bool isLoading = true;
     private bool showChordModal = false;
-    private string modalHeaderText = "Create";
+    private string modalHeaderText = "Edit";
     private ChordCarousel? chordCarouselRef;
 
     protected override async Task OnInitializedAsync()
@@ -81,18 +212,8 @@
         else
         {
             Logger.LogWarning("No chord ID provided");
+            isLoading = false;
         }
-    }
-
-    private string GetInnerContainerClass()
-    {
-        var baseClass = "w-75 w-md-50 border bg-light px-5 pt-3 pb-3 rounded-3 mt-5 shadow";
-        return theme == "dark" ? baseClass + " text-light bg-dark border-dark" : baseClass + " text-dark bg-light";
-    }
-
-    private string GetLineClass()
-    {
-        return theme == "dark" ? "border-top border-2 border-dark" : "border-top border-light";
     }
 
     private string GetDifficultyText(ChordDifficulty difficulty)
@@ -104,6 +225,36 @@
             ChordDifficulty.Advanced => "Advanced",
             ChordDifficulty.Expert => "Expert",
             _ => "Unknown"
+        };
+    }
+
+    private string GetDifficultyClass(ChordDifficulty difficulty)
+    {
+        return difficulty switch
+        {
+            ChordDifficulty.Easy => "easy",
+            ChordDifficulty.Medium => "medium",
+            ChordDifficulty.Advanced => "advanced",
+            ChordDifficulty.Expert => "expert",
+            _ => "unknown"
+        };
+    }
+
+    private string GetChordTypeText(ChordType? chordType)
+    {
+        if (!chordType.HasValue) return "Not specified";
+        
+        return chordType.Value switch
+        {
+            ChordType.Major => "Major",
+            ChordType.Minor => "Minor",
+            ChordType.Suspended => "Suspended",
+            ChordType.Augmented => "Augmented",
+            ChordType.Diminished => "Diminished",
+            ChordType.Seventh => "Seventh",
+            ChordType.MajorSeventh => "Major Seventh",
+            ChordType.MinorSeventh => "Minor Seventh",
+            _ => chordType.Value.ToString()
         };
     }
 
@@ -139,31 +290,19 @@
         }
     }
 
-    private async Task HandleChordSubmit(ChordDto chord)
+    private async Task HandleChordSubmit(ChordDto submittedChord)
     {
         Refit.IApiResponse<ChordEditDto?> response;
-        if (string.IsNullOrEmpty(chord.Id))
+        
+        var editChord = new ChordEditDto
         {
-            var newChord = new ChordCreateDto
-            {
-                ChordName = chord.ChordName,
-                ChordType = ChordTypeService.DetermineChordType(chord.ChordName),
-                ChordDifficulty = ChordTypeService.DetermineChordDifficulty(chord.ChordName),
-            };
-            response = await _chordsApi.CreateChord(newChord);
-        }
-        else
-        {
-            var editChord = new ChordEditDto
-            {
-                Id = chord.Id,
-                ChordName = chord.ChordName,
-                ChordType = ChordTypeService.DetermineChordType(chord.ChordName),
-                Difficulty = ChordTypeService.DetermineChordDifficulty(chord.ChordName),
-            };
+            Id = submittedChord.Id,
+            ChordName = submittedChord.ChordName,
+            ChordType = ChordTypeService.DetermineChordType(submittedChord.ChordName),
+            Difficulty = ChordTypeService.DetermineChordDifficulty(submittedChord.ChordName),
+        };
 
-            response = await _chordsApi.UpdateChord(editChord);
-        }
+        response = await _chordsApi.UpdateChord(editChord);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -176,14 +315,15 @@
                 OptionType = OptionType.Error,
                 Context = new ModalContext
                 {
-                    ActionType = "CreateChord",
+                    ActionType = "UpdateChord",
                     Data = errorMessage
                 }
             });
             return;
         }
-        await LoadChordDetails(chord.Id ?? "");
-        if (chordCarouselRef != null)  await chordCarouselRef.LoadCharts(chord.Id ?? "");
+        
+        await LoadChordDetails(submittedChord.Id ?? "");
+        if (chordCarouselRef != null) await chordCarouselRef.LoadCharts(submittedChord.Id ?? "");
         CloseChordModal();
     }
 
@@ -210,13 +350,7 @@
 
     private async Task ConfirmModal()
     {
-        if (_modalService.CurrentModal?.Context?.ActionType == "")
-        {
-        }
-        else
-        {
-            _modalService.Close();
-        }
+        _modalService.Close();
         await CloseModal();
     }
 
@@ -226,5 +360,4 @@
         _modalService.Close();
         StateHasChanged();
     }
-
 }

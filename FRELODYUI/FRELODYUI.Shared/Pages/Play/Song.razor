@@ -1,138 +1,400 @@
 ﻿@using FRELODYSHRD.Dtos.SubDtos
+@using FRELODYUI.Shared.Pages.Chord
 @inject ILogger<Song> _logger
 @implements IDisposable
 
-<div class="w-100 d-flex justify-content-center mx-auto p-6">
+<div class="song-container" @ref="songContainerRef">
     @if (isLoading)
     {
-        <div class="mt-4 text-center">
+        <div class="loading-state">
             <div class="spinner-border text-primary" role="status"></div>
             <p>Loading song...</p>
         </div>
     }
     else if (song != null)
     {
-        <div class="w-100 h-100 shadow-lg border border-light rounded rounded-3 my-4 px-4" style="max-width:55rem;">
-            <div class="d-flex gap-2 my-3 me-2" style="justify-content:space-between">
-                <div class="ms-2">
-                    <button class="btn btn-outline-primary" @onclick="GoBack">
-                        <i class="bi bi-chevron-left"></i>
-                    </button>
-                </div>
-                <div class="d-flex gap-2 me-2">
-                    <button class="btn btn-outline-primary" 
-                        data-bs-toggle="tooltip"
-                        title="Customize"
-                        aria-label="edit this song"
-                        @onclick="@(() => CustomizeSong(song.Id))">
-                        <i class="bi bi-pencil-square"></i>                        
-                    </button>                  
-                    <ShareDropdown Song="song" OnActionCompleted="() => StateHasChanged()" />
-                </div>
-            </div>
-            <div class="d-flex justify-content-center align-items-center mb-2">
-                @if (song.SongNumber.HasValue)
-                {
-                    <h3 class="text-opacity-50 me-3">
-                        @song.SongNumber.Value.ToString("D3")
-                    </h3>
-                }
-                <h3 class="fw-bold text-center">
-                    @song.Title
-                </h3>
-            </div>
+        <!-- Modern Header with Actions -->
+        <div class="song-header">
+            <button class="header-action-btn back-btn" @onclick="GoBack" title="Go back">
+                <i class="bi bi-chevron-left"></i>
+            </button>
 
-            @* Aggregate rating summary (reusable component) *@
-            <SongRating SongId="@SongId" ShowSummary="true" ShowPanel="false" />
-
-            <!-- content -->
-            <div class="song-content mt-2">
-                @if (song.SongParts?.Any() == true)
-                {
-                    <div class="w-100 d-flex align-items-center justify-content-center gap-5 text-center">
-                        <div class="d-flex align-items-end">
-                            <span class="btn btn-sm rounded-circle btn-outline-secondary me-2" @onclick="ResetTranspose" title="Reset to original transpose">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </span>
-                            <div class="d-flex flex-column">
-                                <label>Transpose</label>
-                                <div>
-                                    <button class="btn btn-sm btn-outline-secondary rounded-0 rounded-start"
-                                            @onclick="DecreaseTranspose"
-                                            disabled="@(transpose <= -12)">
-                                        <i class="bi bi-dash"></i>
-                                    </button>
-                                    <span class="btn btn-sm btn-outline-secondary rounded-0" style="width:2.5rem">@transpose</span>
-                                    <button class="btn btn-sm btn-outline-secondary rounded-0 rounded-end"
-                                            @onclick="IncreaseTranspose"
-                                            disabled="@(transpose >= 12)">
-                                        <i class="bi bi-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-end">
-                            <div class="d-flex flex-column">
-                                <label>Capo</label>
-                                <div>
-                                    <button class="btn btn-sm btn-outline-secondary rounded-0 rounded-start"
-                                            @onclick="DecreaseCapo"
-                                            disabled="@(capo <= 0)">
-                                        <i class="bi bi-dash"></i>
-                                    </button>
-                                    <span class="btn btn-sm btn-outline-secondary rounded-0" style="width:2.5rem">@capo</span>
-                                    <button class="btn btn-sm btn-outline-secondary rounded-0 rounded-end"
-                                            @onclick="IncreaseCapo"
-                                            disabled="@(capo >= 12)">
-                                        <i class="bi bi-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <span class="btn btn-sm rounded-circle btn-outline-secondary ms-2" @onclick="ResetCapo" title="Reset capo">
-                                <i class="bi bi-arrow-clockwise"></i>
-                            </span>
-                        </div>
-                        
-                    </div>
-                    foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
+            <div class="song-title-section" style="font-family:@fontFamily">
+                <div class="song-title-wrapper mb-3">
+                    @if (song.SongNumber.HasValue)
                     {
-                        <div class="verse-section mb-6 ms-4">
-                            <h4 class="font-semibold text-center text-opacity-75 my-2">
-                                Verse @verse.PartNumber.ToString("D2")
-                            </h4>
-                            @if (verse.LyricLines?.Any() == true)
-                            {
-                                foreach (var line in verse.LyricLines.OrderBy(l => l.LyricLineOrder))
+                        <span class="song-number">@song.SongNumber.Value.ToString("D3")</span>
+                    }
+                    <h1 class="song-title">@song.Title</h1>
+                </div>
+                <SongRating SongId="@SongId" ShowSummary="true" ShowPanel="false" />
+            </div>
+
+            <div class="header-actions">
+                <!-- Settings Dropdown -->
+                <div class="settings-dropdown-wrapper">
+                    <button class="header-action-btn settings-btn @(showSettingsDropdown ? "active" : "")" 
+                            @onclick="ToggleSettingsDropdown"
+                            title="Display settings">
+                        <i class="bi bi-gear"></i>
+                    </button>
+                    
+                    @if (showSettingsDropdown)
+                    {
+                        <div class="settings-dropdown-overlay" onclick="()=>()"></div>
+                        <div class="settings-dropdown" @onclick:stopPropagation>
+                            <div class="settings-header">
+                                <h6>Display Settings</h6>
+                                <button class="close-btn" @onclick="CloseSettingsDropdown">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+
+                            <div class="settings-content">
+                                <!-- Autoscroll Settings -->
+                                <div class="settings-section">
+                                    <label class="settings-label">
+                                        <i class="bi bi-speedometer2"></i>
+                                        Autoscroll Speed
+                                    </label>
+                                    <div class="setting-control">
+                                        <button class="size-btn" @onclick="() => AdjustScrollSpeed(-1)" disabled="@(scrollSpeed <= 0)">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <span class="control-value">@scrollSpeed</span>
+                                        <button class="size-btn" @onclick="() => AdjustScrollSpeed(1)" disabled="@(scrollSpeed >= 5)">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Font Settings -->
+                                <div class="settings-section">
+                                    <label class="settings-label">
+                                        <i class="bi bi-type"></i>
+                                        Chord Font Size
+                                    </label>
+                                    <div class="setting-control">
+                                        <button class="size-btn" @onclick="() => AdjustChordFontSize(-2)">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <span class="size-value">@chordFontSize</span>
+                                        <button class="size-btn" @onclick="() => AdjustChordFontSize(2)">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="settings-section">
+                                    <label class="settings-label">
+                                        <i class="bi bi-text-paragraph"></i>
+                                        Lyric Font Size
+                                    </label>
+                                    <div class="setting-control">
+                                        <button class="size-btn" @onclick="() => AdjustLyricFontSize(-2)">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <span class="size-value">@lyricFontSize</span>
+                                        <button class="size-btn" @onclick="() => AdjustLyricFontSize(2)">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Display Mode -->
+                                <div class="settings-section">
+                                    <label class="settings-label">
+                                        <i class="bi bi-eye"></i>
+                                        Display Mode
+                                    </label>
+                                    <select class="settings-select" @bind="songDisplayMode">
+                                        <option value="@SongDisplay.LyricsAndChordsAndCharts">Lyrics, Chords & Charts</option>
+                                        <option value="@SongDisplay.LyricsAndChords">Lyrics & Chords</option>
+                                        <option value="@SongDisplay.LyricsOnly">Lyrics Only</option>
+                                    </select>
+                                </div>
+
+                                <!-- Chord Display Position -->
+                                @if (songDisplayMode == SongDisplay.LyricsAndChords 
+                                || songDisplayMode == SongDisplay.LyricsAndChordsAndCharts)
                                 {
-                                    <div class="lyric-line d-flex flex-wrap mb-2">
-                                        @if (line.LyricSegments?.Any() == true)
-                                        {
-                                            foreach (var segment in line.LyricSegments.OrderBy(s => s.LyricOrder))
-                                            {
-                                                <div class="lyric-segment d-flex flex-column justify-content-end">
-                                                    @if (segment.Chord != null)
-                                                    {
-                                                        <div class="w-100 d-flex @GetChordAlignmentClass(segment)">
-                                                            <h6 class="chord text-sm text-primary fw-bolder" style="cursor:pointer">
-                                                                @GetTransposedChordName(segment.Chord.ChordName)
-                                                            </h6>
-                                                        </div>                                                       
-                                                    }
-                                                    <div class="lyric text-opacity-75">
-                                                        @segment.Lyric
-                                                    </div>
-                                                </div>
-                                            }
-                                        }
+                                    <div class="settings-section">
+                                        <label class="settings-label">
+                                            <i class="bi bi-music-note"></i>
+                                            Chord Position
+                                        </label>
+                                        <select class="settings-select" @bind="chordDisplayMode">
+                                            <option value="@ChordDisplay.Above">Above Lyrics</option>
+                                            <option value="@ChordDisplay.Inline">Inline</option>
+                                        </select>
                                     </div>
                                 }
-                            }
+
+                                <!-- Font Family Selection -->
+                                <div class="settings-section">
+                                    <label class="settings-label">
+                                        <i class="bi bi-fonts"></i>
+                                        Font Style
+                                    </label>
+                                    <select class="settings-select" @bind="fontFamily">
+                                        <option value="system-ui, -apple-system, 'Segoe UI'">System Default</option>
+                                        <option value="'Georgia', serif">Georgia</option>
+                                        <option value="'Arial', sans-serif">Arial</option>
+                                        <option value="'Courier New', monospace">Courier New</option>
+                                        <option value="'Times New Roman', serif">Times New Roman</option>
+                                        <option value="'Kanit','Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'">Kanit</option>
+                                        <option value="'Montserrat', sans-serif">Montserrat</option>
+                                    </select>
+                                </div>
+                                <div class="settings-footer">
+                                    <!-- Save Settings Button -->
+                                    <button class="save-settings-btn" @onclick="SaveDisplaySettings" disabled="@isSavingSettings">
+                                        @if (isSavingSettings)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-check-circle me-2"></i>
+                                        }
+                                        Save Settings
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     }
+                </div>
+                <button class="btn btn-primary dropdown-toggle"
+                        type="button"
+                        @onclick="ToggleDropdown"
+                        disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-upload me-1"></i>
+                    }
+                    Share
+                </button>
+
+                @if (showShareDropdown)
+                {
+                    <ShareDropdown Song="song" 
+                                   ShowShareDropdown="@showShareDropdown" 
+                                   OnActionCompleted="() => StateHasChanged()" 
+                                   OnCustomizeSong="(songId) => CustomizeSong(songId)" />
+                    <div style="z-index:0" class="modal-backdrop bg-transparent" @onclick="() => showShareDropdown = false"></div>                    
                 }
             </div>
+        </div>
 
-            @* Bottom "rate this song" panel (reusable component) *@
+        <!-- Autoscroll and Controls Section -->
+        <div class="fret-section">
+
+            @if (songDisplayMode != SongDisplay.LyricsOnly)
+            {
+                <div class="controls-section">
+                    <!-- Autoscroll Control -->
+                    <div class="control-group">
+                        <button class="control-action-btn @(isAutoScrolling ? "active" : "")"
+                                @onclick="ToggleAutoScroll"
+                                title="@(isAutoScrolling ? "Stop autoscroll" : "Start autoscroll")">
+                            <i class="bi bi-@(isAutoScrolling ? "pause-fill" : "play-fill")"></i>
+                        </button>
+                        <div class="control-wrapper">
+                            <label class="control-label">Autoscroll</label>
+                            <div class="control-buttons">
+                                <button class="control-btn" @onclick="() => AdjustScrollSpeed(-1)" disabled="@(scrollSpeed <= 0)">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <span class="control-value">@scrollSpeed</span>
+                                <button class="control-btn" @onclick="() => AdjustScrollSpeed(1)" disabled="@(scrollSpeed >= 5)">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Transpose Control -->
+                    <div class="control-group">
+                        <button class="control-reset-btn" @onclick="ResetTranspose" title="Reset transpose">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                        <div class="control-wrapper">
+                            <label class="control-label">Transpose</label>
+                            <div class="control-buttons">
+                                <button class="control-btn" @onclick="DecreaseTranspose" disabled="@(transpose <= -12)">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <span class="control-value">@transpose</span>
+                                <button class="control-btn" @onclick="IncreaseTranspose" disabled="@(transpose >= 12)">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Capo Control -->
+                    <div class="control-group">
+                        <div class="control-wrapper">
+                            <label class="control-label">Capo</label>
+                            <div class="control-buttons">
+                                <button class="control-btn" @onclick="DecreaseCapo" disabled="@(capo <= 0)">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <span class="control-value">@capo</span>
+                                <button class="control-btn" @onclick="IncreaseCapo" disabled="@(capo >= 12)">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button class="control-reset-btn" @onclick="ResetCapo" title="Reset capo">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+
+                @if (showCharts && uniqueSongChords.Any())
+                {
+                    <div class="control-divider"></div>
+                    <div class="chord-charts-section">
+                        <div class="chord-charts-header">
+                            <h5 class="chord-charts-title">
+                                <i class="bi bi-music-note-list"></i>
+                                Song Chords
+                            </h5>
+                            <button class="toggle-grid-btn" @onclick="ToggleChordGrid" title="@(showChordGrid ? "Show slider" : "Show all")">
+                                <i class="bi bi-@(showChordGrid ? "list" : "grid-3x3")"></i>
+                            </button>
+                        </div>
+
+                        @if (showChordGrid)
+                        {
+                            <div class="chord-charts-grid">
+                                @foreach (var chord in uniqueSongChords)
+                                {
+                                    <div class="chord-chart-card">
+                                        <h6 class="chord-chart-name">@GetTransposedChordName(chord.ChordName)</h6>
+                                        <ChordCarousel Chord="@chord"
+                                                       Size="CarouselSize.Medium"
+                                                       ShowActions="false"
+                                                       CarouselId="@($"inline-carousel-{chord.Id}")" />
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="chord-charts-slider">
+                                <button class="slider-nav-btn slider-prev" @onclick="ScrollChartsLeft" disabled="@(chordScrollPosition <= 0)">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+                                <div class="chord-charts-track" @ref="chordChartsTrackRef">
+                                    @foreach (var chord in uniqueSongChords)
+                                    {
+                                        <div class="chord-chart-card">
+                                            <h6 class="chord-chart-name">@GetTransposedChordName(chord.ChordName)</h6>
+                                            <ChordCarousel Chord="@chord"
+                                                           Size="CarouselSize.Medium"
+                                                           ShowActions="false"
+                                                           CarouselId="@($"inline-carousel-{chord.Id}")" />
+                                        </div>
+                                    }
+                                </div>
+                                <button class="slider-nav-btn slider-next" @onclick="ScrollChartsRight">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        }
+                        <div class="w-100 d-flex justify-content-end">
+                            <small> <i class="bi bi-music-note-beamed me-2"></i> @uniqueSongChords.Count chords</small>
+                        </div>
+                    </div>
+
+                }
+            }
+        </div>
+
+        <!-- Song Content with Dynamic Styling -->
+        <div class="song-content" style="@GetSongContentStyle()">
+            @if (song.SongParts?.Any() == true)
+            {
+                foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
+                {
+                    <div class="verse-section">
+                        <h4 class="verse-title">
+                            Verse @verse.PartNumber.ToString("D2")
+                        </h4>
+                        @if (verse.LyricLines?.Any() == true)
+                        {
+                            foreach (var line in verse.LyricLines.OrderBy(l => l.LyricLineOrder))
+                            {
+                                <div class="lyric-line">
+                                    @if (line.LyricSegments?.Any() == true)
+                                    {
+                                        foreach (var segment in line.LyricSegments.OrderBy(s => s.LyricOrder))
+                                        {
+                                            <div class="lyric-segment @GetChordDisplayClass()">
+                                                @if (segment.Chord != null && 
+                                                (songDisplayMode == SongDisplay.LyricsAndChords 
+                                                || songDisplayMode == SongDisplay.LyricsAndChordsAndCharts))
+                                                {
+                                                    <span class="chord @GetChordAlignmentClass(segment)" 
+                                                          style="font-size: @(chordFontSize)px;"
+                                                          @onmouseenter="(e) => ShowChordPopover(segment.Chord, e)"
+                                                          @onmouseleave="HandleChordMouseLeave">
+                                                        @GetTransposedChordName(segment.Chord.ChordName)
+                                                    </span>
+                                                }
+                                                <span class="lyric" style="font-size: @(lyricFontSize)px;">
+                                                    @segment.Lyric
+                                                </span>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            }
+        </div>
+
+        <!-- Chord Popover -->
+        @if (showChordPopover && hoveredChord != null)
+        {
+            <div class="chord-popover-overlay" 
+                 style="top: @(popoverTop)px; left: @(popoverLeft)px;"
+                 @onmouseenter="() => isMouseOverPopover = true"
+                 @onmouseleave="HideChordPopover">
+                <div class="chord-popover-content">
+                    <div class="chord-popover-header">
+                        <h6>@hoveredChord.ChordName</h6>
+                        <button class="popover-close-btn" @onclick="HideChordPopover">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    @if (hoveredChord.ChordCharts?.Any() == true)
+                    {
+                        <ChordCarousel Chord="@hoveredChord"
+                                       Size="CarouselSize.Popover"
+                                       ShowActions="false"
+                                       CarouselId="@($"popover-carousel-{hoveredChord.Id}")" />
+                    }
+                    else
+                    {
+                        <div class="chord-popover-empty">
+                            <i class="bi bi-music-note"></i>
+                            <p>No chord chart available</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="song-rating">
+            <!-- Bottom Rating Panel -->
             <SongRating SongId="@SongId" ShowSummary="false" ShowPanel="true" />
         </div>
     }
@@ -155,19 +417,423 @@
     private int capo = 0;
     private Dictionary<string, int>? chordScale;
     private string[]? originalChords;
-    private string currentUserId = string.Empty;
+    private string? currentUserId;
+    private ElementReference songContainerRef;
+    private ElementReference chordChartsTrackRef;
 
+    // Display Settings
+    private bool showSettingsDropdown = false;
+    private bool isSavingSettings = false;
+    private int chordFontSize = 14;
+    private int lyricFontSize = 18;
+    private string fontFamily = "system-ui, -apple-system, 'Montserrat', Roboto, sans-serif";
+    private SongDisplay songDisplayMode = SongDisplay.LyricsAndChordsAndCharts;
+    private ChordDisplay chordDisplayMode = ChordDisplay.Above;
+
+    // Autoscroll
+    private bool isAutoScrolling = false;
+    private int scrollSpeed = 3; // pixels per second
+    private System.Threading.Timer? autoScrollTimer;
+    private const string ApiBaseUrl = "https://localhost:7077";
+
+    // Chord Charts
+    private List<ChordDto> uniqueSongChords = new();
+    private bool showChordGrid = false;
+    private int chordScrollPosition = 0;
+
+    // Chord Popover
+    private bool showChordPopover = false;
+    private ChordDto? hoveredChord;
+    private int currentChartIndex = 0;
+    private double popoverTop = 0;
+    private double popoverLeft = 0;
+    private bool isMouseOverPopover = false;
+    private System.Threading.Timer? popoverTimer;
+
+    private bool showCharts => songDisplayMode == SongDisplay.LyricsAndChordsAndCharts;
+    private bool showShareDropdown = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Ensure JS functions are loaded
+            try
+            {
+                // Test that smoothScrollBy exists
+                await JsRt.InvokeVoidAsync("smoothScrollBy", 0);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "JavaScript functions not loaded properly");
+            }
+        }
+    }
     protected override async Task OnParametersSetAsync()
     {
         if (!string.IsNullOrEmpty(SongId))
             await LoadSong();
 
-
-        var user = await _globalAuth.GetAuthenticatedUserAsync();
-        if (user.IsSuccess && user.Data != null)
+        var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+        if (userResult.IsSuccess && userResult.Data != null)
         {
-            currentUserId = user.Data.Id;
+            currentUserId = userResult.Data.Id;
+            await LoadUserSettings();
+            await LoadSongSpecificSettings();
         }
+    }
+
+    private async Task LoadUserSettings()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var response = await _settingsApi.GetUserSettings(currentUserId);
+                if (response.IsSuccessStatusCode && response.Content != null)
+                {
+                    var settings = response.Content;
+                    chordFontSize = int.TryParse(settings.ChordFontSize, out var cfs) ? cfs : 14;
+                    lyricFontSize = int.TryParse(settings.LyricFontSize, out var lfs) ? lfs : 18;
+                    fontFamily = settings.ChordFont ?? fontFamily;
+                    songDisplayMode = settings.SongDisplay ?? SongDisplay.LyricsAndChordsAndCharts;
+                    chordDisplayMode = settings.ChordDisplay ?? ChordDisplay.Above;
+                }
+            }
+            else
+            {
+                var storedSettings = await _storageService.GetItemAsync<SettingDto>("DisplaySettings");
+                if (storedSettings != null)
+                {
+                    chordFontSize = int.TryParse(storedSettings.ChordFontSize, out var cfs) ? cfs : 14;
+                    lyricFontSize = int.TryParse(storedSettings.LyricFontSize, out var lfs) ? lfs : 18;
+                    fontFamily = storedSettings.ChordFont ?? fontFamily;
+                    songDisplayMode = storedSettings.SongDisplay ?? SongDisplay.LyricsAndChordsAndCharts;
+                    chordDisplayMode = storedSettings.ChordDisplay ?? ChordDisplay.Above;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading user settings");
+        }
+    }
+
+    private async Task LoadSongSpecificSettings()
+    {
+        try
+        {
+            var key = $"SongSettings_{SongId}";
+            var songSettings = await _storageService.GetItemAsync<Dictionary<string, int>>(key);
+            if (songSettings != null && songSettings.ContainsKey("scrollSpeed"))
+            {
+                scrollSpeed = songSettings["scrollSpeed"];
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading song-specific settings");
+        }
+    }
+
+    private async Task SaveDisplaySettings()
+    {
+        try
+        {
+            isSavingSettings = true;
+
+            var settings = new SettingDto
+            {
+                ChordFontSize = chordFontSize.ToString(),
+                LyricFontSize = lyricFontSize.ToString(),
+                ChordFont = fontFamily,
+                LyricFont = fontFamily,
+                SongDisplay = songDisplayMode,
+                ChordDisplay = chordDisplayMode
+            };
+
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                settings.CreatedBy = currentUserId;
+                var response = await _settingsApi.CreateOrUpdateUserSettings(settings);
+                if (response.IsSuccessStatusCode)
+                {
+                    ShowSuccessMessage("Settings saved successfully!");
+                }
+                else
+                {
+                    ShowErrorMessage("Failed to save settings");
+                }
+            }
+            else
+            {
+                await _storageService.SetItemAsync("DisplaySettings", settings);
+                ShowSuccessMessage("Settings saved locally!");
+            }
+
+            // Save song-specific settings
+            var songSettings = new Dictionary<string, int> { { "scrollSpeed", scrollSpeed } };
+            await _storageService.SetItemAsync($"SongSettings_{SongId}", songSettings);
+
+            CloseSettingsDropdown();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving settings");
+            ShowErrorMessage("Failed to save settings");
+        }
+        finally
+        {
+            isSavingSettings = false;
+        }
+    }
+
+    private void ToggleSettingsDropdown()
+    {
+        showSettingsDropdown = !showSettingsDropdown;
+        StateHasChanged();
+    }
+
+    private void CloseSettingsDropdown()
+    {
+        showSettingsDropdown = false;
+        StateHasChanged();
+    }
+
+    private void AdjustChordFontSize(int delta)
+    {
+        chordFontSize = Math.Clamp(chordFontSize + delta, 10, 32);
+        StateHasChanged();
+    }
+
+    private void AdjustLyricFontSize(int delta)
+    {
+        lyricFontSize = Math.Clamp(lyricFontSize + delta, 12, 40);
+        StateHasChanged();
+    }
+
+    private void AdjustScrollSpeed(int delta)
+    {
+        scrollSpeed = Math.Clamp(scrollSpeed + delta, 0, 5);
+        StateHasChanged();
+    }
+
+    private async Task ToggleAutoScroll()
+    {
+        isAutoScrolling = !isAutoScrolling;
+
+        if (isAutoScrolling)
+        {
+            // Check if we're already at bottom
+            var atBottom = await JsRt.InvokeAsync<bool>("isAtBottom");
+            if (atBottom)
+            {
+                // Reset to top if at bottom
+                await JsRt.InvokeVoidAsync("scrollToTop");
+                await Task.Delay(100); // Small delay
+            }
+
+            StartAutoScroll();
+        }
+        else
+        {
+            StopAutoScroll();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task CheckAndScroll()
+    {
+        if (!isAutoScrolling) return;
+
+        // Check if we're at the bottom
+        var isAtBottom = await JsRt.InvokeAsync<bool>("isAtBottom");
+
+        if (isAtBottom)
+        {
+            // Stop at bottom
+            StopAutoScroll();
+            isAutoScrolling = false;
+            StateHasChanged();
+            return;
+        }
+
+        // Calculate scroll amount based on speed (0-5)
+        // Speed 0 = 0px/sec, Speed 5 = 50px/sec
+        // Each tick (100ms) = speed * 10px
+        int scrollAmount = scrollSpeed * 10;
+
+        await JsRt.InvokeVoidAsync("smoothScrollBy", scrollAmount);
+    }
+
+    private void StartAutoScroll()
+    {
+        autoScrollTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                // Use the scrollSpeed directly (0-5 scale)
+                // Convert to pixels per tick: speed * 10 pixels per tick
+                int scrollAmount = scrollSpeed * 10;
+
+                await JsRt.InvokeVoidAsync("smoothScrollBy", scrollAmount);
+
+                // Check if we've reached the bottom
+                var scrollPos = await JsRt.InvokeAsync<object>("getScrollPosition");
+                await InvokeAsync(CheckAndScroll);
+            });
+        }, null, 0, 100); // 100ms = 10 times per second
+    }
+
+    private void StopAutoScroll()
+    {
+        autoScrollTimer?.Dispose();
+        autoScrollTimer = null;
+    }
+
+    private void ToggleChordGrid()
+    {
+        showChordGrid = !showChordGrid;
+        StateHasChanged();
+    }
+
+    private async Task ScrollChartsLeft()
+    {
+        chordScrollPosition -= 200;
+        await JsRt.InvokeVoidAsync("scrollElement", chordChartsTrackRef, chordScrollPosition);
+    }
+
+    private async Task ScrollChartsRight()
+    {
+        chordScrollPosition += 200;
+        await JsRt.InvokeVoidAsync("scrollElement", chordChartsTrackRef, chordScrollPosition);
+    }
+
+    private async Task ShowChordPopover(ChordDto chord, MouseEventArgs e)
+    {
+        popoverTimer?.Dispose();
+
+        hoveredChord = await LoadChordWithCharts(chord.Id!);
+        if (hoveredChord != null)
+        {
+            currentChartIndex = 0;
+
+            // Calculate position to show above the chord
+            var popoverHeight = 280; // Approximate height of compact popover
+            var popoverWidth = 280;  // Approximate width of compact popover
+
+            // Position above the chord
+            popoverTop = e.ClientY - popoverHeight - 15;
+            popoverLeft = e.ClientX - (popoverWidth / 2);
+
+            // Adjust if popover would go off top of screen
+            if (popoverTop < 10)
+            {
+                popoverTop = e.ClientY + 15; // Show below instead
+            }
+
+            // Adjust if popover would go off left edge
+            if (popoverLeft < 10)
+            {
+                popoverLeft = 10;
+            }
+
+            // Adjust if popover would go off right edge
+            // var viewportWidth = await JsRt.InvokeAsync<int>("getViewportDimensions").then(d => d.width);
+            // if (popoverLeft + popoverWidth > viewportWidth - 10)
+            // {
+            //     popoverLeft = viewportWidth - popoverWidth - 10;
+            // }
+
+            showChordPopover = true;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleChordMouseLeave()
+    {
+        popoverTimer?.Dispose();
+        popoverTimer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                if (!isMouseOverPopover)
+                {
+                    HideChordPopover();
+                }
+            });
+        }, null, 300, Timeout.Infinite);
+    }
+
+    private void HideChordPopover()
+    {
+        showChordPopover = false;
+        isMouseOverPopover = false;
+        hoveredChord = null;
+        currentChartIndex = 0;
+        StateHasChanged();
+    }
+
+    private void NextChartImage()
+    {
+        if (hoveredChord?.ChordCharts != null && currentChartIndex < hoveredChord.ChordCharts.Count - 1)
+        {
+            currentChartIndex++;
+            StateHasChanged();
+        }
+    }
+
+    private void PreviousChartImage()
+    {
+        if (currentChartIndex > 0)
+        {
+            currentChartIndex--;
+            StateHasChanged();
+        }
+    }
+
+    private void SetChartIndex(int index)
+    {
+        currentChartIndex = index;
+        StateHasChanged();
+    }
+
+    private async Task<ChordDto?> LoadChordWithCharts(string chordId)
+    {
+        try
+        {
+            var response = await _chordsApi.GetChordById(chordId);
+            if (response.IsSuccessStatusCode)
+            {
+                return response.Content;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading chord with charts");
+        }
+        return null;
+    }
+
+    private string GetChordChartImage(ChordChartDto chart)
+    {
+        if (string.IsNullOrEmpty(chart.FilePath)) return "/_content/FRELODYUI.Shared/images/no_image_placeholder.png";
+        
+        if (chart.FilePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            return chart.FilePath;
+            
+        return $"{ApiBaseUrl}/{chart.FilePath.TrimStart('/')}";
+    }
+
+    private string GetSongContentStyle()
+    {
+        return $"font-family: {fontFamily};";
+    }
+
+    private string GetChordDisplayClass()
+    {
+        return chordDisplayMode == ChordDisplay.Inline ? "chord-inline" : "chord-above";
     }
 
     private async Task LoadSong()
@@ -182,40 +848,18 @@
             {
                 song = response.Content;
                 InitializeChordScale();
+                ExtractUniqueChords();
             }
             else
             {
                 var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
-                _modalService.Show(new ModalOptionDto
-                {
-                    Title = "Error",
-                    Message = errorMessage,
-                    ButtonText = "Close",
-                    OptionType = OptionType.Error,
-                    Context= new ModalContext
-                    {
-                        ActionType = "LoadSong",
-                        Data = "Failed to load song with ID: " + SongId
-                    }
-                });
+                ShowErrorMessage($"Failed to load song: {errorMessage}");
             }
         }
         catch (Exception ex)
         {
-            var errorMessage = "An unexpected error occurred";
             _logger.LogError(ex, "Error loading song with ID: {SongId}", SongId);
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "Error",
-                Message = errorMessage,
-                ButtonText = "Close",
-                OptionType = OptionType.Error,
-                Context= new ModalContext
-                {
-                    ActionType = "LoadSong",
-                    Data = "Unexpected error while loading song with ID: " + SongId
-                }
-            });
+            ShowErrorMessage("An unexpected error occurred");
         }
         finally
         {
@@ -228,7 +872,6 @@
     {
         if (song?.SongParts?.Any() == true)
         {
-            // Extract all unique chord names from the song
             var chords = song.SongParts
                 .SelectMany(part => part.LyricLines ?? Enumerable.Empty<LyricLineDto>())
                 .SelectMany(line => line.LyricSegments ?? Enumerable.Empty<LyricSegmentDto>())
@@ -245,85 +888,47 @@
         }
     }
 
+    private void ExtractUniqueChords()
+    {
+        if (song?.SongParts?.Any() == true)
+        {
+            uniqueSongChords = song.SongParts
+                .SelectMany(part => part.LyricLines ?? Enumerable.Empty<LyricLineDto>())
+                .SelectMany(line => line.LyricSegments ?? Enumerable.Empty<LyricSegmentDto>())
+                .Where(segment => segment.Chord != null)
+                .Select(segment => segment.Chord!)
+                .GroupBy(c => c.ChordName)
+                .Select(g => g.First())
+                .ToList();
+        }
+    }
+
     private string GetTransposedChordName(string originalChordName)
     {
         if (chordScale == null || string.IsNullOrEmpty(originalChordName))
             return originalChordName;
 
-        var totalSemitones = transpose - capo; // Capo effectively transposes down
+        var totalSemitones = transpose - capo;
         return ChordTransposer.TransposeChord(originalChordName, totalSemitones, chordScale);
     }
 
-    private void IncreaseTranspose()
-    {
-        if (transpose < 12)
-        {
-            transpose++;
-            StateHasChanged();
-        }
-    }
+    private void IncreaseTranspose() { if (transpose < 12) { transpose++; StateHasChanged(); } }
+    private void DecreaseTranspose() { if (transpose > -12) { transpose--; StateHasChanged(); } }
+    private void IncreaseCapo() { if (capo < 12) { capo++; StateHasChanged(); } }
+    private void DecreaseCapo() { if (capo > 0) { capo--; StateHasChanged(); } }
+    private void ResetTranspose() { transpose = 0; StateHasChanged(); }
+    private void ResetCapo() { capo = 0; StateHasChanged(); }
 
-    private void DecreaseTranspose()
+    private void ToggleDropdown()
     {
-        if (transpose > -12)
-        {
-            transpose--;
-            StateHasChanged();
-        }
-    }
-
-    private void IncreaseCapo()
-    {
-        if (capo < 12)
-        {
-            capo++;
-            StateHasChanged();
-        }
-    }
-
-    private void DecreaseCapo()
-    {
-        if (capo > 0)
-        {
-            capo--;
-            StateHasChanged();
-        }
-    }
-
-    private void ResetTranspose()
-    {
-        transpose = 0;
+        showShareDropdown = !showShareDropdown;
         StateHasChanged();
     }
 
-    private void ResetCapo()
-    {
-        capo = 0;
-        StateHasChanged();
-    }
 
-    private string GetChordAlignmentClass(LyricSegmentDto segment)
+    private void CustomizeSong(string? songId)
     {
-        return segment.ChordAlignment switch
-        {
-            Alignment.Left => "justify-content-start",
-            Alignment.Center => "justify-content-center",
-            Alignment.Right => "justify-content-end",
-            Alignment.Justify => "justify-content-between",
-            _ => "justify-content-start"
-        };
-    }
-
-    public void Dispose()
-    {
-        // Clean up any resources if needed
-        chordScale = null;
-        originalChords = null;
-    }
-
-    private void CustomizeSong(string songId)
-    {
-        if(string.IsNullOrEmpty(songId))
+        if (string.IsNullOrEmpty(songId))
         {
             _modalService.Show(new ModalOptionDto
             {
@@ -359,25 +964,46 @@
         _navManager.NavigateTo("/compose?songId=" + songId);
     }
 
+    private string GetChordAlignmentClass(LyricSegmentDto segment)
+    {
+        return segment.ChordAlignment switch
+        {
+            Alignment.Left => "chord-align-left",
+            Alignment.Center => "chord-align-center",
+            Alignment.Right => "chord-align-right",
+            _ => "chord-align-left"
+        };
+    }
+
+    private async Task GoBack()
+    {
+        await JsRt.InvokeVoidAsync("goBack");
+    }
+
+    private void ShowSuccessMessage(string message)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Success",
+            Message = message,
+            ButtonText = "OK",
+            OptionType = OptionType.Success
+        });
+    }
+
+    private void ShowErrorMessage(string message)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Error",
+            Message = message,
+            ButtonText = "OK",
+            OptionType = OptionType.Error
+        });
+    }
+
     private async Task ConfirmModal()
     {
-        if (_modalService.CurrentModal?.Context?.ActionType == "PrintSong")
-        {
-            await PrintAsync();
-        }
-        else if (_modalService.CurrentModal?.Context?.ActionType == "CreateShareLink")
-        {
-            await ShareLinkAsync();
-        }
-        else if (_modalService.CurrentModal?.Context?.ActionType == "CustomizeSong")
-        {
-            var returnUrl = _modalService.CurrentModal.Context.Data as string ?? "/";
-            _navManager.NavigateTo(returnUrl);
-        }
-        else
-        {
-            _modalService.Close();
-        }
         await CloseModal();
     }
 
@@ -388,138 +1014,11 @@
         StateHasChanged();
     }
 
-    private string RenderSongHtml()
+    public void Dispose()
     {
-        if (song is null) return string.Empty;
-
-        // simple standalone HTML for printing/sharing with transposed chords
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine("<style>body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding:24px;} .title{font-weight:700; font-size:1.4rem; text-align:center; margin-bottom:8px;} .num{opacity:.6; margin-right:8px;} .section{margin-top:20px;} .line{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:6px;} .seg{display:flex; flex-direction:column; min-width:40px;} .ch{color:#0d6efd; font-weight:600; font-size:.9rem;} .ly{opacity:.9;}</style>");
-        sb.Append("<div class='header' style='display:flex; justify-content:center; align-items:center; margin-bottom:8px;'>");
-        if (song.SongNumber.HasValue)
-        {
-            sb.Append($"<span class='num'>{song.SongNumber.Value:D3}</span>");
-        }
-        sb.Append($"<div class='title'>{System.Net.WebUtility.HtmlEncode(song.Title)}</div></div>");
-
-        // Add transpose/capo info if applied
-        if (transpose != 0 || capo != 0)
-        {
-            sb.Append($"<div style='text-align:center; margin-bottom:16px; font-size:0.9rem; opacity:0.8;'>");
-            if (transpose != 0) sb.Append($"Transposed: {transpose:+#;-#;0} ");
-            if (capo != 0) sb.Append($"Capo: {capo}");
-            sb.Append("</div>");
-        }
-
-        if (song.SongParts?.Any() == true)
-        {
-            foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
-            {
-                sb.Append($"<div class='section'><h3 style='text-align:center; opacity:.8;'>Verse {verse.PartNumber:D2}</h3>");
-                if (verse.LyricLines?.Any() == true)
-                {
-                    foreach (var line in verse.LyricLines.OrderBy(l => l.LyricLineOrder))
-                    {
-                        sb.Append("<div class='line'>");
-                        if (line.LyricSegments?.Any() == true)
-                        {
-                            foreach (var seg in line.LyricSegments.OrderBy(s => s.LyricOrder))
-                            {
-                                sb.Append("<div class='seg'>");
-                                if (seg.Chord != null)
-                                {
-                                    var transposedChord = GetTransposedChordName(seg.Chord.ChordName);
-                                    sb.Append($"<div class='ch'>{System.Net.WebUtility.HtmlEncode(transposedChord)}</div>");
-                                }
-                                sb.Append($"<div class='ly'>{System.Net.WebUtility.HtmlEncode(seg.Lyric ?? string.Empty)}</div>");
-                                sb.Append("</div>");
-                            }
-                        }
-                        sb.Append("</div>");
-                    }
-                }
-                sb.Append("</div>");
-            }
-        }
-
-        return sb.ToString();
-    }
-
-    private async Task PrintAsync()
-    {
-        try
-        {
-            var html = RenderSongHtml();
-            //await _printService.PrintAsync(html, song?.Title ?? "Song");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Print failed for song {SongId}", SongId);
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "Error",
-                Message = "Failed to print song.",
-                ButtonText = "Close",
-                OptionType = OptionType.Error,
-                Context = new ModalContext
-                {
-                    ActionType = "PrintSong",
-                    Data = "Failed to print song with ID: " + SongId
-                }
-            });
-        }
-    }
-
-    private async Task GoBack()
-    {
-        //_navManager.NavigateTo("/songs-list");
-        await JsRt.InvokeVoidAsync("goBack");
-    }
-
-    private async Task ShareLinkAsync()
-    {
-        try
-        {
-            // var response = await _shareLinksApi.CreateShareLink(new FRELODYUI.Shared.Dtos.ShareLinkCreateRequest(SongId));
-            // if (response.IsSuccessStatusCode && response.Content is not null)
-            // {
-            //     var link = response.Content.Url;
-            //     await _clipboard.CopyTextAsync(link);
-            //     await OpenModal(new ModalOptionDto
-            //     {
-            //         Title = "Share link copied",
-            //         Message = link,
-            //         ButtonText = "Done",
-            //         OptionType = OptionType.Success
-            //     });
-            // }
-            // else
-            // {
-            //     var err = _apiResponseHandler.GetApiErrorMessage(response);
-            //     await OpenModal(new ModalOptionDto
-            //     {
-            //         Title = "Error",
-            //         Message = err,
-            //         ButtonText = "Close",
-            //         OptionType = OptionType.Error
-            //     });
-            // }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Share link creation failed for song {SongId}", SongId);
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "Error",
-                Message = "An error occurred while creating the share link.",
-                ButtonText = "Close",
-                OptionType = OptionType.Error,
-                Context = new ModalContext
-                {
-                    ActionType = "CreateShareLink",
-                    Data = ex.Message
-                }
-            });
-        }
+        chordScale = null;
+        originalChords = null;
+        autoScrollTimer?.Dispose();
+        popoverTimer?.Dispose();
     }
 }

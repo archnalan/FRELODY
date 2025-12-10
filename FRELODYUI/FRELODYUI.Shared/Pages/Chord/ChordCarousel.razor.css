@@ -1,7 +1,57 @@
-.fixed-height-img {
-    height: 15rem;
-    min-height: 15rem;
-    max-height: 15rem;
+/* Base carousel styling */
+.chord-carousel {
+    width: 100%;
+    position: relative;
+}
+
+/* Small size - for compact displays */
+.carousel-sm .chord-chart-img {
+    height: 120px;
+    min-height: 120px;
+    max-height: 120px;
+    max-width: 100px;
     object-fit: contain;
     border-radius: 0.5em;
 }
+
+/* Medium size - default for inline song display */
+.carousel-md .chord-chart-img {
+    height: 150px;
+    min-height: 150px;
+    max-height: 150px;
+    max-width: 130px;
+    object-fit: contain;
+    border-radius: 0.5em;
+}
+
+/* Large size - for detailed views */
+.carousel-lg .chord-chart-img {
+    height: 200px;
+    min-height: 200px;
+    max-height: 200px;
+    max-width: 170px;
+    object-fit: contain;
+    border-radius: 0.5em;
+}
+
+/* Popover size - compact for hover displays */
+.carousel-popover .chord-chart-img {
+    height: 90px;
+    min-height: 90px;
+    max-height: 90px;
+    max-width: 75px;
+    object-fit: contain;
+    border-radius: 0.5em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .carousel-md .chord-chart-img,
+    .carousel-lg .chord-chart-img {
+        height: 70px;
+        min-height: 70px;
+        max-height: 70px;
+        max-width: 60px;
+    }
+}
+

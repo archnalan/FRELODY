@@ -27,6 +27,7 @@
     {
         LyricsOnly,
         LyricsAndChords,
+        LyricsAndChordsAndCharts,
     }
 
     public enum Theme
