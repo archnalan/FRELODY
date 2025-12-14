@@ -68,6 +68,7 @@
     [Parameter] public EventCallback OnActionCompleted { get; set; }
     [Parameter] public EventCallback<string> OnCustomizeSong { get; set; }
     [Parameter] public bool ShowShareDropdown { get; set; } 
+    [Parameter] public string ShareLinkUrl { get; set; } = string.Empty;
 
     private string? currentUserId;
     private bool isLoading = false;
@@ -89,6 +90,13 @@
     private async Task HandleShareLink()
     {
         if (Song == null) return;
+        if(!string.IsNullOrEmpty(ShareLinkUrl))
+        {
+            await _clipboardService.CopyToClipboardAsync(ShareLinkUrl);
+            await ShowSuccessMessage("Share link copied to clipboard!");
+            await OnActionCompleted.InvokeAsync();
+            return;
+        }
 
         isGeneratingLink = true;
         ShowShareDropdown = false;

@@ -41,7 +41,7 @@ builder.Services.AddSingleton<ITimeHelper, TimeHelper>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ICurrencyConverter, CurrencyConverter>();
 builder.Services.AddScoped<ICurrencyDisplayService, CurrencyDisplayService>();
-var baseAddressApi = new Uri("https://localhost:7018");
+var baseAddressApi = new Uri("https://localhost:7077");
 
 builder.Services.AddRefitClient<ISongsApi>()
     .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)

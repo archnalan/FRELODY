@@ -73,6 +73,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<ISmtpSenderService,SmtpSenderService>();
+builder.Services.AddScoped<IShareLinkService, ShareLinkService>();
 builder.Services.AddScoped<FileValidationService>();
 builder.Services.AddScoped<SecurityUtilityService>();
 builder.Services.AddScoped<TokenService>();

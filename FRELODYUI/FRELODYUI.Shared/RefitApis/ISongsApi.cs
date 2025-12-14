@@ -22,7 +22,7 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<PaginationDetails<ComboBoxDto>>> SearchSongs([Query]string keywords, [Query]int offset, [Query]int limit);
 
         [Get("/api/songs/get-song-with-chords-by-id")]
-        Task<ApiResponse<SongDto>> GetSongWithChordsById([Query] string Id);
+        Task<IApiResponse<SongDto>> GetSongWithChordsById([Query] string Id);
 
         [Get("/api/songs/get-song-details-by-id/{id}")]
         Task<IApiResponse<SongDto>> GetSongDetailsById([Query]string id);

@@ -181,7 +181,8 @@
 
                 @if (showShareDropdown)
                 {
-                    <ShareDropdown Song="song" 
+                    <ShareDropdown Song="song"
+                                   ShareLinkUrl="@shareLinkUrl"
                                    ShowShareDropdown="@showShareDropdown" 
                                    OnActionCompleted="() => StateHasChanged()" 
                                    OnCustomizeSong="(songId) => CustomizeSong(songId)" />
@@ -420,7 +421,7 @@
     private string? currentUserId;
     private ElementReference songContainerRef;
     private ElementReference chordChartsTrackRef;
-
+    private string shareLinkUrl = string.Empty;
     // Display Settings
     private bool showSettingsDropdown = false;
     private bool isSavingSettings = false;
@@ -457,6 +458,7 @@
     {
         if (firstRender)
         {
+            shareLinkUrl = _navManager.Uri;
             // Ensure JS functions are loaded
             try
             {
@@ -819,10 +821,10 @@
     private string GetChordChartImage(ChordChartDto chart)
     {
         if (string.IsNullOrEmpty(chart.FilePath)) return "/_content/FRELODYUI.Shared/images/no_image_placeholder.png";
-        
+
         if (chart.FilePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             return chart.FilePath;
-            
+
         return $"{ApiBaseUrl}/{chart.FilePath.TrimStart('/')}";
     }
 
@@ -844,8 +846,22 @@
         try
         {
             var response = await _songsApi.GetSongWithChordsById(SongId);
+
             if (response.IsSuccessStatusCode)
             {
+                if (!response.IsSuccessful && response.Content == null)
+                {
+                    response = await _shareApi.GetSharedSong(SongId);
+                    var json = System.Text.Json.JsonSerializer.Serialize(response.Content);
+                    Console.WriteLine("Shared Song JSON: " + json);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                        ShowErrorMessage($"Failed to load song: {errorMessage}");
+                    }
+
+                }
+                
                 song = response.Content;
                 InitializeChordScale();
                 ExtractUniqueChords();

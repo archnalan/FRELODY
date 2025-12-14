@@ -26,7 +26,7 @@ namespace FRELODYUI.Services
 #if ANDROID || IOS
             _baseUrl = "https://frelody.app"; // Production URL for mobile
 #else
-            _baseUrl = "https://localhost:7077"; // Development URL for web
+            _baseUrl = "https://localhost:7018"; // Development URL for web
 #endif
         }
 
@@ -40,7 +40,7 @@ namespace FRELODYUI.Services
                 if (response.IsSuccessStatusCode && response.Content != null)
                 {
                     // Construct the full share URL
-                    response.Content.ShareUrl = $"{_baseUrl}/shared/{response.Content.ShareToken}";
+                    response.Content.ShareUrl = $"{_baseUrl}/songs/{response.Content.ShareToken}";
                     return response.Content;
                 }
 
@@ -56,7 +56,7 @@ namespace FRELODYUI.Services
 
         public Task<string> GetShareUrlAsync(string shareToken)
         {
-            return Task.FromResult($"{_baseUrl}/shared/{shareToken}");
+            return Task.FromResult($"{_baseUrl}/songs/{shareToken}");
         }
 
         public async Task NotifyLinkCopiedAsync()

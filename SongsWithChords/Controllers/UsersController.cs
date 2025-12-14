@@ -21,7 +21,6 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpGet]
-        [Authorize]
         [ProducesResponseType(typeof(UpdateUserProfileOutDto), 200)]
         public async Task<IActionResult> GetUserProfile([FromQuery] string userId)
         {

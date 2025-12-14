@@ -12,7 +12,7 @@ using Refit;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
-var baseAddressApi = new Uri("https://localhost:7018");
+var baseAddressApi = new Uri("https://localhost:7077");
 
 builder.Services.AddAuthenticationCore();
 builder.Services.AddAuthorizationCore();
