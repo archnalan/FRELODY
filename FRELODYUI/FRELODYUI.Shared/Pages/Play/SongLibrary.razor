@@ -77,7 +77,9 @@
                 <button class="btn @(viewMode == ViewMode.Catalogue ? "btn-outline-primary" : "btn-outline-secondary")"
                         data-bs-toggle="tooltip"
                         title="View by Catalogue"
-                        @onclick="() => SetViewMode(ViewMode.Catalogue)" style="width:3.5rem">
+                        @onclick="() => SetViewMode(ViewMode.Catalogue)" 
+                        style="width:3.5rem"
+                        disabled="@isInSelectionMode">
                     @if (viewMode == ViewMode.Catalogue)
                     {
                         <i class="bi bi-journals"></i>
@@ -92,7 +94,8 @@
                     <button class="btn @(viewMode == ViewMode.Favorites ? "btn-outline-primary" : "btn-outline-secondary")"
                     data-bs-toggle="tooltip"
                     title="View Favorites"
-                    @onclick="() => SetViewMode(ViewMode.Favorites)" style="width:3.5rem">
+                    @onclick="() => SetViewMode(ViewMode.Favorites)" style="width:3.5rem"
+                    disabled="@isInSelectionMode">                        
                         @if (viewMode == ViewMode.Favorites)
                         {
                             <i class="bi bi-heart-fill"></i>
@@ -105,7 +108,8 @@
                     <button class="btn @(viewMode == ViewMode.Playlists ? "btn-outline-primary" : "btn-outline-secondary")"
                         data-bs-toggle="tooltip"
                         title="View Playlists"
-                        @onclick="() => SetViewMode(ViewMode.Playlists)" style="width:3.5rem">
+                        @onclick="() => SetViewMode(ViewMode.Playlists)" style="width:3.5rem" 
+                        disabled="@isInSelectionMode">
                         <i class="bi bi-music-note-list"></i>
                     </button>
                 }
@@ -244,7 +248,6 @@
         }
     }
 
-
     private async Task SetViewMode(ViewMode mode)
     {
         if (viewMode != mode)
@@ -331,6 +334,7 @@
     {
         _navManager.NavigateTo("/compose");
     }
+
     private void HandleSongLongPress(string songId)
     {
         if (selectedSongIds.Contains(songId))
@@ -360,6 +364,7 @@
             }
         });
     }
+
     private async Task ExitSelectionMode()
     {
         selectedSongIds.Clear();

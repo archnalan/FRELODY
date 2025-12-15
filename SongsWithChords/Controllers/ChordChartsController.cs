@@ -162,7 +162,6 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPut]
-        [Authorize]
         [ProducesResponseType(typeof(ChordChartEditDto), 200)]
         public async Task<IActionResult> UpdateChordChartFiles(
             IFormFile? chartImage,

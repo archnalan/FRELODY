@@ -370,26 +370,10 @@
                  @onmouseenter="() => isMouseOverPopover = true"
                  @onmouseleave="HideChordPopover">
                 <div class="chord-popover-content">
-                    <div class="chord-popover-header">
-                        <h6>@hoveredChord.ChordName</h6>
-                        <button class="popover-close-btn" @onclick="HideChordPopover">
-                            <i class="bi bi-x"></i>
-                        </button>
-                    </div>
-                    @if (hoveredChord.ChordCharts?.Any() == true)
-                    {
-                        <ChordCarousel Chord="@hoveredChord"
-                                       Size="CarouselSize.Popover"
-                                       ShowActions="false"
-                                       CarouselId="@($"popover-carousel-{hoveredChord.Id}")" />
-                    }
-                    else
-                    {
-                        <div class="chord-popover-empty">
-                            <i class="bi bi-music-note"></i>
-                            <p>No chord chart available</p>
-                        </div>
-                    }
+                    <ChordCarousel Chord="@hoveredChord"
+                                   Size="CarouselSize.Popover"
+                                   ShowActions="false"
+                                   CarouselId="@($"popover-carousel-{hoveredChord.Id}")" />
                 </div>
             </div>
         }
@@ -722,8 +706,8 @@
             currentChartIndex = 0;
 
             // Calculate position to show above the chord
-            var popoverHeight = 280; // Approximate height of compact popover
-            var popoverWidth = 280;  // Approximate width of compact popover
+            var popoverHeight = 150; // Approximate height of compact popover
+            var popoverWidth = 85;  // Approximate width of compact popover
 
             // Position above the chord
             popoverTop = e.ClientY - popoverHeight - 15;

@@ -582,8 +582,8 @@
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     padding: 1rem;
-    min-width: 200px;
-    max-width: 280px;
+    min-width: 100px;
+    max-width: 150px;
     animation: popoverFadeIn 0.2s ease;
 }
 
@@ -648,7 +648,7 @@
 .chord-popover-image {
     width: 100%;
     height: auto;
-    max-height: 300px;
+    max-height: 200px;
     object-fit: contain;
     border-radius: 8px;
 }
