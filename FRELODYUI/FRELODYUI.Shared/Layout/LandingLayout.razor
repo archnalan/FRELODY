@@ -204,6 +204,12 @@
         if (firstRender)
         {
             await JsRt.InvokeVoidAsync("setupSearchShortcut");
+            // var sessionModel = await _localStorage.GetItemAsync<LoginResponseDto>("sessionState");
+            // if (sessionModel == null)
+            // {
+            //     await _globalAuth.MarkUserAsLoggedOutAsync();
+            //     _navManager.NavigateTo("/login", replace: true);
+            // }
         }
     }
 
@@ -214,7 +220,7 @@
 
     private async Task HandleResultSelected(SearchResult songResult)
     {
-        _navManager.NavigateTo($"/songs/{songResult.Id}/landing");
+        _navManager.NavigateTo($"/songs/landing/{songResult.Id}");
         await Task.CompletedTask;
     }
 

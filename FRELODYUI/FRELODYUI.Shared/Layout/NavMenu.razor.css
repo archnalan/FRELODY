@@ -55,6 +55,16 @@
     margin-right: 0.75rem;
     top: -1px;
     background-size: cover;
+    filter: brightness(0) saturate(100%) invert(44%) sepia(8%) saturate(878%) hue-rotate(180deg) brightness(95%) contrast(88%);
+}
+/* Dark theme - keep icons white */
+[data-bs-theme="dark"] .bi {
+    filter: brightness(0) saturate(100%) invert(100%);
+}
+
+/* Active state - always white */
+.nav-item ::deep a.active .bi {
+    filter: brightness(0) saturate(100%) invert(100%);
 }
 
 .bi-house-door-fill-nav-menu {

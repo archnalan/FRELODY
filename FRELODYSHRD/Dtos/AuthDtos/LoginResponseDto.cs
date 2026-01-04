@@ -1,4 +1,5 @@
-﻿using FRELODYSHRD.Dtos.UserDtos;
+﻿using FRELODYAPP.Dtos.UserDtos;
+using FRELODYSHRD.Dtos.UserDtos;
 
 namespace FRELODYAPP.Dtos.AuthDtos
 {
@@ -7,7 +8,7 @@ namespace FRELODYAPP.Dtos.AuthDtos
         public string? Token { get; set; }
         public string? RefreshToken { get; set; }
         public string? TenantId { get; set; }
-        public DateTime? Expiry { get; set; }
         public UserType? UserType { get; set; }
+        public UserClaimsDto User { get; set; }
     }
 }

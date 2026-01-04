@@ -698,7 +698,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 AND suf.UserId = @UserId
                 AND suf.IsDeleted = 0
             WHERE s.Title LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -775,7 +775,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 AND suf.UserId = @UserId
                 AND suf.IsDeleted = 0
             WHERE aggregated_line.AggregatedLyrics LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+               AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -825,7 +825,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 AND suf.UserId = @UserId
                 AND suf.IsDeleted = 0
             WHERE c.Name LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -875,7 +875,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 AND suf.UserId = @UserId
                 AND suf.IsDeleted = 0
             WHERE sb.Title LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -925,7 +925,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 AND suf.UserId = @UserId
                 AND suf.IsDeleted = 0
             WHERE p.Title LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -975,7 +975,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 AND suf.UserId = @UserId
                 AND suf.IsDeleted = 0
             WHERE (s.WrittenBy LIKE @SearchPattern OR sb.Author LIKE @SearchPattern)
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -1016,7 +1016,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             new SqlParameter("@UserId", _userId ?? (object)DBNull.Value),
             new SqlParameter("@CurrentUserId", _currentUserId ?? (object)DBNull.Value),
             new SqlParameter("@IsSuperAdmin", _isSuperAdmin),
-            new SqlParameter("@TenantId", _tenantId ?? (object)DBNull.Value),
+            new SqlParameter("@TenantId", string.IsNullOrEmpty(_tenantId) ? (object)DBNull.Value : _tenantId),
             new SqlParameter("@PublicAccess", publicAccess),
             new SqlParameter("@PrivateAccess", privateAccess),
             new SqlParameter("@ProtectedAccess", protectedAccess),
@@ -1050,7 +1050,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         FROM (
             SELECT s.Id FROM Songs s 
             WHERE s.Title LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -1067,7 +1067,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             INNER JOIN LyricLines ll ON sp.Id = ll.PartId
             INNER JOIN LyricSegments ls ON ll.Id = ls.LyricLineId
             WHERE ls.Lyric LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+               AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -1082,7 +1082,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             SELECT s.Id FROM Songs s
             LEFT JOIN Categories c ON s.CategoryId = c.Id
             WHERE c.Name LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -1098,7 +1098,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             LEFT JOIN Categories c ON s.CategoryId = c.Id
             LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
             WHERE sb.Title LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -1115,7 +1115,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
             LEFT JOIN Playlists p ON sb.PlaylistId = p.Id
             WHERE p.Title LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -1131,7 +1131,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             LEFT JOIN Categories c ON s.CategoryId = c.Id
             LEFT JOIN SongBooks sb ON c.SongBookId = sb.Id
             WHERE (s.WrittenBy LIKE @SearchPattern OR sb.Author LIKE @SearchPattern)
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -1146,7 +1146,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             SELECT s.Id FROM Songs s
             LEFT JOIN Albums al ON s.AlbumId = al.Id
             WHERE al.Title LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -1161,7 +1161,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             SELECT s.Id FROM Songs s
             LEFT JOIN Artists ar ON s.ArtistId = ar.Id
             WHERE ar.Name LIKE @SearchPattern
-                AND s.Access != @ProtectedAccess
+                AND (s.Access IS NULL OR s.Access != @ProtectedAccess)
                 AND (s.IsDeleted = 0 OR s.IsDeleted IS NULL)
                 AND (
                     @IsSuperAdmin = 1 
@@ -1177,7 +1177,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     .SqlQueryRaw<int>(countSql,
                         new SqlParameter("@SearchPattern", searchPattern),
                         new SqlParameter("@IsSuperAdmin", _isSuperAdmin),
-                        new SqlParameter("@TenantId", _tenantId ?? (object)DBNull.Value),
+                        new SqlParameter("@TenantId", string.IsNullOrEmpty(_tenantId) ? (object)DBNull.Value : _tenantId),
                         new SqlParameter("@CurrentUserId", _currentUserId ?? (object)DBNull.Value),
                         new SqlParameter("@PublicAccess", publicAccess),
                         new SqlParameter("@PrivateAccess", privateAccess),

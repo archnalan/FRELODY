@@ -293,10 +293,11 @@ namespace FRELODYAPP.Data
 
                     var token = await _tokenService.GenerateTokens(user, user.TenantId);
 
-                    // Reset login attempts on successful login
+                    // **NEW: Set claims in HTTP context**
+                    await SetUserClaimsInContext(user, user.TenantId);
+
                     _securityUtilityService.ResetLoginAttempts(userLogin.Email);
 
-                    // Log security event
                     await _securityUtilityService.LogSecurityEvent(
                         user.Id,
                         "Login",
@@ -306,10 +307,7 @@ namespace FRELODYAPP.Data
 
                     // Send email notification (async)
                     await SendLoginNotification(user);
-
                     await _securityUtilityService.LogUserLogin(user.Id);
-
-                    //TODO: Check Browser cookie for new devices before sending Email!
 
                     return ServiceResult<LoginResponseDto>.Success(token);
                 }
@@ -1056,6 +1054,49 @@ namespace FRELODYAPP.Data
             };
             await _emailSmtpService.SendMailAsync(emailDto);
         }
+
+        private async Task SetUserClaimsInContext(User user, string tenantId)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+
+            var userClaimsDto = new UserClaimsDto
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                FullName = $"{user.FirstName} {user.LastName}",
+                Email = user.Email,
+                UserName = user.UserName,
+                Roles = roles.ToList(),
+                TenantId = tenantId,
+                UserType = user.UserType,
+                BillingStatus = user.BillingStatus
+            };
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+                new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
+                new Claim("user", System.Text.Json.JsonSerializer.Serialize(userClaimsDto)),
+                new Claim("TenantId", tenantId ?? string.Empty),
+                new Claim("UserType", user.UserType.ToString())
+            };
+
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
+            var claimsIdentity = new ClaimsIdentity(claims, "Bearer");
+            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+
+            _httpContextAccessor.HttpContext.User = claimsPrincipal;
+
+            // Also sign in with cookie authentication if using cookie auth
+            await _signInManager.SignInAsync(user, isPersistent: false);
+        }
+
         public class ResultObject
         {
             public string ReturnCode { get; set; }

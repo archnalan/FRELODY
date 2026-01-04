@@ -39,16 +39,33 @@ namespace FRELODYAPP.Data
 
         public async Task<LoginResponseDto> GenerateTokens(User user, string? tenantId)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+            //var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+            //var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var roles = await _userManager.GetRolesAsync(user);
-            var userClaimsDto = user.Adapt<UserClaimsDto>();
+            var userClaimsDto = new UserClaimsDto
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                FullName = $"{user.FirstName} {user.LastName}",
+                Email = user.Email,
+                UserName = user.UserName,
+                Roles = roles.ToList(),
+                TenantId = tenantId,
+                UserType = user.UserType,
+                BillingStatus = user.BillingStatus
+            };
             userClaimsDto.TenantId = tenantId ?? user.TenantId;
             var claims = new List<Claim>
             {
-                new Claim("user", 
-                JsonConvert.SerializeObject(userClaimsDto))
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+                new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
+                new Claim("UserId", user.Id), // Redundant but useful
+                new Claim("user", System.Text.Json.JsonSerializer.Serialize(userClaimsDto)), 
+                new Claim("TenantId", tenantId ?? string.Empty),
+                new Claim("UserType", user.UserType.ToString())
             };
 
             foreach (var role in roles)
@@ -62,34 +79,51 @@ namespace FRELODYAPP.Data
             {
                 claims.Add(new Claim("UserType", user.UserType.ToString()!));
             }
+            var tokenHandler = new JwtSecurityTokenHandler();
             // Get token expiration from config
             int tokenExpiryDays = _config.GetValue<int>("Jwt:TokenExpirationDays", 7);
-            var expiryTime = DateTime.Now.AddDays(tokenExpiryDays);
+            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
 
-            var token = new JwtSecurityToken(
-                issuer: _config["Jwt:Issuer"],
-                audience: _config["Jwt:Audience"],
-                claims: claims,
-                expires: expiryTime,
-                signingCredentials: credentials
-            );
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.Now.AddDays(tokenExpiryDays),
+                Issuer = _config["Jwt:Issuer"],
+                Audience = _config["Jwt:Audience"],
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature)
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var accessToken = tokenHandler.WriteToken(token);
 
-            // Create refresh token
             string refreshToken = GenerateRefreshToken();
-            int refreshTokenExpiryDays = _config.GetValue<int>("Jwt:RefreshTokenExpirationDays", 30);
+            await StoreRefreshToken(user.Id, refreshToken);
 
+            var result = new LoginResponseDto
+            {
+                Token = accessToken,
+                TenantId = user.TenantId,
+                RefreshToken = refreshToken,
+                User = userClaimsDto
+            };
+
+            return result;
+        }
+
+        private async Task StoreRefreshToken(string userId, string refreshToken)
+        {
+            int refreshTokenExpiryDays = _config.GetValue<int>("Jwt:RefreshTokenExpirationDays", 30);
             // Save refresh token to database
             var userRefreshToken = new UserRefreshToken
             {
-                UserId = user.Id,
+                UserId = userId,
                 Token = refreshToken,
                 ExpiryDate = DateTime.UtcNow.AddDays(refreshTokenExpiryDays)
             };
-
             // Check if user already has a refresh token
             var existingToken = await _context.UserRefreshTokens
-                .FirstOrDefaultAsync(t => t.UserId == user.Id);
-
+                .FirstOrDefaultAsync(t => t.UserId == userId);
             if (existingToken != null)
             {
                 existingToken.Token = refreshToken;
@@ -98,21 +132,10 @@ namespace FRELODYAPP.Data
             }
             else
             {
-                userRefreshToken.TenantId = string.IsNullOrWhiteSpace(user.TenantId) ? null : user.TenantId;
                 await _context.UserRefreshTokens.AddAsync(userRefreshToken);
             }
-
             await _context.SaveChangesAsync();
 
-            var result = new LoginResponseDto
-            {
-                Token = new JwtSecurityTokenHandler().WriteToken(token),
-                Expiry = expiryTime,
-                TenantId = user.TenantId,
-                RefreshToken = refreshToken
-            };
-
-            return result;
         }
 
         public async Task<ServiceResult<LoginResponseDto>> RefreshToken(string accessToken, string refreshToken)

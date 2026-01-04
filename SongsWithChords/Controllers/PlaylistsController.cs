@@ -35,7 +35,6 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpGet]
-        [Authorize]
         [ProducesResponseType(typeof(List<PlaylistSongs>), 200)]
         public async Task<IActionResult> GetUserPlaylists([FromQuery] string userId)
         {
@@ -66,7 +65,6 @@ namespace FRELODYAPIs.Controllers
         }
         
         [HttpPost]
-        [Authorize]
         [ProducesResponseType(typeof(PlaylistDto), 201)]
         public async Task<IActionResult> AddPlaylist([FromBody] PlaylistCreateDto playlist)
         {
@@ -77,7 +75,6 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
-        [Authorize]
         [ProducesResponseType(typeof(PlaylistDto), 200)]
         public async Task<IActionResult> AddSongToPlaylist([FromQuery] string playlistId, [FromQuery] string songId)
         {
@@ -88,7 +85,6 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
-        [Authorize]
         [ProducesResponseType(typeof(PlaylistDto), 200)]
         public async Task<IActionResult> MakePlaylistPrivate([FromQuery] string id)
         {
@@ -110,7 +106,6 @@ namespace FRELODYAPIs.Controllers
         }
         
         [HttpDelete]
-        [Authorize]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> RemoveSongFromPlaylist([FromQuery] string playlistId, [FromQuery] string songId)
         {
