@@ -93,25 +93,15 @@
    SETTINGS DROPDOWN - FIXED Z-INDEX
    ============================================ */
 
-.settings-dropdown-wrapper {
-    position: relative;
-}
-
 .settings-dropdown-overlay {
     position: fixed !important;
     z-index: 9999 !important;
 }
 
 .settings-dropdown {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    right: 0;
     width: 320px;
-    background-color: var(--modal-content-bg);
-    border: 1px solid var(--border-medium);
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    animation: slideDown 0.2s ease;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 @keyframes slideDown {
@@ -132,6 +122,10 @@
     justify-content: space-between;
     padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--border-light);
+    position: sticky;
+    top: 0;
+    background: var(--card-bg);
+    z-index: 1;
 }
 
     .settings-header h6 {
@@ -276,6 +270,9 @@
     justify-content: end;
     padding: 1rem 1.25rem;
     border-top: 1px solid var(--border-light);
+    position: sticky;
+    bottom: 0;
+    background: var(--card-bg);
 }
 
 /* ============================================
@@ -857,10 +854,9 @@
     }
 
     .settings-dropdown {
-        width: calc(100vw - 2rem);
-        right: auto;
-        left: 50%;
-        transform: translateX(-50%);
+        width: 320px;
+        max-height: 80vh;
+        overflow-y: auto;
     }
 
     .fret-section {
@@ -950,7 +946,6 @@
     background: rgba(31, 41, 55, 0.5);
 }
 
-[data-bs-theme="dark"] .settings-dropdown,
 [data-bs-theme="dark"] .chord-popover-content {
     background: rgba(17, 24, 39, 0.98);
 }

@@ -32,162 +32,169 @@
 
             <div class="header-actions">
                 <!-- Settings Dropdown -->
-                <div class="settings-dropdown-wrapper">
-                    <button class="header-action-btn settings-btn @(showSettingsDropdown ? "active" : "")" 
-                            @onclick="ToggleSettingsDropdown"
+                <div class="dropdown">
+                    <button class="header-action-btn settings-btn"
+                            type="button"
+                            id="settingsDropdownButton"
+                            data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside"
                             title="Display settings">
                         <i class="bi bi-gear"></i>
                     </button>
-                    
-                    @if (showSettingsDropdown)
-                    {
-                        <div class="settings-dropdown-overlay" onclick="()=>()"></div>
-                        <div class="settings-dropdown" @onclick:stopPropagation>
-                            <div class="settings-header">
-                                <h6>Display Settings</h6>
-                                <button class="close-btn" @onclick="CloseSettingsDropdown">
+
+                    <div class="dropdown-menu dropdown-menu-end settings-dropdown"
+                         aria-labelledby="settingsDropdownButton">
+                        <div class="settings-header">
+                            <h6>Display Settings</h6>
+                            <button class="close-btn" type="button" id="closeDropdownBtn" @onclick="CloseSettingsDropdown">
                                     <i class="bi bi-x"></i>
-                                </button>
-                            </div>
+                            </button>
+                        </div>
 
-                            <div class="settings-content">
-                                <!-- Autoscroll Settings -->
-                                <div class="settings-section">
-                                    <label class="settings-label">
-                                        <i class="bi bi-speedometer2"></i>
-                                        Autoscroll Speed
-                                    </label>
-                                    <div class="setting-control">
-                                        <button class="size-btn" @onclick="() => AdjustScrollSpeed(-0.5)" disabled="@(scrollSpeed <= 0)">
-                                            <i class="bi bi-dash"></i>
-                                        </button>
-                                        <span class="control-value">@scrollSpeed.ToString("0.0")</span>
-                                        <button class="size-btn" @onclick="() => AdjustScrollSpeed(0.5)" disabled="@(scrollSpeed >= 5)">
-                                            <i class="bi bi-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Font Settings -->
-                                <div class="settings-section">
-                                    <label class="settings-label">
-                                        <i class="bi bi-type"></i>
-                                        Chord Font Size
-                                    </label>
-                                    <div class="setting-control">
-                                        <button class="size-btn" @onclick="() => AdjustChordFontSize(-2)">
-                                            <i class="bi bi-dash"></i>
-                                        </button>
-                                        <span class="size-value">@chordFontSize</span>
-                                        <button class="size-btn" @onclick="() => AdjustChordFontSize(2)">
-                                            <i class="bi bi-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div class="settings-section">
-                                    <label class="settings-label">
-                                        <i class="bi bi-text-paragraph"></i>
-                                        Lyric Font Size
-                                    </label>
-                                    <div class="setting-control">
-                                        <button class="size-btn" @onclick="() => AdjustLyricFontSize(-2)">
-                                            <i class="bi bi-dash"></i>
-                                        </button>
-                                        <span class="size-value">@lyricFontSize</span>
-                                        <button class="size-btn" @onclick="() => AdjustLyricFontSize(2)">
-                                            <i class="bi bi-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Display Mode -->
-                                <div class="settings-section">
-                                    <label class="settings-label">
-                                        <i class="bi bi-eye"></i>
-                                        Display Mode
-                                    </label>
-                                    <select class="settings-select" @bind="songDisplayMode">
-                                        <option value="@SongDisplay.LyricsAndChordsAndCharts">Lyrics, Chords & Charts</option>
-                                        <option value="@SongDisplay.LyricsAndChords">Lyrics & Chords</option>
-                                        <option value="@SongDisplay.LyricsOnly">Lyrics Only</option>
-                                    </select>
-                                </div>
-
-                                <!-- Chord Display Position -->
-                                @if (songDisplayMode == SongDisplay.LyricsAndChords 
-                                || songDisplayMode == SongDisplay.LyricsAndChordsAndCharts)
-                                {
-                                    <div class="settings-section">
-                                        <label class="settings-label">
-                                            <i class="bi bi-music-note"></i>
-                                            Chord Position
-                                        </label>
-                                        <select class="settings-select" @bind="chordDisplayMode">
-                                            <option value="@ChordDisplay.Above">Above Lyrics</option>
-                                            <option value="@ChordDisplay.Inline">Inline</option>
-                                        </select>
-                                    </div>
-                                }
-
-                                <!-- Font Family Selection -->
-                                <div class="settings-section">
-                                    <label class="settings-label">
-                                        <i class="bi bi-fonts"></i>
-                                        Font Style
-                                    </label>
-                                    <select class="settings-select" @bind="fontFamily">
-                                        <option value="system-ui, -apple-system, 'Segoe UI'">System Default</option>
-                                        <option value="'Georgia', serif">Georgia</option>
-                                        <option value="'Arial', sans-serif">Arial</option>
-                                        <option value="'Courier New', monospace">Courier New</option>
-                                        <option value="'Times New Roman', serif">Times New Roman</option>
-                                        <option value="'Kanit','Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'">Kanit</option>
-                                        <option value="'Montserrat', sans-serif">Montserrat</option>
-                                    </select>
-                                </div>
-                                <div class="settings-footer">
-                                    <!-- Save Settings Button -->
-                                    <button class="save-settings-btn" @onclick="SaveDisplaySettings" disabled="@isSavingSettings">
-                                        @if (isSavingSettings)
-                                        {
-                                            <span class="spinner-border spinner-border-sm me-2"></span>
-                                        }
-                                        else
-                                        {
-                                            <i class="bi bi-check-circle me-2"></i>
-                                        }
-                                        Save Settings
+                        <div class="settings-content">
+                            <!-- Autoscroll Settings -->
+                            <div class="settings-section">
+                                <label class="settings-label">
+                                    <i class="bi bi-speedometer2"></i>
+                                    Autoscroll Speed
+                                </label>
+                                <div class="setting-control">
+                                    <button class="size-btn" @onclick="() => AdjustScrollSpeed(-0.5)" @onclick:stopPropagation disabled="@(scrollSpeed <= 0)">
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <span class="control-value">@scrollSpeed.ToString("0.0")</span>
+                                    <button class="size-btn" @onclick="() => AdjustScrollSpeed(0.5)" @onclick:stopPropagation disabled="@(scrollSpeed >= 5)">
+                                        <i class="bi bi-plus"></i>
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                    }
-                </div>
-                <button class="btn btn-primary dropdown-toggle"
-                        type="button"
-                        @onclick="ToggleDropdown"
-                        disabled="@isLoading">
-                    @if (isLoading)
-                    {
-                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                    }
-                    else
-                    {
-                        <i class="bi bi-upload me-1"></i>
-                    }
-                    Share
-                </button>
 
-                @if (showShareDropdown)
-                {
-                    <ShareDropdown Song="song"
-                                   ShareLinkUrl="@shareLinkUrl"
-                                   ShowShareDropdown="@showShareDropdown" 
-                                   OnActionCompleted="() => StateHasChanged()" 
-                                   OnCustomizeSong="(songId) => CustomizeSong(songId)" />
-                    <div style="z-index:0" class="modal-backdrop bg-transparent" @onclick="() => showShareDropdown = false"></div>                    
-                }
+                            <!-- Font Settings -->
+                            <div class="settings-section">
+                                <label class="settings-label">
+                                    <i class="bi bi-type"></i>
+                                    Chord Font Size
+                                </label>
+                                <div class="setting-control">
+                                    <button class="size-btn" @onclick="() => AdjustChordFontSize(-2)" @onclick:stopPropagation>
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <span class="size-value">@chordFontSize</span>
+                                    <button class="size-btn" @onclick="() => AdjustChordFontSize(2)" @onclick:stopPropagation>
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="settings-section">
+                                <label class="settings-label">
+                                    <i class="bi bi-text-paragraph"></i>
+                                    Lyric Font Size
+                                </label>
+                                <div class="setting-control">
+                                    <button class="size-btn" @onclick="() => AdjustLyricFontSize(-2)" @onclick:stopPropagation>
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <span class="size-value">@lyricFontSize</span>
+                                    <button class="size-btn" @onclick="() => AdjustLyricFontSize(2)" @onclick:stopPropagation>
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Display Mode -->
+                            <div class="settings-section">
+                                <label class="settings-label">
+                                    <i class="bi bi-eye"></i>
+                                    Display Mode
+                                </label>
+                                <select class="settings-select" @bind="songDisplayMode" @onclick:stopPropagation>
+                                    <option value="@SongDisplay.LyricsAndChordsAndCharts">Lyrics, Chords & Charts</option>
+                                    <option value="@SongDisplay.LyricsAndChords">Lyrics & Chords</option>
+                                    <option value="@SongDisplay.LyricsOnly">Lyrics Only</option>
+                                </select>
+                            </div>
+
+                            <!-- Chord Display Position -->
+                            @if (songDisplayMode == SongDisplay.LyricsAndChords
+                                                    || songDisplayMode == SongDisplay.LyricsAndChordsAndCharts)
+                            {
+                                <div class="settings-section">
+                                    <label class="settings-label">
+                                        <i class="bi bi-music-note"></i>
+                                        Chord Position
+                                    </label>
+                                    <select class="settings-select" @bind="chordDisplayMode" @onclick:stopPropagation>
+                                        <option value="@ChordDisplay.Above">Above Lyrics</option>
+                                        <option value="@ChordDisplay.Inline">Inline</option>
+                                    </select>
+                                </div>
+                            }
+
+                            <!-- Font Family Selection -->
+                            <div class="settings-section">
+                                <label class="settings-label">
+                                    <i class="bi bi-fonts"></i>
+                                    Font Style
+                                </label>
+                                <select class="settings-select" @bind="fontFamily" @onclick:stopPropagation>
+                                    <option value="system-ui, -apple-system, 'Segoe UI'">System Default</option>
+                                    <option value="'Georgia', serif">Georgia</option>
+                                    <option value="'Arial', sans-serif">Arial</option>
+                                    <option value="'Courier New', monospace">Courier New</option>
+                                    <option value="'Times New Roman', serif">Times New Roman</option>
+                                    <option value="'Kanit','Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'">Kanit</option>
+                                    <option value="'Montserrat', sans-serif">Montserrat</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="settings-footer">
+                            <!-- Save Settings Button -->
+                            <button class="save-settings-btn" @onclick="SaveDisplaySettings" @onclick:stopPropagation disabled="@isSavingSettings">
+                                @if (isSavingSettings)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-circle me-2"></i>
+                                }
+                                Save Settings
+                            </button>
+                        </div>
+                    </div>
+                    
+                </div>
+                <!-- Share Dropdown -->
+                <div class="dropdown">
+                    <button class="btn btn-primary dropdown-toggle"
+                            type="button"
+                            id="shareDropdownButton"
+                            data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside"
+                            title="Share" 
+                            disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-upload me-1"></i>
+                        }
+                        Share
+                    </button>
+
+                    <div class="dropdown-menu dropdown-menu-start"
+                         aria-labelledby="shareDropdownButton">
+                        <ShareDropdown Song="song"
+                                       ShareLinkUrl="@shareLinkUrl"
+                                       ShowShareDropdown="@showShareDropdown"
+                                       OnActionCompleted="CloseShareDropdown"
+                                       OnCustomizeSong="(songId) => CustomizeSong(songId)" />
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -446,7 +453,6 @@
             // Ensure JS functions are loaded
             try
             {
-                // Test that smoothScrollBy exists
                 await JsRt.InvokeVoidAsync("smoothScrollBy", 0);
             }
             catch (Exception ex)
@@ -595,6 +601,8 @@
     {
         showSettingsDropdown = false;
         StateHasChanged();
+
+        JsRt.InvokeVoidAsync("hideDropdown", "settingsDropdownButton");
     }
 
     private void AdjustChordFontSize(int delta)
@@ -834,7 +842,7 @@
 
     private string GetSongContentStyle()
     {
-        return $"font-family: {fontFamily};";
+        return $"font-family: {fontFamily};z-index: 0;";
     }
 
     private string GetChordDisplayClass()
@@ -942,6 +950,12 @@
     private void ToggleDropdown()
     {
         showShareDropdown = !showShareDropdown;
+        StateHasChanged();
+    }
+
+    private void CloseShareDropdown()
+    {
+        showShareDropdown = false;
         StateHasChanged();
     }
 

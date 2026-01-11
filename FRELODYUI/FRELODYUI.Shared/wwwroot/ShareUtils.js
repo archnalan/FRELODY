@@ -140,6 +140,16 @@ window.setupSearchShortcut = () => {
     });
 };
 
+window.hideDropdown = function (dropdownButtonId) {
+    const dropdownBtn = document.getElementById(dropdownButtonId);
+    if (dropdownBtn && window.bootstrap && window.bootstrap.Dropdown) {
+        const bsDropdown = bootstrap.Dropdown.getInstance(dropdownBtn);
+        if (bsDropdown) {
+            bsDropdown.hide();
+        }
+    }
+};
+
 // ============================================
 // AUTOSCROLL FUNCTIONALITY - UNIVERSAL APPROACH
 // ============================================
@@ -528,6 +538,7 @@ window.isElementInViewport = function (element) {
     );
 };
 
+
 // ============================================
 // INITIALIZE ON LOAD
 // ============================================
@@ -550,3 +561,4 @@ window.isElementInViewport = function (element) {
         document.head.appendChild(style);
     });
 })();
+

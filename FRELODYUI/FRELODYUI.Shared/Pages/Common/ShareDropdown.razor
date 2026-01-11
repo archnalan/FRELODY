@@ -2,47 +2,40 @@
 @using FRELODYSHRD.Dtos
 @inject ILogger<ShareDropdown> _logger
 
-<div class="dropdown position-relative">
-    @if (ShowShareDropdown)
+<button class="dropdown-item d-flex align-items-center" 
+        type="button"
+        data-bs-toggle="tooltip"
+        title="@(string.IsNullOrEmpty(currentUserId) ? "Login..." : "Customize")"
+        aria-label="edit this song"
+        @onclick="@(() => CustomizeSong(Song.Id))"
+        disabled="@(string.IsNullOrEmpty(currentUserId))">
+    <i class="bi bi-pencil-square me-2"></i>
+    <span>Customize</span>
+</button>
+
+<button class="dropdown-item d-flex align-items-center"
+        type="button"
+        @onclick="HandleShareLink"
+        disabled="@isLoading">
+    <i class="bi bi-link-45deg me-2"></i>
+    <span>Share Link</span>
+    @if (isGeneratingLink)
     {
-        <div class="dropdown-menu show position-absolute" style="top: 100%; left: 0; z-index: 1050;">
-            <button class="dropdown-item d-flex align-items-center" 
-                    type="button"
-                    data-bs-toggle="tooltip"
-                    title="@(string.IsNullOrEmpty(currentUserId) ? "Login..." : "Customize")"
-                    aria-label="edit this song"
-                    @onclick="@(() => CustomizeSong(Song.Id))"
-                    disabled="@(string.IsNullOrEmpty(currentUserId))">
-                <i class="bi bi-pencil-square me-2"></i>
-                <span>Customize</span>
-            </button>
-
-            <button class="dropdown-item d-flex align-items-center"
-                    type="button"
-                    @onclick="HandleShareLink"
-                    disabled="@isLoading">
-                <i class="bi bi-link-45deg me-2"></i>
-                <span>Share Link</span>
-                @if (isGeneratingLink)
-                {
-                    <span class="spinner-border spinner-border-sm ms-auto" role="status"></span>
-                }
-            </button>
-
-            <button class="dropdown-item d-flex align-items-center"
-                    type="button"
-                    @onclick="HandlePrint"
-                    disabled="@isLoading">
-                <i class="bi bi-printer-fill me-2"></i>
-                <span>Print</span>
-                @if (isPrinting)
-                {
-                    <span class="spinner-border spinner-border-sm ms-auto" role="status"></span>
-                }
-            </button>
-        </div>
+        <span class="spinner-border spinner-border-sm ms-auto" role="status"></span>
     }
-</div>
+</button>
+
+<button class="dropdown-item d-flex align-items-center"
+        type="button"
+        @onclick="HandlePrint"
+        disabled="@isLoading">
+    <i class="bi bi-printer-fill me-2"></i>
+    <span>Print</span>
+    @if (isPrinting)
+    {
+        <span class="spinner-border spinner-border-sm ms-auto" role="status"></span>
+    }
+</button>
 
 @if (showSuccessMessage)
 {
