@@ -141,65 +141,119 @@ window.setupSearchShortcut = () => {
 };
 
 // ============================================
-// AUTOSCROLL FUNCTIONALITY
+// AUTOSCROLL FUNCTIONALITY - UNIVERSAL APPROACH
 // ============================================
 
 /**
+ * Get the current scroll container with all scroll utilities
+ * Returns a unified interface that works with both LandingLayout and MainLayout
+ * @returns {object} Scroll container object with utility methods
+ */
+window.getCurrentScrollContainer = function () {
+    // Check for LandingLayout first
+    const landingBody = document.querySelector('.landing-body');
+    if (landingBody) {
+        return {
+            element: landingBody,
+            scrollTop: landingBody.scrollTop,
+            scrollHeight: landingBody.scrollHeight,
+            clientHeight: landingBody.clientHeight,
+            scrollBy: (pixels) => {
+                landingBody.scrollBy({ top: pixels, behavior: 'smooth' });
+            },
+            scrollTo: (position) => {
+                landingBody.scrollTo({ top: position, behavior: 'smooth' });
+            },
+            scrollToTop: () => {
+                landingBody.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+            scrollToBottom: () => {
+                landingBody.scrollTo({ top: landingBody.scrollHeight, behavior: 'smooth' });
+            }
+        };
+    }
+    
+    // Fallback to window/document for MainLayout
+    return {
+        element: window,
+        scrollTop: window.pageYOffset || document.documentElement.scrollTop,
+        scrollHeight: document.documentElement.scrollHeight,
+        clientHeight: document.documentElement.clientHeight,
+        scrollBy: (pixels) => {
+            window.scrollBy({ top: pixels, behavior: 'smooth' });
+        },
+        scrollTo: (position) => {
+            window.scrollTo({ top: position, behavior: 'smooth' });
+        },
+        scrollToTop: () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+        scrollToBottom: () => {
+            const maxScroll = document.documentElement.scrollHeight;
+            window.scrollTo({ top: maxScroll, behavior: 'smooth' });
+        }
+    };
+};
+
+/**
  * Smooth scroll by a specific number of pixels
+ * Works universally across both layouts
  * @param {number} pixels - Number of pixels to scroll
  */
 window.smoothScrollBy = function (pixels) {
-    window.scrollBy({
-        top: pixels,
-        left: 0,
-        behavior: 'smooth'
-    });
+    const container = window.getCurrentScrollContainer();
+    container.scrollBy(pixels);
 };
 
 /**
  * Scroll to top of the page
+ * Works universally across both layouts
  */
 window.scrollToTop = function () {
-    window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: 'smooth'
-    });
+    const container = window.getCurrentScrollContainer();
+    container.scrollToTop();
 };
 
 /**
  * Scroll to bottom of the page
+ * Works universally across both layouts
  */
 window.scrollToBottom = function () {
-    window.scrollTo({
-        top: document.documentElement.scrollHeight,
-        left: 0,
-        behavior: 'smooth'
-    });
+    const container = window.getCurrentScrollContainer();
+    container.scrollToBottom();
 };
 
 /**
  * Get current scroll position
- * @returns {object} Object with scrollTop and scrollHeight
+ * Works universally across both layouts
+ * @returns {object} Object with scrollTop, scrollHeight, and clientHeight
  */
 window.getScrollPosition = function () {
+    const container = window.getCurrentScrollContainer();
     return {
-        scrollTop: window.pageYOffset || document.documentElement.scrollTop,
-        scrollHeight: document.documentElement.scrollHeight,
-        clientHeight: document.documentElement.clientHeight
+        scrollTop: container.scrollTop,
+        scrollHeight: container.scrollHeight,
+        clientHeight: container.clientHeight
     };
 };
 
 /**
  * Check if user has scrolled to bottom
+ * Works universally across both layouts
+ * @param {number} threshold - Pixel threshold before bottom (default: 50)
  * @returns {boolean} True if at bottom
  */
-window.isAtBottom = function () {
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const scrollHeight = document.documentElement.scrollHeight;
-    const clientHeight = document.documentElement.clientHeight;
-    
-    return (scrollTop + clientHeight) >= (scrollHeight - 50); // 50px threshold
+window.isAtBottom = function (threshold = 50) {
+    const container = window.getCurrentScrollContainer();
+    return (container.scrollTop + container.clientHeight) >= (container.scrollHeight - threshold);
+};
+
+/**
+ * Check if the current layout is LandingLayout
+ * @returns {boolean} True if using LandingLayout
+ */
+window.isLandingLayout = function () {
+    return document.querySelector('.landing-body') !== null;
 };
 
 // ============================================

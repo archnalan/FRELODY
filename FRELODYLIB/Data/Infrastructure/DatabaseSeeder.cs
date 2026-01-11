@@ -441,7 +441,6 @@ namespace FRELODYAPP.Data.Infrastructure
                 Feature.SongManagement,
                 Feature.ChordManagement,
                 Feature.PdfExport,
-                Feature.AiAssistedComposition
             },
             TenantId = tenantId,
             CreatedBy = userId,

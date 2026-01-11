@@ -58,11 +58,11 @@
                                         Autoscroll Speed
                                     </label>
                                     <div class="setting-control">
-                                        <button class="size-btn" @onclick="() => AdjustScrollSpeed(-1)" disabled="@(scrollSpeed <= 0)">
+                                        <button class="size-btn" @onclick="() => AdjustScrollSpeed(-0.5)" disabled="@(scrollSpeed <= 0)">
                                             <i class="bi bi-dash"></i>
                                         </button>
-                                        <span class="control-value">@scrollSpeed</span>
-                                        <button class="size-btn" @onclick="() => AdjustScrollSpeed(1)" disabled="@(scrollSpeed >= 5)">
+                                        <span class="control-value">@scrollSpeed.ToString("0.0")</span>
+                                        <button class="size-btn" @onclick="() => AdjustScrollSpeed(0.5)" disabled="@(scrollSpeed >= 5)">
                                             <i class="bi bi-plus"></i>
                                         </button>
                                     </div>
@@ -207,11 +207,11 @@
                         <div class="control-wrapper">
                             <label class="control-label">Autoscroll</label>
                             <div class="control-buttons">
-                                <button class="control-btn" @onclick="() => AdjustScrollSpeed(-1)" disabled="@(scrollSpeed <= 0)">
+                                <button class="control-btn" @onclick="() => AdjustScrollSpeed(-0.5)" disabled="@(scrollSpeed <= 0)">
                                     <i class="bi bi-dash"></i>
                                 </button>
-                                <span class="control-value">@scrollSpeed</span>
-                                <button class="control-btn" @onclick="() => AdjustScrollSpeed(1)" disabled="@(scrollSpeed >= 5)">
+                                <span class="control-value">@scrollSpeed.ToString("0.0")</span>
+                                <button class="control-btn" @onclick="() => AdjustScrollSpeed(0.5)" disabled="@(scrollSpeed >= 5)">
                                     <i class="bi bi-plus"></i>
                                 </button>
                             </div>
@@ -416,9 +416,9 @@
     private ChordDisplay chordDisplayMode = ChordDisplay.Above;
 
     // Autoscroll
-    private bool isAutoScrolling = false;
-    private int scrollSpeed = 3; // pixels per second
     private System.Threading.Timer? autoScrollTimer;
+    private bool isAutoScrolling = false;
+    private double scrollSpeed = 1.5; // Support decimal values for smoother control
     private const string ApiBaseUrl = "https://localhost:7077";
 
     // Chord Charts
@@ -455,6 +455,7 @@
             }
         }
     }
+
     protected override async Task OnParametersSetAsync()
     {
         if (!string.IsNullOrEmpty(SongId))
@@ -510,10 +511,20 @@
         try
         {
             var key = $"SongSettings_{SongId}";
-            var songSettings = await _storageService.GetItemAsync<Dictionary<string, int>>(key);
+            // Try loading as double first (new format)
+            var songSettings = await _storageService.GetItemAsync<Dictionary<string, double>>(key);
             if (songSettings != null && songSettings.ContainsKey("scrollSpeed"))
             {
                 scrollSpeed = songSettings["scrollSpeed"];
+            }
+            else
+            {
+                // Fallback to int format for backward compatibility
+                var oldSettings = await _storageService.GetItemAsync<Dictionary<string, int>>(key);
+                if (oldSettings != null && oldSettings.ContainsKey("scrollSpeed"))
+                {
+                    scrollSpeed = (double)oldSettings["scrollSpeed"];
+                }
             }
         }
         catch (Exception ex)
@@ -558,7 +569,7 @@
             }
 
             // Save song-specific settings
-            var songSettings = new Dictionary<string, int> { { "scrollSpeed", scrollSpeed } };
+            var songSettings = new Dictionary<string, double> { { "scrollSpeed", scrollSpeed } };
             await _storageService.SetItemAsync($"SongSettings_{SongId}", songSettings);
 
             CloseSettingsDropdown();
@@ -598,7 +609,7 @@
         StateHasChanged();
     }
 
-    private void AdjustScrollSpeed(int delta)
+    private void AdjustScrollSpeed(double delta)
     {
         scrollSpeed = Math.Clamp(scrollSpeed + delta, 0, 5);
         StateHasChanged();
@@ -610,13 +621,13 @@
 
         if (isAutoScrolling)
         {
-            // Check if we're already at bottom
+            // Check if we're at bottom (works universally now)
             var atBottom = await JsRt.InvokeAsync<bool>("isAtBottom");
             if (atBottom)
             {
                 // Reset to top if at bottom
                 await JsRt.InvokeVoidAsync("scrollToTop");
-                await Task.Delay(100); // Small delay
+                await Task.Delay(100);
             }
 
             StartAutoScroll();
@@ -645,31 +656,40 @@
             return;
         }
 
-        // Calculate scroll amount based on speed (0-5)
-        // Speed 0 = 0px/sec, Speed 5 = 50px/sec
-        // Each tick (100ms) = speed * 10px
-        int scrollAmount = scrollSpeed * 10;
-
-        await JsRt.InvokeVoidAsync("smoothScrollBy", scrollAmount);
+        // Only scroll if we're not at bottom
+        double scrollAmount = scrollSpeed * 10;
+        await JsRt.InvokeVoidAsync("smoothScrollBy", (int)Math.Round(scrollAmount));
     }
 
     private void StartAutoScroll()
     {
+        autoScrollTimer?.Dispose();
+
         autoScrollTimer = new System.Threading.Timer(async _ =>
         {
             await InvokeAsync(async () =>
             {
-                // Use the scrollSpeed directly (0-5 scale)
-                // Convert to pixels per tick: speed * 10 pixels per tick
-                int scrollAmount = scrollSpeed * 10;
+                if (!isAutoScrolling) return;
 
-                await JsRt.InvokeVoidAsync("smoothScrollBy", scrollAmount);
+                // Check if at bottom (universal function)
+                var atBottom = await JsRt.InvokeAsync<bool>("isAtBottom");
+                if (atBottom)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        StopAutoScroll();
+                        isAutoScrolling = false;
+                        StateHasChanged();
+                    });
+                    return;
+                }
 
-                // Check if we've reached the bottom
-                var scrollPos = await JsRt.InvokeAsync<object>("getScrollPosition");
-                await InvokeAsync(CheckAndScroll);
+                // Scroll with more precise speed control
+                // Using 5 as base multiplier for smoother scrolling
+                double scrollAmount = scrollSpeed * 5;
+                await JsRt.InvokeVoidAsync("smoothScrollBy", (int)Math.Round(scrollAmount));
             });
-        }, null, 0, 100); // 100ms = 10 times per second
+        }, null, 0, 100);
     }
 
     private void StopAutoScroll()
@@ -1020,5 +1040,7 @@
         originalChords = null;
         autoScrollTimer?.Dispose();
         popoverTimer?.Dispose();
+        autoScrollTimer = null;
+        popoverTimer = null;
     }
 }
