@@ -1,3 +1,13 @@
+.view-mode-container {
+    position: sticky;
+    top: 0.5rem;
+    width: fit-content;
+    justify-self: center;
+    z-index: 1020;
+    border-radius: 0.75rem;
+    background: var(--modal-content-bg);
+}
+
 .btn-outline-secondary {
     color: var(--bs-gray-500);
 }

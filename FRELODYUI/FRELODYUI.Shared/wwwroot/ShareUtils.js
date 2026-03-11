@@ -1,3 +1,9 @@
+// Trigger click on an element by ID
+window.clickElement = function (id) {
+    var el = document.getElementById(id);
+    if (el) el.click();
+};
+
 // Print functionality for web
 window.printContent = function (htmlContent) {
     // Create a new window for printing

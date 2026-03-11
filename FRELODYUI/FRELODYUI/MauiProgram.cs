@@ -33,6 +33,7 @@ namespace FRELODYUI
             builder.Services.AddScoped<IModalService, ModalService>();
             builder.Services.AddScoped<IStorageService, MauiStorageService>();
             builder.Services.AddScoped<ChordLyricExtrator>();
+            builder.Services.AddScoped<ISongExtractionAiService, SongExtractionAiService>();
             builder.Services.AddScoped<TabManagementService>();
             builder.Services.AddScoped<HeroDataService>();
             builder.Services.AddScoped<UserSettingsService>();
@@ -126,6 +127,10 @@ namespace FRELODYUI
                             .AddHttpMessageHandler<AuthHeaderHandler>();
 
             builder.Services.AddRefitClient<IContentChangeTrackingApi>()
+                            .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                            .AddHttpMessageHandler<AuthHeaderHandler>();
+
+            builder.Services.AddRefitClient<ISongAiApi>()
                             .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                             .AddHttpMessageHandler<AuthHeaderHandler>();
 

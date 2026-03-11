@@ -14,7 +14,7 @@
     else if (song != null)
     {
         <!-- Modern Header with Actions -->
-        <div class="song-header">
+        <div class="song-header" style="position:relative; z-index:5">
             <button class="header-action-btn back-btn" @onclick="GoBack" title="Go back">
                 <i class="bi bi-chevron-left"></i>
             </button>
@@ -42,7 +42,7 @@
                         <i class="bi bi-gear"></i>
                     </button>
 
-                    <div class="dropdown-menu dropdown-menu-end settings-dropdown"
+                    <div class="dropdown-menu dropdown-menu-end settings-dropdown shadow-lg"
                          aria-labelledby="settingsDropdownButton">
                         <div class="settings-header">
                             <h6>Display Settings</h6>
@@ -199,7 +199,7 @@
         </div>
 
         <!-- Autoscroll and Controls Section -->
-        <div class="fret-section">
+        <div class="fret-section" style="position:relative; z-index:2">
 
             @if (songDisplayMode != SongDisplay.LyricsOnly)
             {
@@ -224,43 +224,48 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Transpose Control -->
-                    <div class="control-group">
-                        <button class="control-reset-btn" @onclick="ResetTranspose" title="Reset transpose">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                        </button>
-                        <div class="control-wrapper">
-                            <label class="control-label">Transpose</label>
-                            <div class="control-buttons">
-                                <button class="control-btn" @onclick="DecreaseTranspose" disabled="@(transpose <= -12)">
-                                    <i class="bi bi-dash"></i>
-                                </button>
-                                <span class="control-value">@transpose</span>
-                                <button class="control-btn" @onclick="IncreaseTranspose" disabled="@(transpose >= 12)">
-                                    <i class="bi bi-plus"></i>
-                                </button>
+                    
+                    @if (originalChords != null && originalChords.Length > 0)
+                    {
+                        <!-- Transpose Control -->
+                        <div class="control-group">
+                            <button class="control-reset-btn" @onclick="ResetTranspose" title="Reset transpose">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                            <div class="control-wrapper">
+                                <label class="control-label">Transpose</label>
+                                <div class="control-buttons">
+                                    <button class="control-btn" @onclick="DecreaseTranspose" disabled="@(transpose <= -12)">
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <span class="control-value">@transpose</span>
+                                    <button class="control-btn" @onclick="IncreaseTranspose" disabled="@(transpose >= 12)">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Capo Control -->
-                    <div class="control-group">
-                        <div class="control-wrapper">
-                            <label class="control-label">Capo</label>
-                            <div class="control-buttons">
-                                <button class="control-btn" @onclick="DecreaseCapo" disabled="@(capo <= 0)">
-                                    <i class="bi bi-dash"></i>
-                                </button>
-                                <span class="control-value">@capo</span>
-                                <button class="control-btn" @onclick="IncreaseCapo" disabled="@(capo >= 12)">
-                                    <i class="bi bi-plus"></i>
-                                </button>
+                        <!-- Capo Control -->
+                        <div class="control-group">
+                            <div class="control-wrapper">
+                                <label class="control-label">Capo</label>
+                                <div class="control-buttons">
+                                    <button class="control-btn" @onclick="DecreaseCapo" disabled="@(capo <= 0)">
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <span class="control-value">@capo</span>
+                                    <button class="control-btn" @onclick="IncreaseCapo" disabled="@(capo >= 12)">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
                             </div>
+                            <button class="control-reset-btn" @onclick="ResetCapo" title="Reset capo">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
                         </div>
-                        <button class="control-reset-btn" @onclick="ResetCapo" title="Reset capo">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                    </div>
+                    }
+                    
                 </div>
 
                 @if (showCharts && uniqueSongChords.Any())
@@ -842,7 +847,7 @@
 
     private string GetSongContentStyle()
     {
-        return $"font-family: {fontFamily};z-index: 0;";
+        return $"font-family: {fontFamily};position:relative; z-index: 0;";
     }
 
     private string GetChordDisplayClass()

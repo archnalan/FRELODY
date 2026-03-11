@@ -1,74 +1,162 @@
 ﻿@page "/song/import"
 @using FRELODYUI.Shared.Services
 @inject IFormFactor FormFactor
+@inject ISongExtractionAiService _aiService
 
-<PageTitle>Song Library</PageTitle>
-<div class="container-fluid vh-100" style="max-width:55rem;justify-self:center">
-    <h3 class="mb-4">Song With Chords App</h3>
+<PageTitle>Import Song</PageTitle>
 
-    <div class="position-relative px-5 mb-3">
-        <textarea @bind="pastedText"
-                  class="position-relative form-control"
-                  style="border-radius:1rem;"
-                  placeholder="Paste or Import Song Lyrics..."
-                  rows="3"
-                  disabled="@isProcessing">   
-    </textarea>
-        <span class="btn position-absolute top-50 start-0 translate-middle-y ps-2 text-secondary" disabled="@isProcessing" @onclick="OpenFileUpload">
-            <i class="bi bi-plus-circle fs-2"></i>
-        </span>
-        <span class="btn position-absolute top-50 end-0 translate-middle-y ps-2 text-secondary" disabled="@isProcessing" @onclick="ProcessPastedText">
-            <i class="bi bi-arrow-up-circle-fill fs-2"></i>
-        </span>
-    </div>
+<div class="import-page">
+    <div class="import-container">
+        @* ── Header ── *@
+        <div class="import-header">
+            <div class="header-icon">
+                <i class="bi bi-music-note-beamed"></i>
+            </div>
+            <h2 class="header-title">Import Song</h2>
+            <p class="header-subtitle">Paste lyrics, or upload a PDF, DOCX, or TXT file</p>
+        </div>
 
-    <InputFile @ref="fileInputRef" OnChange="HandleFileSelected" class="d-none" accept=".pdf,.docx,.txt" />
+        @* ── Input Area ── *@
+        <div class="input-section">
+            <div class="textarea-wrapper">
+                <textarea @bind="pastedText"
+                          class="import-textarea"
+                          placeholder="Paste song lyrics with chords here...&#10;&#10;Supports: [F]inline chords, alternating chord/lyric lines, or plain lyrics"
+                          rows="5"
+                          disabled="@isProcessing">
+                </textarea>
 
-    @if (Song != null)
-    {
-        <div class="song-container p-3">
-            <div class="d-flex justify-content-center align-items-center">
-                <h3 class="fw-bold text-center m-0 me-3">
-                    @Song.SongNumber - @Song.Title
-                </h3>
-                <button class="btn btn-outline-primary" @onclick="CustomizeSong">
-                    <i class="bi bi-pencil-square"></i>
-                    Customize
-                </button>
+                <div class="input-actions">                  
+                  <label for="fileUploadInput"
+                         class="action-btn file-btn"
+                         style="@(isProcessing ? "pointer-events:none;opacity:0.5;" : "cursor:pointer;")"
+                         title="Upload file">
+                      <i class="bi bi-folder2-open"></i>
+                      <span>Upload</span>
+                  </label>
+                    <button class="action-btn process-btn" disabled="@isProcessing" @onclick="ProcessPastedText" title="Process text">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                            <span>Processing...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-right-circle"></i>
+                            <span>Extract</span>
+                        }
+                    </button>
+                </div>
             </div>
 
-            @if (Song.SongLyrics != null)
-            {
-                @foreach (var lineGroup in Song.SongLyrics
-                        .GroupBy(s => s.LineNumber)
-                        .OrderBy(g => g.Key))
-                {
-                    <div class="d-flex flex-row flex-wrap mb-2">
-                        @foreach (var seg in lineGroup.OrderBy(s => s.LyricOrder))
+            <div class="format-hints">
+                <span class="hint-badge" title="Chords in square brackets before syllables">
+                    <i class="bi bi-hash"></i> Inline [Am]word
+                </span>
+                <span class="hint-badge" title="Chord line above lyric line">
+                    <i class="bi bi-distribute-vertical"></i> Alternating
+                </span>
+                <span class="hint-badge" title="Plain lyrics without chords">
+                    <i class="bi bi-text-paragraph"></i> Plain text
+                </span>
+            </div>
+        </div>
+
+        <InputFile id="fileUploadInput" OnChange="HandleFileSelected" class="d-none" accept=".pdf,.docx,.txt" />
+
+        @* ── Detected Format Badge ── *@
+        @if (detectedFormat != null)
+        {
+            <div class="format-detected">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Detected format: <strong>@GetFormatDisplayName(detectedFormat.Value)</strong></span>
+            </div>
+        }
+
+        @* ── Song Preview ── *@
+        @if (Song != null)
+        {
+            <div class="song-preview">
+                <div class="preview-header">
+                    <div class="song-title-block">
+                        @if (Song.SongNumber.HasValue)
                         {
-                            <div class="d-flex flex-column justify-content-between gap-1 py-2 me-2">
-                                <div class="d-flex @GetChordAlignmentClass(seg)">
-                                    <button class="btn btn-outline-primary border-0">
-                                        <span class="fw-bold">@seg.ChordName</span>
-                                    </button>
-                                </div>
-                                <div>
-                                    <button class="btn btn-outline-secondary">
-                                        @seg.Lyric
-                                    </button>
-                                </div>
+                            <span class="song-number">@Song.SongNumber</span>
+                        }
+                        <h3 class="song-title">@Song.Title</h3>
+                    </div>
+                    <div class="preview-actions">
+                        <button class="action-btn clear-btn" @onclick="ClearSong" title="Clear">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                        @if (_aiService.IsAvailable)
+                        {
+                            <button class="action-btn ai-btn" disabled="@isRefining" @onclick="RefineWithAi" title="Refine with AI">
+                                @if (isRefining)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    <span>Refining...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-stars"></i>
+                                    <span>AI Refine</span>
+                                }
+                            </button>
+                        }
+                        <button class="action-btn customize-btn" @onclick="CustomizeSong" title="Save & Customize">
+                            <i class="bi bi-pencil-square"></i>
+                            <span>Customize</span>
+                        </button>
+                    </div>
+                </div>
+
+                @if (Song.SongLyrics != null && Song.SongLyrics.Count > 0)
+                {
+                    <div class="lyrics-grid">
+                        @foreach (var lineGroup in Song.SongLyrics
+                                .GroupBy(s => s.LineNumber)
+                                .OrderBy(g => g.Key))
+                        {
+                            <div class="lyric-line">
+                                @foreach (var seg in lineGroup.OrderBy(s => s.LyricOrder))
+                                {
+                                    <div class="segment @(string.IsNullOrEmpty(seg.ChordName) ? "" : "has-chord")">
+                                        <span class="chord-name @GetChordAlignmentClass(seg)">
+                                            @(seg.ChordName ?? "\u00A0")
+                                        </span>
+                                        <span class="lyric-text">@seg.Lyric</span>
+                                    </div>
+                                }
                             </div>
                         }
                     </div>
-                }
-            }
 
-        </div>
-    }
-    else
-    {
-        <p>No song loaded.</p>
-    }
+                    <div class="preview-stats">
+                        <span><i class="bi bi-list-ol"></i> @Song.SongLyrics.Select(s => s.LineNumber).Distinct().Count() lines</span>
+                        <span><i class="bi bi-puzzle"></i> @Song.SongLyrics.Count segments</span>
+                        <span><i class="bi bi-music-note"></i> @Song.SongLyrics.Count(s => !string.IsNullOrEmpty(s.ChordName)) chords</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-preview">
+                        <i class="bi bi-music-note-list"></i>
+                        <p>No lyrics or chords extracted. Try a different format.</p>
+                    </div>
+                }
+            </div>
+        }
+        else if (!isProcessing)
+        {
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="bi bi-file-earmark-music"></i>
+                </div>
+                <p>Paste text above or upload a file to get started</p>
+            </div>
+        }
+    </div>
 </div>
 
 <DialogModal IsVisible="@_modalService.IsModalVisible"
@@ -82,14 +170,13 @@
     private SimpleSongCreateDto? Song;
     private string pastedText = "";
     private bool isProcessing = false;
-    private InputFile fileInputRef =default!;
+    private bool isRefining = false;
+    private SongFormat? detectedFormat;
 
     protected override async Task OnInitializedAsync()
     {
-        // Check if user is already authenticated
         var authState = await _globalAuth.GetAuthenticationStateAsync();
-        var user = _globalAuth.GetAuthenticatedUserAsync();
-        if (authState.User.Identity?.IsAuthenticated ==false)
+        if (authState.User.Identity?.IsAuthenticated == false)
         {
             _navManager.NavigateTo("/login");
         }
@@ -104,103 +191,162 @@
 
         Song = _extractor.ExtractFromRawText(pastedText);
 
+        // Detect format for display
+        var lines = pastedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        detectedFormat = _extractor.DetectFormat(lines, 0);
+
         isProcessing = false;
         StateHasChanged();
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
     {
-        var file = e.File;
-        if (file == null) return;
-
-        isProcessing = true;
-        StateHasChanged();
-
-        var path = Path.Combine(Path.GetTempPath(), file.Name);
-
-        using (var stream = file.OpenReadStream())
-        using (var fs = new FileStream(path, FileMode.Create))
+        try
         {
-            await stream.CopyToAsync(fs);
-        }
+            var file = e.File;
+            if (file == null) return;
 
-        if (file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-        {
-            Song = _extractor.ExtractSong(path);
-        }
-        else if (file.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
-        {
-            var raw = File.ReadAllText(path);
-            Song = _extractor.ExtractFromRawText(raw);
-        }
-        else if (file.Name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase))
-        {
-            var raw = _extractor.ExtractTextFromDocx(path);
-            Song = _extractor.ExtractFromRawText(raw);
-        }
-        else
-        {
-            // Handle unsupported format, e.g., show modal error
-        }
+            isProcessing = true;
+            detectedFormat = null;
+            StateHasChanged();
 
-        isProcessing = false;
-        StateHasChanged();
+            var path = Path.Combine(Path.GetTempPath(), file.Name);
+
+            using (var stream = file.OpenReadStream())
+            using (var fs = new FileStream(path, FileMode.Create))
+            {
+                await stream.CopyToAsync(fs);
+            }
+
+            if (file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                Song = _extractor.ExtractSong(path);
+                // Reconstruct content from extracted segments so AI refinement has context
+                if (Song?.SongLyrics != null)
+                {
+                    pastedText = string.Join("\n", Song.SongLyrics
+                        .GroupBy(s => s.LineNumber)
+                        .OrderBy(g => g.Key)
+                        .Select(g => string.Join("", g.OrderBy(s => s.LyricOrder)
+                            .Select(s => (string.IsNullOrEmpty(s.ChordName) ? "" : $"[{s.ChordName}]") + s.Lyric))));
+                }
+            }
+            else if (file.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+            {
+                var raw = File.ReadAllText(path);
+                pastedText = raw;
+                Song = _extractor.ExtractFromRawText(raw);
+                var lines = raw.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                detectedFormat = _extractor.DetectFormat(lines, 0);
+            }
+            else if (file.Name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase))
+            {
+                var raw = _extractor.ExtractTextFromDocx(path);
+                pastedText = raw;
+                Song = _extractor.ExtractFromRawText(raw);
+                var lines = raw.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                detectedFormat = _extractor.DetectFormat(lines, 0);
+            }
+
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show( new ModalOptionDto
+            {
+                Title = "File Processing Error",
+                Message = $"An error occurred while processing the file: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "fileError" }
+            });
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+   
     }
 
-    private async Task OpenFileUpload()
+    private void ClearSong()
     {
-        await JsRt.InvokeVoidAsync("clickElement", fileInputRef);
+        Song = null;
+        pastedText = "";
+        detectedFormat = null;
+        StateHasChanged();
     }
 
     private string GetChordAlignmentClass(SegmentCreateDto seg)
     {
         return seg.ChordAlignment switch
         {
-            Alignment.Center => "justify-content-center",
-            Alignment.Right => "justify-content-end",
-            _ => "justify-content-start"
+            Alignment.Center => "text-center",
+            Alignment.Right => "text-end",
+            _ => "text-start"
         };
     }
 
-    private async void CustomizeSong()
+    private string GetFormatDisplayName(SongFormat format) => format switch
     {
-        string? songId = null;
-        if (Song != null)
-        {
-            songId = Guid.NewGuid().ToString();
+        SongFormat.InlineChord => "Inline Chords [Am]",
+        SongFormat.AlternatingChordLyric => "Alternating Chord/Lyric",
+        _ => "Plain Text"
+    };
 
-            var response = await _songsApi.CreateSong(Song);
-            if (response.IsSuccessStatusCode)
+    private async Task RefineWithAi()
+    {
+        if (Song?.SongLyrics == null || !_aiService.IsAvailable) return;
+
+        isRefining = true;
+        StateHasChanged();
+
+        try
+        {
+            var refined = await _aiService.RefineExtractionAsync(pastedText, Song.SongLyrics);
+            Song.SongLyrics = refined;
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show(new ModalOptionDto
             {
-                var createdSong = response.Content!;
-                songId = createdSong.Id;
-            }
-            else
+                Title = "AI Refinement Error",
+                Message = $"Could not refine extraction: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "aiError" }
+            });
+        }
+        finally
+        {
+            isRefining = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CustomizeSong()
+    {
+        if (Song == null) return;
+
+        // Ensure segments have valid PartNumber (1-based) so SongBoard creates proper tabs
+        if (Song.SongLyrics != null)
+        {
+            foreach (var seg in Song.SongLyrics)
             {
-                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
-                _modalService.Show(new ModalOptionDto
+                if (seg.PartNumber <= 0)
                 {
-                    Title = "Error Creating Song",
-                    Message = errorMessage,
-                    Context = new ModalContext { ActionType = "CreateSongError", Data = Song },
-                    ButtonText = "OK",
-                    SubTitle = "",
-                    OptionType = OptionType.Error,
-                });
+                    seg.PartNumber = 1;
+                    seg.PartName = seg.PartName == SongSection.unknown ? SongSection.Verse : seg.PartName;
+                }
             }
         }
-        // store Song in some shared SongStateService for retrieval
-        // SongStateService.CurrentSong = Song;
 
-        _navManager.NavigateTo($"/compose?songId={songId}");
+        // Store as draft — SongBoard will pick it up from storage
+        await _storageService.SetItemAsync("songDraft", Song);
+        _navManager.NavigateTo("/compose");
     }
 
     private async Task ConfirmModal()
     {
-        // handle specific contexts awaiting confirmation
         if (_modalService.CurrentModal.Context?.ActionType == "")
         {
-
         }
         await CloseModal();
     }
@@ -209,7 +355,6 @@
     {
         await Task.Delay(100);
         _modalService.Close();
-
         StateHasChanged();
     }
 }

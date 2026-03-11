@@ -78,6 +78,15 @@ builder.Services.AddScoped<FileValidationService>();
 builder.Services.AddScoped<SecurityUtilityService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<ContentChangeTrackingService>();
+builder.Services.AddScoped<ISongAiService, SongAiService>();
+builder.Services.AddHttpClient("NvidiaAI", client =>
+{
+    client.BaseAddress = new Uri("https://integrate.api.nvidia.com/v1/");
+    var nvidiaKey = builder.Configuration["API_KEYS:nvidiaApiKey"];
+    if (!string.IsNullOrEmpty(nvidiaKey))
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", nvidiaKey);
+    client.Timeout = TimeSpan.FromSeconds(60);
+});
 builder.Services.AddIdentity<User, IdentityRole>
             (options =>
             {

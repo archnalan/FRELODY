@@ -104,6 +104,10 @@ builder.Services.AddRefitClient<IContentChangeTrackingApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddRefitClient<ISongAiApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
 // Add device-specific services used by the FRELODYUI.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
@@ -113,6 +117,7 @@ builder.Services.AddScoped<IShareService, ShareService>();
 builder.Services.AddScoped<IModalService, ModalService>();
 builder.Services.AddScoped<IStorageService, WebStorageService>();
 builder.Services.AddScoped<ChordLyricExtrator>();
+builder.Services.AddScoped<ISongExtractionAiService, SongExtractionAiService>();
 builder.Services.AddScoped<TabManagementService>();
 builder.Services.AddScoped<HeroDataService>();
 builder.Services.AddScoped<UserSettingsService>();
