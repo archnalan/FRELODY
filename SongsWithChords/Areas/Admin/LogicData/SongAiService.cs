@@ -147,5 +147,61 @@ Do not wrap the JSON in markdown code blocks. Return raw JSON only.";
 
             return fallback;
         }
+
+        public async Task<string?> RefineOcrTextAsync(string ocrText, string imageBase64)
+        {
+            if (string.IsNullOrWhiteSpace(_apiKey) || _apiKey == "MY_NVIDIA_API")
+                return null;
+
+            if (string.IsNullOrWhiteSpace(ocrText))
+                return null;
+
+            try
+            {
+                var prompt = BuildOcrRefinementPrompt(ocrText);
+                var responseText = await CallNvidiaApi(prompt);
+
+                if (!string.IsNullOrWhiteSpace(responseText))
+                {
+                    // Strip markdown fences if present
+                    var trimmed = responseText.Trim();
+                    if (trimmed.StartsWith("```"))
+                    {
+                        var firstNewline = trimmed.IndexOf('\n');
+                        if (firstNewline > 0)
+                            trimmed = trimmed[(firstNewline + 1)..];
+                        if (trimmed.EndsWith("```"))
+                            trimmed = trimmed[..^3];
+                        trimmed = trimmed.Trim();
+                    }
+                    return trimmed;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "AI OCR refinement failed");
+            }
+
+            return null;
+        }
+
+        private static string BuildOcrRefinementPrompt(string ocrText)
+        {
+            return $@"You are a music transcription expert. You have received OCR-extracted text from an image of a song sheet (lyrics with chords).
+
+OCR text is often imperfect — characters may be misread, spacing may be wrong, and chord symbols may be garbled.
+
+Your task:
+1. **Fix OCR errors**: Correct obviously misread characters (e.g., ""8m"" → ""Bm"", ""Arn"" → ""Am"", ""0"" → ""D"", ""l"" → ""I"" in lyrics).
+2. **Restore chord formatting**: Ensure chords appear on their own line above the lyric line, OR in [Chord] inline format. Pick whichever format the text seems to use.
+3. **Fix line breaks**: OCR may merge or split lines incorrectly. Restore natural song line breaks.
+4. **Identify sections**: If section headers like ""Verse"", ""Chorus"", ""Bridge"" are partially readable, restore them.
+5. **Preserve content**: Do not add lyrics or chords that aren't in the original. Only fix what's clearly an OCR mistake.
+
+OCR EXTRACTED TEXT:
+{ocrText}
+
+Return ONLY the corrected song text. Do not add explanations or commentary. Do not wrap in code blocks.";
+        }
     }
 }

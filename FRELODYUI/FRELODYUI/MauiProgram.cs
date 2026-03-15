@@ -29,6 +29,7 @@ namespace FRELODYUI
             builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
             builder.Services.AddSingleton<IPrintService, MauiPrintService>();
             builder.Services.AddSingleton<IClipboardService, MauiClipboardService>();
+            builder.Services.AddSingleton<ICameraService, MauiCameraService>();
             builder.Services.AddScoped<IShareService, ShareService>();
             builder.Services.AddScoped<IModalService, ModalService>();
             builder.Services.AddScoped<IStorageService, MauiStorageService>();
@@ -131,6 +132,10 @@ namespace FRELODYUI
                             .AddHttpMessageHandler<AuthHeaderHandler>();
 
             builder.Services.AddRefitClient<ISongAiApi>()
+                            .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                            .AddHttpMessageHandler<AuthHeaderHandler>();
+
+            builder.Services.AddRefitClient<IOcrApi>()
                             .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                             .AddHttpMessageHandler<AuthHeaderHandler>();
 

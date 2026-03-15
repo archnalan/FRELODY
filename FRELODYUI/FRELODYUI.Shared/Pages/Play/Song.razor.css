@@ -116,165 +116,6 @@
     }
 }
 
-.settings-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--border-light);
-    position: sticky;
-    top: 0;
-    background: var(--card-bg);
-    z-index: 1;
-}
-
-    .settings-header h6 {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-.close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-}
-
-    .close-btn:hover {
-        background: var(--bg-hover);
-        color: var(--text-primary);
-    }
-
-.settings-content {
-    padding: 1rem 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    flex:1;
-    max-height: 50vh;
-    overflow-y: auto;
-}
-
-.settings-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.settings-label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-}
-
-    .settings-label i {
-        font-size: 1rem;
-    }
-
-.setting-control {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    justify-content: space-between;
-}
-
-.size-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    background: var(--input-bg);
-    border: 1px solid var(--border-medium);
-    border-radius: 6px;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-    .size-btn:hover:not(:disabled) {
-        background: var(--bg-hover);
-        border-color: var(--gradient-primary-start);
-    }
-
-    .size-btn:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-
-.size-value {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    min-width: 3rem;
-    text-align: center;
-}
-
-.settings-select {
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    background: var(--input-bg);
-    border: 1px solid var(--border-medium);
-    border-radius: 6px;
-    color: var(--input-color);
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-    .settings-select:focus {
-        outline: none;
-        border-color: var(--input-border-focus);
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-
-.save-settings-btn {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    background: linear-gradient(135deg, var(--bg-active), #0056b3);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-top: 0.5rem;
-}
-
-    .save-settings-btn:hover:not(:disabled) {
-        background: linear-gradient(135deg, var(--gradient-primary-hover-start), var(--gradient-primary-hover-end));
-        transform: translateY(-1px);
-    }
-
-    .save-settings-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-.settings-footer {
-    display: flex;
-    align-items: center;
-    justify-content: end;
-    padding: 1rem 1.25rem;
-    border-top: 1px solid var(--border-light);
-    position: sticky;
-    bottom: 0;
-    background: var(--card-bg);
-}
-
 /* ============================================
    CONTROLS SECTION
    ============================================ */
@@ -735,6 +576,120 @@
     padding: 2rem;
     margin-bottom: 2rem;
     line-height: 1.6;
+    position: relative;
+}
+
+/* ============================================
+   FULLSCREEN TOGGLE BUTTON
+   ============================================ */
+
+.fullscreen-toggle-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border-medium);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 2;
+    opacity: 0;
+}
+
+.song-content:hover .fullscreen-toggle-btn {
+    opacity: 1;
+}
+
+.fullscreen-toggle-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--gradient-primary-start);
+    color: var(--gradient-primary-start);
+    transform: scale(1.05);
+}
+
+/* ============================================
+   FULLSCREEN MODE
+   ============================================ */
+
+.song-content-fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    z-index: 99999 !important;
+    overflow-y: auto;
+    padding: 2rem 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--modal-content-bg) !important;
+}
+
+.song-content-fullscreen .verse-section {
+    max-width: 800px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.fullscreen-minimize-btn {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    background: var(--input-bg);
+    border: 2px solid var(--border-medium);
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 100000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.fullscreen-minimize-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--gradient-primary-start);
+    color: var(--gradient-primary-start);
+    transform: scale(1.05);
+}
+
+/* Fullscreen mode via Fullscreen API */
+.song-content:fullscreen {
+    padding: 2rem 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--modal-content-bg) !important;
+    overflow-y: auto;
+}
+
+.song-content:fullscreen .verse-section {
+    max-width: 800px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.song-content:fullscreen .fullscreen-toggle-btn {
+    display: none;
 }
 
 .verse-section {
@@ -894,6 +849,18 @@
     .chord-popover-content {
         max-width: calc(100vw - 2rem);
     }
+
+    .song-content-fullscreen {
+        padding: 1.5rem 1rem !important;
+    }
+
+    .song-content-fullscreen .verse-section {
+        max-width: 100%;
+    }
+
+    .fullscreen-toggle-btn {
+        opacity: 1;
+    }
 }
 
 @media (max-width: 480px) {
@@ -932,6 +899,17 @@
     .chord-charts-section {
         padding: 1rem;
     }
+
+    .song-content-fullscreen {
+        padding: 1rem 0.75rem !important;
+    }
+
+    .fullscreen-minimize-btn {
+        top: 0.5rem;
+        right: 0.5rem;
+        width: 2.25rem;
+        height: 2.25rem;
+    }
 }
 
 /* ============================================
@@ -952,4 +930,15 @@
 
 [data-bs-theme="dark"] .control-value {
     background: rgba(55, 65, 81, 0.5);
+}
+
+[data-bs-theme="dark"] .song-content-fullscreen,
+[data-bs-theme="dark"] .song-content:fullscreen {
+    background: #111827 !important;
+}
+
+[data-bs-theme="dark"] .fullscreen-toggle-btn,
+[data-bs-theme="dark"] .fullscreen-minimize-btn {
+    background: rgba(55, 65, 81, 0.9);
+    border-color: var(--border-medium);
 }

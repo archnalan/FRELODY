@@ -27,6 +27,7 @@ builder.Services.AddSingleton<IFormFactor, FRELODYUI.Web.Client.Services.FormFac
 builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();
 builder.Services.AddScoped<IPrintService, WebPrintService>();
 builder.Services.AddScoped<IClipboardService, WebClipboardService>();
+builder.Services.AddScoped<ICameraService, WebCameraService>();
 builder.Services.AddScoped<IShareService, ShareService>();
 builder.Services.AddScoped<IModalService, ModalService>();
 builder.Services.AddScoped<IStorageService, WebStorageService>();
@@ -129,6 +130,10 @@ builder.Services.AddRefitClient<IContentChangeTrackingApi>()
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<ISongAiApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddRefitClient<IOcrApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 

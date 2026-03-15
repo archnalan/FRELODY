@@ -1,5 +1,6 @@
 ﻿@using FRELODYSHRD.Dtos.SubDtos
 @using FRELODYUI.Shared.Pages.Chord
+@using FRELODYUI.Shared.Pages.Play.Components
 @inject ILogger<Song> _logger
 @implements IDisposable
 
@@ -44,125 +45,10 @@
 
                     <div class="dropdown-menu dropdown-menu-end settings-dropdown shadow-lg"
                          aria-labelledby="settingsDropdownButton">
-                        <div class="settings-header">
-                            <h6>Display Settings</h6>
-                            <button class="close-btn" type="button" id="closeDropdownBtn" @onclick="CloseSettingsDropdown">
-                                    <i class="bi bi-x"></i>
-                            </button>
-                        </div>
-
-                        <div class="settings-content">
-                            <!-- Autoscroll Settings -->
-                            <div class="settings-section">
-                                <label class="settings-label">
-                                    <i class="bi bi-speedometer2"></i>
-                                    Autoscroll Speed
-                                </label>
-                                <div class="setting-control">
-                                    <button class="size-btn" @onclick="() => AdjustScrollSpeed(-0.5)" @onclick:stopPropagation disabled="@(scrollSpeed <= 0)">
-                                        <i class="bi bi-dash"></i>
-                                    </button>
-                                    <span class="control-value">@scrollSpeed.ToString("0.0")</span>
-                                    <button class="size-btn" @onclick="() => AdjustScrollSpeed(0.5)" @onclick:stopPropagation disabled="@(scrollSpeed >= 5)">
-                                        <i class="bi bi-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Font Settings -->
-                            <div class="settings-section">
-                                <label class="settings-label">
-                                    <i class="bi bi-type"></i>
-                                    Chord Font Size
-                                </label>
-                                <div class="setting-control">
-                                    <button class="size-btn" @onclick="() => AdjustChordFontSize(-2)" @onclick:stopPropagation>
-                                        <i class="bi bi-dash"></i>
-                                    </button>
-                                    <span class="size-value">@chordFontSize</span>
-                                    <button class="size-btn" @onclick="() => AdjustChordFontSize(2)" @onclick:stopPropagation>
-                                        <i class="bi bi-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="settings-section">
-                                <label class="settings-label">
-                                    <i class="bi bi-text-paragraph"></i>
-                                    Lyric Font Size
-                                </label>
-                                <div class="setting-control">
-                                    <button class="size-btn" @onclick="() => AdjustLyricFontSize(-2)" @onclick:stopPropagation>
-                                        <i class="bi bi-dash"></i>
-                                    </button>
-                                    <span class="size-value">@lyricFontSize</span>
-                                    <button class="size-btn" @onclick="() => AdjustLyricFontSize(2)" @onclick:stopPropagation>
-                                        <i class="bi bi-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Display Mode -->
-                            <div class="settings-section">
-                                <label class="settings-label">
-                                    <i class="bi bi-eye"></i>
-                                    Display Mode
-                                </label>
-                                <select class="settings-select" @bind="songDisplayMode" @onclick:stopPropagation>
-                                    <option value="@SongDisplay.LyricsAndChordsAndCharts">Lyrics, Chords & Charts</option>
-                                    <option value="@SongDisplay.LyricsAndChords">Lyrics & Chords</option>
-                                    <option value="@SongDisplay.LyricsOnly">Lyrics Only</option>
-                                </select>
-                            </div>
-
-                            <!-- Chord Display Position -->
-                            @if (songDisplayMode == SongDisplay.LyricsAndChords
-                                                    || songDisplayMode == SongDisplay.LyricsAndChordsAndCharts)
-                            {
-                                <div class="settings-section">
-                                    <label class="settings-label">
-                                        <i class="bi bi-music-note"></i>
-                                        Chord Position
-                                    </label>
-                                    <select class="settings-select" @bind="chordDisplayMode" @onclick:stopPropagation>
-                                        <option value="@ChordDisplay.Above">Above Lyrics</option>
-                                        <option value="@ChordDisplay.Inline">Inline</option>
-                                    </select>
-                                </div>
-                            }
-
-                            <!-- Font Family Selection -->
-                            <div class="settings-section">
-                                <label class="settings-label">
-                                    <i class="bi bi-fonts"></i>
-                                    Font Style
-                                </label>
-                                <select class="settings-select" @bind="fontFamily" @onclick:stopPropagation>
-                                    <option value="system-ui, -apple-system, 'Segoe UI'">System Default</option>
-                                    <option value="'Georgia', serif">Georgia</option>
-                                    <option value="'Arial', sans-serif">Arial</option>
-                                    <option value="'Courier New', monospace">Courier New</option>
-                                    <option value="'Times New Roman', serif">Times New Roman</option>
-                                    <option value="'Kanit','Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'">Kanit</option>
-                                    <option value="'Montserrat', sans-serif">Montserrat</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="settings-footer">
-                            <!-- Save Settings Button -->
-                            <button class="save-settings-btn" @onclick="SaveDisplaySettings" @onclick:stopPropagation disabled="@isSavingSettings">
-                                @if (isSavingSettings)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-check-circle me-2"></i>
-                                }
-                                Save Settings
-                            </button>
-                        </div>
+                        <SongSettings UserId="@currentUserId"
+                                      SongId="@SongId"
+                                      OnSettingsSaved="OnSettingsSaved"
+                                      OnClose="CloseSettingsDropdown" />
                     </div>
                     
                 </div>
@@ -330,15 +216,30 @@
         </div>
 
         <!-- Song Content with Dynamic Styling -->
-        <div class="song-content" style="@GetSongContentStyle()">
+        <div class="song-content @(isFullscreen ? "song-content-fullscreen" : "")" style="@GetSongContentStyle()" @ref="songContentRef">
+            @if (isFullscreen)
+            {
+                <button class="fullscreen-minimize-btn" @onclick="ExitFullscreen" title="Exit fullscreen (Esc)">
+                    <i class="bi bi-fullscreen-exit"></i>
+                </button>
+            }
+            else
+            {
+                <button class="fullscreen-toggle-btn" @onclick="EnterFullscreen" title="Fullscreen">
+                    <i class="bi bi-arrows-fullscreen"></i>
+                </button>
+            }
             @if (song.SongParts?.Any() == true)
             {
                 foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
                 {
                     <div class="verse-section">
-                        <h4 class="verse-title">
-                            Verse @verse.PartNumber.ToString("D2")
-                        </h4>
+                        @if (showVerseTitles)
+                        {
+                            <h4 class="verse-title">
+                                Verse @verse.PartNumber.ToString("D2")
+                            </h4>
+                        }
                         @if (verse.LyricLines?.Any() == true)
                         {
                             foreach (var line in verse.LyricLines.OrderBy(l => l.LyricLineOrder))
@@ -420,12 +321,16 @@
     private string shareLinkUrl = string.Empty;
     // Display Settings
     private bool showSettingsDropdown = false;
-    private bool isSavingSettings = false;
     private int chordFontSize = 14;
     private int lyricFontSize = 18;
     private string fontFamily = "system-ui, -apple-system, 'Montserrat', Roboto, sans-serif";
     private SongDisplay songDisplayMode = SongDisplay.LyricsAndChordsAndCharts;
     private ChordDisplay chordDisplayMode = ChordDisplay.Above;
+    private bool showVerseTitles = false;
+
+    // Fullscreen
+    private bool isFullscreen = false;
+    private ElementReference songContentRef;
 
     // Autoscroll
     private System.Threading.Timer? autoScrollTimer;
@@ -459,6 +364,7 @@
             try
             {
                 await JsRt.InvokeVoidAsync("smoothScrollBy", 0);
+                await JsRt.InvokeVoidAsync("songFullscreen.registerEscHandler", DotNetObjectReference.Create(this));
             }
             catch (Exception ex)
             {
@@ -476,124 +382,75 @@
         if (userResult.IsSuccess && userResult.Data != null)
         {
             currentUserId = userResult.Data.Id;
-            await LoadUserSettings();
-            await LoadSongSpecificSettings();
         }
+
+        await LoadUserDisplaySettings();
     }
 
-    private async Task LoadUserSettings()
+    private async Task LoadUserDisplaySettings()
     {
         try
         {
+            SettingDto? settings = null;
+
             if (!string.IsNullOrEmpty(currentUserId))
             {
                 var response = await _settingsApi.GetUserSettings(currentUserId);
                 if (response.IsSuccessStatusCode && response.Content != null)
-                {
-                    var settings = response.Content;
-                    chordFontSize = int.TryParse(settings.ChordFontSize, out var cfs) ? cfs : 14;
-                    lyricFontSize = int.TryParse(settings.LyricFontSize, out var lfs) ? lfs : 18;
-                    fontFamily = settings.ChordFont ?? fontFamily;
-                    songDisplayMode = settings.SongDisplay ?? SongDisplay.LyricsAndChordsAndCharts;
-                    chordDisplayMode = settings.ChordDisplay ?? ChordDisplay.Above;
-                }
+                    settings = response.Content;
             }
             else
             {
-                var storedSettings = await _storageService.GetItemAsync<SettingDto>("DisplaySettings");
-                if (storedSettings != null)
-                {
-                    chordFontSize = int.TryParse(storedSettings.ChordFontSize, out var cfs) ? cfs : 14;
-                    lyricFontSize = int.TryParse(storedSettings.LyricFontSize, out var lfs) ? lfs : 18;
-                    fontFamily = storedSettings.ChordFont ?? fontFamily;
-                    songDisplayMode = storedSettings.SongDisplay ?? SongDisplay.LyricsAndChordsAndCharts;
-                    chordDisplayMode = storedSettings.ChordDisplay ?? ChordDisplay.Above;
-                }
+                settings = await _storageService.GetItemAsync<SettingDto>("DisplaySettings");
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error loading user settings");
-        }
-    }
 
-    private async Task LoadSongSpecificSettings()
-    {
-        try
-        {
-            var key = $"SongSettings_{SongId}";
-            // Try loading as double first (new format)
-            var songSettings = await _storageService.GetItemAsync<Dictionary<string, double>>(key);
-            if (songSettings != null && songSettings.ContainsKey("scrollSpeed"))
+            if (settings != null)
             {
-                scrollSpeed = songSettings["scrollSpeed"];
+                chordFontSize = int.TryParse(settings.ChordFontSize, out var cfs) ? cfs : 14;
+                lyricFontSize = int.TryParse(settings.LyricFontSize, out var lfs) ? lfs : 18;
+                fontFamily = settings.ChordFont ?? fontFamily;
+                songDisplayMode = settings.SongDisplay ?? SongDisplay.LyricsAndChordsAndCharts;
+                chordDisplayMode = settings.ChordDisplay ?? ChordDisplay.Above;
+                showVerseTitles = settings.ShowVerseTitles ?? false;
             }
-            else
+
+            // Load song-specific scroll speed
+            if (!string.IsNullOrEmpty(SongId))
             {
-                // Fallback to int format for backward compatibility
-                var oldSettings = await _storageService.GetItemAsync<Dictionary<string, int>>(key);
-                if (oldSettings != null && oldSettings.ContainsKey("scrollSpeed"))
+                var key = $"SongSettings_{SongId}";
+                var songSettings = await _storageService.GetItemAsync<Dictionary<string, double>>(key);
+                if (songSettings != null && songSettings.ContainsKey("scrollSpeed"))
                 {
-                    scrollSpeed = (double)oldSettings["scrollSpeed"];
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error loading song-specific settings");
-        }
-    }
-
-    private async Task SaveDisplaySettings()
-    {
-        try
-        {
-            isSavingSettings = true;
-
-            var settings = new SettingDto
-            {
-                ChordFontSize = chordFontSize.ToString(),
-                LyricFontSize = lyricFontSize.ToString(),
-                ChordFont = fontFamily,
-                LyricFont = fontFamily,
-                SongDisplay = songDisplayMode,
-                ChordDisplay = chordDisplayMode
-            };
-
-            if (!string.IsNullOrEmpty(currentUserId))
-            {
-                settings.CreatedBy = currentUserId;
-                var response = await _settingsApi.CreateOrUpdateUserSettings(settings);
-                if (response.IsSuccessStatusCode)
-                {
-                    ShowSuccessMessage("Settings saved successfully!");
+                    scrollSpeed = songSettings["scrollSpeed"];
                 }
                 else
                 {
-                    ShowErrorMessage("Failed to save settings");
+                    var oldSettings = await _storageService.GetItemAsync<Dictionary<string, int>>(key);
+                    if (oldSettings != null && oldSettings.ContainsKey("scrollSpeed"))
+                    {
+                        scrollSpeed = (double)oldSettings["scrollSpeed"];
+                    }
                 }
             }
-            else
-            {
-                await _storageService.SetItemAsync("DisplaySettings", settings);
-                ShowSuccessMessage("Settings saved locally!");
-            }
-
-            // Save song-specific settings
-            var songSettings = new Dictionary<string, double> { { "scrollSpeed", scrollSpeed } };
-            await _storageService.SetItemAsync($"SongSettings_{SongId}", songSettings);
-
-            CloseSettingsDropdown();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saving settings");
-            ShowErrorMessage("Failed to save settings");
+            _logger.LogError(ex, "Error loading user display settings");
         }
-        finally
-        {
-            isSavingSettings = false;
-        }
+    }
+
+    private void OnSettingsSaved(SettingDto settings)
+    {
+        chordFontSize = int.TryParse(settings.ChordFontSize, out var cfs) ? cfs : 14;
+        lyricFontSize = int.TryParse(settings.LyricFontSize, out var lfs) ? lfs : 18;
+        fontFamily = settings.ChordFont ?? fontFamily;
+        songDisplayMode = settings.SongDisplay ?? SongDisplay.LyricsAndChordsAndCharts;
+        chordDisplayMode = settings.ChordDisplay ?? ChordDisplay.Above;
+        showVerseTitles = settings.ShowVerseTitles ?? false;
+
+        ShowSuccessMessage("Settings saved successfully!");
+        CloseSettingsDropdown();
+        StateHasChanged();
     }
 
     private void ToggleSettingsDropdown()
@@ -610,21 +467,31 @@
         JsRt.InvokeVoidAsync("hideDropdown", "settingsDropdownButton");
     }
 
-    private void AdjustChordFontSize(int delta)
-    {
-        chordFontSize = Math.Clamp(chordFontSize + delta, 10, 32);
-        StateHasChanged();
-    }
-
-    private void AdjustLyricFontSize(int delta)
-    {
-        lyricFontSize = Math.Clamp(lyricFontSize + delta, 12, 40);
-        StateHasChanged();
-    }
-
     private void AdjustScrollSpeed(double delta)
     {
         scrollSpeed = Math.Clamp(scrollSpeed + delta, 0, 5);
+        StateHasChanged();
+    }
+
+    private async Task EnterFullscreen()
+    {
+        isFullscreen = true;
+        StateHasChanged();
+        await JsRt.InvokeVoidAsync("songFullscreen.enter", songContentRef);
+    }
+
+    private async Task ExitFullscreen()
+    {
+        isFullscreen = false;
+        StateHasChanged();
+        await JsRt.InvokeVoidAsync("songFullscreen.exit");
+    }
+
+    [JSInvokable]
+    public void OnEscapePressed()
+    {
+        if (!isFullscreen) return;
+        isFullscreen = false;
         StateHasChanged();
     }
 
@@ -1061,5 +928,6 @@
         popoverTimer?.Dispose();
         autoScrollTimer = null;
         popoverTimer = null;
+        try { JsRt.InvokeVoidAsync("songFullscreen.dispose"); } catch { }
     }
 }

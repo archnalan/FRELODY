@@ -79,6 +79,7 @@ builder.Services.AddScoped<SecurityUtilityService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<ContentChangeTrackingService>();
 builder.Services.AddScoped<ISongAiService, SongAiService>();
+builder.Services.AddScoped<IOcrService, OcrService>();
 builder.Services.AddHttpClient("NvidiaAI", client =>
 {
     client.BaseAddress = new Uri("https://integrate.api.nvidia.com/v1/");

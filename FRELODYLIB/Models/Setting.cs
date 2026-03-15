@@ -15,6 +15,7 @@ namespace FRELODYLIB.Models
         public string? ChordFontSize { get; set; }
         public string? LyricFontSize { get; set; }
         public bool? ShowNotifications { get; set; }
+        public bool? ShowVerseTitles { get; set; }
         public SongDisplay? SongDisplay { get; set; } 
         public Theme? Theme { get; set; }
         public ChordDisplay? ChordDisplay { get; set; }

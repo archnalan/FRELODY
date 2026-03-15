@@ -546,6 +546,82 @@ window.isElementInViewport = function (element) {
 
 
 // ============================================
+// SONG FULLSCREEN FUNCTIONALITY
+// ============================================
+
+window.songFullscreen = {
+    _dotNetRef: null,
+    _handler: null,
+
+    enter: function (element) {
+        if (element && element.requestFullscreen) {
+            element.requestFullscreen().catch(function () {
+                // Fallback: use CSS-only fullscreen if API is blocked
+                element.classList.add('song-content-fullscreen');
+            });
+        } else if (element) {
+            element.classList.add('song-content-fullscreen');
+        }
+    },
+
+    exit: function () {
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(function () {});
+        }
+        // Also remove CSS fallback class
+        var el = document.querySelector('.song-content-fullscreen');
+        if (el) {
+            el.classList.remove('song-content-fullscreen');
+        }
+    },
+
+    registerEscHandler: function (dotNetRef) {
+        // Clean up previous handlers if any
+        if (window.songFullscreen._handler) {
+            document.removeEventListener('keydown', window.songFullscreen._handler);
+        }
+        if (window.songFullscreen._fullscreenChangeHandler) {
+            document.removeEventListener('fullscreenchange', window.songFullscreen._fullscreenChangeHandler);
+        }
+        window.songFullscreen._dotNetRef = dotNetRef;
+        window.songFullscreen._handler = function (e) {
+            if (e.key === 'Escape') {
+                var fullscreenEl = document.querySelector('.song-content-fullscreen');
+                if (fullscreenEl && !document.fullscreenElement) {
+                    // CSS-only fullscreen — notify Blazor
+                    e.preventDefault();
+                    dotNetRef.invokeMethodAsync('OnEscapePressed');
+                }
+            }
+        };
+        window.songFullscreen._fullscreenChangeHandler = function () {
+            if (!document.fullscreenElement) {
+                var el = document.querySelector('.song-content-fullscreen');
+                if (el) {
+                    el.classList.remove('song-content-fullscreen');
+                }
+                // Notify Blazor that fullscreen was exited (e.g. via browser ESC)
+                dotNetRef.invokeMethodAsync('OnEscapePressed');
+            }
+        };
+        document.addEventListener('keydown', window.songFullscreen._handler);
+        document.addEventListener('fullscreenchange', window.songFullscreen._fullscreenChangeHandler);
+    },
+
+    dispose: function () {
+        if (window.songFullscreen._handler) {
+            document.removeEventListener('keydown', window.songFullscreen._handler);
+            window.songFullscreen._handler = null;
+        }
+        if (window.songFullscreen._fullscreenChangeHandler) {
+            document.removeEventListener('fullscreenchange', window.songFullscreen._fullscreenChangeHandler);
+            window.songFullscreen._fullscreenChangeHandler = null;
+        }
+        window.songFullscreen._dotNetRef = null;
+    }
+};
+
+// ============================================
 // INITIALIZE ON LOAD
 // ============================================
 

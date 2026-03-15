@@ -2,6 +2,8 @@
 @using FRELODYUI.Shared.Services
 @inject IFormFactor FormFactor
 @inject ISongExtractionAiService _aiService
+@inject ICameraService _cameraService
+@inject IOcrApi _ocrApi
 
 <PageTitle>Import Song</PageTitle>
 
@@ -13,7 +15,7 @@
                 <i class="bi bi-music-note-beamed"></i>
             </div>
             <h2 class="header-title">Import Song</h2>
-            <p class="header-subtitle">Paste lyrics, or upload a PDF, DOCX, or TXT file</p>
+            <p class="header-subtitle">Paste lyrics, upload a file, or scan a song sheet with your camera</p>
         </div>
 
         @* ── Input Area ── *@
@@ -34,6 +36,21 @@
                       <i class="bi bi-folder2-open"></i>
                       <span>Upload</span>
                   </label>
+                    @if (_cameraService.IsCameraAvailable)
+                    {
+                        <button class="action-btn camera-btn" disabled="@isProcessing" @onclick="ScanImage" title="Scan song sheet">
+                            @if (isScanning)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                <span>Scanning...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-camera"></i>
+                                <span>Scan</span>
+                            }
+                        </button>
+                    }
                     <button class="action-btn process-btn" disabled="@isProcessing" @onclick="ProcessPastedText" title="Process text">
                         @if (isProcessing)
                         {
@@ -59,10 +76,28 @@
                 <span class="hint-badge" title="Plain lyrics without chords">
                     <i class="bi bi-text-paragraph"></i> Plain text
                 </span>
+                <span class="hint-badge" title="Scan a printed song sheet">
+                    <i class="bi bi-camera"></i> Camera scan
+                </span>
             </div>
         </div>
 
         <InputFile id="fileUploadInput" OnChange="HandleFileSelected" class="d-none" accept=".pdf,.docx,.txt" />
+
+        @* ── Scanned Image Preview ── *@
+        @if (scannedImageBase64 != null)
+        {
+            <div class="scan-preview">
+                <div class="scan-preview-header">
+                    <i class="bi bi-camera-fill"></i>
+                    <span>Scanned Image</span>
+                    <button class="btn-close-scan" @onclick="ClearScannedImage" title="Remove image">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                <img src="data:image/jpeg;base64,@scannedImageBase64" alt="Scanned song sheet" class="scan-thumbnail" />
+            </div>
+        }
 
         @* ── Detected Format Badge ── *@
         @if (detectedFormat != null)
@@ -171,7 +206,9 @@
     private string pastedText = "";
     private bool isProcessing = false;
     private bool isRefining = false;
+    private bool isScanning = false;
     private SongFormat? detectedFormat;
+    private string? scannedImageBase64;
 
     protected override async Task OnInitializedAsync()
     {
@@ -272,7 +309,101 @@
         Song = null;
         pastedText = "";
         detectedFormat = null;
+        scannedImageBase64 = null;
         StateHasChanged();
+    }
+
+    private void ClearScannedImage()
+    {
+        scannedImageBase64 = null;
+        StateHasChanged();
+    }
+
+    private async Task ScanImage()
+    {
+        try
+        {
+            // On MAUI, try camera capture first; on Web, both paths use file input
+            var result = await _cameraService.CapturePhotoAsync()
+                         ?? await _cameraService.PickPhotoFromGalleryAsync();
+
+            if (result != null)
+            {
+                await ProcessCapturedImage(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Scan Error",
+                Message = $"Could not capture image: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "cameraError" }
+            });
+        }
+    }
+
+    private async Task ProcessCapturedImage(CameraResult imageResult)
+    {
+        isProcessing = true;
+        isScanning = true;
+        detectedFormat = null;
+        Song = null;
+        StateHasChanged();
+
+        try
+        {
+            scannedImageBase64 = Convert.ToBase64String(imageResult.ImageData);
+            StateHasChanged();
+
+            // Send to server for OCR extraction (+ AI refinement)
+            var ocrRequest = new OcrExtractRequest
+            {
+                ImageBase64 = scannedImageBase64,
+                FileName = imageResult.FileName
+            };
+
+            var response = await _ocrApi.ExtractTextFromImage(ocrRequest);
+
+            if (response.IsSuccessStatusCode && response.Content != null && response.Content.Success)
+            {
+                pastedText = response.Content.ExtractedText;
+
+                // Clean OCR artifacts and extract segments for preview
+                Song = _extractor.ExtractFromOcrText(pastedText);
+
+                var lines = pastedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                detectedFormat = _extractor.DetectFormat(lines, 0);
+            }
+            else
+            {
+                var errorMsg = response.Content?.ErrorMessage ?? "OCR extraction failed. Please try again with a clearer image.";
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Scan Error",
+                    Message = errorMsg,
+                    ButtonText = "OK",
+                    Context = new ModalContext { ActionType = "ocrError" }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Scan Processing Error",
+                Message = $"An error occurred while processing the scanned image: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "ocrError" }
+            });
+        }
+        finally
+        {
+            isProcessing = false;
+            isScanning = false;
+            StateHasChanged();
+        }
     }
 
     private string GetChordAlignmentClass(SegmentCreateDto seg)

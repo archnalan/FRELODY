@@ -660,6 +660,81 @@ public class ChordLyricExtrator
     }
 
     // ──────────────────────────────────────────────
+    //  OCR Text Extraction (tolerant of garbled text)
+    // ──────────────────────────────────────────────
+
+    public SimpleSongCreateDto ExtractFromOcrText(string ocrText)
+    {
+        if (string.IsNullOrWhiteSpace(ocrText))
+            return new SimpleSongCreateDto { Title = "Scanned Song", SongLyrics = new List<SegmentCreateDto>() };
+
+        var cleaned = CleanOcrText(ocrText);
+        var song = ExtractFromRawText(cleaned);
+
+        if (string.IsNullOrEmpty(song.Title) || song.Title == "Untitled Song")
+            song.Title = "Scanned Song";
+
+        return song;
+    }
+
+    private string CleanOcrText(string ocrText)
+    {
+        var lines = ocrText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        var cleaned = new List<string>();
+
+        foreach (var line in lines)
+        {
+            var l = line;
+
+            // Remove common OCR junk characters
+            l = l.Replace("\u00bb", "").Replace("\u00ab", ""); // » «
+            l = l.Replace("\u2013", "-").Replace("\u2014", "-"); // – —
+            l = l.Replace("\u2018", "'").Replace("\u2019", "'"); // ' '
+            l = l.Replace("\u201c", "\"").Replace("\u201d", "\""); // " "
+            l = Regex.Replace(l, @"[=]{2,}", ""); // == or ===
+            l = l.Replace("=", " ");
+
+            // Fix common chord OCR misreads: Xrn → Xm, 8m → Bm
+            l = Regex.Replace(l, @"\b([A-G])rn\b", "$1m"); // Arn→Am, Crn→Cm, etc.
+            l = Regex.Replace(l, @"\b8m\b", "Bm", RegexOptions.IgnoreCase);
+            l = Regex.Replace(l, @"\b8b\b", "Bb", RegexOptions.IgnoreCase);
+            l = Regex.Replace(l, @"\b([A-G])rnaj\b", "$1maj"); // Arnaj→Amaj
+            l = Regex.Replace(l, @"\b([A-G])irn\b", "$1im"); // misread dim
+
+            // Remove stray ] [ that aren't part of inline chord [X] notation
+            if (!InlineBracketChordRegex.IsMatch(l))
+            {
+                l = l.Replace("[", "").Replace("]", "");
+            }
+
+            // Collapse multiple spaces
+            l = Regex.Replace(l, @"\s{2,}", " ").Trim();
+
+            cleaned.Add(l);
+        }
+
+        // Remove excessive consecutive blank lines (keep max 1)
+        var result = new List<string>();
+        int consecutiveBlanks = 0;
+        foreach (var line in cleaned)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                consecutiveBlanks++;
+                if (consecutiveBlanks <= 1)
+                    result.Add(line);
+            }
+            else
+            {
+                consecutiveBlanks = 0;
+                result.Add(line);
+            }
+        }
+
+        return string.Join("\n", result);
+    }
+
+    // ──────────────────────────────────────────────
     //  DOCX Extraction
     // ──────────────────────────────────────────────
 

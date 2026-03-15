@@ -21,5 +21,6 @@ namespace FRELODYSHRD.Dtos
         public ChordDifficulty? ChordDifficulty { get; set; }
         public PlayLevel? PlayLevel { get; set; }
         public bool? ShowNotifications { get; set; }
+        public bool? ShowVerseTitles { get; set; }
     }
 }

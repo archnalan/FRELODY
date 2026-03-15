@@ -1877,6 +1877,9 @@ namespace FRELODYLIB.Migrations
                     b.Property<bool?>("ShowNotifications")
                         .HasColumnType("bit");
 
+                    b.Property<bool?>("ShowVerseTitles")
+                        .HasColumnType("bit");
+
                     b.Property<string>("SongDisplay")
                         .HasColumnType("nvarchar(max)");
 

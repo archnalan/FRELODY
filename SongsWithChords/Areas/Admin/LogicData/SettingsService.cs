@@ -190,16 +190,16 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 if (existingSetting != null)
                 {
                     // Update existing settings
-                    existingSetting.ChordFont = settingDto.ChordFont;
-                    existingSetting.LyricFont = settingDto.LyricFont;
-                    existingSetting.ChordFontSize = settingDto.ChordFontSize;
-                    existingSetting.LyricFontSize = settingDto.LyricFontSize;
-                    existingSetting.SongDisplay = settingDto.SongDisplay;
-                    existingSetting.Theme = settingDto.Theme;
-                    existingSetting.ChordDisplay = settingDto.ChordDisplay;
-                    existingSetting.ChordDifficulty = settingDto.ChordDifficulty;
-                    existingSetting.PlayLevel = settingDto.PlayLevel;
-                    existingSetting.ShowNotifications = settingDto.ShowNotifications;
+                    existingSetting.ChordFont = settingDto.ChordFont ?? existingSetting.ChordFont;
+                    existingSetting.LyricFont = settingDto.LyricFont ?? existingSetting.LyricFont;
+                    existingSetting.ChordFontSize = settingDto.ChordFontSize ?? existingSetting.ChordFontSize;
+                    existingSetting.LyricFontSize = settingDto.LyricFontSize ?? existingSetting.LyricFontSize;
+                    existingSetting.SongDisplay = settingDto.SongDisplay ?? existingSetting.SongDisplay;
+                    existingSetting.Theme = settingDto.Theme ?? existingSetting.Theme;
+                    existingSetting.ChordDisplay = settingDto.ChordDisplay ?? existingSetting.ChordDisplay;
+                    existingSetting.ChordDifficulty = settingDto.ChordDifficulty ?? existingSetting.ChordDifficulty;
+                    existingSetting.PlayLevel = settingDto.PlayLevel ?? existingSetting.PlayLevel;
+                    existingSetting.ShowNotifications = settingDto.ShowNotifications ?? existingSetting.ShowNotifications;
 
                     _context.Settings.Update(existingSetting);
                     await _context.SaveChangesAsync();
@@ -282,15 +282,15 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         new UnauthorizedAccessException("You don't have permission to update this setting."));
                 }
 
-                existingSetting.ChordFont = settingDto.ChordFont;
-                existingSetting.LyricFont = settingDto.LyricFont;
-                existingSetting.ChordFontSize = settingDto.ChordFontSize;
-                existingSetting.LyricFontSize = settingDto.LyricFontSize;
-                existingSetting.SongDisplay = settingDto.SongDisplay;
-                existingSetting.Theme = settingDto.Theme;
-                existingSetting.ChordDisplay = settingDto.ChordDisplay;
-                existingSetting.ChordDifficulty = settingDto.ChordDifficulty;
-                existingSetting.PlayLevel = settingDto.PlayLevel;
+                existingSetting.ChordFont = settingDto.ChordFont ?? existingSetting.ChordFont;
+                existingSetting.LyricFont = settingDto.LyricFont ?? existingSetting.LyricFont;
+                existingSetting.ChordFontSize = settingDto.ChordFontSize ?? existingSetting.ChordFontSize;
+                existingSetting.LyricFontSize = settingDto.LyricFontSize ?? existingSetting.LyricFontSize;
+                existingSetting.SongDisplay = settingDto.SongDisplay ?? existingSetting.SongDisplay;
+                existingSetting.Theme = settingDto.Theme ?? existingSetting.Theme;
+                existingSetting.ChordDisplay = settingDto.ChordDisplay ?? existingSetting.ChordDisplay;
+                existingSetting.ChordDifficulty = settingDto.ChordDifficulty ?? existingSetting.ChordDifficulty;
+                existingSetting.PlayLevel = settingDto.PlayLevel ?? existingSetting.PlayLevel;
 
                 _context.Settings.Update(existingSetting);
                 await _context.SaveChangesAsync();
