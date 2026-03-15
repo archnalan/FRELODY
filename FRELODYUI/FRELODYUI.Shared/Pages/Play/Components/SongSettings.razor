@@ -12,61 +12,56 @@
 else
 {
     <div class="settings-header">
-        <h6>Display Settings</h6>
+        <h6><i class="bi bi-sliders me-2"></i>Display Settings</h6>
         <button class="close-btn" type="button" @onclick="OnClose">
-            <i class="bi bi-x"></i>
+            <i class="bi bi-x-lg"></i>
         </button>
     </div>
 
     <div class="settings-content">
-        <!-- Autoscroll Settings -->
+        <!-- Autoscroll Speed -->
         <div class="settings-section">
-            <label class="settings-label">
-                <i class="bi bi-speedometer2"></i>
-                Autoscroll Speed
-            </label>
-            <div class="setting-control">
-                <button class="size-btn" @onclick="() => AdjustScrollSpeed(-0.5)" @onclick:stopPropagation disabled="@(scrollSpeed <= 0)">
-                    <i class="bi bi-dash"></i>
-                </button>
-                <span class="control-value">@scrollSpeed.ToString("0.0")</span>
-                <button class="size-btn" @onclick="() => AdjustScrollSpeed(0.5)" @onclick:stopPropagation disabled="@(scrollSpeed >= 5)">
-                    <i class="bi bi-plus"></i>
-                </button>
+            <div class="slider-header">
+                <label class="settings-label">
+                    <i class="bi bi-speedometer2"></i>
+                    Autoscroll Speed
+                </label>
+                <span class="slider-value">@scrollSpeed.ToString("0.0")x</span>
             </div>
+            <input type="range" class="settings-range" min="0" max="5" step="0.5"
+                   value="@scrollSpeed"
+                   @oninput="OnScrollSpeedInput"
+                   @onclick:stopPropagation />
         </div>
 
-        <!-- Font Settings -->
+        <!-- Chord Font Size -->
         <div class="settings-section">
-            <label class="settings-label">
-                <i class="bi bi-type"></i>
-                Chord Font Size
-            </label>
-            <div class="setting-control">
-                <button class="size-btn" @onclick="() => AdjustChordFontSize(-2)" @onclick:stopPropagation>
-                    <i class="bi bi-dash"></i>
-                </button>
-                <span class="size-value">@chordFontSize</span>
-                <button class="size-btn" @onclick="() => AdjustChordFontSize(2)" @onclick:stopPropagation>
-                    <i class="bi bi-plus"></i>
-                </button>
+            <div class="slider-header">
+                <label class="settings-label">
+                    <i class="bi bi-type"></i>
+                    Chord Size
+                </label>
+                <span class="slider-value">@(chordFontSize)px</span>
             </div>
+            <input type="range" class="settings-range" min="10" max="32" step="1"
+                   value="@chordFontSize"
+                   @oninput="OnChordFontSizeInput"
+                   @onclick:stopPropagation />
         </div>
 
+        <!-- Lyric Font Size -->
         <div class="settings-section">
-            <label class="settings-label">
-                <i class="bi bi-text-paragraph"></i>
-                Lyric Font Size
-            </label>
-            <div class="setting-control">
-                <button class="size-btn" @onclick="() => AdjustLyricFontSize(-2)" @onclick:stopPropagation>
-                    <i class="bi bi-dash"></i>
-                </button>
-                <span class="size-value">@lyricFontSize</span>
-                <button class="size-btn" @onclick="() => AdjustLyricFontSize(2)" @onclick:stopPropagation>
-                    <i class="bi bi-plus"></i>
-                </button>
+            <div class="slider-header">
+                <label class="settings-label">
+                    <i class="bi bi-text-paragraph"></i>
+                    Lyric Size
+                </label>
+                <span class="slider-value">@(lyricFontSize)px</span>
             </div>
+            <input type="range" class="settings-range" min="12" max="40" step="1"
+                   value="@lyricFontSize"
+                   @oninput="OnLyricFontSizeInput"
+                   @onclick:stopPropagation />
         </div>
 
         <!-- Display Mode -->
@@ -75,26 +70,43 @@ else
                 <i class="bi bi-eye"></i>
                 Display Mode
             </label>
-            <select class="settings-select" value="@songDisplayMode" @onchange="OnSongDisplayModeChanged" @onclick:stopPropagation>
-                <option value="@SongDisplay.LyricsAndChordsAndCharts">Lyrics, Chords & Charts</option>
-                <option value="@SongDisplay.LyricsAndChords">Lyrics & Chords</option>
-                <option value="@SongDisplay.LyricsOnly">Lyrics Only</option>
-            </select>
+            <div class="segmented-control" @onclick:stopPropagation>
+                <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsAndChordsAndCharts ? "active" : "")"
+                        @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChordsAndCharts)">
+                    <i class="bi bi-music-note-list"></i>
+                    <span>Full</span>
+                </button>
+                <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsAndChords ? "active" : "")"
+                        @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChords)">
+                    <i class="bi bi-music-note-beamed"></i>
+                    <span>Chords</span>
+                </button>
+                <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsOnly ? "active" : "")"
+                        @onclick="() => SetDisplayMode(SongDisplay.LyricsOnly)">
+                    <i class="bi bi-text-left"></i>
+                    <span>Lyrics</span>
+                </button>
+            </div>
         </div>
 
         <!-- Chord Display Position -->
-        @if (songDisplayMode == SongDisplay.LyricsAndChords
-                                || songDisplayMode == SongDisplay.LyricsAndChordsAndCharts)
+        @if (songDisplayMode != SongDisplay.LyricsOnly)
         {
             <div class="settings-section">
                 <label class="settings-label">
                     <i class="bi bi-music-note"></i>
                     Chord Position
                 </label>
-                <select class="settings-select" value="@chordDisplayMode" @onchange="OnChordDisplayModeChanged" @onclick:stopPropagation>
-                    <option value="@ChordDisplay.Above">Above Lyrics</option>
-                    <option value="@ChordDisplay.Inline">Inline</option>
-                </select>
+                <div class="segmented-control segmented-sm" @onclick:stopPropagation>
+                    <button class="segment-btn @(chordDisplayMode == ChordDisplay.Above ? "active" : "")"
+                            @onclick="() => SetChordDisplay(ChordDisplay.Above)">
+                        Above
+                    </button>
+                    <button class="segment-btn @(chordDisplayMode == ChordDisplay.Inline ? "active" : "")"
+                            @onclick="() => SetChordDisplay(ChordDisplay.Inline)">
+                        Inline
+                    </button>
+                </div>
             </div>
         }
 
@@ -143,7 +155,7 @@ else
             {
                 <i class="bi bi-check-circle me-2"></i>
             }
-            Save Settings
+            Save
         </button>
     </div>
 }
@@ -152,6 +164,7 @@ else
     [Parameter] public string? UserId { get; set; }
     [Parameter] public string? SongId { get; set; }
     [Parameter] public EventCallback<SettingDto> OnSettingsSaved { get; set; }
+    [Parameter] public EventCallback<SettingDto> OnSettingsChanged { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
     private bool isLoading = true;
@@ -251,6 +264,11 @@ else
         };
     }
 
+    private async Task NotifyChanged()
+    {
+        await OnSettingsChanged.InvokeAsync(BuildSettingDto());
+    }
+
     private async Task HandleSave()
     {
         try
@@ -305,40 +323,48 @@ else
         }
     }
 
-    private void AdjustScrollSpeed(double delta)
+    private async Task OnScrollSpeedInput(ChangeEventArgs e)
     {
-        scrollSpeed = Math.Clamp(scrollSpeed + delta, 0, 5);
+        if (double.TryParse(e.Value?.ToString(), out var val))
+            scrollSpeed = val;
+        await NotifyChanged();
     }
 
-    private void AdjustChordFontSize(int delta)
+    private async Task OnChordFontSizeInput(ChangeEventArgs e)
     {
-        chordFontSize = Math.Clamp(chordFontSize + delta, 10, 32);
+        if (int.TryParse(e.Value?.ToString(), out var val))
+            chordFontSize = Math.Clamp(val, 10, 32);
+        await NotifyChanged();
     }
 
-    private void AdjustLyricFontSize(int delta)
+    private async Task OnLyricFontSizeInput(ChangeEventArgs e)
     {
-        lyricFontSize = Math.Clamp(lyricFontSize + delta, 12, 40);
+        if (int.TryParse(e.Value?.ToString(), out var val))
+            lyricFontSize = Math.Clamp(val, 12, 40);
+        await NotifyChanged();
     }
 
-    private void OnSongDisplayModeChanged(ChangeEventArgs e)
+    private async Task SetDisplayMode(SongDisplay mode)
     {
-        if (Enum.TryParse<SongDisplay>(e.Value?.ToString(), out var mode))
-            songDisplayMode = mode;
+        songDisplayMode = mode;
+        await NotifyChanged();
     }
 
-    private void OnChordDisplayModeChanged(ChangeEventArgs e)
+    private async Task SetChordDisplay(ChordDisplay mode)
     {
-        if (Enum.TryParse<ChordDisplay>(e.Value?.ToString(), out var mode))
-            chordDisplayMode = mode;
+        chordDisplayMode = mode;
+        await NotifyChanged();
     }
 
-    private void OnFontFamilyChanged(ChangeEventArgs e)
+    private async Task OnFontFamilyChanged(ChangeEventArgs e)
     {
         fontFamily = e.Value?.ToString() ?? fontFamily;
+        await NotifyChanged();
     }
 
-    private void OnShowVerseTitlesChanged(ChangeEventArgs e)
+    private async Task OnShowVerseTitlesChanged(ChangeEventArgs e)
     {
         showVerseTitles = (bool)(e.Value ?? false);
+        await NotifyChanged();
     }
 }

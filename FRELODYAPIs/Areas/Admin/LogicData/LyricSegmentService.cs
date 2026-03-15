@@ -3,7 +3,6 @@ using FRELODYAPP.Dtos;
 using FRELODYAPP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Web.Http.ModelBinding;
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYSHRD.Dtos.CreateDtos;
 using Mapster;

@@ -8,15 +8,16 @@ using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Data;
 using FRELODYAPP.Models.SubModels;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
-using Microsoft.OpenApi.Models;
+using Mapster;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using Swashbuckle.AspNetCore.SwaggerGen;
+using Scalar.AspNetCore;
 using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPIs.Areas.Admin.LogicData;
 using System.Text.Json;
 using FRELODYAPP.Data.Extensions;
+using FRELODYAPP.Profiles;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -42,7 +43,10 @@ builder.Configuration
 builder.Services.AddDatabaseSeeder();
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+// Register Mapster mappings
+MappingConfig.RegisterMappings();
+builder.Services.AddSingleton(TypeAdapterConfig.GlobalSettings);
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
@@ -210,75 +214,16 @@ builder.Services.AddControllers(options => {
         new SlugifyParameterTransformer()));
 });
 
-// Add Swagger services
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
+// Add OpenAPI services
+builder.Services.AddOpenApi("v1", options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo
+    options.AddDocumentTransformer((document, context, ct) =>
     {
-        Title = "FRELODYAPP API",
-        Version = "v1",
-        Description = "API for managing songs with chords and lyrics",
-        Contact = new OpenApiContact
-        {
-            Name = "FRELODY",
-            Email = "support@example.com"
-        }
+        document.Info.Title = "FRELODYAPP API";
+        document.Info.Version = "v1";
+        document.Info.Description = "API for managing songs with chords and lyrics";
+        return Task.CompletedTask;
     });
-
-    // Enable JWT Authentication in Swagger UI
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-
-    // Properly handle area-prefixed routes
-    options.DocumentFilter<AddAreaRouteDocumentFilter>();
-
-    // Configure operation IDs to avoid duplicates
-    options.CustomOperationIds(apiDesc =>
-    {
-        var controllerName = apiDesc.ActionDescriptor.RouteValues["controller"];
-        var actionName = apiDesc.ActionDescriptor.RouteValues["action"];
-        var areaName = apiDesc.ActionDescriptor.RouteValues.ContainsKey("area") ?
-            apiDesc.ActionDescriptor.RouteValues["area"] : string.Empty;
-
-        if (!string.IsNullOrEmpty(areaName))
-        {
-            return $"{areaName}_{controllerName}_{actionName}";
-        }
-
-        return $"{controllerName}_{actionName}";
-    });
-
-    // Include XML comments if you have them
-    /*
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    if (File.Exists(xmlPath))
-    {
-        options.IncludeXmlComments(xmlPath);
-    }
-    */
 });
 
 var app = builder.Build();
@@ -303,16 +248,13 @@ using (var scope = app.Services.CreateScope())
 	if (app.Environment.IsDevelopment())
 	{
 		app.UseMigrationsEndPoint();
-    // Add Swagger middleware only in development
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
+    // Add OpenAPI and Scalar API reference UI in development
+    app.MapOpenApi();
+    app.MapScalarApiReference(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "FRELODYAPP API v1");
-        options.RoutePrefix = string.Empty;
-        options.DocumentTitle = "FRELODYAPP API Documentation";
-        options.DefaultModelsExpandDepth(-1); // Hide models section by default
-        options.EnableDeepLinking(); // Enable direct linking to operations
-        options.DisplayRequestDuration(); // Display request duration
+        options
+            .WithTitle("FRELODYAPP API Documentation")
+            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
     });
 }
 	else
@@ -328,7 +270,7 @@ app.UseExceptionHandler();
 
 app.UseCors("AllowAll");
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+app.MapStaticAssets();
 
 app.UseRouting();
 
@@ -356,22 +298,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
-
-// Helper class for handling Area routes in Swagger
-public class AddAreaRouteDocumentFilter : IDocumentFilter
-{
-    public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
-    {
-        var paths = new OpenApiPaths();
-
-        foreach (var path in swaggerDoc.Paths)
-        {
-            paths.Add(path.Key, path.Value);
-        }
-
-        swaggerDoc.Paths = paths;
-    }
-}
 
 // Helper class for route transformations
 public class SlugifyParameterTransformer : IOutboundParameterTransformer

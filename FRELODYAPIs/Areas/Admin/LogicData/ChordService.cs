@@ -11,7 +11,6 @@ using FRELODYSHRD.Dtos.HybridDtos;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Web.Http.ModelBinding;
 
 namespace FRELODYAPP.Areas.Admin.LogicData
 {

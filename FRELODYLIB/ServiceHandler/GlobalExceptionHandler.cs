@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
 using System.Diagnostics;
 
-namespace SongsWithChords.Middleware
+namespace FRELODYAPIs.Middleware
 {
     public class GlobalExceptionHandler : IExceptionHandler
     {

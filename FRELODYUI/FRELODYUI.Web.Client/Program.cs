@@ -14,7 +14,6 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 var baseAddressApi = new Uri("https://localhost:7077");
 
-builder.Services.AddAuthenticationCore();
 builder.Services.AddAuthorizationCore();
 
 builder.Services.AddBlazoredLocalStorage();

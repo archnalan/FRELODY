@@ -22,7 +22,6 @@ namespace FRELODYUI
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 });
 
-            builder.Services.AddAuthenticationCore();
             builder.Services.AddAuthorizationCore();
             builder.Services.AddTransient<AuthHeaderHandler>();
             builder.Services.AddSingleton<IFormFactor, FormFactor>();

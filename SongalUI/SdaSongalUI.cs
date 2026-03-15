@@ -1,6 +1,6 @@
-using SongsWithChords.Controllers;
-using SongsWithChords.Data;
-using SongsWithChords.Interfaces;
+using FRELODYAPP.Controllers;
+using FRELODYAPP.Data;
+using FRELODYAPP.Interfaces;
 using Microsoft.AspNetCore.Http;
 using System.Net.Mime;
 using System.Runtime.InteropServices;

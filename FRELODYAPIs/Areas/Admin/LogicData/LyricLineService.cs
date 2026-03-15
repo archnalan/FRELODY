@@ -5,7 +5,6 @@ using FRELODYAPP.Dtos.CompositeDtos;
 using FRELODYAPP.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Web.Http.ModelBinding;
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYLIB.ServiceHandler.ResultModels;
 

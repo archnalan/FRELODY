@@ -47,6 +47,7 @@
                          aria-labelledby="settingsDropdownButton">
                         <SongSettings UserId="@currentUserId"
                                       SongId="@SongId"
+                                      OnSettingsChanged="OnSettingsPreview"
                                       OnSettingsSaved="OnSettingsSaved"
                                       OnClose="CloseSettingsDropdown" />
                     </div>
@@ -406,12 +407,7 @@
 
             if (settings != null)
             {
-                chordFontSize = int.TryParse(settings.ChordFontSize, out var cfs) ? cfs : 14;
-                lyricFontSize = int.TryParse(settings.LyricFontSize, out var lfs) ? lfs : 18;
-                fontFamily = settings.ChordFont ?? fontFamily;
-                songDisplayMode = settings.SongDisplay ?? SongDisplay.LyricsAndChordsAndCharts;
-                chordDisplayMode = settings.ChordDisplay ?? ChordDisplay.Above;
-                showVerseTitles = settings.ShowVerseTitles ?? false;
+                ApplySettingsDto(settings);
             }
 
             // Load song-specific scroll speed
@@ -439,7 +435,7 @@
         }
     }
 
-    private void OnSettingsSaved(SettingDto settings)
+    private void ApplySettingsDto(SettingDto settings)
     {
         chordFontSize = int.TryParse(settings.ChordFontSize, out var cfs) ? cfs : 14;
         lyricFontSize = int.TryParse(settings.LyricFontSize, out var lfs) ? lfs : 18;
@@ -447,7 +443,17 @@
         songDisplayMode = settings.SongDisplay ?? SongDisplay.LyricsAndChordsAndCharts;
         chordDisplayMode = settings.ChordDisplay ?? ChordDisplay.Above;
         showVerseTitles = settings.ShowVerseTitles ?? false;
+    }
 
+    private void OnSettingsPreview(SettingDto settings)
+    {
+        ApplySettingsDto(settings);
+        StateHasChanged();
+    }
+
+    private void OnSettingsSaved(SettingDto settings)
+    {
+        ApplySettingsDto(settings);
         ShowSuccessMessage("Settings saved successfully!");
         CloseSettingsDropdown();
         StateHasChanged();

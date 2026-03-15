@@ -1,7 +1,7 @@
 using FRELODYLIB.ServiceHandler.ResultModels;
 using Microsoft.AspNetCore.Mvc;
 
-namespace SongsWithChords.Extensions
+namespace FRELODYAPIs.Extensions
 {
     public static class ServiceResultExtensions
     {

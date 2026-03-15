@@ -1,6 +1,6 @@
-using SongsWithChords.Controllers;
-using SongsWithChords.Data;
-using SongsWithChords.Interfaces;
+using FRELODYAPP.Controllers;
+using FRELODYAPP.Data;
+using FRELODYAPP.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace SongalUI
@@ -17,7 +17,7 @@ namespace SongalUI
 			var services = new ServiceCollection();
 
 			services.AddSingleton<ILyricHandler, LyricExtractor>();
-			services.AddSingleton<IChordHandler, ChordTransposer>();
+			services.AddSingleton<IChordHandler, ChordHandler>();
 			services.AddSingleton<LyricExtractionController>();
 			
 			services.AddScoped<SdaSongalUI>();			

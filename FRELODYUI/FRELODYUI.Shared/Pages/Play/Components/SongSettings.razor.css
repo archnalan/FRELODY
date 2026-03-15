@@ -15,7 +15,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1.25rem;
+    padding: 0.875rem 1.25rem;
     border-bottom: 1px solid var(--border-light);
     position: sticky;
     top: 0;
@@ -25,9 +25,11 @@
 
     .settings-header h6 {
         margin: 0;
-        font-size: 1rem;
+        font-size: 0.9375rem;
         font-weight: 600;
         color: var(--text-primary);
+        display: flex;
+        align-items: center;
     }
 
 .close-btn {
@@ -40,8 +42,9 @@
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: 6px;
     transition: all 0.2s ease;
+    font-size: 0.75rem;
 }
 
     .close-btn:hover {
@@ -50,10 +53,10 @@
     }
 
 .settings-content {
-    padding: 1rem 1.25rem;
+    padding: 0.75rem 1.25rem;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.875rem;
     flex: 1;
     max-height: 50vh;
     overflow-y: auto;
@@ -62,28 +65,163 @@
 .settings-section {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.375rem;
 }
 
 .settings-label {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     color: var(--text-secondary);
 }
 
     .settings-label i {
-        font-size: 1rem;
+        font-size: 0.875rem;
     }
 
-.setting-control {
+/* ============================================
+   SLIDER HEADER (label + value)
+   ============================================ */
+
+.slider-header {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
     justify-content: space-between;
 }
+
+.slider-value {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--input-bg);
+    padding: 0.125rem 0.5rem;
+    border-radius: 4px;
+    min-width: 2.75rem;
+    text-align: center;
+}
+
+/* ============================================
+   RANGE SLIDER
+   ============================================ */
+
+.settings-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: var(--border-medium);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+    .settings-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        background: var(--bg-active);
+        border: 2px solid white;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .settings-range::-webkit-slider-thumb:hover {
+        transform: scale(1.15);
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+    }
+
+    .settings-range::-webkit-slider-thumb:active {
+        transform: scale(1.05);
+    }
+
+    .settings-range::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        background: var(--bg-active);
+        border: 2px solid white;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        transition: transform 0.15s ease;
+    }
+
+    .settings-range::-moz-range-thumb:hover {
+        transform: scale(1.15);
+    }
+
+    .settings-range::-moz-range-track {
+        height: 6px;
+        background: var(--border-medium);
+        border-radius: 3px;
+    }
+
+    .settings-range:focus {
+        outline: none;
+    }
+
+    .settings-range:focus::-webkit-slider-thumb {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15), 0 1px 4px rgba(0, 0, 0, 0.2);
+    }
+
+/* ============================================
+   SEGMENTED CONTROL
+   ============================================ */
+
+.segmented-control {
+    display: flex;
+    background: var(--input-bg);
+    border: 1px solid var(--border-medium);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+}
+
+.segmented-control.segmented-sm {
+    max-width: 220px;
+}
+
+.segment-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.5rem;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+    .segment-btn:hover:not(.active) {
+        color: var(--text-primary);
+        background: var(--bg-hover);
+    }
+
+    .segment-btn.active {
+        background: var(--bg-active);
+        color: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+
+    .segment-btn i {
+        font-size: 0.8125rem;
+    }
+
+/* ============================================
+   TOGGLE, SELECT, FOOTER
+   ============================================ */
 
 .setting-toggle {
     display: flex;
@@ -108,55 +246,14 @@
             border-color: var(--bg-active);
         }
 
-.size-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    background: var(--input-bg);
-    border: 1px solid var(--border-medium);
-    border-radius: 6px;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-    .size-btn:hover:not(:disabled) {
-        background: var(--bg-hover);
-        border-color: var(--gradient-primary-start);
-    }
-
-    .size-btn:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-
-.size-value {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    min-width: 3rem;
-    text-align: center;
-}
-
-.control-value {
-    min-width: 2.5rem;
-    padding: 0 0.5rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    text-align: center;
-    background: var(--input-bg);
-}
-
 .settings-select {
     width: 100%;
-    padding: 0.5rem 0.75rem;
+    padding: 0.4375rem 0.75rem;
     background: var(--input-bg);
     border: 1px solid var(--border-medium);
     border-radius: 6px;
     color: var(--input-color);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -168,17 +265,17 @@
     }
 
 .save-settings-btn {
-    width: 100%;
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 1.25rem;
     background: linear-gradient(135deg, var(--bg-active), #0056b3);
     color: white;
     border: none;
     border-radius: 8px;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
 }
 
     .save-settings-btn:hover:not(:disabled) {
@@ -195,7 +292,7 @@
     display: flex;
     align-items: center;
     justify-content: end;
-    padding: 1rem 1.25rem;
+    padding: 0.75rem 1.25rem;
     border-top: 1px solid var(--border-light);
     position: sticky;
     bottom: 0;
@@ -206,6 +303,19 @@
    DARK MODE
    ============================================ */
 
-[data-bs-theme="dark"] .control-value {
+[data-bs-theme="dark"] .slider-value {
     background: rgba(55, 65, 81, 0.5);
+}
+
+[data-bs-theme="dark"] .settings-range {
+    background: rgba(55, 65, 81, 0.6);
+}
+
+[data-bs-theme="dark"] .settings-range::-webkit-slider-thumb {
+    border-color: #1f2937;
+}
+
+[data-bs-theme="dark"] .segmented-control {
+    background: rgba(31, 41, 55, 0.5);
+    border-color: rgba(75, 85, 99, 0.4);
 }
