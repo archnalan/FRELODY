@@ -248,41 +248,37 @@
     }
 
 /* ============================================
-   FLOATING SETTINGS PANEL
+   SETTINGS PALETTE (draggable floating panel)
    ============================================ */
 
-.settings-panel-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.2);
-    z-index: 200000;
-    animation: backdropFadeIn 0.2s ease;
-}
-
-@keyframes backdropFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.settings-panel-floating {
-    position: fixed;
-    top: 3.5rem;
-    right: 0.75rem;
-    left: 0.75rem;
-    max-height: calc(100vh - 4.5rem);
-    overflow-y: auto;
+.settings-palette {
+    position: absolute;
+    top: 3rem;
+    right: 0.5rem;
+    width: 280px;
+    max-height: calc(100vh - 4rem);
     background: var(--card-bg);
     border: 1px solid var(--border-light);
-    border-radius: 12px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
-    z-index: 200001;
-    animation: panelSlideIn 0.25s ease;
+    border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    z-index: 200;
+    animation: paletteIn 0.2s ease;
+    overflow: hidden;
+    touch-action: none;
 }
 
-@keyframes panelSlideIn {
+.palette-drag-handle {
+    cursor: grab;
+}
+
+    .palette-drag-handle:active {
+        cursor: grabbing;
+    }
+
+@keyframes paletteIn {
     from {
         opacity: 0;
-        transform: translateY(-12px) scale(0.97);
+        transform: translateY(-8px) scale(0.97);
     }
     to {
         opacity: 1;
@@ -762,6 +758,11 @@
         margin-right: auto;
     }
 
+    .playback-fullscreen .settings-palette {
+        position: fixed;
+        z-index: 100001;
+    }
+
 /* Fullscreen via Fullscreen API */
 .song-playback-area:fullscreen {
     overflow-y: auto;
@@ -788,6 +789,11 @@
     .song-playback-area:fullscreen .song-content .verse-section {
         max-width: 800px;
         width: 100%;
+    }
+
+    .song-playback-area:fullscreen .settings-palette {
+        position: fixed;
+        z-index: 100001;
     }
 
 /* ============================================
@@ -865,12 +871,9 @@
         height: 2.25rem;
     }
 
-    .settings-panel-floating {
-        left: auto;
+    .settings-palette {
+        width: 300px;
         right: 1rem;
-        width: 340px;
-        top: 4rem;
-        max-height: calc(100vh - 5rem);
     }
 
     .slider-nav-btn {
@@ -979,14 +982,10 @@
         background: rgba(17, 24, 39, 0.95);
     }
 
-[data-bs-theme="dark"] .settings-panel-floating {
+[data-bs-theme="dark"] .settings-palette {
     background: rgba(17, 24, 39, 0.98);
     border-color: var(--border-medium);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-
-[data-bs-theme="dark"] .settings-panel-backdrop {
-    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 [data-bs-theme="dark"] .chord-count-badge {

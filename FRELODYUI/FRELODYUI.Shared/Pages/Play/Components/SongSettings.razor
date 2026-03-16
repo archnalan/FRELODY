@@ -6,13 +6,13 @@
 {
     <div class="settings-loading">
         <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-        <span>Loading settings...</span>
+        <span>Loading...</span>
     </div>
 }
 else
 {
-    <div class="settings-header">
-        <h6><i class="bi bi-sliders me-2"></i>Display Settings</h6>
+    <div class="settings-header palette-drag-handle">
+        <h6><i class="bi bi-sliders me-1"></i>Settings</h6>
         <button class="close-btn" type="button" @onclick="OnClose">
             <i class="bi bi-x-lg"></i>
         </button>
@@ -20,71 +20,56 @@ else
 
     <div class="settings-content">
         <!-- Autoscroll Speed -->
-        <div class="settings-section">
-            <div class="slider-header">
-                <label class="settings-label">
-                    <i class="bi bi-speedometer2"></i>
-                    Autoscroll Speed
-                </label>
+        <div class="settings-row">
+            <label class="settings-label"><i class="bi bi-speedometer2"></i> Speed</label>
+            <div class="settings-inline-control">
+                <input type="range" class="settings-range" min="0" max="5" step="0.5"
+                       value="@scrollSpeed"
+                       @oninput="OnScrollSpeedInput"
+                       @onclick:stopPropagation />
                 <span class="slider-value">@scrollSpeed.ToString("0.0")x</span>
             </div>
-            <input type="range" class="settings-range" min="0" max="5" step="0.5"
-                   value="@scrollSpeed"
-                   @oninput="OnScrollSpeedInput"
-                   @onclick:stopPropagation />
         </div>
 
         <!-- Chord Font Size -->
-        <div class="settings-section">
-            <div class="slider-header">
-                <label class="settings-label">
-                    <i class="bi bi-type"></i>
-                    Chord Size
-                </label>
+        <div class="settings-row">
+            <label class="settings-label"><i class="bi bi-type"></i> Chord</label>
+            <div class="settings-inline-control">
+                <input type="range" class="settings-range" min="10" max="32" step="1"
+                       value="@chordFontSize"
+                       @oninput="OnChordFontSizeInput"
+                       @onclick:stopPropagation />
                 <span class="slider-value">@(chordFontSize)px</span>
             </div>
-            <input type="range" class="settings-range" min="10" max="32" step="1"
-                   value="@chordFontSize"
-                   @oninput="OnChordFontSizeInput"
-                   @onclick:stopPropagation />
         </div>
 
         <!-- Lyric Font Size -->
-        <div class="settings-section">
-            <div class="slider-header">
-                <label class="settings-label">
-                    <i class="bi bi-text-paragraph"></i>
-                    Lyric Size
-                </label>
+        <div class="settings-row">
+            <label class="settings-label"><i class="bi bi-text-paragraph"></i> Lyric</label>
+            <div class="settings-inline-control">
+                <input type="range" class="settings-range" min="12" max="40" step="1"
+                       value="@lyricFontSize"
+                       @oninput="OnLyricFontSizeInput"
+                       @onclick:stopPropagation />
                 <span class="slider-value">@(lyricFontSize)px</span>
             </div>
-            <input type="range" class="settings-range" min="12" max="40" step="1"
-                   value="@lyricFontSize"
-                   @oninput="OnLyricFontSizeInput"
-                   @onclick:stopPropagation />
         </div>
 
         <!-- Display Mode -->
-        <div class="settings-section">
-            <label class="settings-label">
-                <i class="bi bi-eye"></i>
-                Display Mode
-            </label>
+        <div class="settings-row">
+            <label class="settings-label"><i class="bi bi-eye"></i> Mode</label>
             <div class="segmented-control" @onclick:stopPropagation>
                 <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsAndChordsAndCharts ? "active" : "")"
-                        @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChordsAndCharts)">
+                        @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChordsAndCharts)" title="Full">
                     <i class="bi bi-music-note-list"></i>
-                    <span>Full</span>
                 </button>
                 <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsAndChords ? "active" : "")"
-                        @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChords)">
+                        @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChords)" title="Chords + Lyrics">
                     <i class="bi bi-music-note-beamed"></i>
-                    <span>Chords</span>
                 </button>
                 <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsOnly ? "active" : "")"
-                        @onclick="() => SetDisplayMode(SongDisplay.LyricsOnly)">
+                        @onclick="() => SetDisplayMode(SongDisplay.LyricsOnly)" title="Lyrics only">
                     <i class="bi bi-text-left"></i>
-                    <span>Lyrics</span>
                 </button>
             </div>
         </div>
@@ -92,11 +77,8 @@ else
         <!-- Chord Display Position -->
         @if (songDisplayMode != SongDisplay.LyricsOnly)
         {
-            <div class="settings-section">
-                <label class="settings-label">
-                    <i class="bi bi-music-note"></i>
-                    Chord Position
-                </label>
+            <div class="settings-row">
+                <label class="settings-label"><i class="bi bi-music-note"></i> Pos</label>
                 <div class="segmented-control segmented-sm" @onclick:stopPropagation>
                     <button class="segment-btn @(chordDisplayMode == ChordDisplay.Above ? "active" : "")"
                             @onclick="() => SetChordDisplay(ChordDisplay.Above)">
@@ -110,37 +92,29 @@ else
             </div>
         }
 
-        <!-- Font Family Selection -->
-        <div class="settings-section">
-            <label class="settings-label">
-                <i class="bi bi-fonts"></i>
-                Font Style
-            </label>
+        <!-- Font Family -->
+        <div class="settings-row">
+            <label class="settings-label"><i class="bi bi-fonts"></i> Font</label>
             <select class="settings-select" value="@fontFamily" @onchange="OnFontFamilyChanged" @onclick:stopPropagation>
-                <option value="system-ui, -apple-system, 'Segoe UI'">System Default</option>
+                <option value="system-ui, -apple-system, 'Segoe UI'">System</option>
                 <option value="'Georgia', serif">Georgia</option>
                 <option value="'Arial', sans-serif">Arial</option>
-                <option value="'Courier New', monospace">Courier New</option>
-                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="'Courier New', monospace">Courier</option>
+                <option value="'Times New Roman', serif">Times</option>
                 <option value="'Kanit','Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'">Kanit</option>
                 <option value="'Montserrat', sans-serif">Montserrat</option>
             </select>
         </div>
 
         <!-- Show Verse Titles Toggle -->
-        <div class="settings-section">
-            <div class="setting-toggle">
-                <label class="settings-label" for="showVerseTitlesToggle">
-                    <i class="bi bi-card-heading"></i>
-                    Show Verse Titles
-                </label>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" role="switch"
-                           id="showVerseTitlesToggle"
-                           checked="@showVerseTitles"
-                           @onchange="OnShowVerseTitlesChanged"
-                           @onclick:stopPropagation />
-                </div>
+        <div class="settings-row">
+            <label class="settings-label" for="showVerseTitlesToggle"><i class="bi bi-card-heading"></i> Titles</label>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="showVerseTitlesToggle"
+                       checked="@showVerseTitles"
+                       @onchange="OnShowVerseTitlesChanged"
+                       @onclick:stopPropagation />
             </div>
         </div>
     </div>
@@ -149,11 +123,11 @@ else
         <button class="save-settings-btn" @onclick="HandleSave" @onclick:stopPropagation disabled="@isSaving">
             @if (isSaving)
             {
-                <span class="spinner-border spinner-border-sm me-2"></span>
+                <span class="spinner-border spinner-border-sm me-1"></span>
             }
             else
             {
-                <i class="bi bi-check-circle me-2"></i>
+                <i class="bi bi-check-circle me-1"></i>
             }
             Save
         </button>

@@ -622,21 +622,93 @@ window.songFullscreen = {
 };
 
 // ============================================
+// DRAGGABLE PALETTE
+// ============================================
+
+/**
+ * Make a palette element draggable via its header (drag handle)
+ * Supports both mouse and touch, clamped to viewport
+ * @param {HTMLElement} paletteEl - The palette element to make draggable
+ */
+window.initDraggablePalette = function (paletteEl) {
+    if (!paletteEl) return;
+
+    var handle = paletteEl.querySelector('.palette-drag-handle');
+    if (!handle) handle = paletteEl.querySelector('.settings-header');
+    if (!handle) return;
+
+    var offsetX = 0, offsetY = 0;
+    var isDragging = false;
+
+    function clampPosition(x, y) {
+        var rect = paletteEl.getBoundingClientRect();
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        x = Math.max(0, Math.min(x, vw - rect.width));
+        y = Math.max(0, Math.min(y, vh - rect.height));
+        return { x: x, y: y };
+    }
+
+    function onStart(clientX, clientY) {
+        isDragging = true;
+        var rect = paletteEl.getBoundingClientRect();
+        offsetX = clientX - rect.left;
+        offsetY = clientY - rect.top;
+        paletteEl.style.transition = 'none';
+        paletteEl.classList.add('is-dragging');
+    }
+
+    function onMove(clientX, clientY) {
+        if (!isDragging) return;
+        var pos = clampPosition(clientX - offsetX, clientY - offsetY);
+        paletteEl.style.left = pos.x + 'px';
+        paletteEl.style.top = pos.y + 'px';
+        paletteEl.style.right = 'auto';
+        paletteEl.style.bottom = 'auto';
+    }
+
+    function onEnd() {
+        isDragging = false;
+        paletteEl.style.transition = '';
+        paletteEl.classList.remove('is-dragging');
+    }
+
+    // Mouse events
+    handle.addEventListener('mousedown', function (e) {
+        if (e.target.closest('button, input, select')) return;
+        e.preventDefault();
+        onStart(e.clientX, e.clientY);
+    });
+    document.addEventListener('mousemove', function (e) {
+        onMove(e.clientX, e.clientY);
+    });
+    document.addEventListener('mouseup', onEnd);
+
+    // Touch events
+    handle.addEventListener('touchstart', function (e) {
+        if (e.target.closest('button, input, select')) return;
+        var t = e.touches[0];
+        onStart(t.clientX, t.clientY);
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+        if (!isDragging) return;
+        var t = e.touches[0];
+        onMove(t.clientX, t.clientY);
+    }, { passive: true });
+    document.addEventListener('touchend', onEnd);
+
+    handle.style.cursor = 'grab';
+};
+
+// ============================================
 // INITIALIZE ON LOAD
 // ============================================
 
 (function () {
-    // Prevent settings dropdown from being hidden behind other elements
+    // Ensure popovers and dropdowns have proper z-index
     document.addEventListener('DOMContentLoaded', function () {
-        // Ensure popovers and dropdowns have proper z-index
-        const style = document.createElement('style');
+        var style = document.createElement('style');
         style.textContent = `
-            .settings-panel-backdrop {
-                z-index: 200000 !important;
-            }
-            .settings-panel-floating {
-                z-index: 200001 !important;
-            }
             .chord-popover-overlay {
                 position: fixed !important;
                 z-index: 200002 !important;

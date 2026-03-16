@@ -151,6 +151,19 @@
             </div>
         </div>
 
+            <!-- Floating Settings Palette -->
+            @if (showSettingsDropdown)
+            {
+                <div class="settings-palette" @ref="settingsPaletteRef">
+                    <SongSettings UserId="@currentUserId"
+                                  SongId="@SongId"
+                                  OnSettingsChanged="OnSettingsPreview"
+                                  OnScrollSpeedChanged="OnScrollSpeedPreview"
+                                  OnSettingsSaved="OnSettingsSaved"
+                                  OnClose="CloseSettingsDropdown" />
+                </div>
+            }
+
             <!-- Chord Charts Section -->
             @if (!isFullscreen && showCharts && uniqueSongChords.Any() && songDisplayMode != SongDisplay.LyricsOnly)
         {
@@ -284,20 +297,6 @@
         <div class="song-rating">
             <SongRating SongId="@SongId" ShowSummary="false" ShowPanel="true" />
         </div>
-
-        <!-- Floating Settings Panel (always on top, even in fullscreen) -->
-        @if (showSettingsDropdown)
-        {
-            <div class="settings-panel-backdrop" @onclick="CloseSettingsDropdown"></div>
-            <div class="settings-panel-floating">
-                <SongSettings UserId="@currentUserId"
-                              SongId="@SongId"
-                              OnSettingsChanged="OnSettingsPreview"
-                              OnScrollSpeedChanged="OnScrollSpeedPreview"
-                              OnSettingsSaved="OnSettingsSaved"
-                              OnClose="CloseSettingsDropdown" />
-            </div>
-        }
     }
 </div>
 
@@ -337,6 +336,7 @@
     // Fullscreen
     private bool isFullscreen = false;
     private ElementReference songContentRef;
+    private ElementReference settingsPaletteRef;
 
     // Autoscroll
     private System.Threading.Timer? autoScrollTimer;
@@ -469,10 +469,15 @@
         StateHasChanged();
     }
 
-    private void ToggleSettingsDropdown()
+    private async Task ToggleSettingsDropdown()
     {
         showSettingsDropdown = !showSettingsDropdown;
         StateHasChanged();
+        if (showSettingsDropdown)
+        {
+            await Task.Yield();
+            await JsRt.InvokeVoidAsync("initDraggablePalette", settingsPaletteRef);
+        }
     }
 
     private void CloseSettingsDropdown()
