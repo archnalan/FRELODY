@@ -557,10 +557,10 @@ window.songFullscreen = {
         if (element && element.requestFullscreen) {
             element.requestFullscreen().catch(function () {
                 // Fallback: use CSS-only fullscreen if API is blocked
-                element.classList.add('song-content-fullscreen');
+                element.classList.add('playback-fullscreen');
             });
         } else if (element) {
-            element.classList.add('song-content-fullscreen');
+            element.classList.add('playback-fullscreen');
         }
     },
 
@@ -569,9 +569,9 @@ window.songFullscreen = {
             document.exitFullscreen().catch(function () {});
         }
         // Also remove CSS fallback class
-        var el = document.querySelector('.song-content-fullscreen');
+        var el = document.querySelector('.playback-fullscreen');
         if (el) {
-            el.classList.remove('song-content-fullscreen');
+            el.classList.remove('playback-fullscreen');
         }
     },
 
@@ -586,7 +586,7 @@ window.songFullscreen = {
         window.songFullscreen._dotNetRef = dotNetRef;
         window.songFullscreen._handler = function (e) {
             if (e.key === 'Escape') {
-                var fullscreenEl = document.querySelector('.song-content-fullscreen');
+                var fullscreenEl = document.querySelector('.playback-fullscreen');
                 if (fullscreenEl && !document.fullscreenElement) {
                     // CSS-only fullscreen — notify Blazor
                     e.preventDefault();
@@ -596,9 +596,9 @@ window.songFullscreen = {
         };
         window.songFullscreen._fullscreenChangeHandler = function () {
             if (!document.fullscreenElement) {
-                var el = document.querySelector('.song-content-fullscreen');
+                var el = document.querySelector('.playback-fullscreen');
                 if (el) {
-                    el.classList.remove('song-content-fullscreen');
+                    el.classList.remove('playback-fullscreen');
                 }
                 // Notify Blazor that fullscreen was exited (e.g. via browser ESC)
                 dotNetRef.invokeMethodAsync('OnEscapePressed');
@@ -631,13 +631,15 @@ window.songFullscreen = {
         // Ensure popovers and dropdowns have proper z-index
         const style = document.createElement('style');
         style.textContent = `
-            .settings-dropdown-overlay {
-                position: fixed !important;
-                z-index: 9999 !important;
+            .settings-panel-backdrop {
+                z-index: 200000 !important;
+            }
+            .settings-panel-floating {
+                z-index: 200001 !important;
             }
             .chord-popover-overlay {
                 position: fixed !important;
-                z-index: 10000 !important;
+                z-index: 200002 !important;
             }
         `;
         document.head.appendChild(style);

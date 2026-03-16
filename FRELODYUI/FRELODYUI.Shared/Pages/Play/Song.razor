@@ -14,8 +14,10 @@
     }
     else if (song != null)
     {
-        <!-- Header: back, title, share -->
-        <div class="song-header">
+        @if (!isFullscreen)
+        {
+            <!-- Header: back, title, share -->
+            <div class="song-header">
             <button class="header-action-btn back-btn" @onclick="GoBack" title="Go back">
                 <i class="bi bi-chevron-left"></i>
             </button>
@@ -53,9 +55,13 @@
                 </div>
             </div>
         </div>
+        }
 
-        <!-- Sticky Controls Bar -->
-        <div class="controls-bar">
+        <!-- Main Playback Area (becomes fullscreen) -->
+        <div class="song-playback-area @(isFullscreen ? "playback-fullscreen" : "")" @ref="songContentRef">
+
+            <!-- Sticky Controls Bar -->
+            <div class="controls-bar">
             <div class="controls-bar-inner">
                 <!-- Autoscroll -->
                 <div class="control-group">
@@ -129,29 +135,24 @@
                             title="Display settings">
                         <i class="bi bi-@(showSettingsDropdown ? "x-lg" : "sliders")"></i>
                     </button>
-                    <button class="control-action-btn" @onclick="EnterFullscreen" title="Fullscreen">
-                        <i class="bi bi-arrows-fullscreen"></i>
-                    </button>
+                    @if (isFullscreen)
+                    {
+                        <button class="control-action-btn" @onclick="ExitFullscreen" title="Exit fullscreen">
+                            <i class="bi bi-fullscreen-exit"></i>
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="control-action-btn" @onclick="EnterFullscreen" title="Fullscreen">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    }
                 </div>
             </div>
         </div>
 
-        <!-- Floating Settings Panel -->
-        @if (showSettingsDropdown)
-        {
-            <div class="settings-panel-backdrop" @onclick="CloseSettingsDropdown"></div>
-            <div class="settings-panel-floating">
-                <SongSettings UserId="@currentUserId"
-                              SongId="@SongId"
-                              OnSettingsChanged="OnSettingsPreview"
-                              OnScrollSpeedChanged="OnScrollSpeedPreview"
-                              OnSettingsSaved="OnSettingsSaved"
-                              OnClose="CloseSettingsDropdown" />
-            </div>
-        }
-
-        <!-- Chord Charts Section -->
-        @if (showCharts && uniqueSongChords.Any() && songDisplayMode != SongDisplay.LyricsOnly)
+            <!-- Chord Charts Section -->
+            @if (!isFullscreen && showCharts && uniqueSongChords.Any() && songDisplayMode != SongDisplay.LyricsOnly)
         {
             <div class="chord-charts-section">
                 <div class="chord-charts-header">
@@ -208,68 +209,9 @@
             </div>
         }
 
-        <!-- Song Content -->
-        <div class="song-content @(isFullscreen ? "song-content-fullscreen" : "")"
-             style="@GetSongContentStyle()" @ref="songContentRef">
-
-            @if (isFullscreen)
-            {
-                <!-- Fullscreen inline controls -->
-                <div class="fullscreen-controls">
-                    <div class="fullscreen-controls-inner">
-                        <div class="control-group">
-                            <button class="control-action-btn @(isAutoScrolling ? "active" : "")"
-                                    @onclick="ToggleAutoScroll"
-                                    title="@(isAutoScrolling ? "Stop" : "Play")">
-                                <i class="bi bi-@(isAutoScrolling ? "pause-fill" : "play-fill")"></i>
-                            </button>
-                            <div class="control-wrapper">
-                                <div class="control-buttons">
-                                    <button class="control-btn" @onclick="() => AdjustScrollSpeed(-0.5)" disabled="@(scrollSpeed <= 0)">
-                                        <i class="bi bi-dash"></i>
-                                    </button>
-                                    <span class="control-value">@scrollSpeed.ToString("0.0")</span>
-                                    <button class="control-btn" @onclick="() => AdjustScrollSpeed(0.5)" disabled="@(scrollSpeed >= 5)">
-                                        <i class="bi bi-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        @if (songDisplayMode != SongDisplay.LyricsOnly && originalChords != null && originalChords.Length > 0)
-                        {
-                            <div class="control-separator"></div>
-                            <div class="control-group">
-                                <button class="control-reset-btn" @onclick="ResetTranspose" title="Reset">
-                                    <i class="bi bi-arrow-counterclockwise"></i>
-                                </button>
-                                <div class="control-wrapper">
-                                    <label class="control-label">Key</label>
-                                    <div class="control-buttons">
-                                        <button class="control-btn" @onclick="DecreaseTranspose" disabled="@(transpose <= -12)">
-                                            <i class="bi bi-dash"></i>
-                                        </button>
-                                        <span class="control-value">@transpose</span>
-                                        <button class="control-btn" @onclick="IncreaseTranspose" disabled="@(transpose >= 12)">
-                                            <i class="bi bi-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-
-                        <div class="control-separator"></div>
-                        <button class="control-action-btn" @onclick="ToggleSettingsDropdown" title="Display settings">
-                            <i class="bi bi-@(showSettingsDropdown ? "x-lg" : "sliders")"></i>
-                        </button>
-                        <button class="control-action-btn" @onclick="ExitFullscreen" title="Exit fullscreen (Esc)">
-                            <i class="bi bi-fullscreen-exit"></i>
-                        </button>
-                    </div>
-                </div>
-            }
-
-            @if (song.SongParts?.Any() == true)
+            <!-- Song Content -->
+            <div class="song-content" style="@GetSongContentStyle()">
+                @if (song.SongParts?.Any() == true)
             {
                 foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
                 {
@@ -313,7 +255,15 @@
                     </div>
                 }
             }
-        </div>
+            </div>
+
+            @if (!isFullscreen)
+            {
+                <button class="maximize-fab" @onclick="EnterFullscreen" title="Enter fullscreen">
+                    <i class="bi bi-arrows-fullscreen"></i>
+                </button>
+            }
+        </div> @* Close song-playback-area *@
 
         <!-- Chord Popover -->
         @if (showChordPopover && hoveredChord != null)
@@ -334,6 +284,20 @@
         <div class="song-rating">
             <SongRating SongId="@SongId" ShowSummary="false" ShowPanel="true" />
         </div>
+
+        <!-- Floating Settings Panel (always on top, even in fullscreen) -->
+        @if (showSettingsDropdown)
+        {
+            <div class="settings-panel-backdrop" @onclick="CloseSettingsDropdown"></div>
+            <div class="settings-panel-floating">
+                <SongSettings UserId="@currentUserId"
+                              SongId="@SongId"
+                              OnSettingsChanged="OnSettingsPreview"
+                              OnScrollSpeedChanged="OnScrollSpeedPreview"
+                              OnSettingsSaved="OnSettingsSaved"
+                              OnClose="CloseSettingsDropdown" />
+            </div>
+        }
     }
 </div>
 
@@ -350,6 +314,8 @@
 
     private SongDto? song;
     private bool isLoading = true;
+    private string? loadedSongId;
+    private DotNetObjectReference<Song>? dotNetRef;
     private int transpose = 0;
     private int capo = 0;
     private Dictionary<string, int>? chordScale;
@@ -403,7 +369,8 @@
             try
             {
                 await JsRt.InvokeVoidAsync("smoothScrollBy", 0);
-                await JsRt.InvokeVoidAsync("songFullscreen.registerEscHandler", DotNetObjectReference.Create(this));
+                dotNetRef = DotNetObjectReference.Create(this);
+                await JsRt.InvokeVoidAsync("songFullscreen.registerEscHandler", dotNetRef);
             }
             catch (Exception ex)
             {
@@ -414,7 +381,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!string.IsNullOrEmpty(SongId))
+        if (!string.IsNullOrEmpty(SongId) && SongId != loadedSongId)
             await LoadSong();
 
         var userResult = await _globalAuth.GetAuthenticatedUserAsync();
@@ -523,7 +490,6 @@
     private async Task EnterFullscreen()
     {
         isFullscreen = true;
-        showSettingsDropdown = false;
         StateHasChanged();
         await JsRt.InvokeVoidAsync("songFullscreen.enter", songContentRef);
     }
@@ -579,12 +545,9 @@
                 var atBottom = await JsRt.InvokeAsync<bool>("isAtBottom");
                 if (atBottom)
                 {
-                    await InvokeAsync(() =>
-                    {
-                        StopAutoScroll();
-                        isAutoScrolling = false;
-                        StateHasChanged();
-                    });
+                    StopAutoScroll();
+                    isAutoScrolling = false;
+                    StateHasChanged();
                     return;
                 }
 
@@ -724,6 +687,7 @@
 
     private async Task LoadSong()
     {
+        loadedSongId = SongId;
         isLoading = true;
         StateHasChanged();
 
@@ -924,6 +888,7 @@
         popoverTimer?.Dispose();
         autoScrollTimer = null;
         popoverTimer = null;
+        dotNetRef?.Dispose();
         try { JsRt.InvokeVoidAsync("songFullscreen.dispose"); } catch { }
     }
 }

@@ -9,6 +9,10 @@
     min-height: 100vh;
 }
 
+.song-playback-area {
+    position: relative;
+}
+
 /* ============================================
    HEADER
    ============================================ */
@@ -251,7 +255,7 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.2);
-    z-index: 1000;
+    z-index: 200000;
     animation: backdropFadeIn 0.2s ease;
 }
 
@@ -271,7 +275,7 @@
     border: 1px solid var(--border-light);
     border-radius: 12px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
-    z-index: 1001;
+    z-index: 200001;
     animation: panelSlideIn 0.25s ease;
 }
 
@@ -685,82 +689,106 @@
 }
 
 /* ============================================
+   MAXIMIZE FLOATING ACTION BUTTON
+   ============================================ */
+
+.maximize-fab {
+    position: absolute;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    background: var(--bg-active);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+    transition: all 0.2s ease;
+    z-index: 10;
+    font-size: 1rem;
+}
+
+    .maximize-fab:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+    }
+
+    .maximize-fab:active {
+        transform: scale(0.95);
+    }
+
+/* ============================================
    FULLSCREEN MODE
    ============================================ */
 
-.song-content-fullscreen {
+.playback-fullscreen {
     position: fixed !important;
     inset: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
     max-width: none !important;
     margin: 0 !important;
-    border-radius: 0 !important;
-    border: none !important;
     z-index: 99999 !important;
     overflow-y: auto;
-    padding: 4rem 1rem 2rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     background: var(--modal-content-bg) !important;
 }
 
-.song-content-fullscreen .verse-section {
-    max-width: 800px;
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-}
+    .playback-fullscreen .controls-bar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        border-radius: 0;
+        margin: 0;
+        padding: 0 1rem;
+        border-top: none;
+    }
 
-/* Fullscreen controls bar at the top */
-.fullscreen-controls {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100000;
-    background: var(--card-bg);
-    border-bottom: 1px solid var(--border-light);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    animation: slideDownFromTop 0.3s ease;
-}
+    .playback-fullscreen .song-content {
+        max-width: 800px;
+        margin: 0 auto;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+    }
 
-@keyframes slideDownFromTop {
-    from { transform: translateY(-100%); }
-    to { transform: translateY(0); }
-}
-
-.fullscreen-controls-inner {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 1rem;
-    max-width: 900px;
-    margin: 0 auto;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-    .fullscreen-controls-inner::-webkit-scrollbar {
-        display: none;
+    .playback-fullscreen .song-content .verse-section {
+        max-width: 800px;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
     }
 
 /* Fullscreen via Fullscreen API */
-.song-content:fullscreen {
-    padding: 4rem 2rem 2rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: var(--modal-content-bg) !important;
+.song-playback-area:fullscreen {
     overflow-y: auto;
+    background: var(--modal-content-bg) !important;
 }
 
-.song-content:fullscreen .verse-section {
-    max-width: 800px;
-    width: 100%;
-}
+    .song-playback-area:fullscreen .controls-bar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        border-radius: 0;
+        margin: 0;
+        padding: 0 1rem;
+    }
+
+    .song-playback-area:fullscreen .song-content {
+        max-width: 800px;
+        margin: 0 auto;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .song-playback-area:fullscreen .song-content .verse-section {
+        max-width: 800px;
+        width: 100%;
+    }
 
 /* ============================================
    LOADING STATE
@@ -848,7 +876,6 @@
     .slider-nav-btn {
         display: flex;
     }
-
     .chord-charts-section {
         padding: 1.5rem;
         margin-bottom: 1.5rem;
@@ -880,13 +907,13 @@
         margin-right: 0.5rem;
     }
 
-    .song-content-fullscreen {
-        padding: 4rem 3rem 2rem;
+    .playback-fullscreen {
+        padding: 0;
     }
 
-    .fullscreen-controls-inner {
-        padding: 0.625rem 1.5rem;
-    }
+        .playback-fullscreen .song-content {
+            padding: 2rem 3rem;
+        }
 }
 
 /* ============================================
@@ -924,9 +951,17 @@
     background: rgba(31, 41, 55, 0.8);
 }
 
-[data-bs-theme="dark"] .fullscreen-controls {
-    background: rgba(17, 24, 39, 0.95);
+[data-bs-theme="dark"] .playback-fullscreen {
+    background: #111827 !important;
 }
+
+    [data-bs-theme="dark"] .playback-fullscreen .controls-bar {
+        background: rgba(17, 24, 39, 0.95);
+    }
+
+    [data-bs-theme="dark"] .playback-fullscreen .song-content {
+        background: transparent;
+    }
 
 [data-bs-theme="dark"] .chord-popover-content {
     background: rgba(17, 24, 39, 0.98);
@@ -936,10 +971,13 @@
     background: rgba(55, 65, 81, 0.5);
 }
 
-[data-bs-theme="dark"] .song-content-fullscreen,
-[data-bs-theme="dark"] .song-content:fullscreen {
+[data-bs-theme="dark"] .song-playback-area:fullscreen {
     background: #111827 !important;
 }
+
+    [data-bs-theme="dark"] .song-playback-area:fullscreen .controls-bar {
+        background: rgba(17, 24, 39, 0.95);
+    }
 
 [data-bs-theme="dark"] .settings-panel-floating {
     background: rgba(17, 24, 39, 0.98);
@@ -953,4 +991,8 @@
 
 [data-bs-theme="dark"] .chord-count-badge {
     background: var(--gradient-primary-start);
+}
+
+[data-bs-theme="dark"] .maximize-fab {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
 }
