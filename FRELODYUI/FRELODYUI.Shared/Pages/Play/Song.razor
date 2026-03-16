@@ -149,20 +149,19 @@
                     }
                 </div>
             </div>
-        </div>
 
-            <!-- Floating Settings Palette -->
-            @if (showSettingsDropdown)
-            {
-                <div class="settings-palette" @ref="settingsPaletteRef">
-                    <SongSettings UserId="@currentUserId"
-                                  SongId="@SongId"
-                                  OnSettingsChanged="OnSettingsPreview"
-                                  OnScrollSpeedChanged="OnScrollSpeedPreview"
-                                  OnSettingsSaved="OnSettingsSaved"
-                                  OnClose="CloseSettingsDropdown" />
-                </div>
-            }
+                @if (showSettingsDropdown)
+                {
+                    <div class="settings-palette" @ref="settingsPaletteRef">
+                        <SongSettings UserId="@currentUserId"
+                                      SongId="@SongId"
+                                      OnSettingsChanged="OnSettingsPreview"
+                                      OnScrollSpeedChanged="OnScrollSpeedPreview"
+                                      OnSettingsSaved="OnSettingsSaved"
+                                      OnClose="CloseSettingsDropdown" />
+                    </div>
+                }
+        </div>
 
             <!-- Chord Charts Section -->
             @if (!isFullscreen && showCharts && uniqueSongChords.Any() && songDisplayMode != SongDisplay.LyricsOnly)

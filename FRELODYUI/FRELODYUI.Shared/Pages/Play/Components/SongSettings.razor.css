@@ -35,6 +35,12 @@
         align-items: center;
     }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+}
+
 .close-btn {
     display: flex;
     align-items: center;

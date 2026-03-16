@@ -166,7 +166,30 @@ window.hideDropdown = function (dropdownButtonId) {
  * @returns {object} Scroll container object with utility methods
  */
 window.getCurrentScrollContainer = function () {
-    // Check for LandingLayout first
+    // Check for fullscreen mode first (both native API and CSS fallback)
+    var fullscreenEl = document.fullscreenElement || document.querySelector('.playback-fullscreen');
+    if (fullscreenEl) {
+        return {
+            element: fullscreenEl,
+            scrollTop: fullscreenEl.scrollTop,
+            scrollHeight: fullscreenEl.scrollHeight,
+            clientHeight: fullscreenEl.clientHeight,
+            scrollBy: (pixels) => {
+                fullscreenEl.scrollBy({ top: pixels, behavior: 'smooth' });
+            },
+            scrollTo: (position) => {
+                fullscreenEl.scrollTo({ top: position, behavior: 'smooth' });
+            },
+            scrollToTop: () => {
+                fullscreenEl.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+            scrollToBottom: () => {
+                fullscreenEl.scrollTo({ top: fullscreenEl.scrollHeight, behavior: 'smooth' });
+            }
+        };
+    }
+
+    // Check for LandingLayout
     const landingBody = document.querySelector('.landing-body');
     if (landingBody) {
         return {
@@ -633,6 +656,11 @@ window.songFullscreen = {
 window.initDraggablePalette = function (paletteEl) {
     if (!paletteEl) return;
 
+    // Clean up previous drag listeners if re-initialized
+    if (paletteEl._dragCleanup) {
+        paletteEl._dragCleanup();
+    }
+
     var handle = paletteEl.querySelector('.palette-drag-handle');
     if (!handle) handle = paletteEl.querySelector('.settings-header');
     if (!handle) return;
@@ -654,6 +682,13 @@ window.initDraggablePalette = function (paletteEl) {
         var rect = paletteEl.getBoundingClientRect();
         offsetX = clientX - rect.left;
         offsetY = clientY - rect.top;
+
+        // Switch to fixed positioning so coords are viewport-relative
+        paletteEl.style.position = 'fixed';
+        paletteEl.style.left = rect.left + 'px';
+        paletteEl.style.top = rect.top + 'px';
+        paletteEl.style.right = 'auto';
+        paletteEl.style.bottom = 'auto';
         paletteEl.style.transition = 'none';
         paletteEl.classList.add('is-dragging');
     }
@@ -663,41 +698,55 @@ window.initDraggablePalette = function (paletteEl) {
         var pos = clampPosition(clientX - offsetX, clientY - offsetY);
         paletteEl.style.left = pos.x + 'px';
         paletteEl.style.top = pos.y + 'px';
-        paletteEl.style.right = 'auto';
-        paletteEl.style.bottom = 'auto';
     }
 
     function onEnd() {
+        if (!isDragging) return;
         isDragging = false;
         paletteEl.style.transition = '';
         paletteEl.classList.remove('is-dragging');
     }
 
     // Mouse events
-    handle.addEventListener('mousedown', function (e) {
+    function onMouseDown(e) {
         if (e.target.closest('button, input, select')) return;
         e.preventDefault();
         onStart(e.clientX, e.clientY);
-    });
-    document.addEventListener('mousemove', function (e) {
+    }
+    function onMouseMove(e) {
         onMove(e.clientX, e.clientY);
-    });
-    document.addEventListener('mouseup', onEnd);
+    }
 
     // Touch events
-    handle.addEventListener('touchstart', function (e) {
+    function onTouchStart(e) {
         if (e.target.closest('button, input, select')) return;
         var t = e.touches[0];
         onStart(t.clientX, t.clientY);
-    }, { passive: true });
-    document.addEventListener('touchmove', function (e) {
+    }
+    function onTouchMove(e) {
         if (!isDragging) return;
         var t = e.touches[0];
         onMove(t.clientX, t.clientY);
-    }, { passive: true });
+    }
+
+    handle.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onEnd);
+    handle.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
     document.addEventListener('touchend', onEnd);
 
     handle.style.cursor = 'grab';
+
+    // Store cleanup function for re-initialization
+    paletteEl._dragCleanup = function () {
+        handle.removeEventListener('mousedown', onMouseDown);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onEnd);
+        handle.removeEventListener('touchstart', onTouchStart);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onEnd);
+    };
 };
 
 // ============================================
