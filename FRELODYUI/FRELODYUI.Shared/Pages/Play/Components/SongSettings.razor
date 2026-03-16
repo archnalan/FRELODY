@@ -165,11 +165,13 @@ else
     [Parameter] public string? SongId { get; set; }
     [Parameter] public EventCallback<SettingDto> OnSettingsSaved { get; set; }
     [Parameter] public EventCallback<SettingDto> OnSettingsChanged { get; set; }
+    [Parameter] public EventCallback<double> OnScrollSpeedChanged { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
     private bool isLoading = true;
     private bool isSaving = false;
     private bool hasLoaded = false;
+    private bool isInitialized = false;
 
     // Local settings state
     private double scrollSpeed = 1.5;
@@ -186,6 +188,7 @@ else
         {
             await LoadSettings();
             hasLoaded = true;
+            isInitialized = true;
         }
     }
 
@@ -266,6 +269,7 @@ else
 
     private async Task NotifyChanged()
     {
+        if (!isInitialized) return;
         await OnSettingsChanged.InvokeAsync(BuildSettingDto());
     }
 
@@ -327,7 +331,8 @@ else
     {
         if (double.TryParse(e.Value?.ToString(), out var val))
             scrollSpeed = val;
-        await NotifyChanged();
+        if (isInitialized)
+            await OnScrollSpeedChanged.InvokeAsync(scrollSpeed);
     }
 
     private async Task OnChordFontSizeInput(ChangeEventArgs e)

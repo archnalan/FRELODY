@@ -14,17 +14,17 @@
     }
     else if (song != null)
     {
-        <!-- Modern Header with Actions -->
-        <div class="song-header" style="position:relative; z-index:5">
+        <!-- Header: back, title, share -->
+        <div class="song-header">
             <button class="header-action-btn back-btn" @onclick="GoBack" title="Go back">
                 <i class="bi bi-chevron-left"></i>
             </button>
 
             <div class="song-title-section" style="font-family:@fontFamily">
-                <div class="song-title-wrapper mb-3">
+                <div class="song-title-wrapper">
                     @if (song.SongNumber.HasValue)
                     {
-                        <span class="song-number">@song.SongNumber.Value.ToString("D3")</span>
+                        <span class="song-number">#@song.SongNumber.Value.ToString("D3")</span>
                     }
                     <h1 class="song-title">@song.Title</h1>
                 </div>
@@ -32,48 +32,17 @@
             </div>
 
             <div class="header-actions">
-                <!-- Settings Dropdown -->
-                <div class="dropdown">
-                    <button class="header-action-btn settings-btn"
-                            type="button"
-                            id="settingsDropdownButton"
-                            data-bs-toggle="dropdown"
-                            data-bs-auto-close="outside"
-                            title="Display settings">
-                        <i class="bi bi-gear"></i>
-                    </button>
-
-                    <div class="dropdown-menu dropdown-menu-end settings-dropdown shadow-lg"
-                         aria-labelledby="settingsDropdownButton">
-                        <SongSettings UserId="@currentUserId"
-                                      SongId="@SongId"
-                                      OnSettingsChanged="OnSettingsPreview"
-                                      OnSettingsSaved="OnSettingsSaved"
-                                      OnClose="CloseSettingsDropdown" />
-                    </div>
-                    
-                </div>
-                <!-- Share Dropdown -->
                 <div class="dropdown">
                     <button class="btn btn-primary dropdown-toggle"
                             type="button"
                             id="shareDropdownButton"
                             data-bs-toggle="dropdown"
                             data-bs-auto-close="outside"
-                            title="Share" 
-                            disabled="@isLoading">
-                        @if (isLoading)
-                        {
-                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                        }
-                        else
-                        {
-                            <i class="bi bi-upload me-1"></i>
-                        }
-                        Share
+                            title="Share">
+                        <i class="bi bi-upload me-1"></i>
+                        <span class="d-none d-sm-inline">Share</span>
                     </button>
-
-                    <div class="dropdown-menu dropdown-menu-start"
+                    <div class="dropdown-menu dropdown-menu-end"
                          aria-labelledby="shareDropdownButton">
                         <ShareDropdown Song="song"
                                        ShareLinkUrl="@shareLinkUrl"
@@ -85,151 +54,221 @@
             </div>
         </div>
 
-        <!-- Autoscroll and Controls Section -->
-        <div class="fret-section" style="position:relative; z-index:2">
+        <!-- Sticky Controls Bar -->
+        <div class="controls-bar">
+            <div class="controls-bar-inner">
+                <!-- Autoscroll -->
+                <div class="control-group">
+                    <button class="control-action-btn @(isAutoScrolling ? "active" : "")"
+                            @onclick="ToggleAutoScroll"
+                            title="@(isAutoScrolling ? "Stop autoscroll" : "Start autoscroll")">
+                        <i class="bi bi-@(isAutoScrolling ? "pause-fill" : "play-fill")"></i>
+                    </button>
+                    <div class="control-wrapper">
+                        <label class="control-label">Scroll</label>
+                        <div class="control-buttons">
+                            <button class="control-btn" @onclick="() => AdjustScrollSpeed(-0.5)" disabled="@(scrollSpeed <= 0)">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <span class="control-value">@scrollSpeed.ToString("0.0")</span>
+                            <button class="control-btn" @onclick="() => AdjustScrollSpeed(0.5)" disabled="@(scrollSpeed >= 5)">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-            @if (songDisplayMode != SongDisplay.LyricsOnly)
-            {
-                <div class="controls-section">
-                    <!-- Autoscroll Control -->
+                @if (songDisplayMode != SongDisplay.LyricsOnly && originalChords != null && originalChords.Length > 0)
+                {
+                    <div class="control-separator"></div>
+
+                    <!-- Transpose -->
                     <div class="control-group">
-                        <button class="control-action-btn @(isAutoScrolling ? "active" : "")"
-                                @onclick="ToggleAutoScroll"
-                                title="@(isAutoScrolling ? "Stop autoscroll" : "Start autoscroll")">
-                            <i class="bi bi-@(isAutoScrolling ? "pause-fill" : "play-fill")"></i>
+                        <button class="control-reset-btn" @onclick="ResetTranspose" title="Reset transpose">
+                            <i class="bi bi-arrow-counterclockwise"></i>
                         </button>
                         <div class="control-wrapper">
-                            <label class="control-label">Autoscroll</label>
+                            <label class="control-label">Transpose</label>
                             <div class="control-buttons">
-                                <button class="control-btn" @onclick="() => AdjustScrollSpeed(-0.5)" disabled="@(scrollSpeed <= 0)">
+                                <button class="control-btn" @onclick="DecreaseTranspose" disabled="@(transpose <= -12)">
                                     <i class="bi bi-dash"></i>
                                 </button>
-                                <span class="control-value">@scrollSpeed.ToString("0.0")</span>
-                                <button class="control-btn" @onclick="() => AdjustScrollSpeed(0.5)" disabled="@(scrollSpeed >= 5)">
+                                <span class="control-value">@transpose</span>
+                                <button class="control-btn" @onclick="IncreaseTranspose" disabled="@(transpose >= 12)">
                                     <i class="bi bi-plus"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
-                    
-                    @if (originalChords != null && originalChords.Length > 0)
-                    {
-                        <!-- Transpose Control -->
-                        <div class="control-group">
-                            <button class="control-reset-btn" @onclick="ResetTranspose" title="Reset transpose">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </button>
-                            <div class="control-wrapper">
-                                <label class="control-label">Transpose</label>
-                                <div class="control-buttons">
-                                    <button class="control-btn" @onclick="DecreaseTranspose" disabled="@(transpose <= -12)">
-                                        <i class="bi bi-dash"></i>
-                                    </button>
-                                    <span class="control-value">@transpose</span>
-                                    <button class="control-btn" @onclick="IncreaseTranspose" disabled="@(transpose >= 12)">
-                                        <i class="bi bi-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Capo Control -->
-                        <div class="control-group">
-                            <div class="control-wrapper">
-                                <label class="control-label">Capo</label>
-                                <div class="control-buttons">
-                                    <button class="control-btn" @onclick="DecreaseCapo" disabled="@(capo <= 0)">
-                                        <i class="bi bi-dash"></i>
-                                    </button>
-                                    <span class="control-value">@capo</span>
-                                    <button class="control-btn" @onclick="IncreaseCapo" disabled="@(capo >= 12)">
-                                        <i class="bi bi-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <button class="control-reset-btn" @onclick="ResetCapo" title="Reset capo">
-                                <i class="bi bi-arrow-clockwise"></i>
-                            </button>
-                        </div>
-                    }
-                    
-                </div>
-
-                @if (showCharts && uniqueSongChords.Any())
-                {
-                    <div class="control-divider"></div>
-                    <div class="chord-charts-section">
-                        <div class="chord-charts-header">
-                            <h5 class="chord-charts-title">
-                                <i class="bi bi-music-note-list"></i>
-                                Song Chords
-                            </h5>
-                            <button class="toggle-grid-btn" @onclick="ToggleChordGrid" title="@(showChordGrid ? "Show slider" : "Show all")">
-                                <i class="bi bi-@(showChordGrid ? "list" : "grid-3x3")"></i>
-                            </button>
-                        </div>
-
-                        @if (showChordGrid)
-                        {
-                            <div class="chord-charts-grid">
-                                @foreach (var chord in uniqueSongChords)
-                                {
-                                    <div class="chord-chart-card">
-                                        <h6 class="chord-chart-name">@GetTransposedChordName(chord.ChordName)</h6>
-                                        <ChordCarousel Chord="@chord"
-                                                       Size="CarouselSize.Medium"
-                                                       ShowActions="false"
-                                                       CarouselId="@($"inline-carousel-{chord.Id}")" />
-                                    </div>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="chord-charts-slider">
-                                <button class="slider-nav-btn slider-prev" @onclick="ScrollChartsLeft" disabled="@(chordScrollPosition <= 0)">
-                                    <i class="bi bi-chevron-left"></i>
+                    <!-- Capo -->
+                    <div class="control-group">
+                        <div class="control-wrapper">
+                            <label class="control-label">Capo</label>
+                            <div class="control-buttons">
+                                <button class="control-btn" @onclick="DecreaseCapo" disabled="@(capo <= 0)">
+                                    <i class="bi bi-dash"></i>
                                 </button>
-                                <div class="chord-charts-track" @ref="chordChartsTrackRef">
-                                    @foreach (var chord in uniqueSongChords)
-                                    {
-                                        <div class="chord-chart-card">
-                                            <h6 class="chord-chart-name">@GetTransposedChordName(chord.ChordName)</h6>
-                                            <ChordCarousel Chord="@chord"
-                                                           Size="CarouselSize.Medium"
-                                                           ShowActions="false"
-                                                           CarouselId="@($"inline-carousel-{chord.Id}")" />
-                                        </div>
-                                    }
-                                </div>
-                                <button class="slider-nav-btn slider-next" @onclick="ScrollChartsRight">
-                                    <i class="bi bi-chevron-right"></i>
+                                <span class="control-value">@capo</span>
+                                <button class="control-btn" @onclick="IncreaseCapo" disabled="@(capo >= 12)">
+                                    <i class="bi bi-plus"></i>
                                 </button>
                             </div>
-                        }
-                        <div class="w-100 d-flex justify-content-end">
-                            <small> <i class="bi bi-music-note-beamed me-2"></i> @uniqueSongChords.Count chords</small>
                         </div>
+                        <button class="control-reset-btn" @onclick="ResetCapo" title="Reset capo">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
                     </div>
-
                 }
-            }
+
+                <div class="control-separator d-none d-sm-block"></div>
+
+                <!-- Right-side actions -->
+                <div class="controls-bar-actions">
+                    <button class="control-action-btn" @onclick="ToggleSettingsDropdown"
+                            title="Display settings">
+                        <i class="bi bi-@(showSettingsDropdown ? "x-lg" : "sliders")"></i>
+                    </button>
+                    <button class="control-action-btn" @onclick="EnterFullscreen" title="Fullscreen">
+                        <i class="bi bi-arrows-fullscreen"></i>
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <!-- Song Content with Dynamic Styling -->
-        <div class="song-content @(isFullscreen ? "song-content-fullscreen" : "")" style="@GetSongContentStyle()" @ref="songContentRef">
+        <!-- Floating Settings Panel -->
+        @if (showSettingsDropdown)
+        {
+            <div class="settings-panel-backdrop" @onclick="CloseSettingsDropdown"></div>
+            <div class="settings-panel-floating">
+                <SongSettings UserId="@currentUserId"
+                              SongId="@SongId"
+                              OnSettingsChanged="OnSettingsPreview"
+                              OnScrollSpeedChanged="OnScrollSpeedPreview"
+                              OnSettingsSaved="OnSettingsSaved"
+                              OnClose="CloseSettingsDropdown" />
+            </div>
+        }
+
+        <!-- Chord Charts Section -->
+        @if (showCharts && uniqueSongChords.Any() && songDisplayMode != SongDisplay.LyricsOnly)
+        {
+            <div class="chord-charts-section">
+                <div class="chord-charts-header">
+                    <h5 class="chord-charts-title">
+                        <i class="bi bi-music-note-list"></i>
+                        Song Chords
+                        <span class="chord-count-badge">@uniqueSongChords.Count</span>
+                    </h5>
+                    <button class="toggle-grid-btn" @onclick="ToggleChordGrid"
+                            title="@(showChordGrid ? "Show slider" : "Show all")">
+                        <i class="bi bi-@(showChordGrid ? "list" : "grid-3x3")"></i>
+                    </button>
+                </div>
+
+                @if (showChordGrid)
+                {
+                    <div class="chord-charts-grid">
+                        @foreach (var chord in uniqueSongChords)
+                        {
+                            <div class="chord-chart-card">
+                                <h6 class="chord-chart-name">@GetTransposedChordName(chord.ChordName)</h6>
+                                <ChordCarousel Chord="@chord"
+                                               Size="CarouselSize.Medium"
+                                               ShowActions="false"
+                                               CarouselId="@($"inline-carousel-{chord.Id}")" />
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="chord-charts-slider">
+                        <button class="slider-nav-btn slider-prev" @onclick="ScrollChartsLeft"
+                                disabled="@(chordScrollPosition <= 0)">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <div class="chord-charts-track" @ref="chordChartsTrackRef">
+                            @foreach (var chord in uniqueSongChords)
+                            {
+                                <div class="chord-chart-card">
+                                    <h6 class="chord-chart-name">@GetTransposedChordName(chord.ChordName)</h6>
+                                    <ChordCarousel Chord="@chord"
+                                                   Size="CarouselSize.Medium"
+                                                   ShowActions="false"
+                                                   CarouselId="@($"inline-carousel-{chord.Id}")" />
+                                </div>
+                            }
+                        </div>
+                        <button class="slider-nav-btn slider-next" @onclick="ScrollChartsRight">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Song Content -->
+        <div class="song-content @(isFullscreen ? "song-content-fullscreen" : "")"
+             style="@GetSongContentStyle()" @ref="songContentRef">
+
             @if (isFullscreen)
             {
-                <button class="fullscreen-minimize-btn" @onclick="ExitFullscreen" title="Exit fullscreen (Esc)">
-                    <i class="bi bi-fullscreen-exit"></i>
-                </button>
+                <!-- Fullscreen inline controls -->
+                <div class="fullscreen-controls">
+                    <div class="fullscreen-controls-inner">
+                        <div class="control-group">
+                            <button class="control-action-btn @(isAutoScrolling ? "active" : "")"
+                                    @onclick="ToggleAutoScroll"
+                                    title="@(isAutoScrolling ? "Stop" : "Play")">
+                                <i class="bi bi-@(isAutoScrolling ? "pause-fill" : "play-fill")"></i>
+                            </button>
+                            <div class="control-wrapper">
+                                <div class="control-buttons">
+                                    <button class="control-btn" @onclick="() => AdjustScrollSpeed(-0.5)" disabled="@(scrollSpeed <= 0)">
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <span class="control-value">@scrollSpeed.ToString("0.0")</span>
+                                    <button class="control-btn" @onclick="() => AdjustScrollSpeed(0.5)" disabled="@(scrollSpeed >= 5)">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (songDisplayMode != SongDisplay.LyricsOnly && originalChords != null && originalChords.Length > 0)
+                        {
+                            <div class="control-separator"></div>
+                            <div class="control-group">
+                                <button class="control-reset-btn" @onclick="ResetTranspose" title="Reset">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                                <div class="control-wrapper">
+                                    <label class="control-label">Key</label>
+                                    <div class="control-buttons">
+                                        <button class="control-btn" @onclick="DecreaseTranspose" disabled="@(transpose <= -12)">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <span class="control-value">@transpose</span>
+                                        <button class="control-btn" @onclick="IncreaseTranspose" disabled="@(transpose >= 12)">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="control-separator"></div>
+                        <button class="control-action-btn" @onclick="ToggleSettingsDropdown" title="Display settings">
+                            <i class="bi bi-@(showSettingsDropdown ? "x-lg" : "sliders")"></i>
+                        </button>
+                        <button class="control-action-btn" @onclick="ExitFullscreen" title="Exit fullscreen (Esc)">
+                            <i class="bi bi-fullscreen-exit"></i>
+                        </button>
+                    </div>
+                </div>
             }
-            else
-            {
-                <button class="fullscreen-toggle-btn" @onclick="EnterFullscreen" title="Fullscreen">
-                    <i class="bi bi-arrows-fullscreen"></i>
-                </button>
-            }
+
             @if (song.SongParts?.Any() == true)
             {
                 foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
@@ -251,11 +290,11 @@
                                         foreach (var segment in line.LyricSegments.OrderBy(s => s.LyricOrder))
                                         {
                                             <div class="lyric-segment @GetChordDisplayClass()">
-                                                @if (segment.Chord != null && 
-                                                (songDisplayMode == SongDisplay.LyricsAndChords 
-                                                || songDisplayMode == SongDisplay.LyricsAndChordsAndCharts))
+                                                @if (segment.Chord != null &&
+                                                    (songDisplayMode == SongDisplay.LyricsAndChords
+                                                    || songDisplayMode == SongDisplay.LyricsAndChordsAndCharts))
                                                 {
-                                                    <span class="chord @GetChordAlignmentClass(segment)" 
+                                                    <span class="chord @GetChordAlignmentClass(segment)"
                                                           style="font-size: @(chordFontSize)px;"
                                                           @onmouseenter="(e) => ShowChordPopover(segment.Chord, e)"
                                                           @onmouseleave="HandleChordMouseLeave">
@@ -279,7 +318,7 @@
         <!-- Chord Popover -->
         @if (showChordPopover && hoveredChord != null)
         {
-            <div class="chord-popover-overlay" 
+            <div class="chord-popover-overlay"
                  style="top: @(popoverTop)px; left: @(popoverLeft)px;"
                  @onmouseenter="() => isMouseOverPopover = true"
                  @onmouseleave="HideChordPopover">
@@ -293,7 +332,6 @@
         }
 
         <div class="song-rating">
-            <!-- Bottom Rating Panel -->
             <SongRating SongId="@SongId" ShowSummary="false" ShowPanel="true" />
         </div>
     }
@@ -320,6 +358,7 @@
     private ElementReference songContainerRef;
     private ElementReference chordChartsTrackRef;
     private string shareLinkUrl = string.Empty;
+
     // Display Settings
     private bool showSettingsDropdown = false;
     private int chordFontSize = 14;
@@ -336,7 +375,7 @@
     // Autoscroll
     private System.Threading.Timer? autoScrollTimer;
     private bool isAutoScrolling = false;
-    private double scrollSpeed = 1.5; // Support decimal values for smoother control
+    private double scrollSpeed = 1.5;
     private const string ApiBaseUrl = "https://localhost:7077";
 
     // Chord Charts
@@ -361,7 +400,6 @@
         if (firstRender)
         {
             shareLinkUrl = _navManager.Uri;
-            // Ensure JS functions are loaded
             try
             {
                 await JsRt.InvokeVoidAsync("smoothScrollBy", 0);
@@ -410,7 +448,6 @@
                 ApplySettingsDto(settings);
             }
 
-            // Load song-specific scroll speed
             if (!string.IsNullOrEmpty(SongId))
             {
                 var key = $"SongSettings_{SongId}";
@@ -451,6 +488,12 @@
         StateHasChanged();
     }
 
+    private void OnScrollSpeedPreview(double newSpeed)
+    {
+        scrollSpeed = newSpeed;
+        StateHasChanged();
+    }
+
     private void OnSettingsSaved(SettingDto settings)
     {
         ApplySettingsDto(settings);
@@ -469,8 +512,6 @@
     {
         showSettingsDropdown = false;
         StateHasChanged();
-
-        JsRt.InvokeVoidAsync("hideDropdown", "settingsDropdownButton");
     }
 
     private void AdjustScrollSpeed(double delta)
@@ -482,6 +523,7 @@
     private async Task EnterFullscreen()
     {
         isFullscreen = true;
+        showSettingsDropdown = false;
         StateHasChanged();
         await JsRt.InvokeVoidAsync("songFullscreen.enter", songContentRef);
     }
@@ -507,11 +549,9 @@
 
         if (isAutoScrolling)
         {
-            // Check if we're at bottom (works universally now)
             var atBottom = await JsRt.InvokeAsync<bool>("isAtBottom");
             if (atBottom)
             {
-                // Reset to top if at bottom
                 await JsRt.InvokeVoidAsync("scrollToTop");
                 await Task.Delay(100);
             }
@@ -526,27 +566,6 @@
         StateHasChanged();
     }
 
-    private async Task CheckAndScroll()
-    {
-        if (!isAutoScrolling) return;
-
-        // Check if we're at the bottom
-        var isAtBottom = await JsRt.InvokeAsync<bool>("isAtBottom");
-
-        if (isAtBottom)
-        {
-            // Stop at bottom
-            StopAutoScroll();
-            isAutoScrolling = false;
-            StateHasChanged();
-            return;
-        }
-
-        // Only scroll if we're not at bottom
-        double scrollAmount = scrollSpeed * 10;
-        await JsRt.InvokeVoidAsync("smoothScrollBy", (int)Math.Round(scrollAmount));
-    }
-
     private void StartAutoScroll()
     {
         autoScrollTimer?.Dispose();
@@ -557,7 +576,6 @@
             {
                 if (!isAutoScrolling) return;
 
-                // Check if at bottom (universal function)
                 var atBottom = await JsRt.InvokeAsync<bool>("isAtBottom");
                 if (atBottom)
                 {
@@ -570,8 +588,6 @@
                     return;
                 }
 
-                // Scroll with more precise speed control
-                // Using 5 as base multiplier for smoother scrolling
                 double scrollAmount = scrollSpeed * 5;
                 await JsRt.InvokeVoidAsync("smoothScrollBy", (int)Math.Round(scrollAmount));
             });
@@ -610,33 +626,17 @@
         if (hoveredChord != null)
         {
             currentChartIndex = 0;
+            var popoverHeight = 150;
+            var popoverWidth = 85;
 
-            // Calculate position to show above the chord
-            var popoverHeight = 150; // Approximate height of compact popover
-            var popoverWidth = 85;  // Approximate width of compact popover
-
-            // Position above the chord
             popoverTop = e.ClientY - popoverHeight - 15;
             popoverLeft = e.ClientX - (popoverWidth / 2);
 
-            // Adjust if popover would go off top of screen
             if (popoverTop < 10)
-            {
-                popoverTop = e.ClientY + 15; // Show below instead
-            }
+                popoverTop = e.ClientY + 15;
 
-            // Adjust if popover would go off left edge
             if (popoverLeft < 10)
-            {
                 popoverLeft = 10;
-            }
-
-            // Adjust if popover would go off right edge
-            // var viewportWidth = await JsRt.InvokeAsync<int>("getViewportDimensions").then(d => d.width);
-            // if (popoverLeft + popoverWidth > viewportWidth - 10)
-            // {
-            //     popoverLeft = viewportWidth - popoverWidth - 10;
-            // }
 
             showChordPopover = true;
             StateHasChanged();
@@ -651,9 +651,7 @@
             InvokeAsync(() =>
             {
                 if (!isMouseOverPopover)
-                {
                     HideChordPopover();
-                }
             });
         }, null, 300, Timeout.Infinite);
     }
@@ -697,9 +695,7 @@
         {
             var response = await _chordsApi.GetChordById(chordId);
             if (response.IsSuccessStatusCode)
-            {
                 return response.Content;
-            }
         }
         catch (Exception ex)
         {
@@ -711,16 +707,14 @@
     private string GetChordChartImage(ChordChartDto chart)
     {
         if (string.IsNullOrEmpty(chart.FilePath)) return "/_content/FRELODYUI.Shared/images/no_image_placeholder.png";
-
         if (chart.FilePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             return chart.FilePath;
-
         return $"{ApiBaseUrl}/{chart.FilePath.TrimStart('/')}";
     }
 
     private string GetSongContentStyle()
     {
-        return $"font-family: {fontFamily};position:relative; z-index: 0;";
+        return $"font-family: {fontFamily};";
     }
 
     private string GetChordDisplayClass()
@@ -742,16 +736,13 @@
                 if (!response.IsSuccessful && response.Content == null)
                 {
                     response = await _shareApi.GetSharedSong(SongId);
-                    var json = System.Text.Json.JsonSerializer.Serialize(response.Content);
-                    Console.WriteLine("Shared Song JSON: " + json);
                     if (!response.IsSuccessStatusCode)
                     {
                         var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
                         ShowErrorMessage($"Failed to load song: {errorMessage}");
                     }
-
                 }
-                
+
                 song = response.Content;
                 InitializeChordScale();
                 ExtractUniqueChords();
@@ -836,7 +827,6 @@
         showShareDropdown = false;
         StateHasChanged();
     }
-
 
     private void CustomizeSong(string? songId)
     {
