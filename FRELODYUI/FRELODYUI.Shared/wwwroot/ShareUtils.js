@@ -70,9 +70,9 @@ window.addClickOutsideListener = function (elementSelector, dotNetReference, met
             dotNetReference.invokeMethodAsync(methodName);
         }
     };
-    
+
     document.addEventListener('click', handler);
-    
+
     // Return cleanup function
     return {
         dispose: function () {
@@ -166,7 +166,30 @@ window.hideDropdown = function (dropdownButtonId) {
  * @returns {object} Scroll container object with utility methods
  */
 window.getCurrentScrollContainer = function () {
-    // Check for LandingLayout first
+    // Check for fullscreen mode first (both native API and CSS fallback)
+    var fullscreenEl = document.fullscreenElement || document.querySelector('.playback-fullscreen');
+    if (fullscreenEl) {
+        return {
+            element: fullscreenEl,
+            scrollTop: fullscreenEl.scrollTop,
+            scrollHeight: fullscreenEl.scrollHeight,
+            clientHeight: fullscreenEl.clientHeight,
+            scrollBy: (pixels) => {
+                fullscreenEl.scrollBy({ top: pixels, behavior: 'smooth' });
+            },
+            scrollTo: (position) => {
+                fullscreenEl.scrollTo({ top: position, behavior: 'smooth' });
+            },
+            scrollToTop: () => {
+                fullscreenEl.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+            scrollToBottom: () => {
+                fullscreenEl.scrollTo({ top: fullscreenEl.scrollHeight, behavior: 'smooth' });
+            }
+        };
+    }
+
+    // Check for LandingLayout
     const landingBody = document.querySelector('.landing-body');
     if (landingBody) {
         return {
@@ -188,7 +211,7 @@ window.getCurrentScrollContainer = function () {
             }
         };
     }
-    
+
     // Fallback to window/document for MainLayout
     return {
         element: window,
@@ -297,7 +320,7 @@ window.scrollElement = function (element, position) {
  */
 window.getElementScrollPosition = function (element) {
     if (!element) return { scrollLeft: 0, scrollWidth: 0, clientWidth: 0 };
-    
+
     return {
         scrollLeft: element.scrollLeft,
         scrollWidth: element.scrollWidth,
@@ -322,30 +345,30 @@ window.calculatePopoverPosition = function (mouseX, mouseY, popoverWidth, popove
     const viewportHeight = window.innerHeight;
     const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
     const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-    
+
     let top = mouseY + scrollY + 10;
     let left = mouseX + scrollX + 10;
-    
+
     // Check if popover would go off right edge
     if (left + popoverWidth > viewportWidth + scrollX) {
         left = mouseX + scrollX - popoverWidth - 10;
     }
-    
+
     // Check if popover would go off bottom edge
     if (top + popoverHeight > viewportHeight + scrollY) {
         top = mouseY + scrollY - popoverHeight - 10;
     }
-    
+
     // Ensure popover doesn't go off left edge
     if (left < scrollX) {
         left = scrollX + 10;
     }
-    
+
     // Ensure popover doesn't go off top edge
     if (top < scrollY) {
         top = scrollY + 10;
     }
-    
+
     return { top, left };
 };
 
@@ -356,11 +379,11 @@ window.calculatePopoverPosition = function (mouseX, mouseY, popoverWidth, popove
  */
 window.getElementPosition = function (element) {
     if (!element) return { top: 0, left: 0, width: 0, height: 0 };
-    
+
     const rect = element.getBoundingClientRect();
     const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
     const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-    
+
     return {
         top: rect.top + scrollY,
         left: rect.left + scrollX,
@@ -386,11 +409,11 @@ let isUserScrolling = false;
 window.detectUserScroll = function (callback, delay = 2000) {
     const handleScroll = function () {
         isUserScrolling = true;
-        
+
         if (userScrollTimeout) {
             clearTimeout(userScrollTimeout);
         }
-        
+
         userScrollTimeout = setTimeout(function () {
             isUserScrolling = false;
             if (callback && typeof callback === 'function') {
@@ -398,10 +421,10 @@ window.detectUserScroll = function (callback, delay = 2000) {
             }
         }, delay);
     };
-    
+
     window.addEventListener('wheel', handleScroll, { passive: true });
     window.addEventListener('touchmove', handleScroll, { passive: true });
-    
+
     return {
         dispose: function () {
             window.removeEventListener('wheel', handleScroll);
@@ -428,7 +451,7 @@ window.detectUserScroll = function (callback, delay = 2000) {
 window.initializeCarousel = function (carouselId, dotNetReference) {
     const carouselElement = document.getElementById(carouselId);
     if (!carouselElement) return;
-    
+
     carouselElement.addEventListener('slid.bs.carousel', function (event) {
         const index = event.to;
         dotNetReference.invokeMethodAsync('OnSlideChanged', index);
@@ -488,15 +511,15 @@ window.addKeyboardShortcut = function (key, callback, ctrlKey = false, shiftKey 
     const handler = function (e) {
         const matchesCtrl = ctrlKey ? (e.ctrlKey || e.metaKey) : true;
         const matchesShift = shiftKey ? e.shiftKey : true;
-        
+
         if (e.key === key && matchesCtrl && matchesShift) {
             e.preventDefault();
             callback();
         }
     };
-    
+
     window.addEventListener('keydown', handler);
-    
+
     return {
         dispose: function () {
             window.removeEventListener('keydown', handler);
@@ -534,7 +557,7 @@ window.getViewportDimensions = function () {
  */
 window.isElementInViewport = function (element) {
     if (!element) return false;
-    
+
     const rect = element.getBoundingClientRect();
     return (
         rect.top >= 0 &&
@@ -566,7 +589,7 @@ window.songFullscreen = {
 
     exit: function () {
         if (document.fullscreenElement) {
-            document.exitFullscreen().catch(function () {});
+            document.exitFullscreen().catch(function () { });
         }
         // Also remove CSS fallback class
         var el = document.querySelector('.playback-fullscreen');
@@ -633,6 +656,11 @@ window.songFullscreen = {
 window.initDraggablePalette = function (paletteEl) {
     if (!paletteEl) return;
 
+    // Clean up previous drag listeners if re-initialized
+    if (paletteEl._dragCleanup) {
+        paletteEl._dragCleanup();
+    }
+
     var handle = paletteEl.querySelector('.palette-drag-handle');
     if (!handle) handle = paletteEl.querySelector('.settings-header');
     if (!handle) return;
@@ -654,6 +682,13 @@ window.initDraggablePalette = function (paletteEl) {
         var rect = paletteEl.getBoundingClientRect();
         offsetX = clientX - rect.left;
         offsetY = clientY - rect.top;
+
+        // Switch to fixed positioning so coords are viewport-relative
+        paletteEl.style.position = 'fixed';
+        paletteEl.style.left = rect.left + 'px';
+        paletteEl.style.top = rect.top + 'px';
+        paletteEl.style.right = 'auto';
+        paletteEl.style.bottom = 'auto';
         paletteEl.style.transition = 'none';
         paletteEl.classList.add('is-dragging');
     }
@@ -663,41 +698,55 @@ window.initDraggablePalette = function (paletteEl) {
         var pos = clampPosition(clientX - offsetX, clientY - offsetY);
         paletteEl.style.left = pos.x + 'px';
         paletteEl.style.top = pos.y + 'px';
-        paletteEl.style.right = 'auto';
-        paletteEl.style.bottom = 'auto';
     }
 
     function onEnd() {
+        if (!isDragging) return;
         isDragging = false;
         paletteEl.style.transition = '';
         paletteEl.classList.remove('is-dragging');
     }
 
     // Mouse events
-    handle.addEventListener('mousedown', function (e) {
+    function onMouseDown(e) {
         if (e.target.closest('button, input, select')) return;
         e.preventDefault();
         onStart(e.clientX, e.clientY);
-    });
-    document.addEventListener('mousemove', function (e) {
+    }
+    function onMouseMove(e) {
         onMove(e.clientX, e.clientY);
-    });
-    document.addEventListener('mouseup', onEnd);
+    }
 
     // Touch events
-    handle.addEventListener('touchstart', function (e) {
+    function onTouchStart(e) {
         if (e.target.closest('button, input, select')) return;
         var t = e.touches[0];
         onStart(t.clientX, t.clientY);
-    }, { passive: true });
-    document.addEventListener('touchmove', function (e) {
+    }
+    function onTouchMove(e) {
         if (!isDragging) return;
         var t = e.touches[0];
         onMove(t.clientX, t.clientY);
-    }, { passive: true });
+    }
+
+    handle.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onEnd);
+    handle.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
     document.addEventListener('touchend', onEnd);
 
     handle.style.cursor = 'grab';
+
+    // Store cleanup function for re-initialization
+    paletteEl._dragCleanup = function () {
+        handle.removeEventListener('mousedown', onMouseDown);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onEnd);
+        handle.removeEventListener('touchstart', onTouchStart);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onEnd);
+    };
 };
 
 // ============================================

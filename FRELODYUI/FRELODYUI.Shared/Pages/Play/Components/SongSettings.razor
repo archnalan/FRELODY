@@ -13,11 +13,18 @@ else
 {
     <div class="settings-header palette-drag-handle">
         <h6><i class="bi bi-sliders me-1"></i>Settings</h6>
-        <button class="close-btn" type="button" @onclick="OnClose">
-            <i class="bi bi-x-lg"></i>
-        </button>
+        <div class="header-actions">
+            <button class="close-btn" type="button" @onclick="ToggleMinimize" title="@(isMinimized ? "Expand" : "Collapse")">
+                <i class="bi bi-@(isMinimized ? "chevron-down" : "chevron-up")"></i>
+            </button>
+            <button class="close-btn" type="button" @onclick="OnClose" title="Close">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
     </div>
 
+    @if (!isMinimized)
+    {
     <div class="settings-content">
         <!-- Autoscroll Speed -->
         <div class="settings-row">
@@ -132,6 +139,7 @@ else
             Save
         </button>
     </div>
+    }
 }
 
 @code {
@@ -146,6 +154,7 @@ else
     private bool isSaving = false;
     private bool hasLoaded = false;
     private bool isInitialized = false;
+    private bool isMinimized = false;
 
     // Local settings state
     private double scrollSpeed = 1.5;
@@ -345,5 +354,10 @@ else
     {
         showVerseTitles = (bool)(e.Value ?? false);
         await NotifyChanged();
+    }
+
+    private void ToggleMinimize()
+    {
+        isMinimized = !isMinimized;
     }
 }

@@ -253,10 +253,10 @@
 
 .settings-palette {
     position: absolute;
-    top: 3rem;
+    top: 100%;
     right: 0.5rem;
     width: 280px;
-    max-height: calc(100vh - 4rem);
+    max-height: calc(100vh - 5rem);
     background: var(--card-bg);
     border: 1px solid var(--border-light);
     border-radius: 10px;
@@ -758,11 +758,6 @@
         margin-right: auto;
     }
 
-    .playback-fullscreen .settings-palette {
-        position: fixed;
-        z-index: 100001;
-    }
-
 /* Fullscreen via Fullscreen API */
 .song-playback-area:fullscreen {
     overflow-y: auto;
@@ -789,11 +784,6 @@
     .song-playback-area:fullscreen .song-content .verse-section {
         max-width: 800px;
         width: 100%;
-    }
-
-    .song-playback-area:fullscreen .settings-palette {
-        position: fixed;
-        z-index: 100001;
     }
 
 /* ============================================
