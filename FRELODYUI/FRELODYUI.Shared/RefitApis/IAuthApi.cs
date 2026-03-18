@@ -15,7 +15,10 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<CreateUserResponseDto>> CreateUser([Body] CreateUserDto createUserDto);
 
         [Post("/api/authorization/external-login-callback")]
-        Task<IApiResponse<LoginResponseDto>> ExternalLoginCallback();
+        Task<IApiResponse<LoginResponseDto>> ExternalLoginCallback([Body] GoogleAuthRequestDto googleAuthRequestDto);
+
+        [Get("/api/authorization/get-google-o-auth-config")]
+        Task<IApiResponse<OAuthConfigDto>> GetGoogleOAuthConfig();
 
         [Get("/api/authorization/get-user-profile")]
         Task<IApiResponse<UpdateUserProfileOutDto>> GetUserProfile([Query] string id = null, [Query] string userName = null);
@@ -24,7 +27,7 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<List<ComboBoxDto>>> GetUsersForComboBoxes();
 
         [Post("/api/authorization/initiate-password-reset")]
-        Task<IApiResponse<string>> InitiatePasswordReset([Body] string emailAddress);
+        Task<IApiResponse<string>> InitiatePasswordReset([Query] string emailAddress);
 
         [Post("/api/authorization/login")]
         Task<IApiResponse<LoginResponseDto>> Login([Body] UserLogin userLogin);

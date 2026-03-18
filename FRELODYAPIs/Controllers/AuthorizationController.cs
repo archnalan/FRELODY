@@ -15,10 +15,25 @@ namespace FRELODYAPIs.Controllers
     public class AuthorizationController : ControllerBase
     {
         private readonly IAuthService _authorizationDAL;
+        private readonly IConfiguration _configuration;
 
-        public AuthorizationController(IAuthService authorizationDAL)
+        public AuthorizationController(IAuthService authorizationDAL, IConfiguration configuration)
         {
             _authorizationDAL = authorizationDAL;
+            _configuration = configuration;
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(OAuthConfigDto), 200)]
+        public IActionResult GetGoogleOAuthConfig()
+        {
+            var config = new OAuthConfigDto
+            {
+                ClientId = _configuration["GoogleAuth:client_id"] ?? "",
+                RedirectUri = _configuration["GoogleAuth:redirectUri"] ?? ""
+            };
+            return Ok(config);
         }
 
         [HttpPost]
@@ -50,9 +65,9 @@ namespace FRELODYAPIs.Controllers
         [HttpPost]
         [AllowAnonymous]
         [ProducesResponseType(typeof(LoginResponseDto), 200)]
-        public async Task<IActionResult> ExternalLoginCallback()
+        public async Task<IActionResult> ExternalLoginCallback([FromBody] GoogleAuthRequestDto googleAuthRequestDto)
         {
-            var result = await _authorizationDAL.ExternalLoginCallback();
+            var result = await _authorizationDAL.ExternalLoginCallback(googleAuthRequestDto);
             if (!result.IsSuccess)
             {
                 return StatusCode(result.StatusCode, result.Error);
@@ -89,7 +104,7 @@ namespace FRELODYAPIs.Controllers
         [HttpPost]
         [AllowAnonymous]
         [ProducesResponseType(typeof(string), 200)]
-        public async Task<IActionResult> InitiatePasswordReset([FromBody] string EmailAddress)
+        public async Task<IActionResult> InitiatePasswordReset([FromQuery] string EmailAddress)
         {
             var result = await _authorizationDAL.InitiatePasswordReset(EmailAddress);
             if (!result.IsSuccess)

@@ -304,6 +304,14 @@ public class SlugifyParameterTransformer : IOutboundParameterTransformer
 {
     public string TransformOutbound(object value)
     {
-        return value == null ? null : Regex.Replace(value.ToString(), "([a-z])([A-Z])", "$1-$2").ToLower();
+        if (value == null) return null;
+        var str = value.ToString()!;
+        // Pass 1: split runs of uppercase before an uppercase+lowercase pair
+        //   e.g. "OAuthConfig" → "O-AuthConfig"  (catches OAuth, HTML, etc.)
+        str = Regex.Replace(str, "([A-Z]+)([A-Z][a-z])", "$1-$2");
+        // Pass 2: split lowercase→uppercase boundaries
+        //   e.g. "GetGoogle" → "Get-Google"
+        str = Regex.Replace(str, "([a-z])([A-Z])", "$1-$2");
+        return str.ToLower();
     }
 }

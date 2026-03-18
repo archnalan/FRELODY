@@ -9,6 +9,8 @@ using FRELODYAPP.Models.SubModels;
 using FRELODYLIB.Interfaces;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Constants;
+using FRELODYSHRD.Dtos.AuthDtos;
 using FRELODYSHRD.Dtos.UserDtos;
 using Google.Apis.Auth;
 using Mapster;
@@ -48,13 +50,15 @@ namespace FRELODYAPP.Data
         private readonly TokenService _tokenService;
         private readonly string? _tenantId;
         private readonly IUserService _userService;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public AuthorizationService(IConfiguration config, SongDbContext context,
             SignInManager<User> signInManager, UserManager<User> userManager,
             IWebHostEnvironment webHostEnvironment, ISmtpSenderService emailSmtpService,
             ILogger<AuthorizationService> logger, ITenantProvider tenantProvider,
             IHttpContextAccessor httpContextAccessor, RoleManager<IdentityRole> roleManager,
-            FileValidationService fileValidationService, SecurityUtilityService securityUtilityService, TokenService tokenService, IUserService userService)
+            FileValidationService fileValidationService, SecurityUtilityService securityUtilityService, TokenService tokenService, IUserService userService,
+            IHttpClientFactory httpClientFactory)
         {
             _config = config;
             _signInManager = signInManager;
@@ -71,6 +75,7 @@ namespace FRELODYAPP.Data
             _tokenService = tokenService;
             _tenantId = _tenantProvider.GetTenantId();
             _userService = userService;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task<ServiceResult<string>> InitiatePasswordReset(string emailAddress)
@@ -140,126 +145,127 @@ namespace FRELODYAPP.Data
         }
 
         //OAuth
-        public async Task<ServiceResult<LoginResponseDto>> ExternalLoginCallback(string? code = null)
+        public async Task<ServiceResult<LoginResponseDto>> ExternalLoginCallback(GoogleAuthRequestDto googleAuthRequestDto)
         {
-            var client = new HttpClient();
+            var client = _httpClientFactory.CreateClient();
             var uri = new Uri("https://oauth2.googleapis.com/token");
             var content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                { "code", code },
-                { "client_id", $"{_config["GoogleAuth:client_id"]}" },
-                { "client_secret", $"{_config["GoogleAuth:client_secret"]}" },
-                { "redirect_uri", $"{_config["GoogleAuth:redirectUri"]}" },
-                { "grant_type", "authorization_code" }
+                { "code", googleAuthRequestDto.Code },
+                { "client_id", _config["GoogleAuth:client_id"]! },
+                { "client_secret", _config["GoogleAuth:client_secret"]! },
+                { "redirect_uri", _config["GoogleAuth:redirectUri"]! },
+                { "grant_type", "authorization_code" },
+                { "code_verifier", googleAuthRequestDto.CodeVerifier }
             });
 
             var response = await client.PostAsync(uri, content);
             var responseContent = await response.Content.ReadAsStringAsync();
+            var tenantId = _tenantProvider.GetTenantId() ?? _tenantId ?? "default";
 
-            // Check the status code and response content for error handling
             if (response.IsSuccessStatusCode)
             {
                 try
                 {
-                    // Parse the response content into a .NET object
                     var tokenResponse = JsonConvert.DeserializeObject<TokenResponse>(responseContent);
-
-                    // Use the access token or refresh token as needed
-                    var accessToken = tokenResponse.Access_token;
-                    var refreshToken = tokenResponse.Refresh_token;
+                    if (tokenResponse?.Id_token == null)
+                    {
+                        return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Invalid token response from Google"));
+                    }
 
                     var settings = new GoogleJsonWebSignature.ValidationSettings
                     {
                         Audience = new[] { _config["GoogleAuth:client_id"] }
                     };
                     var objFromGoogle = await GoogleJsonWebSignature.ValidateAsync(tokenResponse.Id_token, settings);
-                    //check user exists
+
+                    // Check if user exists by external login provider
                     var userFromDb = await _userManager.FindByLoginAsync("google", objFromGoogle.Subject);
-                    // Update token generation to use TokenService
+
                     if (userFromDb != null)
                     {
-                        var tokens = await _tokenService.GenerateTokens(userFromDb, _tenantId);
-                        await _securityUtilityService.LogSecurityEvent(
-                            userFromDb.Id,
-                            "ExternalLogin",
-                            "Successful Google login",
-                            _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString()
-                        );
-                        return ServiceResult<LoginResponseDto>.Success(tokens);
+                        // Existing external login user - sign in directly
+                        return await LoginUserNoPassword(userFromDb, tenantId);
                     }
-                    IdentityResult result;
-                    if (userFromDb == null)
+
+                    // Check if user exists by email
+                    userFromDb = await _userManager.FindByEmailAsync(objFromGoogle.Email);
+                    if (userFromDb != null)
                     {
-                        //check user exists
-                        userFromDb = await _userManager.FindByEmailAsync(objFromGoogle.Email);
-                        if (userFromDb != null)
+                        // Link Google login to existing account
+                        await _userManager.AddLoginAsync(userFromDb, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
+                        return await LoginUserNoPassword(userFromDb, tenantId);
+                    }
+
+                    // Create new user with a new tenant (each Google sign-up = new company/tenant)
+                    var nameParts = (objFromGoogle.Name ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                    var fullName = objFromGoogle.Name ?? "User";
+                    var emailPrefix = objFromGoogle.Email?.Split('@')[0] ?? "user";
+
+                    var newTenant = new Tenant
+                    {
+                        TenantName = fullName,
+                        Email = objFromGoogle.Email,
+                        DateCreated = DateTime.UtcNow
+                    };
+
+                    var newUser = new User()
+                    {
+                        Email = objFromGoogle.Email,
+                        UserName = $"@{emailPrefix}",
+                        FirstName = nameParts.FirstOrDefault() ?? "",
+                        LastName = nameParts.Length > 1 ? nameParts[1] : "",
+                        EmailConfirmed = objFromGoogle.EmailVerified,
+                        ProfilePicUrl = objFromGoogle.Picture,
+                        TenantId = newTenant.Id,
+                        IsActive = true,
+                        DateCreated = DateTimeOffset.UtcNow
+                    };
+
+                    var strategy = _context.Database.CreateExecutionStrategy();
+                    return await strategy.ExecuteAsync(async () =>
+                    {
+                        using var scope = await _context.Database.BeginTransactionAsync();
+
+                        // Create tenant first
+                        await _context.Tenants.AddAsync(newTenant);
+                        await _context.SaveChangesAsync();
+
+                        var result = await _userManager.CreateAsync(newUser);
+                        if (!result.Succeeded)
                         {
-                            result = await _userManager.AddLoginAsync(userFromDb, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
-                            return await LoginUserNoPassword(userFromDb, _tenantId);
+                            return ServiceResult<LoginResponseDto>.Failure(
+                                new BadRequestException(string.Join("\n", result.Errors.Select(e => e.Description))));
                         }
-                        //Created user
-                        var newUser = new User()
+
+                        var loginResult = await _userManager.AddLoginAsync(newUser, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
+                        if (!loginResult.Succeeded)
                         {
-                            Email = objFromGoogle.Email,
-                            UserName = objFromGoogle.Name.ToLower().Replace(" ", "") + "-" + Guid.NewGuid().ToString().Substring(1, 3),
-                            FirstName = objFromGoogle.Name.Split(" ").FirstOrDefault(),
-                            LastName = objFromGoogle.Name.Split(" ")?[1],
-                            EmailConfirmed = objFromGoogle.EmailVerified,
-                            ProfilePicUrl = objFromGoogle.Picture,
-                            TenantId = Guid.NewGuid().ToString()
+                            return ServiceResult<LoginResponseDto>.Failure(
+                                new BadRequestException(string.Join("\n", loginResult.Errors.Select(e => e.Description))));
+                        }
 
-                        };
-                        var strategy = _context.Database.CreateExecutionStrategy();
-
-                        return await strategy.ExecuteAsync(async () =>
+                        // Add default role for self-registered users
+                        var defaultRole = UserRoles.User;
+                        if (await _roleManager.RoleExistsAsync(defaultRole))
                         {
+                            await _userManager.AddToRoleAsync(newUser, defaultRole);
+                        }
 
-                            using (var scope = _context.Database.BeginTransaction())
-                            {
-                                result = await _userManager.CreateAsync(newUser);
-                                var userLoginInfo = new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name);
-                                result = await _userManager.AddLoginAsync(newUser, userLoginInfo);
-                                if (result.Succeeded)
-                                {
-                                    //if all is well
-                                    scope.Commit();
-                                    return await LoginUserNoPassword(newUser, _tenantId);
-                                }
-
-                                var outputErrors = new List<string>();
-                                foreach (var error in result.Errors)
-                                {
-                                    outputErrors.Add(error.Description);
-                                }
-                                return ServiceResult<LoginResponseDto>.Failure(new BadRequestException(string.Join("\n", outputErrors)));
-
-                            }
-
-                        });
-
-
-                    }
-                    else
-                    {
-                        //User already exisit as external login. sign in
-                        return await LoginUserNoPassword(userFromDb, _tenantId);
-                    }
-
-
-
-
+                        await scope.CommitAsync();
+                        return await LoginUserNoPassword(newUser, newTenant.Id);
+                    });
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"An error occured while signing in with google Message: {ex.Message} and detail :{JsonConvert.SerializeObject(ex)}");
-                    return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Failed to Autheticate. Please try again later"));
+                    _logger.LogError(ex, "An error occurred while signing in with Google");
+                    return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Failed to authenticate. Please try again later"));
                 }
             }
             else
             {
-                _logger.LogError($"An error occured while signing in with google. the request returned an error. Responsecontent:  :{JsonConvert.SerializeObject(responseContent)}");
-                return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Failed to Autheticate. Please try again later"));
-
+                _logger.LogError("Google OAuth token exchange failed. Response: {ResponseContent}", responseContent);
+                return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Failed to authenticate. Please try again later"));
             }
         }
 
@@ -368,18 +374,21 @@ namespace FRELODYAPP.Data
         {
             var token = await _tokenService.GenerateTokens(userFromDb, tenantId);
 
-            var emailDto = new EmailDto(true);
-            emailDto.Subject = "A new Login has been detected";
-            emailDto.ToEmail = userFromDb.Email;
-            emailDto.Body = $"A new login into your account with {_config["ApplicationInfo:Name"]} has been detetected at {DateTime.UtcNow}UTC. If this wasn't you, You can take some steps to secure your account such as changing your account password with us or contacting us for help. <br/><br/>If this was you, then you can Ignore this message.<br/><br/>{_config["ApplicationInfo:SupportUrl"]} ";
+            await SetUserClaimsInContext(userFromDb, tenantId);
 
-            var emailResult = await _emailSmtpService.SendMailAsync(emailDto);
-            if (!emailResult.IsSuccess)
-            {
-                _logger.LogError("Failed to send login notification email: {Error}", emailResult.Error);
-            }
+            var ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
+            await _securityUtilityService.LogSecurityEvent(
+                userFromDb.Id,
+                "ExternalLogin",
+                "Successful OAuth login",
+                ipAddress
+            );
 
-            //return Login token
+            await _securityUtilityService.LogUserLogin(userFromDb.Id);
+
+            // Send login notification asynchronously
+            await SendLoginNotification(userFromDb);
+
             return ServiceResult<LoginResponseDto>.Success(token);
         }
 

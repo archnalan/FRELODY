@@ -9,213 +9,287 @@
 }
 else
 {
-    <div class="login">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="@(FullBody ? "col-12" : "col-11 col-sm-8 col-md-6 col-lg-5 col-xl-4")">
-                    <!-- Login Card -->
-                    <div class="card shadow-lg border-0" style="border-radius: 1rem;">
-                        <div class="card-body p-4 p-sm-5">
-                            <!-- Login Form -->
-                            <EditForm Model="@loginModel" OnValidSubmit="@HandleLogin" FormName="loginForm">
-                                <DataAnnotationsValidator />
+    <div class="login-page">
+        <div class="login-container">
 
-                                @if (!string.IsNullOrEmpty(errorMessage))
-                                {
-                                    <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
-                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                        <div>@errorMessage</div>
-                                    </div>
-                                }
+            <!-- ── Branding ──────────────────────────────────── -->
+            <div class="login-branding">
+                <div class="login-logo" aria-hidden="true">
+                    <span class="login-logo-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m9 18 6-6-6-6"/>
+                        </svg>
+                    </span>
+                </div>
+                <h1 class="login-app-name">FRELODY</h1>
+                <p class="login-tagline">Your music, beautifully organized</p>
+            </div>
 
-                                <!-- Email/Username Field -->
-                                <div class="mb-3">
-                                    <label class="form-label fw-medium">Email or Username</label>
-                                    <div class="email-input-wrapper">
-                                        <i class="bi bi-person text-muted email-icon"></i>
-                                        <input type="text"
-                                               @bind-Value="loginModel.Email"
-                                               @bind-Value:event="oninput"
-                                               class="email-input"
-                                               placeholder="Enter your email or username"
-                                               disabled="@isLoading"
-                                               autocomplete="off" />
-                                    </div>
-                                    <ValidationMessage For="@(() => loginModel.Email)" class="text-danger small mt-1" />
-                                </div>
+            <!-- ── Card ──────────────────────────────────────── -->
+            <div class="login-card">
+                <h2 class="login-card-heading">Welcome back</h2>
 
-                                <!-- Phone Number Field -->
-                                @if (ShowPhoneForm)
-                                {
-                                    <div class="mb-3">
-                                        <label class="form-label fw-medium">Phone Number</label>
-                                        <div class="email-input-wrapper">
-                                            <i class="bi bi-telephone text-muted email-icon"></i>
-                                            <input type="tel"
-                                                   @bind-Value="loginModel.PhoneNumber"
-                                                   @bind-Value:event="oninput"
-                                                   class="email-input"
-                                                   placeholder="Enter your phone number"
-                                                   disabled="@isLoading"
-                                                   autocomplete="tel" />
-                                        </div>
-                                        <ValidationMessage For="@(() => loginModel.PhoneNumber)" class="text-danger small mt-1" />
-                                    </div>
-                                }
+                <EditForm Model="@loginModel" OnValidSubmit="@HandleLogin" FormName="loginForm" class="login-form">
+                    <DataAnnotationsValidator />
 
-                                <!-- Password Field -->
-                                <div class="mb-3">
-                                    <label class="form-label fw-medium">Password</label>
-                                    <div class="password-input-wrapper">
-                                        <i class="bi bi-lock text-muted password-icon"></i>
-                                        <input type="@(showPassword ? "text" : "password")"
-                                               @bind-Value="loginModel.Password"
-                                               @bind-Value:event="oninput"
-                                               class="password-input"
-                                               placeholder="Enter your password"
-                                               disabled="@isLoading" />
-                                        <button type="button"
-                                                class="btn btn-outline-secondary password-toggle"
-                                                @onclick="TogglePasswordVisibility"
-                                                disabled="@isLoading">
-                                            <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
-                                        </button>
-                                    </div>
-                                    <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small mt-1" />
-                                </div>
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="login-error" role="alert">@errorMessage</div>
+                    }
 
-                                <!-- Remember Me & Forgot Password -->
-                                <div class="d-flex justify-content-between align-items-center mb-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" @bind="rememberMe" id="rememberMe" disabled="@isLoading">
-                                        <label class="form-check-label small" for="rememberMe">
-                                            Remember me
-                                        </label>
-                                    </div>
-                                    <button type="button"
-                                            class="btn btn-link p-0 text-decoration-none small"
-                                            @onclick="ShowForgotPassword"
-                                            disabled="@isLoading">
-                                        Forgot password?
-                                    </button>
-                                </div>
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="login-success" role="status">@successMessage</div>
+                    }
 
-                                <!-- Login Button -->
-                                <button type="submit"
-                                        class="btn btn-primary w-100 py-2 fw-medium"
-                                        style="border-radius: 0.5rem;"
-                                        disabled="@isLoading">
-                                    @if (isLoading)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                        <span>Signing in...</span>
-                                    }
-                                    else
-                                    {
-                                        <span>Sign In</span>
-                                    }
-                                </button>
-                            </EditForm>
-
-                            <!-- Alternative Login Methods -->
-                            <div class="text-center my-4">
-                                <div class="position-relative">
-                                    <hr class="text-muted">
-                                    <span class="position-absolute top-50 start-50 translate-middle px-3 text-muted small">
-                                        Or continue with
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- Google Login -->
-                            <button type="button"
-                                    class="btn btn-outline-dark w-100 py-2 mb-3"
-                                    style="border-radius: 0.5rem;"
-                                    @onclick="HandleGoogleLogin"
-                                    disabled="@isLoading">
-                                <i class="bi bi-google me-2"></i>
-                                Continue with Google
-                            </button>
-
-                            <!-- Sign Up Link -->
-                            <div class="text-center">
-                                <span class="text-muted small">Don't have an account? </span>
-                                <button type="button"
-                                        class="btn btn-link p-0 text-decoration-none small fw-medium"
-                                        @onclick="NavigateToSignUp"
-                                        disabled="@isLoading">
-                                    Sign up
-                                </button>
-                            </div>
+                    <!-- Email / Username -->
+                    <div class="login-field">
+                        <label for="login-email" class="login-label">Email or Username</label>
+                        <div class="login-input-wrapper">
+                            <span class="login-input-icon" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                            </span>
+                            <input id="login-email" type="text"
+                                   @bind-Value="loginModel.Email"
+                                   @bind-Value:event="oninput"
+                                   class="login-input"
+                                   placeholder="Enter your email or username"
+                                   disabled="@IsFormDisabled"
+                                   autocomplete="email" />
                         </div>
+                        <ValidationMessage For="@(() => loginModel.Email)" class="login-validation" />
                     </div>
+
+                    <!-- Phone Number (conditional) -->
+                    @if (ShowPhoneForm)
+                    {
+                        <div class="login-field">
+                            <label for="login-phone" class="login-label">Phone Number</label>
+                            <div class="login-input-wrapper">
+                                <span class="login-input-icon" aria-hidden="true">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                    </svg>
+                                </span>
+                                <input id="login-phone" type="tel"
+                                       @bind-Value="loginModel.PhoneNumber"
+                                       @bind-Value:event="oninput"
+                                       class="login-input"
+                                       placeholder="Enter your phone number"
+                                       disabled="@IsFormDisabled"
+                                       autocomplete="tel" />
+                            </div>
+                            <ValidationMessage For="@(() => loginModel.PhoneNumber)" class="login-validation" />
+                        </div>
+                    }
+
+                    <!-- Password -->
+                    <div class="login-field">
+                        <label for="login-password" class="login-label">Password</label>
+                        <div class="login-input-wrapper">
+                            <span class="login-input-icon" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
+                            </span>
+                            <input id="login-password" type="@(showPassword ? "text" : "password")"
+                                   @bind-Value="loginModel.Password"
+                                   @bind-Value:event="oninput"
+                                   class="login-input login-input-password"
+                                   placeholder="Enter your password"
+                                   disabled="@IsFormDisabled"
+                                   autocomplete="current-password" />
+                            <button type="button"
+                                    class="login-password-toggle"
+                                    @onclick="TogglePasswordVisibility"
+                                    disabled="@IsFormDisabled"
+                                    aria-label="Toggle password visibility">
+                                @if (showPassword)
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                                        <line x1="1" y1="1" x2="23" y2="23"/>
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                }
+                            </button>
+                        </div>
+                        <ValidationMessage For="@(() => loginModel.Password)" class="login-validation" />
+                    </div>
+
+                    <!-- Remember Me & Forgot Password -->
+                    <div class="login-options-row">
+                        <label class="login-remember-label">
+                            <input type="checkbox" @bind="rememberMe" class="login-checkbox" disabled="@IsFormDisabled" />
+                            <span>Remember me</span>
+                        </label>
+                        <button type="button"
+                                class="login-forgot-link"
+                                @onclick="ShowForgotPassword"
+                                disabled="@IsFormDisabled">
+                            Forgot password?
+                        </button>
+                    </div>
+
+                    <!-- Submit -->
+                    <button type="submit" class="login-btn-primary" disabled="@IsFormDisabled">
+                        @if (isLoading && !isGoogleOAuthInProgress)
+                        {
+                            <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+                            <span>Signing in&hellip;</span>
+                        }
+                        else
+                        {
+                            <span>Sign In</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                            </svg>
+                        }
+                    </button>
+                </EditForm>
+
+                <!-- ── Divider ────────────────────────────────── -->
+                <div class="login-divider" role="separator">
+                    <span class="login-divider-text">OR continue with</span>
+                </div>
+
+                <!-- ── OAuth Buttons ──────────────────────────── -->
+                <div class="login-oauth">
+                    <button type="button" class="login-btn-oauth" @onclick="HandleGoogleLogin" disabled="@IsFormDisabled">
+                        @if (isGoogleOAuthInProgress)
+                        {
+                            <span class="login-spinner" aria-hidden="true"></span>
+                            <span>Signing in with Google&hellip;</span>
+                        }
+                        else
+                        {
+                            <svg class="login-oauth-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            <span>Continue with Google</span>
+                        }
+                    </button>
+                </div>
+
+                <!-- ── Sign Up Link ───────────────────────────── -->
+                <div class="login-signup-row">
+                    <span>Don't have an account? </span>
+                    <button type="button"
+                            class="login-signup-link"
+                            @onclick="NavigateToSignUp"
+                            disabled="@IsFormDisabled">
+                        Sign up
+                    </button>
                 </div>
             </div>
+
+            <!-- ── Footer ────────────────────────────────────── -->
+            <footer class="login-footer">
+                <p>Secure access powered by FRELODY</p>
+            </footer>
+
         </div>
     </div>
 
-    <!-- Password Reset Modal -->
+    <!-- ── Password Reset Modal ──────────────────────────────── -->
     @if (showForgotPasswordModal)
     {
-        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content" style="border-radius: 1rem;">
-                    <div class="modal-header border-0 pb-0">
-                        <h5 class="modal-title fw-bold">Reset Password</h5>
-                        <button type="button" class="btn-close" @onclick="CloseForgotPasswordModal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="text-muted mb-3">Enter your email address and we'll send you a link to reset your password.</p>
-
-                        <EditForm Model="@resetPasswordModel" OnValidSubmit="@HandlePasswordReset" FormName="resetForm">
-                            <DataAnnotationsValidator />
-
-                            <div class="mb-3">
-                                <label class="form-label">Email Address</label>
-                                <InputText @bind-Value="resetPasswordModel.Email"
-                                           class="form-control"
-                                           placeholder="Enter your email"
-                                           disabled="@isResettingPassword" />
-                                <ValidationMessage For="@(() => resetPasswordModel.Email)" class="text-danger small mt-1" />
-                            </div>
-
-                            @if (!string.IsNullOrEmpty(resetErrorMessage))
-                            {
-                                <div class="alert alert-danger small">@resetErrorMessage</div>
-                            }
-
-                            @if (!string.IsNullOrEmpty(resetSuccessMessage))
-                            {
-                                <div class="alert alert-success small">@resetSuccessMessage</div>
-                            }
-
-                            <div class="d-flex gap-2">
-                                <button type="button"
-                                        class="btn btn-outline-secondary flex-fill"
-                                        @onclick="CloseForgotPasswordModal"
-                                        disabled="@isResettingPassword">
-                                    Cancel
-                                </button>
-                                <button type="submit"
-                                        class="btn btn-primary flex-fill"
-                                        disabled="@isResettingPassword">
-                                    @if (isResettingPassword)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-1"></span>
-                                    }
-                                    Get Link
-                                </button>
-                            </div>
-                        </EditForm>
-                    </div>
+        <div class="login-modal-overlay" @onclick="CloseForgotPasswordModal">
+            <div class="login-modal" @onclick:stopPropagation="true">
+                <div class="login-modal-header">
+                    <h3 class="login-modal-title">Reset Password</h3>
+                    <button type="button" class="login-modal-close" @onclick="CloseForgotPasswordModal" aria-label="Close">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
                 </div>
+                <p class="login-modal-desc">Enter your email address and we'll send you a link to reset your password.</p>
+
+                <EditForm Model="@resetPasswordModel" OnValidSubmit="@HandlePasswordReset" FormName="resetForm">
+                    <DataAnnotationsValidator />
+
+                    <div class="login-field">
+                        <label for="reset-email" class="login-label">Email Address</label>
+                        <div class="login-input-wrapper">
+                            <span class="login-input-icon" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/>
+                                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                                </svg>
+                            </span>
+                            <input id="reset-email" type="email"
+                                   @bind="resetPasswordModel.Email"
+                                   class="login-input"
+                                   placeholder="Enter your email"
+                                   disabled="@isResettingPassword" />
+                        </div>
+                        <ValidationMessage For="@(() => resetPasswordModel.Email)" class="login-validation" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(resetErrorMessage))
+                    {
+                        <div class="login-error" role="alert">@resetErrorMessage</div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(resetSuccessMessage))
+                    {
+                        <div class="login-success" role="status">@resetSuccessMessage</div>
+                    }
+
+                    <div class="login-modal-actions">
+                        <button type="button"
+                                class="login-btn-secondary"
+                                @onclick="CloseForgotPasswordModal"
+                                disabled="@isResettingPassword">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="login-btn-submit"
+                                disabled="@isResettingPassword">
+                            @if (isResettingPassword)
+                            {
+                                <span class="login-spinner" aria-hidden="true"></span>
+                            }
+                            Get Link
+                        </button>
+                    </div>
+                </EditForm>
             </div>
         </div>
     }
-
-
-    <!-- SignUp Modal -->
-
 }
 
 @code {
@@ -232,10 +306,14 @@ else
     private PasswordResetModel resetPasswordModel = new();
 
     private bool isLoading = false;
+    private bool isGoogleOAuthInProgress = false;
     private bool isResettingPassword = false;
     private bool showPassword = false;
     private bool rememberMe = true;
     private bool showForgotPasswordModal = false;
+    private string? _pendingOAuthCode;
+
+    private bool IsFormDisabled => isLoading || isGoogleOAuthInProgress;
 
     private string errorMessage = "";
     private string successMessage = "";
@@ -249,7 +327,28 @@ else
         if (authState.User.Identity?.IsAuthenticated == true)
         {
             _navManager.NavigateTo("/dashboard");
-            //NavigateToReturnUrl();
+            return;
+        }
+
+        // Detect Google OAuth callback — defer to OnAfterRenderAsync where JS interop is available
+        var uri = _navManager.ToAbsoluteUri(_navManager.Uri);
+        var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        _pendingOAuthCode = queryParams["code"];
+        if (!string.IsNullOrEmpty(_pendingOAuthCode))
+        {
+            isGoogleOAuthInProgress = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !string.IsNullOrEmpty(_pendingOAuthCode))
+        {
+            var code = _pendingOAuthCode;
+            _pendingOAuthCode = null;
+            // Clean URL so refresh won't re-process the one-time code
+            await JsRt.InvokeVoidAsync("history.replaceState", null, "", "/login");
+            await HandleGoogleOAuthCallback(code);
         }
     }
 
@@ -317,13 +416,149 @@ else
         try
         {
             ClearMessages();
-            await _authApi.ExternalLoginCallback();
+            isLoading = true;
+            StateHasChanged();
+
+            var configResponse = await _authApi.GetGoogleOAuthConfig();
+            if (!configResponse.IsSuccessStatusCode || configResponse.Content == null 
+                || string.IsNullOrEmpty(configResponse.Content.ClientId) 
+                || string.IsNullOrEmpty(configResponse.Content.RedirectUri))
+            {
+                errorMessage = "Google login is not configured.";
+                _logger.LogError("Failed to retrieve Google OAuth config from API");
+                return;
+            }
+
+            var clientId = configResponse.Content.ClientId;
+            var redirectUri = configResponse.Content.RedirectUri;
+
+            // Generate PKCE code verifier and challenge
+            var codeVerifier = GenerateCodeVerifier();
+            var codeChallenge = GenerateCodeChallenge(codeVerifier);
+
+            // Store code_verifier in session storage for the callback
+            await JsRt.InvokeVoidAsync("sessionStorage.setItem", "google_code_verifier", codeVerifier);
+
+            var authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
+                $"?client_id={Uri.EscapeDataString(clientId)}" +
+                $"&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
+                "&response_type=code" +
+                "&scope=openid%20email%20profile" +
+                $"&code_challenge={Uri.EscapeDataString(codeChallenge)}" +
+                "&code_challenge_method=S256" +
+                "&access_type=offline" +
+                "&prompt=consent";
+
+            _navManager.NavigateTo(authUrl, forceLoad: true);
         }
         catch (Exception ex)
         {
             errorMessage = "Failed to initiate Google login.";
             _logger.LogError(ex, "Google login error");
         }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleGoogleOAuthCallback(string code)
+    {
+        try
+        {
+            isGoogleOAuthInProgress = true;
+            isLoading = true;
+            StateHasChanged();
+
+            var codeVerifier = await JsRt.InvokeAsync<string>("sessionStorage.getItem", "google_code_verifier");
+            await JsRt.InvokeVoidAsync("sessionStorage.removeItem", "google_code_verifier");
+
+            if (string.IsNullOrEmpty(codeVerifier))
+            {
+                errorMessage = "Authentication session expired. Please try again.";
+                return;
+            }
+
+            var googleAuthRequest = new FRELODYSHRD.Dtos.AuthDtos.GoogleAuthRequestDto
+            {
+                Code = code,
+                CodeVerifier = codeVerifier
+            };
+
+            var response = await _authApi.ExternalLoginCallback(googleAuthRequest);
+
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                var authResult = await _globalAuth.MarkUserAsAuthenticatedAsync(response.Content);
+
+                if (authResult.IsSuccess)
+                {
+                    _logger.LogInformation("User logged in via Google successfully");
+                    successMessage = "Login successful! Redirecting...";
+                    StateHasChanged();
+
+                    var userId = await _globalAuth.GetCurrentUserId();
+                    if (!string.IsNullOrEmpty(userId))
+                    {
+                        await _userSettings.LoadUserSettingsAsync(userId);
+                    }
+
+                    await Task.Delay(1000);
+
+                    if (OnLoginSuccess.HasDelegate)
+                    {
+                        await OnLoginSuccess.InvokeAsync();
+                    }
+                    else
+                    {
+                        NavigateToReturnUrl();
+                    }
+                }
+                else
+                {
+                    errorMessage = "Authentication failed. Please try again.";
+                    _logger.LogWarning("Google authentication failed: {Error}", authResult.Error?.Message);
+                }
+            }
+            else
+            {
+                errorMessage = GetErrorMessage(response);
+                _logger.LogWarning("Google login failed: {Error}", errorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred during Google login. Please try again.";
+            _logger.LogError(ex, "Google OAuth callback error");
+        }
+        finally
+        {
+            isGoogleOAuthInProgress = false;
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string GenerateCodeVerifier()
+    {
+        var bytes = new byte[32];
+        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+        rng.GetBytes(bytes);
+        return Convert.ToBase64String(bytes)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+    }
+
+    private static string GenerateCodeChallenge(string codeVerifier)
+    {
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var challengeBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(codeVerifier));
+        return Convert.ToBase64String(challengeBytes)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
     }
 
     private async Task HandlePasswordReset()
