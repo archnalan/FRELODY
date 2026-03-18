@@ -39,15 +39,14 @@ else
         </div>
 
         <!-- Chord Font Size -->
-        <div class="settings-row @(songDisplayMode == SongDisplay.LyricsOnly ? "settings-row-disabled" : "")"
-             title="@(songDisplayMode == SongDisplay.LyricsOnly ? "Not available in Lyrics Only mode" : "")">
+        <div class="settings-row">
             <label class="settings-label"><i class="bi bi-type"></i> Chord</label>
             <div class="settings-inline-control">
                 <input type="range" class="settings-range" min="10" max="32" step="1"
                        value="@chordFontSize"
                        @oninput="OnChordFontSizeInput"
-                       @onclick:stopPropagation
-                       disabled="@(songDisplayMode == SongDisplay.LyricsOnly)" />
+                       @onclick:stopPropagation 
+                       disabled="@(songDisplayMode == SongDisplay.LyricsOnly)"/>
                 <span class="slider-value">@(chordFontSize)px</span>
             </div>
         </div>

@@ -148,6 +148,17 @@
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
     }
+.save-btn {
+    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
+    color: #fff;
+    border: none;
+}
+
+    .save-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, var(--gradient-primary-hover-start), var(--gradient-primary-hover-end));
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+    }
 
 .ai-btn {
     background: linear-gradient(135deg, #8b5cf6, #6d28d9);

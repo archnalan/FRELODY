@@ -126,7 +126,7 @@
                         </button>
                         @if (_aiService.IsAvailable)
                         {
-                            <button class="action-btn ai-btn" disabled="@isRefining" @onclick="RefineWithAi" title="Refine with AI">
+                                <button class="action-btn ai-btn" disabled="@(isProcessing || isSaving || isRefining)" @onclick="RefineWithAi" title="Refine with AI">
                                 @if (isRefining)
                                 {
                                     <span class="spinner-border spinner-border-sm" role="status"></span>
@@ -138,10 +138,22 @@
                                     <span>AI Refine</span>
                                 }
                             </button>
-                        }
-                        <button class="action-btn customize-btn" @onclick="CustomizeSong" title="Save & Customize">
+                        }                     
+                        <button class="action-btn customize-btn" disabled="@(isProcessing || isSaving)" @onclick="CustomizeSong" title="Save & Customize">
                             <i class="bi bi-pencil-square"></i>
                             <span>Customize</span>
+                        </button>
+                        <button class="action-btn save-btn" disabled="@(isProcessing || isSaving)" @onclick="SaveSong" title="Save song">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-save"></i>
+                                <span>Save</span>
+                            }
                         </button>
                     </div>
                 </div>
@@ -207,6 +219,7 @@
     private bool isProcessing = false;
     private bool isRefining = false;
     private bool isScanning = false;
+    private bool isSaving = false;
     private SongFormat? detectedFormat;
     private string? scannedImageBase64;
 
@@ -452,32 +465,87 @@
         }
     }
 
+    private void PrepareSegments()
+    {
+        if (Song?.SongLyrics == null) return;
+        foreach (var seg in Song.SongLyrics)
+        {
+            if (seg.PartNumber <= 0)
+            {
+                seg.PartNumber = 1;
+                seg.PartName = seg.PartName == SongSection.unknown ? SongSection.Verse : seg.PartName;
+            }
+        }
+    }
+
+    private async Task<string?> PerformSaveSong()
+    {
+        if (Song == null) return null;
+
+        isSaving = true;
+        StateHasChanged();
+        try
+        {
+            var result = await _songsApi.CreateSong(Song);
+            if (result.IsSuccessStatusCode && result.Content != null)
+            {
+                return result.Content.Id;
+            }
+
+            var errorMessage = _apiResponseHandler.GetApiErrorMessage(result);
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Save Error",
+                Message = errorMessage,
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext { ActionType = "saveError" }
+            });
+            return null;
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveSong()
+    {
+        if (Song == null) return;
+        PrepareSegments();
+        var songId = await PerformSaveSong();
+        if (songId != null)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Song Saved",
+                Message = $"Song '{Song.Title}' saved successfully!",
+                ButtonText = "OK",
+                OptionType = OptionType.Success,
+                Context = new ModalContext { ActionType = "SongSaved" }
+            });
+        }
+    }
+
     private async Task CustomizeSong()
     {
         if (Song == null) return;
-
-        // Ensure segments have valid PartNumber (1-based) so SongBoard creates proper tabs
-        if (Song.SongLyrics != null)
+        PrepareSegments();
+        var songId = await PerformSaveSong();
+        if (songId != null)
         {
-            foreach (var seg in Song.SongLyrics)
-            {
-                if (seg.PartNumber <= 0)
-                {
-                    seg.PartNumber = 1;
-                    seg.PartName = seg.PartName == SongSection.unknown ? SongSection.Verse : seg.PartName;
-                }
-            }
+            _navManager.NavigateTo($"/compose?songId={songId}");
         }
-
-        // Store as draft — SongBoard will pick it up from storage
-        await _storageService.SetItemAsync("songDraft", Song);
-        _navManager.NavigateTo("/compose");
     }
 
     private async Task ConfirmModal()
     {
-        if (_modalService.CurrentModal.Context?.ActionType == "")
+        if (_modalService.CurrentModal.Context?.ActionType == "SongSaved")
         {
+            _modalService.Close();
+            _navManager.NavigateTo("/songs-library");
+            return;
         }
         await CloseModal();
     }
