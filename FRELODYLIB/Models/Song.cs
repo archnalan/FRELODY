@@ -2,7 +2,6 @@
 using FRELODYAPP.Interfaces;
 using FRELODYAPP.Models.SubModels;
 using FRELODYLIB.Models;
-using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -20,13 +19,9 @@ namespace FRELODYAPP.Models
 		[StringLength(200)]
 		public string? Slug { get; set; }
 
-        public PlayLevel? SongPlayLevel { get; set; }
+		public PlayLevel? SongPlayLevel { get; set; }
 
-        [NotMapped]
-		[TextFileValidation(".txt", ".pdf")]
-		public IFormFile? TextUpload { get; set; }
-        
-        public string? TextFileContent { get; set; }
+		public string? TextFileContent { get; set; }
 
         [StringLength(255)]
         public string? TextFilePath { get; set; }

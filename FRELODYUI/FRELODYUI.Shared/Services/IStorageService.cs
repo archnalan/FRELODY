@@ -14,5 +14,10 @@ namespace FRELODYUI.Shared.Services
         Task RemoveItemAsync(string objectKey);
         Task<T> GetItemAsync<T>(string objectKey);
 
+        /// <summary>
+        /// Returns false when JS interop is unavailable (e.g. during server-side prerendering).
+        /// Use this in OnAfterRenderAsync to gate session-recovery reads.
+        /// </summary>
+        Task<bool> IsStorageAvailableAsync();
     }
 }

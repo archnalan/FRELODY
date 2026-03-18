@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using FRELODYAPP.Data;
+﻿using FRELODYAPP.Data;
 using FRELODYAPP.Models.SubModels;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -17,11 +16,7 @@ namespace FRELODYAPP.Models
 
 		public int LineNumber { get; set; }
 
-        [NotMapped]
-		[TextFileValidation(".txt", ".pdf")]
-		public IFormFile? LyricUpload { get; set; }
-
-        public string? LyricFileContent { get; set; }
+		public string? LyricFileContent { get; set; }
 
         [StringLength(255)]
 		public string? LyricFilePath { get; set; }

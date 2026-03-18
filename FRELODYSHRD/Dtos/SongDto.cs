@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Interfaces;
-using Microsoft.AspNetCore.Http;
 using FRELODYSHRD.Dtos;
 
 namespace FRELODYAPP.Dtos
@@ -23,10 +22,6 @@ namespace FRELODYAPP.Dtos
         public string? Slug { get; set; }
 
         public PlayLevel? SongPlayLevel { get; set; }
-
-        [NotMapped]
-        [TextFileValidation(".txt", ".pdf")]
-        public IFormFile? TextUpload { get; set; }
 
         [StringLength(255)]
         public string? TextFilePath { get; set; }

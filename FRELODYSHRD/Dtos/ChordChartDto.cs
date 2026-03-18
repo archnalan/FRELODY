@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using FRELODYAPP.Data;
+﻿using FRELODYAPP.Data;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -19,10 +18,6 @@ namespace FRELODYSHRD.Dtos
 
         [Range(1, 24)]
         public int? FretPosition { get; set; }
-
-        [NotMapped]
-        [FileExtensionValidation(new string[] { ".png, .jpg, .gif" })]
-        public IFormFile? ChartUpload { get; set; }
 
         [StringLength(255)]
         public string? ChartAudioFilePath { get; set; }

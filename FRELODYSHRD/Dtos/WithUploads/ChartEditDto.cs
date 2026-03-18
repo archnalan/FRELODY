@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using FRELODYAPP.Data;
+﻿using FRELODYAPP.Data;
 using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYAPP.Dtos.WithUploads
@@ -16,13 +15,7 @@ namespace FRELODYAPP.Dtos.WithUploads
 		[StringLength(255)]
 		public string? ChartAudioFilePath { get; set; }
 
-		[FileExtensionValidation(new string[] { ".png", ".jpg", ".gif", ".tiff", ".svg" })]
-		public IFormFile? ChartUpload { get; set; }
-
 		public string? ChartBase64ImageContent { get; set; }
-
-        [FileExtensionValidation(new string[] { ".mp3", ".avi", ".mp4", ".aac", ".wav" })]
-		public IFormFile? ChartAudioUpload { get; set; }
 
 		[StringLength(100)]
 		public string? PositionDescription { get; set; }

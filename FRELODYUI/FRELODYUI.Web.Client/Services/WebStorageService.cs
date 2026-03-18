@@ -65,6 +65,11 @@ namespace FRELODYUI.Web.Client.Services
                     }
                 }
             }
+            catch (InvalidOperationException ex) when (IsPreRenderException(ex))
+            {
+                _logger.LogDebug("Storage unavailable during prerendering for key: {ObjectKey}", objectKey);
+                return default(T);
+            }
             catch (InvalidOperationException ex)
             {
                 _logger.LogError(ex, "Invalid operation while retrieving item for key: {ObjectKey}", objectKey);
@@ -125,6 +130,10 @@ namespace FRELODYUI.Web.Client.Services
                     _logger.LogInformation("Token removal event triggered for key: {ObjectKey}", objectKey);
                 }
             }
+            catch (InvalidOperationException ex) when (IsPreRenderException(ex))
+            {
+                _logger.LogDebug("Storage unavailable during prerendering, skipping remove for key: {ObjectKey}", objectKey);
+            }
             catch (InvalidOperationException ex)
             {
                 _logger.LogError(ex, "Invalid operation while removing item for key: {ObjectKey}", objectKey);
@@ -181,6 +190,10 @@ namespace FRELODYUI.Web.Client.Services
                     }
                 }
             }
+            catch (InvalidOperationException ex) when (IsPreRenderException(ex))
+            {
+                _logger.LogDebug("Storage unavailable during prerendering, skipping set for key: {ObjectKey}", objectKey);
+            }
             catch (InvalidOperationException ex)
             {
                 _logger.LogError(ex, "Invalid operation while setting item for key: {ObjectKey}", objectKey);
@@ -221,6 +234,12 @@ namespace FRELODYUI.Web.Client.Services
         private bool IsInProcessRuntime()
         {
             return _jsRuntime is IJSInProcessRuntime;
+        }
+
+        private static bool IsPreRenderException(InvalidOperationException ex)
+        {
+            return ex.Message.Contains("statically rendered", StringComparison.OrdinalIgnoreCase) ||
+                   ex.Message.Contains("prerendering", StringComparison.OrdinalIgnoreCase);
         }
 
         private bool IsTokenRelatedKey(string objectKey)
@@ -334,6 +353,30 @@ namespace FRELODYUI.Web.Client.Services
             {
                 _logger.LogError(ex, "Error getting storage length");
                 return 0;
+            }
+        }
+
+        public async Task<bool> IsStorageAvailableAsync()
+        {
+            // In-process (WASM) runtimes always have JS available
+            if (_jsRuntime is IJSInProcessRuntime)
+                return true;
+
+            try
+            {
+                // Attempt a minimal JS interop call; throws during server-side prerendering
+                await _jsRuntime.InvokeAsync<bool>("eval", CancellationToken.None, "true");
+                return true;
+            }
+            catch (InvalidOperationException ex) when (IsPreRenderException(ex))
+            {
+                _logger.LogDebug("Storage is not available during prerendering");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Storage availability check failed");
+                return false;
             }
         }
 

@@ -82,6 +82,12 @@
     min-height: 1.75rem;
 }
 
+.settings-row-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
 .settings-label {
     display: flex;
     align-items: center;

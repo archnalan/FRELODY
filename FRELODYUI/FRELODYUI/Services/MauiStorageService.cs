@@ -177,5 +177,8 @@ namespace FRELODYUI.Services
                 return false;
             }
         }
+
+        // MAUI never has a prerendering phase, so storage is always available.
+        public Task<bool> IsStorageAvailableAsync() => Task.FromResult(true);
     }
 }
