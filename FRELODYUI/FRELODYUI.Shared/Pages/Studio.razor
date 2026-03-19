@@ -1,0 +1,713 @@
+@page "/studio"
+@using FRELODYUI.Shared.Services
+@inject IFormFactor FormFactor
+@inject ISongExtractionAiService _aiService
+@inject ICameraService _cameraService
+@inject IOcrApi _ocrApi
+
+<PageTitle>Studio</PageTitle>
+
+<div class="studio-page">
+    <div class="studio-container">
+
+        @* ── Centered header ── *@
+        <div class="studio-header">
+            <div class="studio-header-icon">
+                <i class="bi bi-easel"></i>
+            </div>
+            <h2 class="studio-title">Song Chord Lab</h2>
+            <p class="studio-subtitle">Search songs, paste lyrics, upload a file, or scan a song sheet</p>
+        </div>
+
+        @* ── Composer input ── *@
+        <div class="studio-input-section">
+            <div class="studio-textarea-wrapper">
+                <textarea @bind="pastedText"
+                          @bind:event="oninput"
+                          class="studio-textarea"
+                          placeholder="Paste song lyrics with chords here, or type to search songs...&#10;&#10;Supports: [F]inline chords, alternating chord/lyric lines, or plain lyrics"
+                          rows="4"
+                          disabled="@isProcessing"
+                          @onfocus="OnInputFocus"
+                          @onkeydown="HandleKeyDown">
+                </textarea>
+
+                <div class="studio-input-actions">
+                    <label for="studioFileInput"
+                           class="studio-action-btn studio-file-btn"
+                           style="@(isProcessing ? "pointer-events:none;opacity:0.5;" : "cursor:pointer;")"
+                           title="Upload file">
+                        <i class="bi bi-folder2-open"></i>
+                        <span>Upload</span>
+                    </label>
+                    @if (_cameraService.IsCameraAvailable)
+                    {
+                        <button class="studio-action-btn studio-camera-btn" disabled="@isProcessing" @onclick="ScanImage" title="Scan song sheet">
+                            @if (isScanning)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                <span>Scanning...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-camera"></i>
+                                <span>Scan</span>
+                            }
+                        </button>
+                    }
+                    <button class="studio-action-btn studio-extract-btn" disabled="@isProcessing" @onclick="ProcessPastedText" title="Extract chords &amp; lyrics">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                            <span>Processing...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-right-circle"></i>
+                            <span>Extract</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <div class="studio-format-hints">
+                <span class="studio-hint-badge" title="Chords in square brackets before syllables">
+                    <i class="bi bi-hash"></i> Inline [Am]word
+                </span>
+                <span class="studio-hint-badge" title="Chord line above lyric line">
+                    <i class="bi bi-distribute-vertical"></i> Alternating
+                </span>
+                <span class="studio-hint-badge" title="Plain lyrics without chords">
+                    <i class="bi bi-text-paragraph"></i> Plain text
+                </span>
+                <span class="studio-hint-badge" title="Scan a printed song sheet">
+                    <i class="bi bi-camera"></i> Camera scan
+                </span>
+            </div>
+        </div>
+
+        <InputFile id="studioFileInput" OnChange="HandleFileSelected" class="d-none" accept=".pdf,.docx,.txt" />
+
+        @* ── Scanned image preview ── *@
+        @if (scannedImageBase64 != null)
+        {
+            <div class="studio-scan-preview">
+                <div class="studio-scan-header">
+                    <i class="bi bi-camera-fill"></i>
+                    <span>Scanned Image</span>
+                    <button class="studio-btn-close-scan" @onclick="ClearScannedImage" title="Remove image">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                <img src="data:image/jpeg;base64,@scannedImageBase64" alt="Scanned song sheet" class="studio-scan-thumbnail" />
+            </div>
+        }
+
+        @* ── Detected format ── *@
+        @if (detectedFormat != null)
+        {
+            <div class="studio-format-detected">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Detected format: <strong>@GetFormatDisplayName(detectedFormat.Value)</strong></span>
+            </div>
+        }
+
+        @* ── Inline suggestions ── *@
+        <StudioSuggestions Query="@searchQuery"
+                           ShowSuggestions="@showSuggestions"
+                           IsLoading="@isSearching"
+                           Suggestions="@suggestions"
+                           RecentSearches="@recentSearches"
+                           SelectedIndex="@selectedSuggestionIndex"
+                           OnSuggestionSelected="OnSuggestionSelected"
+                           OnRecentSearchSelected="OnRecentSearchSelected" />
+
+        @* ── Monitor ── *@
+        <StudioMonitor Song="@extractedSong"
+                        DatabaseSong="@databaseSong"
+                        Source="@monitorSource"
+                        IsRefining="@isRefining"
+                        IsSaving="@isSaving"
+                        OnRefineRequested="RefineWithAi"
+                        OnSaveRequested="SaveSong"
+                        OnCustomizeRequested="CustomizeSong"
+                        OnOpenSongRequested="OpenDatabaseSong"
+                        OnClearRequested="ClearMonitor" />
+
+        @* ── Empty state when nothing is active ── *@
+        @if (extractedSong == null && databaseSong == null && !isProcessing && !showSuggestions)
+        {
+            <div class="studio-empty-state">
+                <div class="studio-empty-icon">
+                    <i class="bi bi-file-earmark-music"></i>
+                </div>
+                <p>Paste text above, upload a file, or search to get started</p>
+            </div>
+        }
+    </div>
+</div>
+
+<DialogModal IsVisible="@_modalService.IsModalVisible"
+             Modal="@_modalService.CurrentModal"
+             OnCloseModal="CloseModal"
+             OnConfirmModal="ConfirmModal" />
+
+@code {
+    // ── State ──
+    private string pastedText = "";
+    private string searchQuery = "";
+    private bool isProcessing;
+    private bool isRefining;
+    private bool isScanning;
+    private bool isSaving;
+    private bool isSearching;
+    private bool showSuggestions;
+    private bool isAuthenticated;
+    private SongFormat? detectedFormat;
+    private string? scannedImageBase64;
+
+    // ── Monitor data ──
+    private SimpleSongCreateDto? extractedSong;
+    private SongDto? databaseSong;
+    private StudioMonitor.MonitorSource monitorSource = StudioMonitor.MonitorSource.Extracted;
+
+    // ── Suggestions ──
+    private List<StudioSuggestion> suggestions = new();
+    private List<string> recentSearches = new();
+    private int selectedSuggestionIndex = -1;
+    private CancellationTokenSource? _debounceCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await _globalAuth.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+        await LoadRecentSearches();
+    }
+
+    // ── Input handling ──
+    private async Task OnInputFocus()
+    {
+        // When focused with no text, show recent searches
+        if (string.IsNullOrWhiteSpace(pastedText))
+        {
+            showSuggestions = true;
+            searchQuery = "";
+            await LoadRecentSearches();
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (!showSuggestions) return;
+
+        var totalItems = string.IsNullOrEmpty(searchQuery)
+            ? Math.Min(recentSearches.Count, 5)
+            : suggestions.Count;
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                selectedSuggestionIndex = Math.Min(selectedSuggestionIndex + 1, totalItems - 1);
+                break;
+            case "ArrowUp":
+                selectedSuggestionIndex = Math.Max(selectedSuggestionIndex - 1, -1);
+                break;
+            case "Escape":
+                showSuggestions = false;
+                selectedSuggestionIndex = -1;
+                break;
+            case "Enter":
+                if (selectedSuggestionIndex >= 0 && suggestions.Count > selectedSuggestionIndex)
+                {
+                    await OnSuggestionSelected(suggestions[selectedSuggestionIndex]);
+                }
+                break;
+        }
+    }
+
+    // ── Debounced search ──
+    private string _previousText = "";
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var resumeText = await _storageService.GetItemAsync<string>("studioResumeText");
+                if (!string.IsNullOrEmpty(resumeText))
+                {
+                    pastedText = resumeText;
+                    await _storageService.RemoveItemAsync("studioResumeText");
+                    StateHasChanged();
+                }
+            }
+            catch { }
+        }
+
+        if (pastedText != _previousText)
+        {
+            _previousText = pastedText;
+            await DebouncedSearch(pastedText);
+        }
+    }
+
+    private async Task DebouncedSearch(string text)
+    {
+        _debounceCts?.Cancel();
+        _debounceCts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(300, _debounceCts.Token);
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                searchQuery = "";
+                suggestions.Clear();
+                showSuggestions = true;
+                StateHasChanged();
+                return;
+            }
+
+            // If input looks like lyrics (multi-line or contains chord brackets), don't search
+            if (text.Contains('\n') || text.Contains('['))
+            {
+                showSuggestions = false;
+                StateHasChanged();
+                return;
+            }
+
+            searchQuery = text;
+            showSuggestions = true;
+            isSearching = true;
+            StateHasChanged();
+
+            var result = await _playlistsApi.EnhancedSongSearch(0, 10, text, cancellationToken: _debounceCts.Token);
+            if (result.IsSuccessStatusCode && result.Content?.Data != null)
+            {
+                suggestions = result.Content.Data.Select(r => new StudioSuggestion
+                {
+                    Id = r.Id,
+                    Title = r.Title,
+                    Artist = r.WrittenBy ?? "Unknown Artist",
+                    SongNumber = r.SongNumber,
+                    Album = r.SongBookTitle ?? r.CategoryName,
+                    MatchType = r.MatchType,
+                    MatchSnippet = r.MatchSnippet,
+                    RelevanceScore = r.RelevanceScore,
+                    Source = SuggestionSource.Database
+                }).ToList();
+            }
+            else
+            {
+                suggestions = new();
+            }
+
+            isSearching = false;
+            await SaveRecentSearch(text);
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    // ── Suggestion selection ──
+    private async Task OnSuggestionSelected(StudioSuggestion suggestion)
+    {
+        showSuggestions = false;
+        selectedSuggestionIndex = -1;
+
+        // Load the full song from the database
+        var response = await _songsApi.GetSongWithChordsById(suggestion.Id);
+        if (response.IsSuccessStatusCode && response.Content != null)
+        {
+            databaseSong = response.Content;
+            extractedSong = null;
+            monitorSource = StudioMonitor.MonitorSource.Database;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task OnRecentSearchSelected(string term)
+    {
+        pastedText = term;
+        await DebouncedSearch(term);
+    }
+
+    // ── Extraction logic (from SongImport) ──
+    private void ProcessPastedText()
+    {
+        if (string.IsNullOrWhiteSpace(pastedText)) return;
+
+        isProcessing = true;
+        showSuggestions = false;
+        StateHasChanged();
+
+        extractedSong = _extractor.ExtractFromRawText(pastedText);
+        databaseSong = null;
+        monitorSource = StudioMonitor.MonitorSource.Extracted;
+
+        var lines = pastedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        detectedFormat = _extractor.DetectFormat(lines, 0);
+
+        isProcessing = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            if (file == null) return;
+
+            isProcessing = true;
+            showSuggestions = false;
+            detectedFormat = null;
+            StateHasChanged();
+
+            var path = Path.Combine(Path.GetTempPath(), file.Name);
+
+            using (var stream = file.OpenReadStream())
+            using (var fs = new FileStream(path, FileMode.Create))
+            {
+                await stream.CopyToAsync(fs);
+            }
+
+            if (file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                extractedSong = _extractor.ExtractSong(path);
+                if (extractedSong?.SongLyrics != null)
+                {
+                    pastedText = string.Join("\n", extractedSong.SongLyrics
+                        .GroupBy(s => s.LineNumber)
+                        .OrderBy(g => g.Key)
+                        .Select(g => string.Join("", g.OrderBy(s => s.LyricOrder)
+                            .Select(s => (string.IsNullOrEmpty(s.ChordName) ? "" : $"[{s.ChordName}]") + s.Lyric))));
+                }
+            }
+            else if (file.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+            {
+                var raw = File.ReadAllText(path);
+                pastedText = raw;
+                extractedSong = _extractor.ExtractFromRawText(raw);
+                var lines = raw.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                detectedFormat = _extractor.DetectFormat(lines, 0);
+            }
+            else if (file.Name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase))
+            {
+                var raw = _extractor.ExtractTextFromDocx(path);
+                pastedText = raw;
+                extractedSong = _extractor.ExtractFromRawText(raw);
+                var lines = raw.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                detectedFormat = _extractor.DetectFormat(lines, 0);
+            }
+
+            databaseSong = null;
+            monitorSource = StudioMonitor.MonitorSource.Extracted;
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "File Processing Error",
+                Message = $"An error occurred while processing the file: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "fileError" }
+            });
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ScanImage()
+    {
+        try
+        {
+            var result = await _cameraService.CapturePhotoAsync()
+                         ?? await _cameraService.PickPhotoFromGalleryAsync();
+
+            if (result != null)
+            {
+                await ProcessCapturedImage(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Scan Error",
+                Message = $"Could not capture image: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "cameraError" }
+            });
+        }
+    }
+
+    private async Task ProcessCapturedImage(CameraResult imageResult)
+    {
+        isProcessing = true;
+        isScanning = true;
+        showSuggestions = false;
+        detectedFormat = null;
+        extractedSong = null;
+        StateHasChanged();
+
+        try
+        {
+            scannedImageBase64 = Convert.ToBase64String(imageResult.ImageData);
+            StateHasChanged();
+
+            var ocrRequest = new OcrExtractRequest
+            {
+                ImageBase64 = scannedImageBase64,
+                FileName = imageResult.FileName
+            };
+
+            var response = await _ocrApi.ExtractTextFromImage(ocrRequest);
+
+            if (response.IsSuccessStatusCode && response.Content != null && response.Content.Success)
+            {
+                pastedText = response.Content.ExtractedText;
+                extractedSong = _extractor.ExtractFromOcrText(pastedText);
+                databaseSong = null;
+                monitorSource = StudioMonitor.MonitorSource.Extracted;
+
+                var lines = pastedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                detectedFormat = _extractor.DetectFormat(lines, 0);
+            }
+            else
+            {
+                var errorMsg = response.Content?.ErrorMessage ?? "OCR extraction failed. Please try again with a clearer image.";
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Scan Error",
+                    Message = errorMsg,
+                    ButtonText = "OK",
+                    Context = new ModalContext { ActionType = "ocrError" }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Scan Processing Error",
+                Message = $"An error occurred while processing the scanned image: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "ocrError" }
+            });
+        }
+        finally
+        {
+            isProcessing = false;
+            isScanning = false;
+            StateHasChanged();
+        }
+    }
+
+    // ── AI Refine (auth-gated) ──
+    private async Task RefineWithAi()
+    {
+        if (!isAuthenticated)
+        {
+            await _storageService.SetItemAsync("studioResumeText", pastedText);
+            _navManager.NavigateTo($"/login?returnUrl=/studio");
+            return;
+        }
+
+        if (extractedSong?.SongLyrics == null || !_aiService.IsAvailable) return;
+
+        isRefining = true;
+        StateHasChanged();
+
+        try
+        {
+            var refined = await _aiService.RefineExtractionAsync(pastedText, extractedSong.SongLyrics);
+            extractedSong.SongLyrics = refined;
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "AI Refinement Error",
+                Message = $"Could not refine extraction: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "aiError" }
+            });
+        }
+        finally
+        {
+            isRefining = false;
+            StateHasChanged();
+        }
+    }
+
+    // ── Save (auth-gated) ──
+    private async Task SaveSong()
+    {
+        if (!isAuthenticated)
+        {
+            await _storageService.SetItemAsync("studioResumeText", pastedText);
+            _navManager.NavigateTo($"/login?returnUrl=/studio");
+            return;
+        }
+
+        if (extractedSong == null) return;
+        PrepareSegments();
+        var songId = await PerformSaveSong();
+        if (songId != null)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Song Saved",
+                Message = $"Song '{extractedSong.Title}' saved successfully!",
+                ButtonText = "OK",
+                OptionType = OptionType.Success,
+                Context = new ModalContext { ActionType = "SongSaved" }
+            });
+        }
+    }
+
+    // ── Customize (auth-gated) ──
+    private async Task CustomizeSong()
+    {
+        if (!isAuthenticated)
+        {
+            await _storageService.SetItemAsync("studioResumeText", pastedText);
+            _navManager.NavigateTo($"/login?returnUrl=/studio");
+            return;
+        }
+
+        if (extractedSong == null) return;
+        PrepareSegments();
+        var songId = await PerformSaveSong();
+        if (songId != null)
+        {
+            _navManager.NavigateTo($"/compose?songId={songId}");
+        }
+    }
+
+    private void OpenDatabaseSong()
+    {
+        if (databaseSong != null)
+        {
+            _navManager.NavigateTo($"/song/{databaseSong.Slug ?? databaseSong.Id}");
+        }
+    }
+
+    private void PrepareSegments()
+    {
+        if (extractedSong?.SongLyrics == null) return;
+        foreach (var seg in extractedSong.SongLyrics)
+        {
+            if (seg.PartNumber <= 0)
+            {
+                seg.PartNumber = 1;
+                seg.PartName = seg.PartName == SongSection.unknown ? SongSection.Verse : seg.PartName;
+            }
+        }
+    }
+
+    private async Task<string?> PerformSaveSong()
+    {
+        if (extractedSong == null) return null;
+
+        isSaving = true;
+        StateHasChanged();
+        try
+        {
+            var result = await _songsApi.CreateSong(extractedSong);
+            if (result.IsSuccessStatusCode && result.Content != null)
+            {
+                return result.Content.Id;
+            }
+
+            var errorMessage = _apiResponseHandler.GetApiErrorMessage(result);
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Save Error",
+                Message = errorMessage,
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext { ActionType = "saveError" }
+            });
+            return null;
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearMonitor()
+    {
+        extractedSong = null;
+        databaseSong = null;
+        pastedText = "";
+        detectedFormat = null;
+        scannedImageBase64 = null;
+        showSuggestions = false;
+        StateHasChanged();
+    }
+
+    private void ClearScannedImage()
+    {
+        scannedImageBase64 = null;
+        StateHasChanged();
+    }
+
+    // ── Storage helpers ──
+    private async Task LoadRecentSearches()
+    {
+        try
+        {
+            recentSearches = await _storageService.GetItemAsync<List<string>>("recentSearches")
+                             ?? new List<string>();
+        }
+        catch
+        {
+            recentSearches = new();
+        }
+    }
+
+    private async Task SaveRecentSearch(string term)
+    {
+        if (string.IsNullOrWhiteSpace(term)) return;
+        recentSearches.Remove(term);
+        recentSearches.Insert(0, term);
+        if (recentSearches.Count > 10) recentSearches = recentSearches.Take(10).ToList();
+        await _storageService.SetItemAsync("recentSearches", recentSearches);
+    }
+
+
+
+    private string GetFormatDisplayName(SongFormat format) => format switch
+    {
+        SongFormat.InlineChord => "Inline Chords [Am]",
+        SongFormat.AlternatingChordLyric => "Alternating Chord/Lyric",
+        _ => "Plain Text"
+    };
+
+    // ── Modal handlers ──
+    private async Task ConfirmModal()
+    {
+        if (_modalService.CurrentModal.Context?.ActionType == "SongSaved")
+        {
+            _modalService.Close();
+            return;
+        }
+        await CloseModal();
+    }
+
+    private async Task CloseModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+}

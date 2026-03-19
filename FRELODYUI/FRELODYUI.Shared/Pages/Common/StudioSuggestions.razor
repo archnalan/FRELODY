@@ -1,0 +1,115 @@
+@using FRELODYUI.Shared.Services
+@inject IFormFactor FormFactor
+@inject ISongExtractionAiService _aiService
+@inject ICameraService _cameraService
+@inject IOcrApi _ocrApi
+
+<div class="studio-suggestions">
+    @if (ShowSuggestions)
+    {
+        <div class="suggestions-panel">
+            @if (string.IsNullOrEmpty(Query))
+            {
+                @* Recent searches *@
+                @if (RecentSearches.Any())
+                {
+                    <h6 class="suggestions-section-title">Recent</h6>
+                    <div class="suggestions-list">
+                        @foreach (var term in RecentSearches.Take(5))
+                        {
+                            <div class="suggestion-item suggestion-item--recent @(SelectedIndex == RecentSearches.IndexOf(term) ? "suggestion-item--active" : "")"
+                                 @onclick="() => OnRecentSelected(term)">
+                                <i class="bi bi-clock"></i>
+                                <span class="suggestion-title">@term</span>
+                                <span class="suggestion-badge badge-recent">Recent</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="suggestions-empty">
+                        <i class="bi bi-search"></i>
+                        <p>Search for songs or paste content above</p>
+                    </div>
+                }
+            }
+            else if (IsLoading)
+            {
+                <div class="suggestions-list">
+                    @for (int i = 0; i < 3; i++)
+                    {
+                        <div class="suggestion-item suggestion-item--skeleton">
+                            <div class="skeleton-text" style="width: 60%;"></div>
+                            <div class="skeleton-text" style="width: 35%;"></div>
+                        </div>
+                    }
+                </div>
+            }
+            else if (Suggestions.Any())
+            {
+                <h6 class="suggestions-section-title">Songs</h6>
+                <div class="suggestions-list">
+                    @for (int i = 0; i < Suggestions.Count; i++)
+                    {
+                        var suggestion = Suggestions[i];
+                        var index = i;
+                        <div class="suggestion-item @(index == SelectedIndex ? "suggestion-item--active" : "")"
+                             @onclick="() => SelectSuggestion(suggestion)">
+                            <div class="suggestion-content">
+                                @if (suggestion.SongNumber.HasValue)
+                                {
+                                    <span class="suggestion-number">@suggestion.SongNumber</span>
+                                }
+                                <div class="suggestion-text">
+                                    <span class="suggestion-title">@suggestion.Title</span>
+                                    @if (!string.IsNullOrEmpty(suggestion.Artist))
+                                    {
+                                        <span class="suggestion-artist">@suggestion.Artist</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="suggestion-meta">
+                                @if (!string.IsNullOrEmpty(suggestion.Album))
+                                {
+                                    <span class="suggestion-album">@suggestion.Album</span>
+                                }
+                                <span class="suggestion-badge badge-@suggestion.Source.ToString().ToLower()">
+                                    @suggestion.Source
+                                </span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="suggestions-empty">
+                    <i class="bi bi-music-note-list"></i>
+                    <p>No results for "@Query"</p>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Query { get; set; } = string.Empty;
+    [Parameter] public bool ShowSuggestions { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public List<StudioSuggestion> Suggestions { get; set; } = new();
+    [Parameter] public List<string> RecentSearches { get; set; } = new();
+    [Parameter] public int SelectedIndex { get; set; } = -1;
+    [Parameter] public EventCallback<StudioSuggestion> OnSuggestionSelected { get; set; }
+    [Parameter] public EventCallback<string> OnRecentSearchSelected { get; set; }
+
+    private async Task SelectSuggestion(StudioSuggestion suggestion)
+    {
+        await OnSuggestionSelected.InvokeAsync(suggestion);
+    }
+
+    private async Task OnRecentSelected(string term)
+    {
+        await OnRecentSearchSelected.InvokeAsync(term);
+    }
+}

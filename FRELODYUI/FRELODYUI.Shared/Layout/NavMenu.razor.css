@@ -32,19 +32,202 @@
     align-items: center;
 }
 
+.top-row .container-fluid {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
 .navbar-brand {
     font-size: 1.25rem;
     font-weight: 700;
     color: white !important;
     letter-spacing: 0.5px;
     text-transform: uppercase;
-    transition: all 0.2s ease;
+    transition: opacity 0.2s;
+    padding: 0;
+    text-decoration: none;
 }
 
     .navbar-brand:hover {
         opacity: 0.9;
-        transform: scale(1.02);
+        color: white !important;
     }
+
+/* Logo + hover-reveal expand icon (collapsed mode) */
+.logo-collapse-zone {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+    .logo-collapse-zone .navbar-brand {
+        transition: opacity 0.2s;
+        z-index: 1;
+    }
+
+    .logo-collapse-zone .sidebar-expand-btn {
+        position: absolute;
+        inset: 0;
+        margin: auto;
+        opacity: 0;
+        z-index: 2;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        width: 32px;
+        height: 32px;
+    }
+
+    .logo-collapse-zone:hover .navbar-brand {
+        opacity: 0;
+    }
+
+    .logo-collapse-zone:hover .sidebar-expand-btn {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+/* Logo image */
+.nav-logo-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.nav-brand-text {
+    transition: opacity 0.2s, width 0.2s;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Sidebar expand / collapse toggle buttons */
+.sidebar-expand-btn,
+.sidebar-collapse-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.sidebar-expand-btn:hover,
+.sidebar-collapse-toggle:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.sidebar-expand-btn .bi,
+.sidebar-collapse-toggle .bi {
+    filter: none;
+    width: auto;
+    height: auto;
+    margin: 0;
+    color: white;
+    font-size: 1.1rem;
+}
+
+/* Mobile drawer close button */
+.mobile-drawer-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+
+.mobile-drawer-close:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+@media (min-width: 641px) {
+    .mobile-drawer-close {
+        display: none !important;
+    }
+}
+
+/* d-desktop-flex helper (641px+) */
+@media (max-width: 640.98px) {
+    .d-desktop-flex {
+        display: none !important;
+    }
+}
+
+@media (min-width: 641px) {
+    .d-desktop-flex {
+        display: flex !important;
+    }
+}
+
+/* Nav label */
+.nav-label {
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Nav scrollable fills remaining sidebar height */
+.nav-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+/* Theme icon button for anonymous users */
+.theme-icon-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0 1rem;
+    height: 3rem;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.theme-icon-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.theme-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+}
+
+.theme-icon {
+    font-size: 1.1rem;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-icon-btn:active .theme-icon {
+    transform: scale(0.8) rotate(25deg);
+}
 
 /* Icon Styles */
 .bi {
@@ -118,6 +301,10 @@
 
 .bi-download-nav-menu {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-download' viewBox='0 0 16 16'%3E%3Cpath d='M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5'/%3E%3Cpath d='M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z'/%3E%3C/svg%3E");
+}
+
+.bi-easel-nav-menu {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-easel' viewBox='0 0 16 16'%3E%3Cpath d='M8 0a.5.5 0 0 1 .473.337L9.046 2H14a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1.85l1.323 3.837a.5.5 0 1 1-.946.326L11.092 11H8.5v3a.5.5 0 0 1-1 0v-3H4.908l-1.435 4.163a.5.5 0 1 1-.946-.326L3.85 11H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h4.954L7.527.337A.5.5 0 0 1 8 0M2 3v7h12V3z'/%3E%3C/svg%3E");
 }
 
 /* Navigation Items */
@@ -294,12 +481,8 @@
 
 /* Nav Scrollable Container */
 .nav-scrollable {
-    display: none;
-    background: var(--modal-content-bg);
-}
-
-.navbar-toggler:checked ~ .nav-scrollable {
     display: block;
+    background: var(--modal-content-bg);
 }
 
 /* Scrollbar Styling */
@@ -328,7 +511,6 @@
     }
 
     .nav-scrollable {
-        display: block;
         height: calc(100vh - 3.5rem);
         overflow-y: auto;
     }
@@ -371,3 +553,30 @@
     .nav-item:nth-child(5) {
         animation-delay: 0.25s;
     }
+
+/* ── Collapsed sidebar state ── */
+/* The .sidebar-collapsed class lives on .page in MainLayout,
+   so we use ::deep from the scoped MainLayout context.
+   But NavMenu.razor.css is scoped to NavMenu, so we rely on
+   the parent .page.sidebar-collapsed to hide labels via
+   MainLayout.razor.css. Here we define the local classes. */
+
+@media (min-width: 641px) {
+    :host-context(.sidebar-collapsed) .nav-brand-text,
+    :host-context(.sidebar-collapsed) .nav-label {
+        opacity: 0;
+        width: 0;
+    }
+
+    :host-context(.sidebar-collapsed) .navbar-brand {
+        justify-content: center;
+    }
+
+    :host-context(.sidebar-collapsed) .sidebar-collapse-toggle {
+        margin: 0 auto;
+    }
+
+    :host-context(.sidebar-collapsed) .top-row .container-fluid {
+        justify-content: center;
+    }
+}

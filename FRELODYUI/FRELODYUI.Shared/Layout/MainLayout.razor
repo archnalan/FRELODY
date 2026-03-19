@@ -1,10 +1,30 @@
 ﻿@using System.Security;
 @using System.Text.Json;
 @inherits LayoutComponentBase
+@implements IDisposable
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
+<div class="page @(isSidebarCollapsed ? "sidebar-collapsed" : "")">
+    @* ── Mobile top bar ── *@
+    <header class="mobile-topbar">
+        <button class="mobile-hamburger" @onclick="ToggleMobileDrawer" aria-label="Toggle menu">
+            <i class="bi bi-list fs-5"></i>
+        </button>
+        <a class="mobile-brand" href="/">
+            <img src="_content/FRELODYUI.Shared/fet_melody_logo.png" alt="Frelody" class="mobile-logo-img" />
+            <span class="mobile-brand-text">FRELODY</span>
+        </a>
+    </header>
+
+    @* ── Mobile drawer overlay ── *@
+    @if (isMobileDrawerOpen)
+    {
+        <div class="mobile-overlay" @onclick="CloseMobileDrawer"></div>
+    }
+
+    <div class="sidebar @(isMobileDrawerOpen ? "drawer-open" : "")">
+        <NavMenu IsSidebarCollapsed="isSidebarCollapsed"
+                 OnToggleSidebar="ToggleSidebar"
+                 OnCloseMobileDrawer="CloseMobileDrawer" />
     </div>
 
     <main>
@@ -42,6 +62,45 @@
 @code{
     private GlobalErrorBoundary errorBoundaryRef = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    private bool isSidebarCollapsed = true;
+    private bool isMobileDrawerOpen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var savedSidebar = await _storageService.GetItemAsync<string>("SidebarCollapsed");
+        isSidebarCollapsed = string.IsNullOrEmpty(savedSidebar) || savedSidebar == "true";
+        _navManager.LocationChanged += OnLocationChanged;
+    }
+
+    private async Task ToggleSidebar()
+    {
+        isSidebarCollapsed = !isSidebarCollapsed;
+        await _storageService.SetItemAsync("SidebarCollapsed", isSidebarCollapsed ? "true" : "false");
+    }
+
+    private void ToggleMobileDrawer()
+    {
+        isMobileDrawerOpen = !isMobileDrawerOpen;
+    }
+
+    private void CloseMobileDrawer()
+    {
+        isMobileDrawerOpen = false;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        if (isMobileDrawerOpen)
+        {
+            isMobileDrawerOpen = false;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        _navManager.LocationChanged -= OnLocationChanged;
+    }
 
     private void RecoverPage()
     {

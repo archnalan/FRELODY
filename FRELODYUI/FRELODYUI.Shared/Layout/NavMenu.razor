@@ -1,20 +1,50 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">FRELODY</a>
+        @if (IsSidebarCollapsed)
+        {
+            <div class="logo-collapse-zone">
+                <a class="navbar-brand d-flex align-items-center gap-2 logo-home-link" href="/">
+                    <img src="_content/FRELODYUI.Shared/fet_melody_logo.png" alt="Frelody" class="nav-logo-img" />
+                </a>
+                <button class="sidebar-expand-btn" @onclick="OnToggleSidebar" title="Expand sidebar" aria-label="Expand sidebar">
+                    <i class="bi bi-layout-sidebar"></i>
+                </button>
+            </div>
+        }
+        else
+        {
+            <a class="navbar-brand d-flex align-items-center gap-2 logo-home-link" href="/">
+                <img src="_content/FRELODYUI.Shared/fet_melody_logo.png" alt="Frelody" class="nav-logo-img" />
+                <span class="nav-brand-text">FRELODY</span>
+            </a>
+            <button class="sidebar-collapse-toggle d-desktop-flex" @onclick="OnToggleSidebar" title="Collapse sidebar" aria-label="Collapse sidebar">
+                <i class="bi bi-layout-sidebar-reverse"></i>
+            </button>
+        }
+        <button class="mobile-drawer-close" @onclick="HandleCloseMobile" aria-label="Close menu">
+            <i class="bi bi-x-lg"></i>
+        </button>
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
 <div class="nav-scrollable">
     <nav class="h-100 d-flex flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/studio" Match="NavLinkMatch.All">
+                <span class="bi bi-easel-nav-menu" aria-hidden="true"></span>
+                <span class="nav-label">Studio</span>
+                <span class="ms-auto compose-alert-dot"
+                      data-bs-toggle="tooltip"
+                      title="New"></span>
+            </NavLink>
+        </div>
         <CascadingAuthenticationState>
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
                         <span class="bi bi-card-list-nav-menu" aria-hidden="true"></span> 
-                        Dashboard
+                        <span class="nav-label">Dashboard</span>
                         <span class="ms-auto compose-alert-dot"
                                   data-bs-toggle="tooltip"
                                   title="Popular"></span>
@@ -22,18 +52,18 @@
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link align-items-center" href="/songs-library" Match="NavLinkMatch.Prefix">
-                        <span class="bi bi-collection-play-fill-nav-menu" aria-hidden="true"></span> Library
+                        <span class="bi bi-collection-play-fill-nav-menu" aria-hidden="true"></span> <span class="nav-label">Library</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link align-items-center" href="/playlists" Match="NavLinkMatch.Prefix">
-                            <span class="bi bi-music-note-list-nav-menu" aria-hidden="true"></span> Playlists
+                            <span class="bi bi-music-note-list-nav-menu" aria-hidden="true"></span> <span class="nav-label">Playlists</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="compose" Match="NavLinkMatch.Prefix">
                             <span class="bi bi-pencil-square-nav-menu" aria-hidden="true"></span> 
-                            Compose
+                            <span class="nav-label">Compose</span>
                             <span class="ms-auto compose-alert-dot"
                                   data-bs-toggle="tooltip"
                                   title="Popular"></span>
@@ -41,7 +71,7 @@
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="/chords" Match="NavLinkMatch.Prefix">
-                            <span class="bi bi-sliders-nav-menu" aria-hidden="true"></span> Chords
+                            <span class="bi bi-sliders-nav-menu" aria-hidden="true"></span> <span class="nav-label">Chords</span>
                     </NavLink>
                 </div>
                     @if (isPremiumUser)
@@ -49,7 +79,7 @@
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="/song/import" Match="NavLinkMatch.Prefix">
                                 <span class="bi bi-download-nav-menu" aria-hidden="true"></span>                              
-                                Song Import
+                                <span class="nav-label">Song Import</span>
                             </NavLink>
                         </div>
 
@@ -61,7 +91,7 @@
                                   style="cursor: pointer;">
                                 <span class="bi bi-download-nav-menu"
                                       aria-hidden="true"></span>
-                                Song Import
+                                <span class="nav-label">Song Import</span>
                             </span>
                             <i class="bi bi-stars icon-premium"
                                             data-bs-toggle="tooltip"
@@ -82,24 +112,24 @@
                                     @(firstName?.FirstOrDefault())@(lastName?.FirstOrDefault())
                                 </span>
                         </div>                           
-                            @displayName
+                            <span class="nav-label">@displayName</span>
                     </button>
                     <ul class="dropdown-menu">
                         <li>
                                 <a class="dropdown-item" href="/">
-                                <i class="bi bi-house-door"></i>Home
+                                <i class="bi bi-house-door"></i><span class="nav-label">Home</span>
                             </a>
                         </li>
                         <li>
                             <a class="dropdown-item" href="/user-profile/@(context.User.FindFirst("UserId")?.Value)">
-                                <i class="bi bi-person"></i>View Profile
+                                <i class="bi bi-person"></i><span class="nav-label">View Profile</span>
                             </a>
                         </li>
                         @if (isPremiumUser)
                         {
                             <li>
                                 <a class="dropdown-item" href="/users">
-                                    <i class="bi bi-people"></i>Accounts
+                                    <i class="bi bi-people"></i><span class="nav-label">Accounts</span>
                                 </a>
                             </li>
                         }
@@ -108,7 +138,7 @@
                             <li class="my-2">
                                 <span class="ms-3 disabled text-muted"
                                       style="cursor: pointer;">
-                                    <i class="bi bi-people"></i>Accounts
+                                    <i class="bi bi-people"></i><span class="nav-label">Accounts</span>
                                 </span>
                                 <i class="bi bi-stars icon-premium"
                                    data-bs-toggle="tooltip"
@@ -118,19 +148,34 @@
                         <li class="form-check form-switch mx-3">
                             <input class="form-check-input" type="checkbox" role="switch" id="switchCheckChecked"
                                    checked="@(!isDarkTheme)" @onchange="ToggleTheme">
-                            <label class="form-check-label" for="switchCheckChecked" @onclick:preventDefault>Theme</label>
+                            <label class="form-check-label" for="switchCheckChecked" @onclick:preventDefault><span class="nav-label">Theme</span></label>
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li><button class="dropdown-item text-danger border-0 bg-transparent w-100 text-start" @onclick="TriggerLogout">
-                            <i class="bi bi-box-arrow-right"></i>Log out
+                            <i class="bi bi-box-arrow-right"></i><span class="nav-label">Log out</span>
                         </button></li>
                     </ul>
                 </div>
             </Authorized>
             <NotAuthorized>
+                <div class="nav-item px-3">
+                    <button class="nav-link theme-icon-btn w-100" @onclick="ToggleTheme" title="Toggle theme">
+                        <span class="theme-icon-wrapper">
+                            @if (isDarkTheme)
+                            {
+                                <i class="bi bi-sun-fill theme-icon"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-moon-fill theme-icon"></i>
+                            }
+                        </span>
+                        <span class="nav-label">@(isDarkTheme ? "Light mode" : "Dark mode")</span>
+                    </button>
+                </div>
                 <div class="nav-item px-3 mt-auto">
                     <NavLink class="nav-link" href="/login">
-                        <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> Login
+                        <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> <span class="nav-label">Login</span>
                     </NavLink>
                 </div>
             </NotAuthorized>
@@ -147,6 +192,10 @@
 @code {
     private bool isDarkTheme = false;
     private bool isPremiumUser;
+
+    [Parameter] public bool IsSidebarCollapsed { get; set; }
+    [Parameter] public EventCallback OnToggleSidebar { get; set; }
+    [Parameter] public EventCallback OnCloseMobileDrawer { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -188,6 +237,11 @@
         await _storageService.SetItemAsync("Theme", theme);
     }
 
+    private async Task HandleCloseMobile()
+    {
+        await OnCloseMobileDrawer.InvokeAsync();
+    }
+
     private async Task ApplyTheme(string theme)
     {
         await JsRt.InvokeVoidAsync("eval",
@@ -213,20 +267,3 @@
     }
 }
 
-<script>
-    //Replacing onclick="document.querySelector('.navbar-toggler').click()"
-    document.addEventListener('click', e => {
-      const toggler = document.querySelector('.navbar-toggler');
-      if (!toggler) return;
-      // Only act on small screens where the checkbox controls visibility
-      if (window.matchMedia('(max-width: 640px)').matches) {
-          // Check if it's a NavLink or a dropdown item
-          const navLink = e.target.closest('.nav-item a.nav-link');
-          const dropdownItem = e.target.closest('.dropdown-item');
-
-          if (navLink || dropdownItem) {
-              toggler.checked = false;
-          }
-      }
-  });
-</script>

@@ -16,6 +16,72 @@ article {
 .sidebar {
     background-color: #1f2937;
     border-right: 1px solid #374151;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Mobile top bar ── */
+.mobile-topbar {
+    display: none;
+    align-items: center;
+    height: 56px;
+    padding: 0 0.75rem;
+    background: var(--modal-content-bg);
+    border-bottom: 1px solid var(--modal-border-color);
+    gap: 0.75rem;
+}
+
+.mobile-hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: none;
+    color: var(--text-primary);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.mobile-hamburger:hover {
+    background: var(--bg-hover);
+}
+
+.mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.mobile-logo-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: contain;
+}
+
+.mobile-brand-text {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+}
+
+/* ── Mobile drawer overlay ── */
+.mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    animation: overlayFadeIn 0.2s ease;
+}
+
+@keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .top-row {
@@ -43,12 +109,42 @@ article {
     }
 
 @media (max-width: 640.98px) {
+    .page {
+        flex-direction: column;
+    }
+
+    .mobile-topbar {
+        display: flex !important;
+    }
+
     .top-row {
         justify-content: space-between;
     }
 
     .top-row ::deep a, .top-row ::deep .btn-link {
         margin-left: 0;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 80%;
+        max-width: 300px;
+        z-index: 1050;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: none;
+    }
+
+    .sidebar.drawer-open {
+        transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+    }
+
+    main {
+        height: calc(100vh - 56px);
     }
 }
 
@@ -57,11 +153,99 @@ article {
         flex-direction: row;
     }
 
+    .mobile-topbar {
+        display: none !important;
+    }
+
+    .mobile-overlay {
+        display: none !important;
+    }
+
     .sidebar {
         width: 250px;
         height: 100vh;
         position: sticky;
         top: 0;
+        transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+
+    .page.sidebar-collapsed .sidebar {
+        width: 64px;
+        overflow: visible;
+    }
+
+    /* Allow floating labels to escape collapsed sidebar */
+    .page.sidebar-collapsed .sidebar ::deep .nav-scrollable {
+        overflow: visible;
+    }
+
+    /* nav-brand-text: conditionally hidden via Razor, this is a safety fallback */
+    .page.sidebar-collapsed .sidebar ::deep .nav-brand-text {
+        display: none;
+    }
+
+    /* Collapsed sidebar: hide alert dots */
+    .page.sidebar-collapsed .sidebar ::deep .compose-alert-dot {
+        display: none;
+    }
+
+    .page.sidebar-collapsed .sidebar ::deep .top-row .container-fluid {
+        justify-content: center;
+    }
+
+    .page.sidebar-collapsed .sidebar ::deep .nav-item ::deep .nav-link {
+        justify-content: center;
+        padding: 0 0.5rem;
+    }
+
+    .page.sidebar-collapsed .sidebar ::deep .navbar-brand {
+        gap: 0 !important;
+    }
+
+    .page.sidebar-collapsed .sidebar ::deep .user-avatar-circle {
+        margin: 0 auto;
+    }
+
+    .page.sidebar-collapsed .sidebar ::deep .dropdown-toggle {
+        justify-content: center;
+    }
+
+    /* Floating tooltip labels — appear to the right of the 64px collapsed sidebar */
+    .page.sidebar-collapsed .sidebar ::deep .nav-item {
+        position: relative;
+    }
+
+    .page.sidebar-collapsed .sidebar ::deep .nav-item:not(.dropdown) .nav-label {
+        position: absolute;
+        left: 64px;
+        top: 0;
+        bottom: 0;
+        display: flex !important;
+        align-items: center;
+        background: var(--modal-content-bg);
+        border: 1px solid var(--modal-border-color);
+        padding: 0.3rem 0.75rem;
+        border-radius: 6px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 9999;
+        font-size: 0.875rem;
+        color: var(--text-primary);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        width: max-content;
+        transition: opacity 0.15s;
+        margin-left: 0.5rem;
+    }
+
+    .page.sidebar-collapsed .sidebar ::deep .nav-item:not(.dropdown):hover .nav-label {
+        opacity: 1;
+    }
+
+    /* Avatar dropdown: ensure it escapes the sidebar boundary */
+    .page.sidebar-collapsed .sidebar ::deep .dropdown-menu {
+        z-index: 9999;
     }
 
     .top-row {
