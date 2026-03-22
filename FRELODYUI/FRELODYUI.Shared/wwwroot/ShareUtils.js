@@ -263,6 +263,31 @@ window.scrollToBottom = function () {
 };
 
 /**
+ * Scroll the nearest scrollable ancestor so the given element appears at the
+ * TOP of the visible area (not all the way to the bottom of the page).
+ * Used by the Studio monitor so mon-header lands at top-0 after extraction.
+ * @param {HTMLElement} element
+ */
+window.scrollToElementStart = function (element) {
+    if (!element) return;
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Move keyboard focus away from the composer into the monitor
+    element.focus({ preventScroll: true });
+};
+
+/**
+ * Scroll the nearest scrollable ancestor so the element appears at the TOP of the viewport.
+ * Used to bring the mon-card into view without scrolling all the way to the bottom.
+ * @param {HTMLElement} element
+ */
+window.scrollToElementStart = function (element) {
+    if (!element) return;
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Move keyboard focus away from the composer into the monitor
+    element.focus({ preventScroll: true });
+};
+
+/**
  * Get current scroll position
  * Works universally across both layouts
  * @returns {object} Object with scrollTop, scrollHeight, and clientHeight
@@ -750,6 +775,50 @@ window.initDraggablePalette = function (paletteEl) {
 };
 
 // ============================================
+// BOOTSTRAP TOOLTIP INITIALIZATION
+// ============================================
+
+/**
+ * Initialize Bootstrap tooltips on all elements with a title attribute.
+ * Safely disposes existing instances to avoid duplicates during Blazor re-renders.
+ * @param {HTMLElement} [root=document] - Root element to search within
+ */
+window.initializeTooltips = function (root) {
+    root = root || document;
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) return;
+
+    var elements = root.querySelectorAll('[title]:not([data-bs-tooltip-init])');
+    elements.forEach(function (el) {
+        // Skip elements with empty titles
+        if (!el.getAttribute('title')) return;
+
+        // Dispose any existing tooltip instance
+        var existing = bootstrap.Tooltip.getInstance(el);
+        if (existing) existing.dispose();
+
+        el.setAttribute('data-bs-toggle', 'tooltip');
+        el.setAttribute('data-bs-tooltip-init', '');
+        new bootstrap.Tooltip(el);
+    });
+};
+
+/**
+ * Dispose all Bootstrap tooltips within a root element
+ * @param {HTMLElement} [root=document] - Root element to search within
+ */
+window.disposeTooltips = function (root) {
+    root = root || document;
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) return;
+
+    var elements = root.querySelectorAll('[data-bs-tooltip-init]');
+    elements.forEach(function (el) {
+        var instance = bootstrap.Tooltip.getInstance(el);
+        if (instance) instance.dispose();
+        el.removeAttribute('data-bs-tooltip-init');
+    });
+};
+
+// ============================================
 // INITIALIZE ON LOAD
 // ============================================
 
@@ -764,6 +833,35 @@ window.initDraggablePalette = function (paletteEl) {
             }
         `;
         document.head.appendChild(style);
+
+        // Initialize Bootstrap tooltips on page load
+        window.initializeTooltips();
     });
+
+    // Re-initialize tooltips when Blazor updates the DOM
+    var tooltipInitTimer = null;
+    var tooltipObserver = new MutationObserver(function () {
+        clearTimeout(tooltipInitTimer);
+        tooltipInitTimer = setTimeout(function () {
+            window.initializeTooltips();
+        }, 200);
+    });
+
+    // Start observing once DOM is ready
+    document.addEventListener('DOMContentLoaded', function () {
+        tooltipObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    });
+
+    // Hide all Bootstrap tooltips when the user clicks anywhere
+    document.addEventListener('click', function () {
+        if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) return;
+        document.querySelectorAll('[data-bs-toggle="tooltip"],[data-bs-tooltip-init]').forEach(function (el) {
+            var tooltip = bootstrap.Tooltip.getInstance(el);
+            if (tooltip) tooltip.hide();
+        });
+    }, true);
 })();
 

@@ -5,6 +5,9 @@
     @if (Song != null)
     {
         <div class="mon-card">
+            <button class="mon-btn-close" @onclick="OnClear" title="Clear" type="button">
+                <i class="bi bi-x-lg"></i>
+            </button>
             <div class="mon-header">
                 <div class="mon-title-block">
                     @if (Song.SongNumber.HasValue)
@@ -12,59 +15,67 @@
                         <span class="mon-song-number">@Song.SongNumber</span>
                     }
                     <h3 class="mon-song-title">@Song.Title</h3>
-                    @if (Source == MonitorSource.Database)
+                    <span class="mon-source-badge badge-extracted">Draft</span>
+                </div>
+                <div class="mon-actions">
+                    @* Edit dropdown (Bootstrap) — AI Refine + Customize *@
+                    <div class="dropdown">
+                        <button class="mon-btn dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-pencil-square"></i>
+                            <span>Edit</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            @if (_aiService.IsAvailable)
+                            {
+                                <li>
+                                    <button class="dropdown-item" type="button"
+                                            disabled="@IsRefining"
+                                            @onclick="HandleRefine">
+                                        @if (IsRefining)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"
+                                                  style="width:0.85rem;height:0.85rem;border-width:2px;"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-stars me-2"></i>
+                                        }
+                                        AI Refine
+                                    </button>
+                                </li>
+                            }
+                            <li>
+                                <button class="dropdown-item" type="button" @onclick="HandleCustomize">
+                                    <i class="bi bi-sliders me-2"></i>
+                                    Customize
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    @* Play / Saving / Save button *@
+                    @if (IsSaving)
                     {
-                        <span class="mon-source-badge badge-database">Library</span>
+                        <button class="mon-btn mon-btn--play" disabled type="button">
+                            <span class="spinner-border spinner-border-sm"
+                                  style="width:0.85rem;height:0.85rem;border-width:2px;"></span>
+                            <span>Saving…</span>
+                        </button>
+                    }
+                    else if (!string.IsNullOrEmpty(SavedSongId))
+                    {
+                        <a class="mon-btn mon-btn--play" href="/song/@SavedSongId">
+                            <i class="bi bi-play-fill"></i>
+                            <span>Play</span>
+                        </a>
                     }
                     else
                     {
-                        <span class="mon-source-badge badge-extracted">Draft</span>
-                    }
-                </div>
-                <div class="mon-actions">
-                    <button class="mon-btn mon-btn--clear" @onclick="OnClear" title="Clear">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                    @if (Source == MonitorSource.Extracted && _aiService.IsAvailable)
-                    {
-                        <button class="mon-btn mon-btn--ai"
-                                disabled="@IsRefining"
-                                @onclick="HandleRefine"
-                                title="Refine with AI">
-                            @if (IsRefining)
-                            {
-                                <span class="spinner-border spinner-border-sm" role="status"></span>
-                                <span>Refining…</span>
-                            }
-                            else
-                            {
-                                <i class="bi bi-stars"></i>
-                                <span>AI Refine</span>
-                            }
+                        <button class="mon-btn mon-btn--save" type="button" @onclick="HandleSave">
+                            <i class="bi bi-floppy"></i>
+                            <span>Save</span>
                         </button>
                     }
-                    <button class="mon-btn"
-                            disabled="@IsSaving"
-                            @onclick="HandleCustomize"
-                            title="Save &amp; Customize">
-                        <i class="bi bi-pencil-square"></i>
-                        <span>Customize</span>
-                    </button>
-                    <button class="mon-btn mon-btn--save"
-                            disabled="@IsSaving"
-                            @onclick="HandleSave"
-                            title="Save song">
-                        @if (IsSaving)
-                        {
-                            <span class="spinner-border spinner-border-sm" role="status"></span>
-                            <span>Saving…</span>
-                        }
-                        else
-                        {
-                            <i class="bi bi-save"></i>
-                            <span>Save</span>
-                        }
-                    </button>
                 </div>
             </div>
 
@@ -106,18 +117,19 @@
     else if (DatabaseSong != null)
     {
         <div class="mon-card">
+            <button class="mon-btn-close" @onclick="OnClear" title="Clear" type="button">
+                <i class="bi bi-x-lg"></i>
+            </button>
             <div class="mon-header">
                 <div class="mon-title-block">
                     <h3 class="mon-song-title">@DatabaseSong.Title</h3>
                     <span class="mon-source-badge badge-database">Library</span>
                 </div>
                 <div class="mon-actions">
-                    <button class="mon-btn mon-btn--clear" @onclick="OnClear" title="Clear">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
                     <button class="mon-btn mon-btn--open"
                             @onclick="HandleOpenSong"
-                            title="Open in player">
+                            title="Open in player"
+                            type="button">
                         <i class="bi bi-play-circle"></i>
                         <span>Open</span>
                     </button>
@@ -162,6 +174,8 @@
     [Parameter] public MonitorSource Source { get; set; }
     [Parameter] public bool IsRefining { get; set; }
     [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public string? SavedSongId { get; set; }
+    [Parameter] public bool IsAuthenticated { get; set; }
     [Parameter] public EventCallback OnRefineRequested { get; set; }
     [Parameter] public EventCallback OnSaveRequested { get; set; }
     [Parameter] public EventCallback OnCustomizeRequested { get; set; }

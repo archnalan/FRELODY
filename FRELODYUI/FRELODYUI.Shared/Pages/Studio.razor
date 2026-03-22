@@ -42,34 +42,27 @@
                 @* ── Splash headline ── *@
                 <div class="ii-splash">
                     <div class="ii-splash-icon-wrap">
-                        <span class="bi bi-easel-nav-menu" aria-hidden="true"></span>
+                        <span class="bi bi-easel ii-splash-icon" aria-hidden="true"></span>
                     </div>
-                    <h1 class="ii-splash-heading">Song Chord Lab</h1>
-                    <p class="ii-splash-sub">Search, paste, upload — compose your chord sheet</p>
+                    <h1 class="ii-splash-heading">Chord Flow</h1>
+                    <p class="ii-splash-sub">Song Chord Lab</p>
                 </div>
 
                 @* ── Composer ── *@
                 <div class="ii-composer-wrap">
-                    @if (detectedFormat != null)
-                    {
-                        <div class="ii-format-badge">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-                            </svg>
-                            Detected: <strong>@GetFormatDisplayName(detectedFormat.Value)</strong>
-                        </div>
-                    }
                     <div class="ii-composer">
                         @* Textarea row *@
                         <div class="ii-composer-input-row">
                             <div class="ii-textarea-wrap">
                                 <textarea class="ii-textarea"
+                                          @ref="textareaRef"
                                           @bind="pastedText"
                                           @bind:event="oninput"
-                                          rows="3"
+                                          rows="@(isTextareaFocused || (extractedSong == null && databaseSong == null) ? 3 : 1)"
                                           placeholder="Search for a song, or paste lyrics with chords here…"
                                           disabled="@isProcessing"
                                           @onfocus="OnInputFocus"
+                                          @onblur="OnTextareaBlur"
                                           @onkeydown="HandleKeyDown">
                                 </textarea>
                             </div>
@@ -91,14 +84,11 @@
                             </label>
                         </div>
 
-                        @* Footer: format hints + camera *@
+                        @* Footer: camera (if available) *@
                         <div class="ii-composer-footer">
-                            <div class="ii-footer-actions">
-                               @*  <span class="ii-pill" title="Inline chords before syllables: [Am]word">[Am] Inline</span>
-                                <span class="ii-pill" title="Chord line above lyric line">Alternating</span>
-                                <span class="ii-pill" title="Plain lyrics without chords">Plain text</span> *@
-                                @if (_cameraService.IsCameraAvailable)
-                                {
+                            @if (_cameraService.IsCameraAvailable)
+                            {
+                                <div class="ii-footer-actions">
                                     <button type="button"
                                             class="ii-composer-btn ii-btn-action"
                                             disabled="@(isProcessing || isScanning)"
@@ -112,8 +102,8 @@
                                         </svg>
                                         <span class="ii-btn-label">@(isScanning ? "Scanning…" : "Camera")</span>
                                     </button>
-                                }
-                            </div>
+                                </div>
+                            }
                         </div>
 
                         @* Trailing: extract *@
@@ -138,6 +128,23 @@
                             </button>
                         </div>
                     </div>
+
+                    @* Format hint — informational, below the composer card *@
+                    <p class="ii-format-hint-line">
+                        <i class="bi bi-info-circle" aria-hidden="true"></i>
+                        Accepts <code>[Am]word</code> inline chords, alternating chord&nbsp;&amp;&nbsp;lyric lines, or plain text &mdash; auto-detected
+                    </p>
+
+                    @if (detectedFormat != null)
+                    {
+                        <div class="ii-format-badge">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                            </svg>
+                            Detected: <strong>@GetFormatDisplayName(detectedFormat.Value)</strong>
+                        </div>
+                    }
+
                 </div>
 
                 <InputFile id="studioFileInput" OnChange="HandleFileSelected" class="d-none" accept=".pdf,.docx,.txt"/>
@@ -185,12 +192,14 @@
                 @* ── Monitor: extracted or database song ── *@
                 @if (extractedSong != null || databaseSong != null)
                 {
-                    <div class="ii-monitor-wrap">
+                    <div class="ii-monitor-wrap" @ref="monitorWrapRef" tabindex="-1">
                         <StudioMonitor Song="@extractedSong"
                                        DatabaseSong="@databaseSong"
                                        Source="@monitorSource"
                                        IsRefining="@isRefining"
                                        IsSaving="@isSaving"
+                                       IsAuthenticated="@isAuthenticated"
+                                       SavedSongId="@savedSongId"
                                        OnRefineRequested="RefineWithAi"
                                        OnSaveRequested="SaveSong"
                                        OnCustomizeRequested="CustomizeSong"
@@ -294,6 +303,11 @@
     private bool isSearching;
     private bool showSuggestions;
     private bool isAuthenticated;
+    private string? savedSongId;
+    private bool _shouldScrollToMonitor;
+    private bool isTextareaFocused;
+    private ElementReference textareaRef;
+    private ElementReference monitorWrapRef;
     private SongFormat? detectedFormat;
     private string? scannedImageBase64;
 
@@ -318,6 +332,7 @@
     // ── Input handling ──
     private async Task OnInputFocus()
     {
+        isTextareaFocused = true;
         // When focused with no text, show recent searches
         if (string.IsNullOrWhiteSpace(pastedText))
         {
@@ -325,6 +340,12 @@
             searchQuery = "";
             await LoadRecentSearches();
         }
+    }
+
+    private void OnTextareaBlur()
+    {
+        isTextareaFocused = false;
+        StateHasChanged();
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
@@ -379,6 +400,13 @@
         {
             _previousText = pastedText;
             await DebouncedSearch(pastedText);
+        }
+
+        if (_shouldScrollToMonitor)
+        {
+            _shouldScrollToMonitor = false;
+            if (monitorWrapRef.Id != null)
+                await JsRt.InvokeVoidAsync("scrollToElementStart", monitorWrapRef);
         }
     }
 
@@ -453,7 +481,9 @@
         {
             databaseSong = response.Content;
             extractedSong = null;
+            savedSongId = null;
             monitorSource = StudioMonitor.MonitorSource.Database;
+            _shouldScrollToMonitor = true;
         }
 
         StateHasChanged();
@@ -466,12 +496,13 @@
     }
 
     // ── Extraction logic (from SongImport) ──
-    private void ProcessPastedText()
+    private async Task ProcessPastedText()
     {
         if (string.IsNullOrWhiteSpace(pastedText)) return;
 
         isProcessing = true;
         showSuggestions = false;
+        savedSongId = null;
         StateHasChanged();
 
         extractedSong = _extractor.ExtractFromRawText(pastedText);
@@ -482,7 +513,14 @@
         detectedFormat = _extractor.DetectFormat(lines, 0);
 
         isProcessing = false;
+        _shouldScrollToMonitor = true;
         StateHasChanged();
+
+        if (isAuthenticated && extractedSong != null)
+        {
+            PrepareSegments();
+            savedSongId = await PerformSaveSong();
+        }
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
@@ -536,6 +574,13 @@
 
             databaseSong = null;
             monitorSource = StudioMonitor.MonitorSource.Extracted;
+
+            _shouldScrollToMonitor = true;
+            if (isAuthenticated && extractedSong != null)
+            {
+                PrepareSegments();
+                savedSongId = await PerformSaveSong();
+            }
         }
         catch (Exception ex)
         {
@@ -558,13 +603,10 @@
     {
         try
         {
-            var result = await _cameraService.CapturePhotoAsync()
-                         ?? await _cameraService.PickPhotoFromGalleryAsync();
+            var result = await _cameraService.CapturePhotoAsync();
+            if (result == null) return; // user cancelled — do not also open gallery
 
-            if (result != null)
-            {
-                await ProcessCapturedImage(result);
-            }
+            await ProcessCapturedImage(result);
         }
         catch (Exception ex)
         {
@@ -609,6 +651,13 @@
 
                 var lines = pastedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
                 detectedFormat = _extractor.DetectFormat(lines, 0);
+
+                _shouldScrollToMonitor = true;
+                if (isAuthenticated && extractedSong != null)
+                {
+                    PrepareSegments();
+                    savedSongId = await PerformSaveSong();
+                }
             }
             else
             {
@@ -779,6 +828,7 @@
     {
         extractedSong = null;
         databaseSong = null;
+        savedSongId = null;
         pastedText = "";
         detectedFormat = null;
         scannedImageBase64 = null;
@@ -822,6 +872,8 @@
         showSuggestions = true;
         searchQuery = "";
         await LoadRecentSearches();
+        StateHasChanged();
+        await JsRt.InvokeVoidAsync("focusInputAndSetCursorToEnd", textareaRef);
     }
 
     private void InsertExampleText()

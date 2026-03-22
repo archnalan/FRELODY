@@ -177,6 +177,28 @@ public class ChordLyricExtrator
                 break;
         }
 
+        // Step 4: Fallback — if title extraction consumed all usable content, re-parse from index 0.
+        // This handles cases like a single lyric line ("glory glory hallelujah") or a single
+        // chord+lyric pair ("A\nAmazing grace") where the lyric was wrongly consumed as the title.
+        if (song.SongLyrics.Count == 0 && startIndex > 0)
+        {
+            lineNumber = 1;
+            lyricOrder = 1;
+            var fullFormat = DetectFormat(lines, 0);
+            switch (fullFormat)
+            {
+                case SongFormat.InlineChord:
+                    ParseInlineFormat(lines, 0, song.SongLyrics, ref lineNumber, ref lyricOrder);
+                    break;
+                case SongFormat.AlternatingChordLyric:
+                    ParseAlternatingFormat(lines, 0, song.SongLyrics, ref lineNumber, ref lyricOrder);
+                    break;
+                default:
+                    ParsePlainLyrics(lines, 0, song.SongLyrics, ref lineNumber, ref lyricOrder);
+                    break;
+            }
+        }
+
         if (string.IsNullOrEmpty(song.Title))
             song.Title = "Untitled Song";
 

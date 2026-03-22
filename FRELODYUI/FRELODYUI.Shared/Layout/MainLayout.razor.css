@@ -204,16 +204,39 @@ article {
     }
 
     .page.sidebar-collapsed .sidebar ::deep .user-avatar-circle {
-        margin: 0 auto;
+        margin: 0 !important;
     }
 
     .page.sidebar-collapsed .sidebar ::deep .dropdown-toggle {
-        justify-content: center;
+        justify-content: center !important;
+        padding: 0.5rem !important;
     }
 
-    /* Floating tooltip labels — appear to the right of the 64px collapsed sidebar */
+    .page.sidebar-collapsed .sidebar ::deep .dropdown-toggle::after {
+        display: none;
+    }
+
+    /* Collapsed: hide user name in dropdown */
+    .page.sidebar-collapsed .sidebar ::deep .nav-item.dropdown .nav-label {
+        display: none;
+    }
+
+    /* Collapsed: reduce nav-item padding so icons have room to center */
     .page.sidebar-collapsed .sidebar ::deep .nav-item {
         position: relative;
+        padding-left: 0.25em !important;
+        padding-right: 0.5em !important;
+    }
+
+    /* Collapsed: remove icon right-margin for centered appearance */
+    .page.sidebar-collapsed .sidebar ::deep .nav-link > .bi {
+        margin-right: 0;
+    }
+
+    /* Collapsed: center theme toggle icon */
+    .page.sidebar-collapsed .sidebar ::deep .theme-icon-btn {
+        gap: 0;
+        padding: 0 0.5rem !important;
     }
 
     .page.sidebar-collapsed .sidebar ::deep .nav-item:not(.dropdown) .nav-label {
