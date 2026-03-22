@@ -1,40 +1,40 @@
 @using FRELODYUI.Shared.Services
 @inject ISongExtractionAiService _aiService
 
-<div class="studio-monitor @(HasContent ? "studio-monitor--active" : "")">
+<div class="ii-monitor-outer">
     @if (Song != null)
     {
-        <div class="monitor-card">
-            <div class="monitor-header">
-                <div class="monitor-title-block">
+        <div class="mon-card">
+            <div class="mon-header">
+                <div class="mon-title-block">
                     @if (Song.SongNumber.HasValue)
                     {
-                        <span class="monitor-song-number">@Song.SongNumber</span>
+                        <span class="mon-song-number">@Song.SongNumber</span>
                     }
-                    <h3 class="monitor-song-title">@Song.Title</h3>
+                    <h3 class="mon-song-title">@Song.Title</h3>
                     @if (Source == MonitorSource.Database)
                     {
-                        <span class="monitor-source-badge badge-database">Library</span>
+                        <span class="mon-source-badge badge-database">Library</span>
                     }
                     else
                     {
-                        <span class="monitor-source-badge badge-extracted">Draft</span>
+                        <span class="mon-source-badge badge-extracted">Draft</span>
                     }
                 </div>
-                <div class="monitor-actions">
-                    <button class="monitor-action-btn monitor-clear-btn" @onclick="OnClear" title="Clear">
+                <div class="mon-actions">
+                    <button class="mon-btn mon-btn--clear" @onclick="OnClear" title="Clear">
                         <i class="bi bi-x-lg"></i>
                     </button>
                     @if (Source == MonitorSource.Extracted && _aiService.IsAvailable)
                     {
-                        <button class="monitor-action-btn monitor-ai-btn"
+                        <button class="mon-btn mon-btn--ai"
                                 disabled="@IsRefining"
                                 @onclick="HandleRefine"
                                 title="Refine with AI">
                             @if (IsRefining)
                             {
                                 <span class="spinner-border spinner-border-sm" role="status"></span>
-                                <span>Refining...</span>
+                                <span>Refining…</span>
                             }
                             else
                             {
@@ -43,21 +43,21 @@
                             }
                         </button>
                     }
-                    <button class="monitor-action-btn monitor-customize-btn"
-                            disabled="@(IsSaving)"
+                    <button class="mon-btn"
+                            disabled="@IsSaving"
                             @onclick="HandleCustomize"
-                            title="Save & Customize">
+                            title="Save &amp; Customize">
                         <i class="bi bi-pencil-square"></i>
                         <span>Customize</span>
                     </button>
-                    <button class="monitor-action-btn monitor-save-btn"
-                            disabled="@(IsSaving)"
+                    <button class="mon-btn mon-btn--save"
+                            disabled="@IsSaving"
                             @onclick="HandleSave"
                             title="Save song">
                         @if (IsSaving)
                         {
                             <span class="spinner-border spinner-border-sm" role="status"></span>
-                            <span>Saving...</span>
+                            <span>Saving…</span>
                         }
                         else
                         {
@@ -70,26 +70,25 @@
 
             @if (Song.SongLyrics != null && Song.SongLyrics.Count > 0)
             {
-                <div class="monitor-lyrics-grid">
+                <div class="mon-lyrics-grid">
                     @foreach (var lineGroup in Song.SongLyrics
                             .GroupBy(s => s.LineNumber)
                             .OrderBy(g => g.Key))
                     {
-                        <div class="monitor-lyric-line">
+                        <div class="mon-lyric-line">
                             @foreach (var seg in lineGroup.OrderBy(s => s.LyricOrder))
                             {
-                                <div class="monitor-segment @(string.IsNullOrEmpty(seg.ChordName) ? "" : "has-chord")">
-                                    <span class="monitor-chord-name @GetChordAlignmentClass(seg)">
-                                        @(seg.ChordName ?? "\u00A0")
+                                <div class="mon-segment @(string.IsNullOrEmpty(seg.ChordName) ? "" : "has-chord")">
+                                    <span class="mon-chord @GetChordAlignmentClass(seg)">
+                                        @(seg.ChordName ?? "\u00a0")
                                     </span>
-                                    <span class="monitor-lyric-text">@seg.Lyric</span>
+                                    <span class="mon-lyric">@seg.Lyric</span>
                                 </div>
                             }
                         </div>
                     }
                 </div>
-
-                <div class="monitor-stats">
+                <div class="mon-stats">
                     <span><i class="bi bi-list-ol"></i> @Song.SongLyrics.Select(s => s.LineNumber).Distinct().Count() lines</span>
                     <span><i class="bi bi-puzzle"></i> @Song.SongLyrics.Count segments</span>
                     <span><i class="bi bi-music-note"></i> @Song.SongLyrics.Count(s => !string.IsNullOrEmpty(s.ChordName)) chords</span>
@@ -97,7 +96,7 @@
             }
             else
             {
-                <div class="monitor-empty-lyrics">
+                <div class="mon-empty-lyrics">
                     <i class="bi bi-music-note-list"></i>
                     <p>No lyrics or chords extracted. Try a different format.</p>
                 </div>
@@ -106,17 +105,17 @@
     }
     else if (DatabaseSong != null)
     {
-        <div class="monitor-card">
-            <div class="monitor-header">
-                <div class="monitor-title-block">
-                    <h3 class="monitor-song-title">@DatabaseSong.Title</h3>
-                    <span class="monitor-source-badge badge-database">Library</span>
+        <div class="mon-card">
+            <div class="mon-header">
+                <div class="mon-title-block">
+                    <h3 class="mon-song-title">@DatabaseSong.Title</h3>
+                    <span class="mon-source-badge badge-database">Library</span>
                 </div>
-                <div class="monitor-actions">
-                    <button class="monitor-action-btn monitor-clear-btn" @onclick="OnClear" title="Clear">
+                <div class="mon-actions">
+                    <button class="mon-btn mon-btn--clear" @onclick="OnClear" title="Clear">
                         <i class="bi bi-x-lg"></i>
                     </button>
-                    <button class="monitor-action-btn monitor-customize-btn"
+                    <button class="mon-btn mon-btn--open"
                             @onclick="HandleOpenSong"
                             title="Open in player">
                         <i class="bi bi-play-circle"></i>
@@ -127,23 +126,23 @@
 
             @if (DatabaseSong.SongParts?.Any() == true)
             {
-                <div class="monitor-lyrics-grid">
+                <div class="mon-lyrics-grid">
                     @foreach (var verse in DatabaseSong.SongParts.OrderBy(v => v.PartNumber))
                     {
                         @if (verse.LyricLines?.Any() == true)
                         {
                             @foreach (var line in verse.LyricLines.OrderBy(l => l.LyricLineOrder))
                             {
-                                <div class="monitor-lyric-line">
+                                <div class="mon-lyric-line">
                                     @if (line.LyricSegments?.Any() == true)
                                     {
                                         @foreach (var segment in line.LyricSegments.OrderBy(s => s.LyricOrder))
                                         {
-                                            <div class="monitor-segment @(segment.Chord != null ? "has-chord" : "")">
-                                                <span class="monitor-chord-name">
-                                                    @(segment.Chord?.ChordName ?? "\u00A0")
+                                            <div class="mon-segment @(segment.Chord != null ? "has-chord" : "")">
+                                                <span class="mon-chord">
+                                                    @(segment.Chord?.ChordName ?? "\u00a0")
                                                 </span>
-                                                <span class="monitor-lyric-text">@segment.Lyric</span>
+                                                <span class="mon-lyric">@segment.Lyric</span>
                                             </div>
                                         }
                                     }

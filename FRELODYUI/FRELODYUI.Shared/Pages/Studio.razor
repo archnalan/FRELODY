@@ -7,143 +7,274 @@
 
 <PageTitle>Studio</PageTitle>
 
-<div class="studio-page">
-    <div class="studio-container">
+<div class="ii-page">
+    <div class="ii-scroll-root">
 
-        @* ── Centered header ── *@
-        <div class="studio-header">
-            <div class="studio-header-icon">
-                <i class="bi bi-easel"></i>
+        @* ── Auth pill header ── *@
+        <header class="ii-header">
+            <div class="ii-offer-pill">
+                @if (isAuthenticated)
+                {
+                    <a href="/songs-library" class="ii-offer-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                             fill="currentColor" class="ii-offer-icon">
+                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                        </svg>
+                        <span>My Library</span>
+                    </a>
+                }
+                else
+                {
+                    <a href="/login?returnUrl=/studio" class="ii-offer-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                             fill="currentColor" class="ii-offer-icon">
+                            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 3.9 2.4-7.4L2 9.4h7.6z"/>
+                        </svg>
+                        <span>Sign in free</span>
+                    </a>
+                }
             </div>
-            <h2 class="studio-title">Song Chord Lab</h2>
-            <p class="studio-subtitle">Search songs, paste lyrics, upload a file, or scan a song sheet</p>
-        </div>
+        </header>
 
-        @* ── Composer input ── *@
-        <div class="studio-input-section">
-            <div class="studio-textarea-wrapper">
-                <textarea @bind="pastedText"
-                          @bind:event="oninput"
-                          class="studio-textarea"
-                          placeholder="Paste song lyrics with chords here, or type to search songs...&#10;&#10;Supports: [F]inline chords, alternating chord/lyric lines, or plain lyrics"
-                          rows="4"
-                          disabled="@isProcessing"
-                          @onfocus="OnInputFocus"
-                          @onkeydown="HandleKeyDown">
-                </textarea>
+        <main class="ii-main">
+            <div class="ii-landing">
 
-                <div class="studio-input-actions">
-                    <label for="studioFileInput"
-                           class="studio-action-btn studio-file-btn"
-                           style="@(isProcessing ? "pointer-events:none;opacity:0.5;" : "cursor:pointer;")"
-                           title="Upload file">
-                        <i class="bi bi-folder2-open"></i>
-                        <span>Upload</span>
-                    </label>
-                    @if (_cameraService.IsCameraAvailable)
+                @* ── Splash headline ── *@
+                <div class="ii-splash">
+                    <div class="ii-splash-icon-wrap">
+                        <span class="bi bi-easel-nav-menu" aria-hidden="true"></span>
+                    </div>
+                    <h1 class="ii-splash-heading">Song Chord Lab</h1>
+                    <p class="ii-splash-sub">Search, paste, upload — compose your chord sheet</p>
+                </div>
+
+                @* ── Composer ── *@
+                <div class="ii-composer-wrap">
+                    @if (detectedFormat != null)
                     {
-                        <button class="studio-action-btn studio-camera-btn" disabled="@isProcessing" @onclick="ScanImage" title="Scan song sheet">
-                            @if (isScanning)
-                            {
-                                <span class="spinner-border spinner-border-sm" role="status"></span>
-                                <span>Scanning...</span>
-                            }
-                            else
-                            {
-                                <i class="bi bi-camera"></i>
-                                <span>Scan</span>
-                            }
-                        </button>
+                        <div class="ii-format-badge">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                            </svg>
+                            Detected: <strong>@GetFormatDisplayName(detectedFormat.Value)</strong>
+                        </div>
                     }
-                    <button class="studio-action-btn studio-extract-btn" disabled="@isProcessing" @onclick="ProcessPastedText" title="Extract chords &amp; lyrics">
-                        @if (isProcessing)
-                        {
-                            <span class="spinner-border spinner-border-sm" role="status"></span>
-                            <span>Processing...</span>
-                        }
-                        else
-                        {
-                            <i class="bi bi-arrow-right-circle"></i>
-                            <span>Extract</span>
-                        }
-                    </button>
+                    <div class="ii-composer">
+                        @* Textarea row *@
+                        <div class="ii-composer-input-row">
+                            <div class="ii-textarea-wrap">
+                                <textarea class="ii-textarea"
+                                          @bind="pastedText"
+                                          @bind:event="oninput"
+                                          rows="3"
+                                          placeholder="Search for a song, or paste lyrics with chords here…"
+                                          disabled="@isProcessing"
+                                          @onfocus="OnInputFocus"
+                                          @onkeydown="HandleKeyDown">
+                                </textarea>
+                            </div>
+                        </div>
+
+                        @* Leading: file upload *@
+                        <div class="ii-composer-leading">
+                            <label for="studioFileInput"
+                                   class="ii-composer-btn ii-btn-plus"
+                                   aria-label="Upload file"
+                                   title="Upload .pdf, .docx, or .txt"
+                                   style="@(isProcessing ? "pointer-events:none;opacity:0.45;" : "cursor:pointer;")">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
+                            </label>
+                        </div>
+
+                        @* Footer: format hints + camera *@
+                        <div class="ii-composer-footer">
+                            <div class="ii-footer-actions">
+                               @*  <span class="ii-pill" title="Inline chords before syllables: [Am]word">[Am] Inline</span>
+                                <span class="ii-pill" title="Chord line above lyric line">Alternating</span>
+                                <span class="ii-pill" title="Plain lyrics without chords">Plain text</span> *@
+                                @if (_cameraService.IsCameraAvailable)
+                                {
+                                    <button type="button"
+                                            class="ii-composer-btn ii-btn-action"
+                                            disabled="@(isProcessing || isScanning)"
+                                            @onclick="ScanImage"
+                                            title="Scan a printed song sheet">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                             fill="none" stroke="currentColor" stroke-width="2"
+                                             stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/>
+                                            <circle cx="12" cy="13" r="3"/>
+                                        </svg>
+                                        <span class="ii-btn-label">@(isScanning ? "Scanning…" : "Camera")</span>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+
+                        @* Trailing: extract *@
+                        <div class="ii-composer-trailing">
+                            <button type="button"
+                                    class="ii-btn-submit"
+                                    disabled="@(isProcessing || string.IsNullOrWhiteSpace(pastedText))"
+                                    @onclick="ProcessPastedText"
+                                    title="Extract chords &amp; lyrics">
+                                @if (isProcessing)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status"
+                                          style="width:1.1rem;height:1.1rem;border-width:2px;"></span>
+                                }
+                                else
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                         viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                                    </svg>
+                                }
+                            </button>
+                        </div>
+                    </div>
                 </div>
+
+                <InputFile id="studioFileInput" OnChange="HandleFileSelected" class="d-none" accept=".pdf,.docx,.txt"/>
+
+                @* ── Scanned image preview ── *@
+                @if (scannedImageBase64 != null)
+                {
+                    <div class="ii-scan-wrap">
+                        <div class="ii-scan-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/>
+                                <circle cx="12" cy="13" r="3"/>
+                            </svg>
+                            <span>Scanned image</span>
+                            <button class="ii-scan-close" @onclick="ClearScannedImage" title="Remove image">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <img src="data:image/jpeg;base64,@scannedImageBase64" alt="Scanned song sheet" class="ii-scan-thumb"/>
+                    </div>
+                }
+
+                @* ── Live suggestions (search / recent) ── *@
+                @if (showSuggestions)
+                {
+                    <div class="ii-suggestions-wrap">
+                        <StudioSuggestions Query="@searchQuery"
+                                           ShowSuggestions="@showSuggestions"
+                                           IsLoading="@isSearching"
+                                           Suggestions="@suggestions"
+                                           RecentSearches="@recentSearches"
+                                           SelectedIndex="@selectedSuggestionIndex"
+                                           OnSuggestionSelected="OnSuggestionSelected"
+                                           OnRecentSearchSelected="OnRecentSearchSelected" />
+                    </div>
+                }
+
+                @* ── Monitor: extracted or database song ── *@
+                @if (extractedSong != null || databaseSong != null)
+                {
+                    <div class="ii-monitor-wrap">
+                        <StudioMonitor Song="@extractedSong"
+                                       DatabaseSong="@databaseSong"
+                                       Source="@monitorSource"
+                                       IsRefining="@isRefining"
+                                       IsSaving="@isSaving"
+                                       OnRefineRequested="RefineWithAi"
+                                       OnSaveRequested="SaveSong"
+                                       OnCustomizeRequested="CustomizeSong"
+                                       OnOpenSongRequested="OpenDatabaseSong"
+                                       OnClearRequested="ClearMonitor" />
+                    </div>
+                }
+
+                @* ── Empty state: starter cards ── *@
+                @if (extractedSong == null && databaseSong == null && !isProcessing && !showSuggestions)
+                {
+                    <div class="ii-suggestions-wrap">
+                        <section class="ii-suggestions" aria-label="Get started">
+                            <ul class="ii-suggestions-list">
+                                <li>
+                                    <button type="button" class="ii-suggestion-btn" @onclick="ShowRecentSearches">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                             class="ii-suggestion-arrow">
+                                            <line x1="7" y1="17" x2="17" y2="7"/>
+                                            <polyline points="7 7 17 7 17 17"/>
+                                        </svg>
+                                        <span class="ii-suggestion-text">
+                                            <span class="ii-suggestion-title">Search by song title</span>
+                                            <span class="ii-suggestion-desc">Find any song from the library by title or artist</span>
+                                        </span>
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" class="ii-suggestion-btn" @onclick="InsertExampleText">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                             class="ii-suggestion-arrow">
+                                            <line x1="7" y1="17" x2="17" y2="7"/>
+                                            <polyline points="7 7 17 7 17 17"/>
+                                        </svg>
+                                        <span class="ii-suggestion-text">
+                                            <span class="ii-suggestion-title">Paste with inline chords</span>
+                                            <span class="ii-suggestion-desc">[Am]Amazing [F]Grace, how [C]sweet the [G]sound</span>
+                                        </span>
+                                    </button>
+                                </li>
+                                <li>
+                                    <label for="studioFileInput" class="ii-suggestion-btn" style="cursor:pointer;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                             class="ii-suggestion-arrow">
+                                            <line x1="7" y1="17" x2="17" y2="7"/>
+                                            <polyline points="7 7 17 7 17 17"/>
+                                        </svg>
+                                        <span class="ii-suggestion-text">
+                                            <span class="ii-suggestion-title">Upload a file</span>
+                                            <span class="ii-suggestion-desc">Import lyrics from a .pdf, .txt, or .docx file</span>
+                                        </span>
+                                    </label>
+                                </li>
+                                @if (_cameraService.IsCameraAvailable)
+                                {
+                                    <li>
+                                        <button type="button" class="ii-suggestion-btn" @onclick="ScanImage">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                                 class="ii-suggestion-arrow">
+                                                <line x1="7" y1="17" x2="17" y2="7"/>
+                                                <polyline points="7 7 17 7 17 17"/>
+                                            </svg>
+                                            <span class="ii-suggestion-text">
+                                                <span class="ii-suggestion-title">Scan a song sheet</span>
+                                                <span class="ii-suggestion-desc">Use your camera to capture and extract chords</span>
+                                            </span>
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        </section>
+                    </div>
+                }
+
             </div>
-
-            <div class="studio-format-hints">
-                <span class="studio-hint-badge" title="Chords in square brackets before syllables">
-                    <i class="bi bi-hash"></i> Inline [Am]word
-                </span>
-                <span class="studio-hint-badge" title="Chord line above lyric line">
-                    <i class="bi bi-distribute-vertical"></i> Alternating
-                </span>
-                <span class="studio-hint-badge" title="Plain lyrics without chords">
-                    <i class="bi bi-text-paragraph"></i> Plain text
-                </span>
-                <span class="studio-hint-badge" title="Scan a printed song sheet">
-                    <i class="bi bi-camera"></i> Camera scan
-                </span>
-            </div>
-        </div>
-
-        <InputFile id="studioFileInput" OnChange="HandleFileSelected" class="d-none" accept=".pdf,.docx,.txt" />
-
-        @* ── Scanned image preview ── *@
-        @if (scannedImageBase64 != null)
-        {
-            <div class="studio-scan-preview">
-                <div class="studio-scan-header">
-                    <i class="bi bi-camera-fill"></i>
-                    <span>Scanned Image</span>
-                    <button class="studio-btn-close-scan" @onclick="ClearScannedImage" title="Remove image">
-                        <i class="bi bi-x"></i>
-                    </button>
-                </div>
-                <img src="data:image/jpeg;base64,@scannedImageBase64" alt="Scanned song sheet" class="studio-scan-thumbnail" />
-            </div>
-        }
-
-        @* ── Detected format ── *@
-        @if (detectedFormat != null)
-        {
-            <div class="studio-format-detected">
-                <i class="bi bi-check-circle-fill"></i>
-                <span>Detected format: <strong>@GetFormatDisplayName(detectedFormat.Value)</strong></span>
-            </div>
-        }
-
-        @* ── Inline suggestions ── *@
-        <StudioSuggestions Query="@searchQuery"
-                           ShowSuggestions="@showSuggestions"
-                           IsLoading="@isSearching"
-                           Suggestions="@suggestions"
-                           RecentSearches="@recentSearches"
-                           SelectedIndex="@selectedSuggestionIndex"
-                           OnSuggestionSelected="OnSuggestionSelected"
-                           OnRecentSearchSelected="OnRecentSearchSelected" />
-
-        @* ── Monitor ── *@
-        <StudioMonitor Song="@extractedSong"
-                        DatabaseSong="@databaseSong"
-                        Source="@monitorSource"
-                        IsRefining="@isRefining"
-                        IsSaving="@isSaving"
-                        OnRefineRequested="RefineWithAi"
-                        OnSaveRequested="SaveSong"
-                        OnCustomizeRequested="CustomizeSong"
-                        OnOpenSongRequested="OpenDatabaseSong"
-                        OnClearRequested="ClearMonitor" />
-
-        @* ── Empty state when nothing is active ── *@
-        @if (extractedSong == null && databaseSong == null && !isProcessing && !showSuggestions)
-        {
-            <div class="studio-empty-state">
-                <div class="studio-empty-icon">
-                    <i class="bi bi-file-earmark-music"></i>
-                </div>
-                <p>Paste text above, upload a file, or search to get started</p>
-            </div>
-        }
+        </main>
     </div>
 </div>
 
@@ -685,6 +816,18 @@
     }
 
 
+
+    private async Task ShowRecentSearches()
+    {
+        showSuggestions = true;
+        searchQuery = "";
+        await LoadRecentSearches();
+    }
+
+    private void InsertExampleText()
+    {
+        pastedText = "[Am]Amazing [F]Grace, how [C]sweet the [G]sound";
+    }
 
     private string GetFormatDisplayName(SongFormat format) => format switch
     {

@@ -7,74 +7,79 @@
 <div class="studio-suggestions">
     @if (ShowSuggestions)
     {
-        <div class="suggestions-panel">
+        <div class="ss-panel">
             @if (string.IsNullOrEmpty(Query))
             {
-                @* Recent searches *@
                 @if (RecentSearches.Any())
                 {
-                    <h6 class="suggestions-section-title">Recent</h6>
-                    <div class="suggestions-list">
-                        @foreach (var term in RecentSearches.Take(5))
+                    <p class="ss-section-title">Recent</p>
+                    <div class="ss-list">
+                        @foreach (var (term, idx) in RecentSearches.Take(5).Select((t, i) => (t, i)))
                         {
-                            <div class="suggestion-item suggestion-item--recent @(SelectedIndex == RecentSearches.IndexOf(term) ? "suggestion-item--active" : "")"
+                            <div class="ss-item @(SelectedIndex == idx ? "ss-item--active" : "")"
                                  @onclick="() => OnRecentSelected(term)">
-                                <i class="bi bi-clock"></i>
-                                <span class="suggestion-title">@term</span>
-                                <span class="suggestion-badge badge-recent">Recent</span>
+                                <div class="ss-item-left">
+                                    <div class="ss-item-text">
+                                        <span class="ss-item-title">@term</span>
+                                    </div>
+                                </div>
+                                <div class="ss-item-right">
+                                    <span class="ss-badge ss-badge--recent">Recent</span>
+                                </div>
                             </div>
                         }
                     </div>
                 }
                 else
                 {
-                    <div class="suggestions-empty">
-                        <i class="bi bi-search"></i>
-                        <p>Search for songs or paste content above</p>
-                    </div>
+                    <div class="ss-empty">Search for songs or paste lyrics above</div>
                 }
             }
             else if (IsLoading)
             {
-                <div class="suggestions-list">
+                <div class="ss-list">
                     @for (int i = 0; i < 3; i++)
                     {
-                        <div class="suggestion-item suggestion-item--skeleton">
-                            <div class="skeleton-text" style="width: 60%;"></div>
-                            <div class="skeleton-text" style="width: 35%;"></div>
+                        <div class="ss-item ss-item--loading">
+                            <div class="ss-item-left" style="flex:1;">
+                                <div style="flex:1;">
+                                    <div class="ss-skeleton" style="width:55%;"></div>
+                                    <div class="ss-skeleton" style="width:35%;height:0.65rem;"></div>
+                                </div>
+                            </div>
                         </div>
                     }
                 </div>
             }
             else if (Suggestions.Any())
             {
-                <h6 class="suggestions-section-title">Songs</h6>
-                <div class="suggestions-list">
+                <p class="ss-section-title">Songs</p>
+                <div class="ss-list">
                     @for (int i = 0; i < Suggestions.Count; i++)
                     {
                         var suggestion = Suggestions[i];
                         var index = i;
-                        <div class="suggestion-item @(index == SelectedIndex ? "suggestion-item--active" : "")"
+                        <div class="ss-item @(index == SelectedIndex ? "ss-item--active" : "")"
                              @onclick="() => SelectSuggestion(suggestion)">
-                            <div class="suggestion-content">
+                            <div class="ss-item-left">
                                 @if (suggestion.SongNumber.HasValue)
                                 {
-                                    <span class="suggestion-number">@suggestion.SongNumber</span>
+                                    <span class="ss-item-number">@suggestion.SongNumber</span>
                                 }
-                                <div class="suggestion-text">
-                                    <span class="suggestion-title">@suggestion.Title</span>
+                                <div class="ss-item-text">
+                                    <span class="ss-item-title">@suggestion.Title</span>
                                     @if (!string.IsNullOrEmpty(suggestion.Artist))
                                     {
-                                        <span class="suggestion-artist">@suggestion.Artist</span>
+                                        <span class="ss-item-sub">@suggestion.Artist</span>
                                     }
                                 </div>
                             </div>
-                            <div class="suggestion-meta">
+                            <div class="ss-item-right">
                                 @if (!string.IsNullOrEmpty(suggestion.Album))
                                 {
-                                    <span class="suggestion-album">@suggestion.Album</span>
+                                    <span class="ss-item-album">@suggestion.Album</span>
                                 }
-                                <span class="suggestion-badge badge-@suggestion.Source.ToString().ToLower()">
+                                <span class="ss-badge ss-badge--@suggestion.Source.ToString().ToLower()">
                                     @suggestion.Source
                                 </span>
                             </div>
@@ -84,10 +89,7 @@
             }
             else
             {
-                <div class="suggestions-empty">
-                    <i class="bi bi-music-note-list"></i>
-                    <p>No results for "@Query"</p>
-                </div>
+                <div class="ss-empty">No songs found for &ldquo;@Query&rdquo;</div>
             }
         </div>
     }

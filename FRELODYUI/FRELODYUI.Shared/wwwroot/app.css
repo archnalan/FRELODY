@@ -44,16 +44,6 @@ html, body {
     --gradient-primary-hover-start: #5a6fd8;
     --gradient-primary-hover-end: #6a4190;
     --color-premium-gold: #d4af37;
-    /* Studio */
-    --studio-surface: #f9fafb;
-    --studio-input-bg: #ffffff;
-    --studio-monitor-bg: #ffffff;
-    --studio-suggestion-hover: #eef2ff;
-    --studio-suggestion-active: #e0e7ff;
-    --studio-badge-db: #3b82f6;
-    --studio-badge-recent: #6b7280;
-    --studio-badge-youtube: #ef4444;
-    --studio-badge-extracted: #22c55e;
 }
 
 [data-bs-theme="dark"] {
@@ -96,16 +86,6 @@ html, body {
     --gradient-primary-hover-start: #5a6fd8;
     --gradient-primary-hover-end: #6a4190;
     --color-premium-gold: #f5c84c;
-    /* Studio */
-    --studio-surface: #111827;
-    --studio-input-bg: #1f2937;
-    --studio-monitor-bg: #1f2937;
-    --studio-suggestion-hover: rgba(59, 130, 246, 0.08);
-    --studio-suggestion-active: rgba(59, 130, 246, 0.15);
-    --studio-badge-db: #60a5fa;
-    --studio-badge-recent: #9ca3af;
-    --studio-badge-youtube: #f87171;
-    --studio-badge-extracted: #4ade80;
 }
 
 /*a, .btn-link {

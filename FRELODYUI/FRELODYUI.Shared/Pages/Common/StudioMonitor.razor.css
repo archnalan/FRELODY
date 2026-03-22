@@ -1,0 +1,208 @@
+.ii-monitor-outer { display: contents; }
+
+.mon-card {
+    background: var(--modal-content-bg);
+    border: 1.5px solid var(--border-light);
+    border-radius: 1rem;
+    overflow: hidden;
+    animation: mon-fade-in 0.25s ease;
+}
+
+@keyframes mon-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.mon-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 0.875rem 1.125rem 0.75rem;
+    border-bottom: 1px solid var(--border-light);
+    background: var(--modal-header-bg);
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.mon-title-block {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.mon-song-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0 0.35rem;
+    flex-shrink: 0;
+}
+
+.mon-song-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mon-source-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.badge-database  { background: #3b82f6; color: #fff; }
+.badge-extracted { background: #22c55e; color: #fff; }
+
+.mon-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.mon-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.42rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-light);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--btn-bg);
+    color: var(--btn-color);
+    white-space: nowrap;
+}
+
+.mon-btn:hover:not(:disabled) { background: var(--btn-hover-bg); border-color: var(--border-medium); }
+.mon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.mon-btn--clear {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-muted);
+    padding: 0.42rem 0.5rem;
+}
+
+.mon-btn--clear:hover { background: rgba(239, 68, 68, 0.08); color: #ef4444; border-color: transparent; }
+
+.mon-btn--ai {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: #fff;
+    border: none;
+}
+
+.mon-btn--ai:hover:not(:disabled) { opacity: 0.9; }
+
+.mon-btn--save {
+    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
+    color: #fff;
+    border: none;
+}
+
+.mon-btn--save:hover:not(:disabled) { opacity: 0.9; }
+
+.mon-btn--open {
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    color: #fff;
+    border: none;
+}
+
+.mon-btn--open:hover:not(:disabled) { opacity: 0.9; }
+
+.mon-lyrics-grid {
+    padding: 1rem 1.125rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+    max-height: 20rem;
+    overflow-y: auto;
+}
+
+.mon-lyric-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.1rem;
+    padding: 0.15rem 0;
+}
+
+.mon-segment {
+    display: flex;
+    flex-direction: column;
+    padding: 0.1rem 0.25rem;
+    border-radius: 0.25rem;
+    transition: background 0.12s;
+}
+
+.mon-segment:hover { background: var(--bg-hover); }
+.mon-segment.has-chord { border-bottom: 2px solid rgba(102, 126, 234, 0.3); }
+
+.mon-chord {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--gradient-primary-start);
+    min-height: 1rem;
+    line-height: 1rem;
+}
+
+.mon-lyric {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.mon-stats {
+    display: flex;
+    gap: 1rem;
+    padding: 0.5rem 1.125rem;
+    border-top: 1px solid var(--border-light);
+    background: var(--modal-header-bg);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+}
+
+.mon-stats span { display: inline-flex; align-items: center; gap: 0.3rem; }
+
+.mon-empty-lyrics {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+}
+
+.mon-empty-lyrics .bi {
+    font-size: 2rem;
+    opacity: 0.25;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.mon-empty-lyrics p { font-size: 0.875rem; margin: 0; }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+    .mon-header  { flex-direction: column; }
+    .mon-actions { width: 100%; flex-wrap: wrap; }
+    .mon-lyrics-grid { padding: 0.75rem; }
+}
