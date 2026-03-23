@@ -25,8 +25,9 @@
     </div>
 </div>
 
+<CascadingAuthenticationState>
 <div class="nav-scrollable">
-    <nav class="h-100 d-flex flex-column">
+    <div class="nav-items-scrollable">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="/studio" Match="NavLinkMatch.All">
                 <span class="bi bi-easel-nav-menu" aria-hidden="true"></span>
@@ -36,7 +37,6 @@
                       title="New"></span>
             </NavLink>
         </div>
-        <CascadingAuthenticationState>
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
@@ -91,7 +91,7 @@
                                         {
                                             <div class="your-songs-rename-row">
                                                 <input class="your-songs-rename-input" @bind="renameValue"
-                                                       @bind:event="oninput"
+                                                       @bind:event="onchange"
                                                        @onkeydown="HandleRenameKeyDown"
                                                        @onblur="HandleRenameBlur" />
                                             </div>
@@ -148,25 +148,48 @@
                         </div>
                     }
                 </div>
-                   
-                @{
-                    var firstName = context.User.FindFirst("FirstName")?.Value;
-                    var lastName = context.User.FindFirst("LastName")?.Value;
-                    var fullName = firstName + " " + lastName;
-                    var displayName = fullName.Length > 15 ? fullName.Substring(0, 15) + "..." : fullName;
-                }
-                <div class="nav-item px-3 dropdown dropup mt-auto">
+
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <button class="nav-link theme-icon-btn w-100" @onclick="ToggleTheme" title="Toggle theme">
+                        <span class="theme-icon-wrapper">
+                            @if (isDarkTheme)
+                            {
+                                <i class="bi bi-sun-fill theme-icon"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-moon-fill theme-icon"></i>
+                            }
+                        </span>
+                        <span class="nav-label">@(isDarkTheme ? "Light mode" : "Dark mode")</span>
+                    </button>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+    <AuthorizeView>
+        <Authorized>
+            @{
+                var firstName = context.User.FindFirst("FirstName")?.Value;
+                var lastName = context.User.FindFirst("LastName")?.Value;
+                var fullName = firstName + " " + lastName;
+                var displayName = fullName.Length > 15 ? fullName.Substring(0, 15) + "..." : fullName;
+            }
+            <div class="nav-footer">
+                <div class="nav-item px-3 dropdown dropup">
                     <button class="nav-link dropdown-toggle w-100 d-flex justify-content-between align-items-center" data-bs-toggle="dropdown" aria-expanded="false">
                         <div class="user-avatar-circle me-2">
                             <span>
-                                    @(firstName?.FirstOrDefault())@(lastName?.FirstOrDefault())
-                                </span>
-                        </div>                           
-                            <span class="nav-label">@displayName</span>
+                                @(firstName?.FirstOrDefault())@(lastName?.FirstOrDefault())
+                            </span>
+                        </div>
+                        <span class="nav-label">@displayName</span>
                     </button>
                     <ul class="dropdown-menu">
                         <li>
-                                <a class="dropdown-item" href="/">
+                            <a class="dropdown-item" href="/">
                                 <i class="bi bi-house-door"></i><span class="nav-label">Home</span>
                             </a>
                         </li>
@@ -206,33 +229,20 @@
                         </button></li>
                     </ul>
                 </div>
-            </Authorized>
-            <NotAuthorized>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <div class="nav-footer">
                 <div class="nav-item px-3">
-                    <button class="nav-link theme-icon-btn w-100" @onclick="ToggleTheme" title="Toggle theme">
-                        <span class="theme-icon-wrapper">
-                            @if (isDarkTheme)
-                            {
-                                <i class="bi bi-sun-fill theme-icon"></i>
-                            }
-                            else
-                            {
-                                <i class="bi bi-moon-fill theme-icon"></i>
-                            }
-                        </span>
-                        <span class="nav-label">@(isDarkTheme ? "Light mode" : "Dark mode")</span>
-                    </button>
-                </div>
-                <div class="nav-item px-3 mt-auto">
                     <NavLink class="nav-link" href="/login">
                         <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> <span class="nav-label">Login</span>
                     </NavLink>
                 </div>
-            </NotAuthorized>
-        </AuthorizeView>
-        </CascadingAuthenticationState>
-    </nav>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
 </div>
+</CascadingAuthenticationState>
 
 
 
@@ -433,7 +443,7 @@
     {
         if (e.Key == "Enter")
         {
-            await CommitRename();
+            await JsRt.InvokeVoidAsync("eval", "document.querySelector('.your-songs-rename-input')?.blur()");
         }
         else if (e.Key == "Escape")
         {
@@ -444,8 +454,6 @@
 
     private async Task HandleRenameBlur()
     {
-        // Small delay to let Enter keydown fire first
-        await Task.Delay(100);
         if (!_isCommittingRename && renamingSongId != null)
         {
             await CommitRename();

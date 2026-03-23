@@ -19,6 +19,9 @@ namespace FRELODYUI.Shared.Services
         private readonly IStorageService _localStorage;
         private readonly NavigationManager _navigationManager;
         private readonly ILogger<GlobalAuthStateProvider> _logger;
+        
+        // In-memory cache so we don't lose state when storage is temporarily unavailable
+        private LoginResponseDto? _cachedSession;
 
         public GlobalAuthStateProvider(
             IStorageService localStorage, 
@@ -35,25 +38,36 @@ namespace FRELODYUI.Shared.Services
             try
             {
                 var sessionResult = await GetSessionFromStorageAsync();
-                if (!sessionResult.IsSuccess)
-                {
-                    _logger.LogWarning("Failed to get session from storage: {Error}", sessionResult.Error?.Message);
-                    return CreateAnonymousState();
-                }
+                
+                // Use storage result if available, otherwise fall back to in-memory cache
+                var session = sessionResult.IsSuccess ? sessionResult.Data : null;
+                session ??= _cachedSession;
 
-                if (sessionResult.Data == null)
+                if (session == null)
                 {
                     _logger.LogInformation("No session found in storage");
                     return CreateAnonymousState();
                 }
 
-                var identityResult = GetClaimsIdentityFromToken(sessionResult.Data.Token);
-                if (!identityResult.IsSuccess)
+                if (IsTokenExpired(session.Token))
                 {
-                    _logger.LogWarning("Failed to parse token: {Error}", identityResult.Error?.Message);
+                    _logger.LogInformation("Token is expired, clearing session");
+                    _cachedSession = null;
                     await ClearSessionAsync();
                     return CreateAnonymousState();
                 }
+
+                var identityResult = GetClaimsIdentityFromToken(session.Token!);
+                if (!identityResult.IsSuccess)
+                {
+                    _logger.LogWarning("Failed to parse token: {Error}", identityResult.Error?.Message);
+                    _cachedSession = null;
+                    await ClearSessionAsync();
+                    return CreateAnonymousState();
+                }
+
+                // Update cache with the valid session
+                _cachedSession = session;
 
                 var user = new ClaimsPrincipal(identityResult.Data);
                 _logger.LogInformation("User authenticated successfully");
@@ -62,6 +76,7 @@ namespace FRELODYUI.Shared.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in GetAuthenticationStateAsync");
+                _cachedSession = null;
                 await ClearSessionAsync();
                 return CreateAnonymousState();
             }
@@ -83,6 +98,9 @@ namespace FRELODYUI.Shared.Services
                         new BadRequestException("Token is required"));
                 }
 
+                // Cache in memory immediately so it's available even if storage is slow
+                _cachedSession = loginResponse;
+
                 var saveResult = await SaveSessionToStorageAsync(loginResponse);
                 if (!saveResult.IsSuccess)
                 {
@@ -92,6 +110,7 @@ namespace FRELODYUI.Shared.Services
                 var identityResult = GetClaimsIdentityFromToken(loginResponse.Token);
                 if (!identityResult.IsSuccess)
                 {
+                    _cachedSession = null;
                     await ClearSessionAsync();
                     return ServiceResult<bool>.Failure(identityResult.Error);
                 }
@@ -115,13 +134,16 @@ namespace FRELODYUI.Shared.Services
             try
             {
                 var sessionResult = await GetSessionFromStorageAsync();
-                if (!sessionResult.IsSuccess || sessionResult.Data == null)
+                var session = sessionResult.IsSuccess ? sessionResult.Data : null;
+                session ??= _cachedSession;
+                
+                if (session == null)
                 {
                     return ServiceResult<UserClaimsDto>.Failure(
                         new UnAuthorizedException("No authenticated session found"));
                 }
 
-                var userClaimsResult = ExtractUserClaimsFromToken(sessionResult.Data.Token);
+                var userClaimsResult = ExtractUserClaimsFromToken(session.Token!);
                 if (!userClaimsResult.IsSuccess)
                 {
                     return ServiceResult<UserClaimsDto>.Failure(userClaimsResult.Error);
@@ -166,6 +188,7 @@ namespace FRELODYUI.Shared.Services
         {
             try
             {
+                _cachedSession = null;
                 await ClearSessionAsync();
                 
                 var identity = new ClaimsIdentity();
@@ -472,6 +495,34 @@ namespace FRELODYUI.Shared.Services
             var identity = new ClaimsIdentity();
             var user = new ClaimsPrincipal(identity);
             return new AuthenticationState(user);
+        }
+
+        private static bool IsTokenExpired(string? token)
+        {
+            if (string.IsNullOrEmpty(token))
+                return true;
+
+            try
+            {
+                var parts = token.Split('.');
+                if (parts.Length != 3)
+                    return true;
+
+                var jsonBytes = ParseBase64WithoutPadding(parts[1]);
+                var payload = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonBytes);
+                if (payload == null || !payload.TryGetValue("exp", out var expValue))
+                    return true;
+
+                if (!long.TryParse(expValue.ToString(), out var exp))
+                    return true;
+
+                var expDate = DateTimeOffset.FromUnixTimeSeconds(exp);
+                return expDate <= DateTimeOffset.UtcNow;
+            }
+            catch
+            {
+                return true;
+            }
         }
 
         #endregion

@@ -45,6 +45,8 @@ builder.Services.AddScoped<ICurrencyConverter, CurrencyConverter>();
 builder.Services.AddScoped<ICurrencyDisplayService, CurrencyDisplayService>();
 var baseAddressApi = new Uri("https://localhost:7077");
 
+builder.Services.AddHttpClient("TokenRefresh", c => c.BaseAddress = baseAddressApi);
+
 builder.Services.AddRefitClient<ISongsApi>()
     .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();

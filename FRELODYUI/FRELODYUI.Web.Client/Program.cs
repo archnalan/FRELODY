@@ -17,6 +17,7 @@ var baseAddressApi = new Uri("https://localhost:7077");
 builder.Services.AddAuthorizationCore();
 
 builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddHttpClient("TokenRefresh", c => c.BaseAddress = baseAddressApi);
 builder.Services.AddTransient<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<ISongsApi>()

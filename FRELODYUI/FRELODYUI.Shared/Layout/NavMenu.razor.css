@@ -192,9 +192,24 @@
 /* Nav scrollable fills remaining sidebar height */
 .nav-scrollable {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+/* Scrollable area for nav items */
+.nav-items-scrollable {
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
+}
+
+/* Fixed footer at bottom of sidebar */
+.nav-footer {
+    flex-shrink: 0;
+    background: var(--modal-content-bg);
 }
 
 /* Theme icon button for anonymous users */
@@ -501,26 +516,25 @@
 
 /* Nav Scrollable Container */
 .nav-scrollable {
-    display: block;
     background: var(--modal-content-bg);
 }
 
 /* Scrollbar Styling */
-.nav-scrollable::-webkit-scrollbar {
+.nav-items-scrollable::-webkit-scrollbar {
     width: 6px;
 }
 
-.nav-scrollable::-webkit-scrollbar-track {
+.nav-items-scrollable::-webkit-scrollbar-track {
     background: var(--bg-hover);
     border-radius: 3px;
 }
 
-.nav-scrollable::-webkit-scrollbar-thumb {
+.nav-items-scrollable::-webkit-scrollbar-thumb {
     background: var(--border-medium);
     border-radius: 3px;
 }
 
-    .nav-scrollable::-webkit-scrollbar-thumb:hover {
+    .nav-items-scrollable::-webkit-scrollbar-thumb:hover {
         background: var(--text-secondary);
     }
 
@@ -532,7 +546,6 @@
 
     .nav-scrollable {
         height: calc(100vh - 3.5rem);
-        overflow-y: auto;
     }
 }
 
