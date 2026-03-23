@@ -26,5 +26,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<PaginationDetails<SongRecoveryDto>>> GetRecoverySongsAsync(string? userId = null, int? offset = 0, int? limit = 10);
         Task<ServiceResult<bool>> DeleteRecoverySongItemAsync(string recoveryId);
         Task<ServiceResult<bool>> MarkSongAccessStatus(string songId, Access access);
+        Task<ServiceResult<bool>> RenameSong(string songId, string newTitle);
+        Task<ServiceResult<bool>> ArchiveSong(string songId);
     }
 }

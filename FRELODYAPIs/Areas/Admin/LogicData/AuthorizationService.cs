@@ -185,7 +185,7 @@ namespace FRELODYAPP.Data
                     if (userFromDb != null)
                     {
                         // Existing external login user - sign in directly
-                        return await LoginUserNoPassword(userFromDb, tenantId);
+                        return await LoginUserNoPassword(userFromDb, userFromDb.TenantId);
                     }
 
                     // Check if user exists by email
@@ -194,7 +194,7 @@ namespace FRELODYAPP.Data
                     {
                         // Link Google login to existing account
                         await _userManager.AddLoginAsync(userFromDb, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
-                        return await LoginUserNoPassword(userFromDb, tenantId);
+                        return await LoginUserNoPassword(userFromDb, userFromDb.TenantId);
                     }
 
                     // Create new user with a new tenant (each Google sign-up = new company/tenant)

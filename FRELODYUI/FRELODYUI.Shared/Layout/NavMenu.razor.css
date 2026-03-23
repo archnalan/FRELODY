@@ -167,11 +167,19 @@
     .d-desktop-flex {
         display: none !important;
     }
+
+    .desktop-only {
+        display: none !important;
+    }
 }
 
 @media (min-width: 641px) {
     .d-desktop-flex {
         display: flex !important;
+    }
+
+    .mobile-only {
+        display: none !important;
     }
 }
 
@@ -414,6 +422,17 @@
     box-shadow: var(--modal-shadow);
     padding: 0.5rem;
     margin-top: 0.5rem;
+    z-index: 10000;
+    color: var(--text-primary);
+}
+
+/* Ensure dropdown .nav-label items are always visible */
+.dropdown-menu .nav-label {
+    display: inline !important;
+    position: static !important;
+    opacity: 1 !important;
+    width: auto !important;
+    pointer-events: auto !important;
 }
 
 .dropdown-item {
@@ -561,6 +580,289 @@
    But NavMenu.razor.css is scoped to NavMenu, so we rely on
    the parent .page.sidebar-collapsed to hide labels via
    MainLayout.razor.css. Here we define the local classes. */
+
+/* ── Your Songs collapsible section ── */
+.nav-your-songs {
+    padding: 0 0.75rem;
+    transition: opacity 0.2s, max-height 0.2s;
+}
+
+.nav-your-songs.collapsed-hidden {
+    display: none;
+}
+
+.your-songs-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.5rem 0.5rem;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+
+.your-songs-toggle:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.your-songs-chevron {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    top: 0 !important;
+    font-size: 0.7rem;
+    background-image: none !important;
+    filter: none !important;
+}
+
+.your-songs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding-top: 0.25rem;
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.your-songs-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.your-songs-list::-webkit-scrollbar-thumb {
+    background: var(--border-medium);
+    border-radius: 2px;
+}
+
+/* ── Song item wrapper with 3-dot menu ── */
+.your-songs-item-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.your-songs-item-wrapper:hover {
+    background: var(--bg-hover);
+}
+
+.your-songs-item-wrapper:hover .your-songs-more-btn {
+    opacity: 1;
+}
+
+.your-songs-item-wrapper.menu-open {
+    background: var(--bg-hover);
+}
+
+.your-songs-item-wrapper.menu-open .your-songs-more-btn {
+    opacity: 1;
+}
+
+/* Active/selected song (matches current URL) */
+.your-songs-item-wrapper.active {
+    background: var(--bg-active);
+}
+
+.your-songs-item-wrapper.active .your-songs-item {
+    color: white;
+}
+
+.your-songs-item-wrapper.active .your-songs-pin-icon {
+    color: white;
+}
+
+.your-songs-item-wrapper.active .your-songs-more-btn {
+    color: white;
+}
+
+/* Pin icon for pinned songs */
+.your-songs-pin-icon {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    top: 0 !important;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    padding-left: 0.4rem;
+    background-image: none !important;
+    filter: none !important;
+}
+
+.your-songs-item {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    padding: 0.4rem 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.15s ease;
+}
+
+.your-songs-item:hover {
+    color: var(--text-primary);
+}
+
+.your-songs-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
+
+/* ── 3-dot more button (horizontal) ── */
+.your-songs-more-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0;
+    flex-shrink: 0;
+    border-radius: 4px;
+    transition: opacity 0.15s, background 0.15s;
+    margin-right: 2px;
+}
+
+.your-songs-more-btn:hover {
+    background: var(--bg-active);
+    color: white;
+}
+
+.your-songs-more-btn .bi {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    top: 0 !important;
+    font-size: 0.9rem;
+    background-image: none !important;
+    filter: none !important;
+}
+
+/* ── Context menu dropdown ── */
+.your-songs-context-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 10001;
+    background: var(--modal-content-bg);
+    border: 1px solid var(--modal-border-color);
+    border-radius: 8px;
+    box-shadow: var(--modal-shadow);
+    padding: 0.35rem;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.your-songs-context-menu button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.4rem 0.65rem;
+    border: none;
+    background: none;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.12s;
+    white-space: nowrap;
+    text-align: left;
+}
+
+.your-songs-context-menu button:hover {
+    background: var(--bg-hover);
+}
+
+.your-songs-context-menu button.ctx-danger {
+    color: var(--text-danger, #dc3545);
+}
+
+.your-songs-context-menu button.ctx-danger:hover {
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.your-songs-context-menu button .bi {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    top: 0 !important;
+    font-size: 0.85rem;
+    background-image: none !important;
+    filter: none !important;
+}
+
+/* ── Rename inline row ── */
+.your-songs-rename-row {
+    flex: 1;
+    padding: 0.25rem 0.35rem;
+}
+
+.your-songs-rename-input {
+    width: 100%;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid var(--input-border-focus, #3b82f6);
+    border-radius: 4px;
+    background: var(--input-bg, var(--modal-content-bg));
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    outline: none;
+}
+
+/* ── Ghost skeleton placeholders ── */
+.your-songs-ghost {
+    padding: 0.4rem 0.5rem;
+    border-radius: 6px;
+}
+
+.ghost-line {
+    height: 0.82rem;
+    border-radius: 4px;
+    background: var(--bg-hover);
+    animation: ghostPulse 1.2s ease-in-out infinite;
+}
+
+.your-songs-ghost:nth-child(odd) .ghost-line {
+    width: 75%;
+}
+
+.your-songs-ghost:nth-child(even) .ghost-line {
+    width: 55%;
+}
+
+@keyframes ghostPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+}
+
+.your-songs-empty {
+    padding: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-style: italic;
+    text-align: center;
+}
 
 @media (min-width: 641px) {
     :host-context(.sidebar-collapsed) .nav-brand-text,

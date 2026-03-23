@@ -194,6 +194,11 @@ article {
         justify-content: center;
     }
 
+    /* Collapsed: hide the collapse toggle (expand is inside logo-collapse-zone) */
+    .page.sidebar-collapsed .sidebar ::deep .sidebar-collapse-toggle {
+        display: none !important;
+    }
+
     .page.sidebar-collapsed .sidebar ::deep .nav-item ::deep .nav-link {
         justify-content: center;
         padding: 0 0.5rem;
@@ -237,6 +242,11 @@ article {
     .page.sidebar-collapsed .sidebar ::deep .theme-icon-btn {
         gap: 0;
         padding: 0 0.5rem !important;
+    }
+
+    /* Collapsed: hide Your Songs section entirely */
+    .page.sidebar-collapsed .sidebar ::deep .nav-your-songs {
+        display: none;
     }
 
     .page.sidebar-collapsed .sidebar ::deep .nav-item:not(.dropdown) .nav-label {

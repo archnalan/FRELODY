@@ -21,7 +21,8 @@
                     @* Edit dropdown (Bootstrap) — AI Refine + Customize *@
                     <div class="dropdown">
                         <button class="mon-btn dropdown-toggle" type="button"
-                                data-bs-toggle="dropdown" aria-expanded="false">
+                                data-bs-toggle="dropdown" aria-expanded="false"
+                                disabled="@IsRefining">
                             <i class="bi bi-pencil-square"></i>
                             <span>Edit</span>
                         </button>
@@ -46,7 +47,8 @@
                                 </li>
                             }
                             <li>
-                                <button class="dropdown-item" type="button" @onclick="HandleCustomize">
+                                <button class="dropdown-item" type="button" @onclick="HandleCustomize"
+                                        disabled="@IsRefining">
                                     <i class="bi bi-sliders me-2"></i>
                                     Customize
                                 </button>
@@ -64,14 +66,25 @@
                     }
                     else if (!string.IsNullOrEmpty(SavedSongId))
                     {
-                        <a class="mon-btn mon-btn--play" href="/song/@SavedSongId">
-                            <i class="bi bi-play-fill"></i>
-                            <span>Play</span>
+                        <a class="mon-btn mon-btn--play @(IsRefining ? "disabled" : "")" href="/song/@SavedSongId"
+                           @onclick:preventDefault="@IsRefining">
+                            @if (IsRefining)
+                            {
+                                <span class="spinner-border spinner-border-sm"
+                                      style="width:0.85rem;height:0.85rem;border-width:2px;"></span>
+                                <span>Refining…</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-play-fill"></i>
+                                <span>Play</span>
+                            }
                         </a>
                     }
                     else
                     {
-                        <button class="mon-btn mon-btn--save" type="button" @onclick="HandleSave">
+                        <button class="mon-btn mon-btn--save" type="button" @onclick="HandleSave"
+                                disabled="@IsRefining">
                             <i class="bi bi-floppy"></i>
                             <span>Save</span>
                         </button>

@@ -60,6 +60,12 @@ namespace FRELODYUI.Shared.RefitApis
         [Delete("/api/songs/delete-recovery-song-item")]
         Task<IApiResponse<bool>> DeleteRecoverySongItem([Query] string recoveryId);
 
+        [Put("/api/songs/rename-song")]
+        Task<IApiResponse<bool>> RenameSong([Query] string songId, [Query] string newTitle);
+
+        [Put("/api/songs/archive-song")]
+        Task<IApiResponse<bool>> ArchiveSong([Query] string songId);
+
         [Delete("/api/songs/delete-song")]
         Task<IApiResponse<bool>> DeleteSong([Query] string songId);
     }

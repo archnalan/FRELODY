@@ -2,7 +2,7 @@
     <div class="container-fluid">
         @if (IsSidebarCollapsed)
         {
-            <div class="logo-collapse-zone">
+            <div class="logo-collapse-zone desktop-only">
                 <a class="navbar-brand d-flex align-items-center gap-2 logo-home-link" href="/">
                     <img src="_content/FRELODYUI.Shared/fet_melody_logo.png" alt="Frelody" class="nav-logo-img" />
                 </a>
@@ -11,16 +11,14 @@
                 </button>
             </div>
         }
-        else
-        {
-            <a class="navbar-brand d-flex align-items-center gap-2 logo-home-link" href="/">
-                <img src="_content/FRELODYUI.Shared/fet_melody_logo.png" alt="Frelody" class="nav-logo-img" />
-                <span class="nav-brand-text">FRELODY</span>
-            </a>
-            <button class="sidebar-collapse-toggle d-desktop-flex" @onclick="OnToggleSidebar" title="Collapse sidebar" aria-label="Collapse sidebar">
-                <i class="bi bi-layout-sidebar-reverse"></i>
-            </button>
-        }
+        @* Mobile always sees expanded brand; desktop sees it only when not collapsed *@
+        <a class="navbar-brand d-flex align-items-center gap-2 logo-home-link @(IsSidebarCollapsed ? "mobile-only" : "")" href="/">
+            <img src="_content/FRELODYUI.Shared/fet_melody_logo.png" alt="Frelody" class="nav-logo-img" />
+            <span class="nav-brand-text">FRELODY</span>
+        </a>
+        <button class="sidebar-collapse-toggle d-desktop-flex" @onclick="OnToggleSidebar" title="@(IsSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")" aria-label="@(IsSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")">
+            <i class="bi @(IsSidebarCollapsed ? "bi-layout-sidebar" : "bi-layout-sidebar-reverse")"></i>
+        </button>
         <button class="mobile-drawer-close" @onclick="HandleCloseMobile" aria-label="Close menu">
             <i class="bi bi-x-lg"></i>
         </button>
@@ -73,6 +71,82 @@
                     <NavLink class="nav-link" href="/chords" Match="NavLinkMatch.Prefix">
                             <span class="bi bi-sliders-nav-menu" aria-hidden="true"></span> <span class="nav-label">Chords</span>
                     </NavLink>
+                </div>
+
+                @* ── Your Songs (collapsible, expanded mode only) ── *@
+                <div class="nav-your-songs @(IsSidebarCollapsed ? "collapsed-hidden" : "")">
+                    <button class="your-songs-toggle" @onclick="ToggleYourSongs" type="button">
+                        <span class="your-songs-label">Your Songs</span>
+                        <i class="bi bi-chevron-@(isYourSongsExpanded ? "up" : "down") your-songs-chevron"></i>
+                    </button>
+                    @if (isYourSongsExpanded)
+                    {
+                        <div class="your-songs-list" data-songs-scroll>
+                            @if (userSongs.Any())
+                            {
+                                @foreach (var song in SortedSongs)
+                                {
+                                    <div class="your-songs-item-wrapper @(activeSongMenuId == song.IdString ? "menu-open" : "") @(IsCurrentSong(song.IdString) ? "active" : "")">
+                                        @if (renamingSongId == song.IdString)
+                                        {
+                                            <div class="your-songs-rename-row">
+                                                <input class="your-songs-rename-input" @bind="renameValue"
+                                                       @bind:event="oninput"
+                                                       @onkeydown="HandleRenameKeyDown"
+                                                       @onblur="HandleRenameBlur" />
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            @if (song.ValueSubText == "pinned")
+                                            {
+                                                <i class="bi bi-pin-fill your-songs-pin-icon"></i>
+                                            }
+                                            <a class="your-songs-item" href="/songs/@song.IdString" @onclick="() => CloseContextMenu()">
+                                                <span class="your-songs-title">@song.ValueText</span>
+                                            </a>
+                                            <button class="your-songs-more-btn" @onclick="() => ToggleSongMenu(song.IdString)" @onclick:stopPropagation type="button">
+                                                <i class="bi bi-three-dots"></i>
+                                            </button>
+                                        }
+                                        @if (activeSongMenuId == song.IdString)
+                                        {
+                                            <div class="your-songs-context-menu" @onclick:stopPropagation>
+                                                <button type="button" @onclick="() => ShareSong(song)"><i class="bi bi-share"></i> Share</button>
+                                                <button type="button" @onclick="() => PinSong(song)"><i class="bi @(song.ValueSubText == "pinned" ? "bi-pin-fill" : "bi-pin")"></i> @(song.ValueSubText == "pinned" ? "Unpin" : "Pin")</button>
+                                                <button type="button" @onclick="() => StartRenameSong(song)"><i class="bi bi-pencil"></i> Rename</button>
+                                                <button type="button" @onclick="() => ArchiveSongItem(song)"><i class="bi bi-archive"></i> Archive</button>
+                                                <button type="button" class="ctx-danger" @onclick="() => ConfirmDeleteSong(song)"><i class="bi bi-trash3"></i> Delete</button>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                @* Ghost skeleton placeholders while loading more *@
+                                @if (isLoadingSongs)
+                                {
+                                    @for (int i = 0; i < 3; i++)
+                                    {
+                                        <div class="your-songs-ghost">
+                                            <div class="ghost-line"></div>
+                                        </div>
+                                    }
+                                }
+                            }
+                            else if (isLoadingSongs)
+                            {
+                                @for (int i = 0; i < 5; i++)
+                                {
+                                    <div class="your-songs-ghost">
+                                        <div class="ghost-line"></div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <span class="your-songs-empty">No songs yet</span>
+                            }
+                        </div>
+                    }
                 </div>
                    
                 @{
@@ -160,18 +234,37 @@
     </nav>
 </div>
 
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
+
 
 @code {
     private bool isDarkTheme = false;
     private bool isPremiumUser;
 
+    // Your Songs state
+    private bool isYourSongsExpanded;
+    private bool isLoadingSongs;
+    private bool hasMoreSongs;
+    private List<ComboBoxDto> userSongs = new();
+    private int songsOffset;
+    private const int SongsPageSize = 15;
+
+    // Context menu & rename state
+    private string? activeSongMenuId;
+    private string? renamingSongId;
+    private string renameValue = "";
+    private bool _isCommittingRename;
+    private DotNetObjectReference<NavMenu>? _selfRef;
+    private bool _scrollObserverAttached;
+
     [Parameter] public bool IsSidebarCollapsed { get; set; }
     [Parameter] public EventCallback OnToggleSidebar { get; set; }
     [Parameter] public EventCallback OnCloseMobileDrawer { get; set; }
+
+    private IEnumerable<ComboBoxDto> SortedSongs =>
+        userSongs.OrderByDescending(s => s.ValueSubText == "pinned").ThenBy(s => userSongs.IndexOf(s));
+
+    private bool IsCurrentSong(string? songId) =>
+        !string.IsNullOrEmpty(songId) && _navManager.Uri.Contains($"/songs/{songId}", StringComparison.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
@@ -186,6 +279,256 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (isYourSongsExpanded && hasMoreSongs && !_scrollObserverAttached)
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            try
+            {
+                await JsRt.InvokeVoidAsync("eval", @"
+                    if (!window.__setupSongsScroll) {
+                        window.__setupSongsScroll = function(dotNetRef) {
+                            const list = document.querySelector('[data-songs-scroll]');
+                            if (!list || list.__scrollSetup) return;
+                            list.__scrollSetup = true;
+                            list.addEventListener('scroll', function() {
+                                if (list.scrollTop + list.clientHeight >= list.scrollHeight - 30) {
+                                    dotNetRef.invokeMethodAsync('OnScrolledToEnd');
+                                }
+                            });
+                        };
+                    }
+                    // Close context menu when clicking anywhere outside
+                    if (!window.__navSongsClickAway) {
+                        window.__navSongsClickAway = true;
+                        document.addEventListener('click', function(e) {
+                            const wrapper = e.target.closest('.your-songs-item-wrapper');
+                            const menu = e.target.closest('.your-songs-context-menu');
+                            if (!wrapper && !menu) {
+                                const ref = window.__navSongsDotNetRef;
+                                if (ref) ref.invokeMethodAsync('CloseContextMenuFromJs');
+                            }
+                        });
+                    }
+                    window.__navSongsDotNetRef = dotNetRef;");
+                await JsRt.InvokeVoidAsync("__setupSongsScroll", _selfRef);
+                _scrollObserverAttached = true;
+            }
+            catch { /* SSR or prerender — ignore */ }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnScrolledToEnd()
+    {
+        if (!isLoadingSongs && hasMoreSongs)
+        {
+            await LoadSongs(reset: false);
+        }
+    }
+
+    private async Task ToggleYourSongs()
+    {
+        isYourSongsExpanded = !isYourSongsExpanded;
+        if (isYourSongsExpanded && !userSongs.Any() && !isLoadingSongs)
+        {
+            await LoadSongs(reset: true);
+        }
+        if (!isYourSongsExpanded)
+        {
+            _scrollObserverAttached = false;
+            activeSongMenuId = null;
+            renamingSongId = null;
+        }
+    }
+
+    private async Task LoadSongs(bool reset)
+    {
+        isLoadingSongs = true;
+        StateHasChanged();
+
+        try
+        {
+            if (reset) { songsOffset = 0; userSongs.Clear(); }
+            var result = await _songsApi.GetSongs(songsOffset, SongsPageSize);
+            if (result.IsSuccessStatusCode && result.Content?.Data != null)
+            {
+                userSongs.AddRange(result.Content.Data);
+                songsOffset += result.Content.Data.Count;
+                hasMoreSongs = result.Content.HasMore;
+            }
+        }
+        catch { /* Silently fail — non-critical UI feature */ }
+        finally
+        {
+            isLoadingSongs = false;
+            _scrollObserverAttached = false; // re-attach after new content
+            StateHasChanged();
+        }
+    }
+
+    // ── Context menu ──
+    [JSInvokable]
+    public void CloseContextMenuFromJs()
+    {
+        if (activeSongMenuId != null)
+        {
+            activeSongMenuId = null;
+            renamingSongId = null;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseContextMenu()
+    {
+        activeSongMenuId = null;
+        renamingSongId = null;
+    }
+
+    private void ToggleSongMenu(string? songId)
+    {
+        activeSongMenuId = activeSongMenuId == songId ? null : songId;
+        renamingSongId = null;
+    }
+
+    private async Task ShareSong(ComboBoxDto song)
+    {
+        activeSongMenuId = null;
+        try
+        {
+            var link = await _shareService.GenerateShareLinkAsync(song.IdString!);
+            if (link != null)
+            {
+                await _shareService.NotifyLinkCopiedAsync();
+            }
+        }
+        catch { /* ignore share errors */ }
+    }
+
+    private async Task PinSong(ComboBoxDto song)
+    {
+        activeSongMenuId = null;
+        try
+        {
+            bool isPinned = song.ValueSubText == "pinned";
+            var result = await _songsApi.MarkSongFavoriteStatus(song.IdString!, !isPinned);
+            if (result.IsSuccessStatusCode)
+            {
+                song.ValueSubText = isPinned ? null : "pinned";
+                StateHasChanged();
+            }
+        }
+        catch { /* ignore */ }
+    }
+
+    private void StartRenameSong(ComboBoxDto song)
+    {
+        activeSongMenuId = null;
+        renamingSongId = song.IdString;
+        renameValue = song.ValueText ?? "";
+    }
+
+    private async Task HandleRenameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await CommitRename();
+        }
+        else if (e.Key == "Escape")
+        {
+            renamingSongId = null;
+            _isCommittingRename = false;
+        }
+    }
+
+    private async Task HandleRenameBlur()
+    {
+        // Small delay to let Enter keydown fire first
+        await Task.Delay(100);
+        if (!_isCommittingRename && renamingSongId != null)
+        {
+            await CommitRename();
+        }
+    }
+
+    private async Task CommitRename()
+    {
+        if (_isCommittingRename) return;
+        _isCommittingRename = true;
+
+        if (string.IsNullOrWhiteSpace(renamingSongId) || string.IsNullOrWhiteSpace(renameValue))
+        {
+            renamingSongId = null;
+            _isCommittingRename = false;
+            return;
+        }
+
+        var songId = renamingSongId;
+        try
+        {
+            var result = await _songsApi.RenameSong(songId, renameValue.Trim());
+            if (result.IsSuccessStatusCode)
+            {
+                var song = userSongs.FirstOrDefault(s => s.IdString == songId);
+                if (song != null) song.ValueText = renameValue.Trim();
+            }
+        }
+        catch { /* ignore */ }
+        finally
+        {
+            renamingSongId = null;
+            _isCommittingRename = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ArchiveSongItem(ComboBoxDto song)
+    {
+        activeSongMenuId = null;
+        try
+        {
+            var result = await _songsApi.ArchiveSong(song.IdString!);
+            if (result.IsSuccessStatusCode)
+            {
+                userSongs.Remove(song);
+                StateHasChanged();
+            }
+        }
+        catch { /* ignore */ }
+    }
+
+    private void ConfirmDeleteSong(ComboBoxDto song)
+    {
+        activeSongMenuId = null;
+        var songId = song.IdString!;
+        var modalOptions = new ModalOptionDto
+        {
+            Title = "Delete Song",
+            Message = $"Are you sure you want to delete \"{song.ValueText}\"? This action cannot be undone.",
+            ButtonText = "Delete",
+            OptionType = OptionType.Warning,
+            Context = new ModalContext { ActionType = "DeleteSong", Data = songId },
+            OnConfirmCallback = async () => await HandleDeleteSong(songId)
+        };
+        _modalService.Show(modalOptions);
+    }
+
+    private async Task HandleDeleteSong(string songId)
+    {
+        try
+        {
+            var result = await _songsApi.DeleteSong(songId);
+            if (result.IsSuccessStatusCode)
+            {
+                var song = userSongs.FirstOrDefault(s => s.IdString == songId);
+                if (song != null) userSongs.Remove(song);
+                StateHasChanged();
+            }
+        }
+        catch { /* ignore */ }
+    }
+
     private void TriggerLogout()
     {
         var modalOptions = new ModalOptionDto
@@ -194,7 +537,8 @@
             Message = "Are you sure you want to log out?",
             ButtonText = "Logout",
             OptionType = OptionType.Warning,
-            Context = new ModalContext { ActionType = "LogoutUser" }
+            Context = new ModalContext { ActionType = "LogoutUser" },
+            OnConfirmCallback = async () => await LogoutUser()
         };
         _modalService.Show(modalOptions);
     }
@@ -222,24 +566,6 @@
     {
         await JsRt.InvokeVoidAsync("eval",
             $"document.documentElement.setAttribute('data-bs-theme', '{theme}')");
-    }
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "LogoutUser")
-        {
-            await LogoutUser();
-        }
-        else
-        {
-            _modalService.Close();
-        }
-        await CloseModal();
-    }
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 }
 

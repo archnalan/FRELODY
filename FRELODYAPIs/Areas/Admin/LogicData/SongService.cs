@@ -906,6 +906,11 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     return ServiceResult<bool>.Failure(
                         new BadRequestException("Song ID is required."));
                 }
+                if (string.IsNullOrEmpty(_userId))
+                {
+                    return ServiceResult<bool>.Failure(
+                        new UnauthorizedAccessException("User is not authenticated."));
+                }
                 var song = await _context.Songs.FirstOrDefaultAsync(s => s.Id == songId);
                 if (song == null)
                     return ServiceResult<bool>.Failure(new NotFoundException("Song not found."));
@@ -1219,6 +1224,78 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError(ex, "Error in DeleteRecoverySongItem");
                 return ServiceResult<bool>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Rename Song
+        public async Task<ServiceResult<bool>> RenameSong(string songId, string newTitle)
+        {
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(songId) || string.IsNullOrWhiteSpace(newTitle))
+                        return ServiceResult<bool>.Failure(
+                            new BadRequestException("Song ID and new title are required."));
+
+                    var song = await _context.Songs
+                        .FirstOrDefaultAsync(s => s.Id == songId && s.CreatedBy == _userId);
+
+                    if (song == null)
+                        return ServiceResult<bool>.Failure(
+                            new NotFoundException("Song not found or you don't have permission."));
+
+                    song.Title = newTitle.Trim();
+                    song.DateModified = DateTime.UtcNow;
+                    song.ModifiedBy = _userId;
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return ServiceResult<bool>.Success(true);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error in RenameSong");
+                    return ServiceResult<bool>.Failure(ex);
+                }
+            }
+        }
+        #endregion
+
+        #region Archive Song
+        public async Task<ServiceResult<bool>> ArchiveSong(string songId)
+        {
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(songId))
+                        return ServiceResult<bool>.Failure(
+                            new BadRequestException("Song ID is required."));
+
+                    var song = await _context.Songs
+                        .FirstOrDefaultAsync(s => s.Id == songId && s.CreatedBy == _userId);
+
+                    if (song == null)
+                        return ServiceResult<bool>.Failure(
+                            new NotFoundException("Song not found or you don't have permission."));
+
+                    song.IsDeleted = true;
+                    song.DateModified = DateTime.UtcNow;
+                    song.ModifiedBy = _userId;
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return ServiceResult<bool>.Success(true);
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Error in ArchiveSong");
+                    return ServiceResult<bool>.Failure(ex);
+                }
             }
         }
         #endregion

@@ -59,6 +59,15 @@
     <span class="dismiss">🗙</span>
 </div>
 
+@* ── Global modal portal: rendered outside .page to escape all stacking contexts ── *@
+@if (_modalService.IsModalVisible)
+{
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseGlobalModal"
+                 OnConfirmModal="ConfirmGlobalModal" />
+}
+
 @code{
     private GlobalErrorBoundary errorBoundaryRef = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
@@ -70,6 +79,8 @@
         var savedSidebar = await _storageService.GetItemAsync<string>("SidebarCollapsed");
         isSidebarCollapsed = string.IsNullOrEmpty(savedSidebar) || savedSidebar == "true";
         _navManager.LocationChanged += OnLocationChanged;
+        _modalService.OnShow += OnModalStateChanged;
+        _modalService.OnClose += OnModalStateChanged;
     }
 
     private async Task ToggleSidebar()
@@ -100,6 +111,13 @@
     public void Dispose()
     {
         _navManager.LocationChanged -= OnLocationChanged;
+        _modalService.OnShow -= OnModalStateChanged;
+        _modalService.OnClose -= OnModalStateChanged;
+    }
+
+    private void OnModalStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     private void RecoverPage()
@@ -154,4 +172,20 @@ private (string Title, string Message, bool CanRetry) GetErrorDetails(Exception 
 
     private string GenerateErrorId() =>
         $"ERR-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+
+    private async Task CloseGlobalModal()
+    {
+        await Task.Delay(100);
+        _modalService.Close();
+        StateHasChanged();
+    }
+
+    private async Task ConfirmGlobalModal()
+    {
+        var callback = _modalService.CurrentModal?.OnConfirmCallback;
+        _modalService.Close();
+        if (callback != null)
+            await callback();
+        StateHasChanged();
+    }
 }

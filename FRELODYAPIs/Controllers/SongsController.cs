@@ -82,6 +82,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpPut]
+        [Authorize]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> MarkSongFavoriteStatus([FromQuery]string songId, [FromQuery]bool favorite)
         {
@@ -181,6 +182,28 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         public async Task<IActionResult> DeleteRecoverySongItem([FromQuery] string recoveryId)
         {
             var result = await _songService.DeleteRecoverySongItemAsync(recoveryId);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            return Ok(result.Data);
+        }
+
+        [HttpPut]
+        [Authorize]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> RenameSong([FromQuery] string songId, [FromQuery] string newTitle)
+        {
+            var result = await _songService.RenameSong(songId, newTitle);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            return Ok(result.Data);
+        }
+
+        [HttpPut]
+        [Authorize]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> ArchiveSong([FromQuery] string songId)
+        {
+            var result = await _songService.ArchiveSong(songId);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { message = result.Error.Message });
             return Ok(result.Data);

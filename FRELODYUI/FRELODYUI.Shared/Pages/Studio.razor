@@ -708,6 +708,13 @@
         {
             var refined = await _aiService.RefineExtractionAsync(pastedText, extractedSong.SongLyrics);
             extractedSong.SongLyrics = refined;
+
+            // Update the saved song with refined data
+            if (!string.IsNullOrEmpty(savedSongId))
+            {
+                PrepareSegments();
+                await _songsApi.UpdateSong(savedSongId, extractedSong);
+            }
         }
         catch (Exception ex)
         {
