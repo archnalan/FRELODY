@@ -80,6 +80,51 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
+        public async Task<ServiceResult<PaginationDetails<ComboBoxDto>>> GetUserSongsAsync(int offset, int limit)
+        {
+            try
+            {
+                limit = limit <= 0 ? 10 : limit;
+
+                var favoriteSongIds = await _context.SongUserFavorites
+                    .Where(f => f.UserId == _userId)
+                    .Select(f => f.SongId)
+                    .ToListAsync();
+
+                var favoriteSet = favoriteSongIds.ToHashSet();
+
+                var page = await _context.Songs
+                        .Where(s => s.CreatedBy == _userId)
+                        .OrderBy(s => s.SongNumber)
+                        .ThenByDescending(s => s.Rating ?? 0)
+                        .ToPaginatedResultAsync(offset, limit);
+
+                var result = new PaginationDetails<ComboBoxDto>
+                {
+                    OffSet = page.OffSet,
+                    Limit = page.Limit,
+                    TotalSize = page.TotalSize,
+                    HasMore = page.HasMore,
+                    Data = page.Data?
+                        .Select(s => new ComboBoxDto
+                        {
+                            ValueId = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
+                            ValueText = s.Title,
+                            IdString = s.Id,
+                            ValueSubText = favoriteSet.Contains(s.Id) ? "pinned" : s.WrittenBy,
+                        })
+                        .ToList()
+                };
+
+                return ServiceResult<PaginationDetails<ComboBoxDto>>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetUserSongs");
+                return ServiceResult<PaginationDetails<ComboBoxDto>>.Failure(ex);
+            }
+        }
+
         public async Task<ServiceResult<PaginationDetails<ComboBoxDto>>> SearchSongsAsync(string? keywords, int offset, int limit)
         {
             try

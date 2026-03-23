@@ -11,6 +11,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
     public interface ISongService
     {
         Task<ServiceResult<PaginationDetails<ComboBoxDto>>> GetSongsAsync(int offset, int limit);
+        Task<ServiceResult<PaginationDetails<ComboBoxDto>>> GetUserSongsAsync(int offset, int limit);
         Task<ServiceResult<PaginationDetails<ComboBoxDto>>> SearchSongsAsync(string? keywords, int offset, int limit);
         Task<ServiceResult<SongDto>> CreateSong(SimpleSongCreateDto songDto);
         Task<ServiceResult<SongDto>> GetSongById(string id);

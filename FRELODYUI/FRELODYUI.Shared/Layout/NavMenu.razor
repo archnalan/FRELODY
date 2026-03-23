@@ -74,6 +74,8 @@
                 </div>
 
                 @* ── Your Songs (collapsible, expanded mode only) ── *@
+                @if (hasUserSongs)
+                {
                 <div class="nav-your-songs @(IsSidebarCollapsed ? "collapsed-hidden" : "")">
                     <button class="your-songs-toggle" @onclick="ToggleYourSongs" type="button">
                         <span class="your-songs-label">Your Songs</span>
@@ -148,6 +150,7 @@
                         </div>
                     }
                 </div>
+                }
 
             </Authorized>
             <NotAuthorized>
@@ -254,6 +257,7 @@
     private bool isYourSongsExpanded;
     private bool isLoadingSongs;
     private bool hasMoreSongs;
+    private bool hasUserSongs;
     private List<ComboBoxDto> userSongs = new();
     private int songsOffset;
     private const int SongsPageSize = 15;
@@ -287,6 +291,14 @@
             isDarkTheme = savedTheme == "dark";
             await ApplyTheme(savedTheme);
         }
+
+        // Pre-check if the user has any songs to decide whether to show "Your Songs"
+        try
+        {
+            var songsCheck = await _songsApi.GetUserSongs(0, 1);
+            hasUserSongs = songsCheck.IsSuccessStatusCode && songsCheck.Content?.TotalSize > 0;
+        }
+        catch { hasUserSongs = false; }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -361,12 +373,13 @@
         try
         {
             if (reset) { songsOffset = 0; userSongs.Clear(); }
-            var result = await _songsApi.GetSongs(songsOffset, SongsPageSize);
+            var result = await _songsApi.GetUserSongs(songsOffset, SongsPageSize);
             if (result.IsSuccessStatusCode && result.Content?.Data != null)
             {
                 userSongs.AddRange(result.Content.Data);
                 songsOffset += result.Content.Data.Count;
                 hasMoreSongs = result.Content.HasMore;
+                hasUserSongs = result.Content.TotalSize > 0;
             }
         }
         catch { /* Silently fail — non-critical UI feature */ }
@@ -500,6 +513,7 @@
             if (result.IsSuccessStatusCode)
             {
                 userSongs.Remove(song);
+                if (!userSongs.Any()) hasUserSongs = false;
                 StateHasChanged();
             }
         }
@@ -531,6 +545,7 @@
             {
                 var song = userSongs.FirstOrDefault(s => s.IdString == songId);
                 if (song != null) userSongs.Remove(song);
+                if (!userSongs.Any()) hasUserSongs = false;
                 StateHasChanged();
             }
         }

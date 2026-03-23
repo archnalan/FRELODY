@@ -70,6 +70,19 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
+        [Authorize]
+        [ProducesResponseType(typeof(PaginationDetails<ComboBoxDto>), 200)]
+        public async Task<IActionResult> GetUserSongs([FromQuery]int offset, [FromQuery]int limit)
+        {
+            var songResult = await _songService.GetUserSongsAsync(offset, limit);
+
+            if (!songResult.IsSuccess)
+                return StatusCode(songResult.StatusCode, new { message = songResult.Error.Message });
+
+            return Ok(songResult.Data);
+        }
+
+        [HttpGet]
         [ProducesResponseType(typeof(PaginationDetails<ComboBoxDto>), 200)]
         public async Task<IActionResult> SearchSongs([FromQuery]string? keywords, [FromQuery] int offset, [FromQuery] int limit)
         {

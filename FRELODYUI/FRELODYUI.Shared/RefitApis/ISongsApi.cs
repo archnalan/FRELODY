@@ -18,6 +18,9 @@ namespace FRELODYUI.Shared.RefitApis
         [Get("/api/songs/get-songs")]
         Task<IApiResponse<PaginationDetails<ComboBoxDto>>> GetSongs([Query]int offset, [Query]int limit);
 
+        [Get("/api/songs/get-user-songs")]
+        Task<IApiResponse<PaginationDetails<ComboBoxDto>>> GetUserSongs([Query]int offset, [Query]int limit);
+
         [Get("/api/songs/search-songs")]
         Task<IApiResponse<PaginationDetails<ComboBoxDto>>> SearchSongs([Query]string keywords, [Query]int offset, [Query]int limit);
 

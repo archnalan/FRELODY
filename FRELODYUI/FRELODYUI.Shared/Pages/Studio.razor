@@ -196,14 +196,8 @@
                         <StudioMonitor Song="@extractedSong"
                                        DatabaseSong="@databaseSong"
                                        Source="@monitorSource"
-                                       IsRefining="@isRefining"
-                                       IsSaving="@isSaving"
                                        IsAuthenticated="@isAuthenticated"
-                                       SavedSongId="@savedSongId"
-                                       OnRefineRequested="RefineWithAi"
-                                       OnSaveRequested="SaveSong"
-                                       OnCustomizeRequested="CustomizeSong"
-                                       OnOpenSongRequested="OpenDatabaseSong"
+                                       PastedText="@pastedText"
                                        OnClearRequested="ClearMonitor" />
                     </div>
                 }
@@ -297,13 +291,10 @@
     private string pastedText = "";
     private string searchQuery = "";
     private bool isProcessing;
-    private bool isRefining;
     private bool isScanning;
-    private bool isSaving;
     private bool isSearching;
     private bool showSuggestions;
     private bool isAuthenticated;
-    private string? savedSongId;
     private bool _shouldScrollToMonitor;
     private bool isTextareaFocused;
     private ElementReference textareaRef;
@@ -481,7 +472,6 @@
         {
             databaseSong = response.Content;
             extractedSong = null;
-            savedSongId = null;
             monitorSource = StudioMonitor.MonitorSource.Database;
             _shouldScrollToMonitor = true;
         }
@@ -502,7 +492,6 @@
 
         isProcessing = true;
         showSuggestions = false;
-        savedSongId = null;
         StateHasChanged();
 
         extractedSong = _extractor.ExtractFromRawText(pastedText);
@@ -515,12 +504,6 @@
         isProcessing = false;
         _shouldScrollToMonitor = true;
         StateHasChanged();
-
-        if (isAuthenticated && extractedSong != null)
-        {
-            PrepareSegments();
-            savedSongId = await PerformSaveSong();
-        }
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
@@ -576,11 +559,6 @@
             monitorSource = StudioMonitor.MonitorSource.Extracted;
 
             _shouldScrollToMonitor = true;
-            if (isAuthenticated && extractedSong != null)
-            {
-                PrepareSegments();
-                savedSongId = await PerformSaveSong();
-            }
         }
         catch (Exception ex)
         {
@@ -653,11 +631,6 @@
                 detectedFormat = _extractor.DetectFormat(lines, 0);
 
                 _shouldScrollToMonitor = true;
-                if (isAuthenticated && extractedSong != null)
-                {
-                    PrepareSegments();
-                    savedSongId = await PerformSaveSong();
-                }
             }
             else
             {
@@ -689,153 +662,10 @@
         }
     }
 
-    // ── AI Refine (auth-gated) ──
-    private async Task RefineWithAi()
-    {
-        if (!isAuthenticated)
-        {
-            await _storageService.SetItemAsync("studioResumeText", pastedText);
-            _navManager.NavigateTo($"/login?returnUrl=/studio");
-            return;
-        }
-
-        if (extractedSong?.SongLyrics == null || !_aiService.IsAvailable) return;
-
-        isRefining = true;
-        StateHasChanged();
-
-        try
-        {
-            var refined = await _aiService.RefineExtractionAsync(pastedText, extractedSong.SongLyrics);
-            extractedSong.SongLyrics = refined;
-
-            // Update the saved song with refined data
-            if (!string.IsNullOrEmpty(savedSongId))
-            {
-                PrepareSegments();
-                await _songsApi.UpdateSong(savedSongId, extractedSong);
-            }
-        }
-        catch (Exception ex)
-        {
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "AI Refinement Error",
-                Message = $"Could not refine extraction: {ex.Message}",
-                ButtonText = "OK",
-                Context = new ModalContext { ActionType = "aiError" }
-            });
-        }
-        finally
-        {
-            isRefining = false;
-            StateHasChanged();
-        }
-    }
-
-    // ── Save (auth-gated) ──
-    private async Task SaveSong()
-    {
-        if (!isAuthenticated)
-        {
-            await _storageService.SetItemAsync("studioResumeText", pastedText);
-            _navManager.NavigateTo($"/login?returnUrl=/studio");
-            return;
-        }
-
-        if (extractedSong == null) return;
-        PrepareSegments();
-        var songId = await PerformSaveSong();
-        if (songId != null)
-        {
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "Song Saved",
-                Message = $"Song '{extractedSong.Title}' saved successfully!",
-                ButtonText = "OK",
-                OptionType = OptionType.Success,
-                Context = new ModalContext { ActionType = "SongSaved" }
-            });
-        }
-    }
-
-    // ── Customize (auth-gated) ──
-    private async Task CustomizeSong()
-    {
-        if (!isAuthenticated)
-        {
-            await _storageService.SetItemAsync("studioResumeText", pastedText);
-            _navManager.NavigateTo($"/login?returnUrl=/studio");
-            return;
-        }
-
-        if (extractedSong == null) return;
-        PrepareSegments();
-        var songId = await PerformSaveSong();
-        if (songId != null)
-        {
-            _navManager.NavigateTo($"/compose?songId={songId}");
-        }
-    }
-
-    private void OpenDatabaseSong()
-    {
-        if (databaseSong != null)
-        {
-            _navManager.NavigateTo($"/song/{databaseSong.Slug ?? databaseSong.Id}");
-        }
-    }
-
-    private void PrepareSegments()
-    {
-        if (extractedSong?.SongLyrics == null) return;
-        foreach (var seg in extractedSong.SongLyrics)
-        {
-            if (seg.PartNumber <= 0)
-            {
-                seg.PartNumber = 1;
-                seg.PartName = seg.PartName == SongSection.unknown ? SongSection.Verse : seg.PartName;
-            }
-        }
-    }
-
-    private async Task<string?> PerformSaveSong()
-    {
-        if (extractedSong == null) return null;
-
-        isSaving = true;
-        StateHasChanged();
-        try
-        {
-            var result = await _songsApi.CreateSong(extractedSong);
-            if (result.IsSuccessStatusCode && result.Content != null)
-            {
-                return result.Content.Id;
-            }
-
-            var errorMessage = _apiResponseHandler.GetApiErrorMessage(result);
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "Save Error",
-                Message = errorMessage,
-                ButtonText = "Close",
-                OptionType = OptionType.Error,
-                Context = new ModalContext { ActionType = "saveError" }
-            });
-            return null;
-        }
-        finally
-        {
-            isSaving = false;
-            StateHasChanged();
-        }
-    }
-
     private void ClearMonitor()
     {
         extractedSong = null;
         databaseSong = null;
-        savedSongId = null;
         pastedText = "";
         detectedFormat = null;
         scannedImageBase64 = null;

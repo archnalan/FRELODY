@@ -22,7 +22,7 @@
                     <div class="dropdown">
                         <button class="mon-btn dropdown-toggle" type="button"
                                 data-bs-toggle="dropdown" aria-expanded="false"
-                                disabled="@IsRefining">
+                                disabled="@isRefining">
                             <i class="bi bi-pencil-square"></i>
                             <span>Edit</span>
                         </button>
@@ -31,9 +31,9 @@
                             {
                                 <li>
                                     <button class="dropdown-item" type="button"
-                                            disabled="@IsRefining"
-                                            @onclick="HandleRefine">
-                                        @if (IsRefining)
+                                            disabled="@isRefining"
+                                            @onclick="RefineWithAi">
+                                        @if (isRefining)
                                         {
                                             <span class="spinner-border spinner-border-sm me-2"
                                                   style="width:0.85rem;height:0.85rem;border-width:2px;"></span>
@@ -47,8 +47,8 @@
                                 </li>
                             }
                             <li>
-                                <button class="dropdown-item" type="button" @onclick="HandleCustomize"
-                                        disabled="@IsRefining">
+                                <button class="dropdown-item" type="button" @onclick="CustomizeSong"
+                                        disabled="@isRefining">
                                     <i class="bi bi-sliders me-2"></i>
                                     Customize
                                 </button>
@@ -56,7 +56,7 @@
                         </ul>
                     </div>
                     @* Play / Saving / Save button *@
-                    @if (IsSaving)
+                    @if (isSaving)
                     {
                         <button class="mon-btn mon-btn--play" disabled type="button">
                             <span class="spinner-border spinner-border-sm"
@@ -64,11 +64,11 @@
                             <span>Saving…</span>
                         </button>
                     }
-                    else if (!string.IsNullOrEmpty(SavedSongId))
+                    else if (!string.IsNullOrEmpty(savedSongId))
                     {
-                        <a class="mon-btn mon-btn--play @(IsRefining ? "disabled" : "")" href="/song/@SavedSongId"
-                           @onclick:preventDefault="@IsRefining">
-                            @if (IsRefining)
+                        <a class="mon-btn mon-btn--play @(isRefining ? "disabled" : "")" href="/songs/@savedSongId"
+                           @onclick:preventDefault="@isRefining">
+                            @if (isRefining)
                             {
                                 <span class="spinner-border spinner-border-sm"
                                       style="width:0.85rem;height:0.85rem;border-width:2px;"></span>
@@ -83,8 +83,8 @@
                     }
                     else
                     {
-                        <button class="mon-btn mon-btn--save" type="button" @onclick="HandleSave"
-                                disabled="@IsRefining">
+                        <button class="mon-btn mon-btn--save" type="button" @onclick="SaveSong"
+                                disabled="@isRefining">
                             <i class="bi bi-floppy"></i>
                             <span>Save</span>
                         </button>
@@ -140,7 +140,7 @@
                 </div>
                 <div class="mon-actions">
                     <button class="mon-btn mon-btn--open"
-                            @onclick="HandleOpenSong"
+                            @onclick="OpenDatabaseSong"
                             title="Open in player"
                             type="button">
                         <i class="bi bi-play-circle"></i>
@@ -185,23 +185,168 @@
     [Parameter] public SimpleSongCreateDto? Song { get; set; }
     [Parameter] public SongDto? DatabaseSong { get; set; }
     [Parameter] public MonitorSource Source { get; set; }
-    [Parameter] public bool IsRefining { get; set; }
-    [Parameter] public bool IsSaving { get; set; }
-    [Parameter] public string? SavedSongId { get; set; }
     [Parameter] public bool IsAuthenticated { get; set; }
-    [Parameter] public EventCallback OnRefineRequested { get; set; }
-    [Parameter] public EventCallback OnSaveRequested { get; set; }
-    [Parameter] public EventCallback OnCustomizeRequested { get; set; }
-    [Parameter] public EventCallback OnOpenSongRequested { get; set; }
+    [Parameter] public string? PastedText { get; set; }
     [Parameter] public EventCallback OnClearRequested { get; set; }
 
-    private bool HasContent => Song != null || DatabaseSong != null;
+    private bool isSaving;
+    private bool isRefining;
+    private string? savedSongId;
+    private SimpleSongCreateDto? _previousSong;
 
-    private async Task HandleRefine() => await OnRefineRequested.InvokeAsync();
-    private async Task HandleSave() => await OnSaveRequested.InvokeAsync();
-    private async Task HandleCustomize() => await OnCustomizeRequested.InvokeAsync();
-    private async Task HandleOpenSong() => await OnOpenSongRequested.InvokeAsync();
+    protected override async Task OnParametersSetAsync()
+    {
+        // Auto-save when a new extracted Song arrives
+        if (Song != null && !ReferenceEquals(Song, _previousSong))
+        {
+            _previousSong = Song;
+            savedSongId = null;
+            if (IsAuthenticated)
+            {
+                PrepareSegments();
+                savedSongId = await PerformSaveSong();
+            }
+        }
+        else if (Song == null)
+        {
+            _previousSong = null;
+            savedSongId = null;
+        }
+    }
+
     private async Task OnClear() => await OnClearRequested.InvokeAsync();
+
+    private async Task RefineWithAi()
+    {
+        if (!IsAuthenticated)
+        {
+            await _storageService.SetItemAsync("studioResumeText", PastedText ?? "");
+            _navManager.NavigateTo("/login?returnUrl=/studio");
+            return;
+        }
+
+        if (Song?.SongLyrics == null || !_aiService.IsAvailable) return;
+
+        isRefining = true;
+        StateHasChanged();
+
+        try
+        {
+            var refined = await _aiService.RefineExtractionAsync(PastedText ?? "", Song.SongLyrics);
+            Song.SongLyrics = refined;
+
+            if (!string.IsNullOrEmpty(savedSongId))
+            {
+                PrepareSegments();
+                await _songsApi.UpdateSong(savedSongId, Song);
+            }
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "AI Refinement Error",
+                Message = $"Could not refine extraction: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "aiError" }
+            });
+        }
+        finally
+        {
+            isRefining = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveSong()
+    {
+        if (!IsAuthenticated)
+        {
+            await _storageService.SetItemAsync("studioResumeText", PastedText ?? "");
+            _navManager.NavigateTo("/login?returnUrl=/studio");
+            return;
+        }
+
+        if (Song == null) return;
+        PrepareSegments();
+        var songId = await PerformSaveSong();
+        if (songId != null)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Song Saved",
+                Message = $"Song '{Song.Title}' saved successfully!",
+                ButtonText = "OK",
+                OptionType = OptionType.Success,
+                Context = new ModalContext { ActionType = "SongSaved" }
+            });
+        }
+    }
+
+    private async Task CustomizeSong()
+    {
+        if (!IsAuthenticated)
+        {
+            await _storageService.SetItemAsync("studioResumeText", PastedText ?? "");
+            _navManager.NavigateTo("/login?returnUrl=/studio");
+            return;
+        }
+
+        if (Song == null) return;
+        PrepareSegments();
+        var songId = await PerformSaveSong();
+        if (songId != null)
+            _navManager.NavigateTo($"/compose?songId={songId}");
+    }
+
+    private void OpenDatabaseSong()
+    {
+        if (DatabaseSong != null)
+            _navManager.NavigateTo($"/songs/{DatabaseSong.Slug ?? DatabaseSong.Id}");
+    }
+
+    private void PrepareSegments()
+    {
+        if (Song?.SongLyrics == null) return;
+        foreach (var seg in Song.SongLyrics)
+        {
+            if (seg.PartNumber <= 0)
+            {
+                seg.PartNumber = 1;
+                seg.PartName = seg.PartName == SongSection.unknown ? SongSection.Verse : seg.PartName;
+            }
+        }
+    }
+
+    private async Task<string?> PerformSaveSong()
+    {
+        if (Song == null) return null;
+
+        isSaving = true;
+        StateHasChanged();
+        try
+        {
+            var result = await _songsApi.CreateSong(Song);
+            if (result.IsSuccessStatusCode && result.Content != null)
+                return result.Content.Id;
+
+            var errorMessage = _apiResponseHandler.GetApiErrorMessage(result);
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Save Error",
+                Message = errorMessage,
+                ButtonText = "Close",
+                OptionType = OptionType.Error,
+                Context = new ModalContext { ActionType = "saveError" }
+            });
+            return null;
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
 
     private string GetChordAlignmentClass(SegmentCreateDto seg)
     {
