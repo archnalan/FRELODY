@@ -68,12 +68,21 @@
     border-radius: 9999px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
-    color: #fff;
+    border: 1px solid transparent;
     flex-shrink: 0;
 }
 
-.badge-database  { background: #3b82f6; color: #fff; }
-.badge-extracted { background: #22c55e; color: #fff; }
+.badge-database {
+    background: var(--badge-db-bg);
+    color: var(--badge-db-text);
+    border-color: rgba(59, 130, 246, 0.28);
+}
+
+.badge-extracted {
+    background: var(--badge-extracted-bg);
+    color: var(--badge-extracted-text);
+    border-color: rgba(34, 197, 94, 0.26);
+}
 
 .mon-actions {
     display: flex;

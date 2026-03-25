@@ -18,6 +18,8 @@
    ============================================ */
 
 .song-header {
+    position: relative;
+    z-index: 1000;
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
@@ -93,6 +95,25 @@
     flex-shrink: 0;
 }
 
+.header-actions .dropdown {
+    position: relative;
+    z-index: 1200;
+}
+
+.header-actions .dropdown-menu {
+    z-index: 1210;
+}
+
+.share-dropdown-backdrop {
+    position: fixed;
+    inset: 0;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    z-index: 900;
+}
+
 /* ============================================
    STICKY CONTROLS BAR
    ============================================ */
@@ -111,7 +132,7 @@
 
 .controls-bar-inner {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 0.75rem;
     padding: 0.5rem 0;
     overflow-x: auto;
@@ -125,14 +146,14 @@
 
 .control-separator {
     width: 1px;
-    height: 1.75rem;
+    height: 2rem;
     background: var(--border-medium);
     flex-shrink: 0;
 }
 
 .controls-bar-actions {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 0.5rem;
     margin-left: auto;
     flex-shrink: 0;
@@ -144,7 +165,7 @@
 
 .control-group {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 0.5rem;
     flex-shrink: 0;
 }
@@ -284,6 +305,24 @@
         opacity: 1;
         transform: translateY(0) scale(1);
     }
+}
+
+/* ============================================
+   CHORD CHART GHOST CARDS (while refetching transposed chords)
+   ============================================ */
+
+.chord-chart-name-ghost {
+    height: 1rem;
+    width: 3rem;
+    border-radius: 4px;
+    background: var(--border-light);
+    margin: 0 auto 0.5rem;
+    animation: name-ghost-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes name-ghost-shimmer {
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 0.85; }
 }
 
 /* ============================================
@@ -743,6 +782,18 @@
         border-top: none;
     }
 
+    .playback-fullscreen .controls-bar-inner {
+        position: relative;
+        justify-content: center;
+        overflow-x: visible;
+    }
+
+    .playback-fullscreen .controls-bar-actions {
+        position: absolute;
+        right: 0;
+        margin-left: 0;
+    }
+
     .playback-fullscreen .song-content {
         max-width: 800px;
         margin: 0 auto;
@@ -771,6 +822,18 @@
         border-radius: 0;
         margin: 0;
         padding: 0 1rem;
+    }
+
+    .song-playback-area:fullscreen .controls-bar-inner {
+        position: relative;
+        justify-content: center;
+        overflow-x: visible;
+    }
+
+    .song-playback-area:fullscreen .controls-bar-actions {
+        position: absolute;
+        right: 0;
+        margin-left: 0;
     }
 
     .song-playback-area:fullscreen .song-content {
@@ -835,9 +898,8 @@
     .controls-bar {
         margin: 0 -1rem 1.5rem;
         padding: 0 1rem;
-        border-radius: 12px;
-        border: 1px solid var(--border-light);
-        border-bottom: 1px solid var(--border-light);
+        border: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
     }
 
     .controls-bar-inner {

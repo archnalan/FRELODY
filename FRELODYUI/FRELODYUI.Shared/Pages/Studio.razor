@@ -466,7 +466,13 @@
         showSuggestions = false;
         selectedSuggestionIndex = -1;
 
-        // Load the full song from the database
+        if (suggestion.Source == SuggestionSource.Database && !string.IsNullOrWhiteSpace(suggestion.Id))
+        {
+            _navManager.NavigateTo($"/songs/{suggestion.Id}");
+            return;
+        }
+
+        // Fallback for non-database suggestions
         var response = await _songsApi.GetSongWithChordsById(suggestion.Id);
         if (response.IsSuccessStatusCode && response.Content != null)
         {

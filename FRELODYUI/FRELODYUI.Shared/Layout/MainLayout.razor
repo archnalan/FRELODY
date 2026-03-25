@@ -60,6 +60,22 @@
 </div>
 
 @* ── Global modal portal: rendered outside .page to escape all stacking contexts ── *@
+
+<!-- Global Toast -->
+<div class="toast-container position-fixed top-0 start-50 translate-middle-x pt-2" style="z-index: 100001;">
+    <div class="toast align-items-center text-bg-@ToastBsClass() border-0 @(_toastService.IsVisible ? "show" : "")"
+         role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center gap-2">
+                <i class="bi @ToastIcon()"></i>
+                @_toastService.Message
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    @onclick="_toastService.Hide" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
 @if (_modalService.IsModalVisible)
 {
     <DialogModal IsVisible="true"
@@ -81,6 +97,7 @@
         _navManager.LocationChanged += OnLocationChanged;
         _modalService.OnShow += OnModalStateChanged;
         _modalService.OnClose += OnModalStateChanged;
+        _toastService.OnToast += OnToastChanged;
     }
 
     private async Task ToggleSidebar()
@@ -113,12 +130,27 @@
         _navManager.LocationChanged -= OnLocationChanged;
         _modalService.OnShow -= OnModalStateChanged;
         _modalService.OnClose -= OnModalStateChanged;
+        _toastService.OnToast -= OnToastChanged;
     }
 
-    private void OnModalStateChanged()
+    private void OnModalStateChanged() => InvokeAsync(StateHasChanged);
+    private void OnToastChanged() => InvokeAsync(StateHasChanged);
+
+    private string ToastBsClass() => _toastService.Type switch
     {
-        InvokeAsync(StateHasChanged);
-    }
+        ToastType.Error => "danger",
+        ToastType.Warning => "warning",
+        ToastType.Info => "info",
+        _ => "success"
+    };
+
+    private string ToastIcon() => _toastService.Type switch
+    {
+        ToastType.Error => "bi-x-circle-fill",
+        ToastType.Warning => "bi-exclamation-triangle-fill",
+        ToastType.Info => "bi-info-circle-fill",
+        _ => "bi-check-circle-fill"
+    };
 
     private void RecoverPage()
     {

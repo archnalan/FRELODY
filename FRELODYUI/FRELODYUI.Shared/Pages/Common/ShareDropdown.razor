@@ -5,7 +5,7 @@
 <button class="dropdown-item d-flex align-items-center" 
         type="button"
         data-bs-toggle="tooltip"
-        title="@(string.IsNullOrEmpty(currentUserId) ? "Login..." : "Customize")"
+        title="@(string.IsNullOrEmpty(currentUserId) ? "Login..." : "edit")"
         aria-label="edit this song"
         @onclick="@(() => CustomizeSong(Song.Id))"
         disabled="@(string.IsNullOrEmpty(currentUserId))">
@@ -60,7 +60,6 @@
     [Parameter] public SongDto Song { get; set; } = default!;
     [Parameter] public EventCallback OnActionCompleted { get; set; }
     [Parameter] public EventCallback<string> OnCustomizeSong { get; set; }
-    [Parameter] public bool ShowShareDropdown { get; set; } 
     [Parameter] public string ShareLinkUrl { get; set; } = string.Empty;
 
     private string? currentUserId;
@@ -83,16 +82,17 @@
     private async Task HandleShareLink()
     {
         if (Song == null) return;
+        isLoading = true;
         if(!string.IsNullOrEmpty(ShareLinkUrl))
         {
             await _clipboardService.CopyToClipboardAsync(ShareLinkUrl);
             await ShowSuccessMessage("Share link copied to clipboard!");
             await OnActionCompleted.InvokeAsync();
+            isLoading = false;
             return;
         }
 
         isGeneratingLink = true;
-        ShowShareDropdown = false;
         StateHasChanged();
 
         try
@@ -139,6 +139,7 @@
         finally
         {
             isGeneratingLink = false;
+            isLoading = false;
             StateHasChanged();
         }
     }
@@ -147,8 +148,8 @@
     {
         if (Song == null) return;
 
+        isLoading = true;
         isPrinting = true;
-        ShowShareDropdown = false;
         StateHasChanged();
 
         try
@@ -195,6 +196,7 @@
         finally
         {
             isPrinting = false;
+            isLoading = false;
             StateHasChanged();
         }
     }
@@ -216,6 +218,7 @@
         if (OnCustomizeSong.HasDelegate)
         {
             await OnCustomizeSong.InvokeAsync(songId);
+            await OnActionCompleted.InvokeAsync();
         }
     }
 
@@ -235,10 +238,4 @@
         StateHasChanged();
     }
 
-    // Handle click outside dropdown to close it
-    private void HandleClickOutside()
-    {
-        ShowShareDropdown = false;
-        StateHasChanged();
-    }
 }

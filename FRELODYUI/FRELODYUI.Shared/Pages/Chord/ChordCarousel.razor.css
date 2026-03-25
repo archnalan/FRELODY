@@ -55,3 +55,33 @@
     }
 }
 
+/* ============================================
+   GHOST / LOADING SKELETON
+   ============================================ */
+
+.chord-carousel--ghost {
+    pointer-events: none;
+}
+
+.chord-carousel-ghost-img {
+    border-radius: 0.5em;
+    background: var(--border-light, #d1d5db);
+    animation: carousel-ghost-shimmer 1.4s ease-in-out infinite;
+}
+
+/* width + max-width both set so slider mode (no intrinsic card width) matches real img size */
+.carousel-sm       .chord-carousel-ghost-img { height: 130px; width: 100px;  max-width: 100px; }
+.carousel-md       .chord-carousel-ghost-img { height: 160px; width: 130px;  max-width: 130px; }
+.carousel-lg       .chord-carousel-ghost-img { height: 210px; width: 170px;  max-width: 170px; }
+.carousel-popover  .chord-carousel-ghost-img { height: 100px; width:  75px;  max-width:  75px; }
+
+@media (max-width: 768px) {
+    .carousel-md .chord-carousel-ghost-img,
+    .carousel-lg .chord-carousel-ghost-img { height: 80px; width: 60px; max-width: 60px; }
+}
+
+@keyframes carousel-ghost-shimmer {
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 0.85; }
+}
+

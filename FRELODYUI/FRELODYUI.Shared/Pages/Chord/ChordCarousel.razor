@@ -2,7 +2,13 @@
 @inject ILogger<ChordCarousel> _logger
 @inject IConfiguration Configuration
 
-@if (Charts.Count > 0)
+@if (IsLoading)
+{
+    <div class="chord-carousel @SizeClass chord-carousel--ghost">
+        <div class="chord-carousel-ghost-img"></div>
+    </div>
+}
+else if (Charts.Count > 0)
 {
     <div id="@CarouselId" class="carousel slide chord-carousel @SizeClass" data-bs-interval="false">
         <div class="carousel-inner">
@@ -104,6 +110,9 @@ else
 
     [Parameter]
     public bool ShowActions { get; set; } = true;
+
+    [Parameter]
+    public bool IsLoading { get; set; }
 
     [Parameter]
     public string CarouselId { get; set; } = "chordCarousel";

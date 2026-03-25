@@ -293,17 +293,12 @@ else
             }
 
             await OnSettingsSaved.InvokeAsync(settings);
+            _toastService.Show("Settings saved!", ToastType.Success);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error saving settings");
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "Error",
-                Message = "Failed to save settings",
-                ButtonText = "OK",
-                OptionType = OptionType.Error
-            });
+            _toastService.Show("Failed to save settings", ToastType.Error);
         }
         finally
         {

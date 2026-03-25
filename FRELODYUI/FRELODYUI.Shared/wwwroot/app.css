@@ -44,6 +44,15 @@ html, body {
     --gradient-primary-hover-start: #5a6fd8;
     --gradient-primary-hover-end: #6a4190;
     --color-premium-gold: #d4af37;
+    /* Studio suggestion/source badge colors (light) */
+    --badge-db-bg: #dbeafe;
+    --badge-db-text: #1e40af;
+    --badge-recent-bg: #f3f4f6;
+    --badge-recent-text: #374151;
+    --badge-youtube-bg: #fee2e2;
+    --badge-youtube-text: #b91c1c;
+    --badge-extracted-bg: #dcfce7;
+    --badge-extracted-text: #166534;
 }
 
 [data-bs-theme="dark"] {
@@ -86,6 +95,15 @@ html, body {
     --gradient-primary-hover-start: #5a6fd8;
     --gradient-primary-hover-end: #6a4190;
     --color-premium-gold: #f5c84c;
+    /* Studio suggestion/source badge colors (dark) */
+    --badge-db-bg: #1e3a8a;
+    --badge-db-text: #dbeafe;
+    --badge-recent-bg: #374151;
+    --badge-recent-text: #e5e7eb;
+    --badge-youtube-bg: #7f1d1d;
+    --badge-youtube-text: #fee2e2;
+    --badge-extracted-bg: #14532d;
+    --badge-extracted-text: #dcfce7;
 }
 
 /*a, .btn-link {

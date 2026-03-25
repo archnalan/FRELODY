@@ -38,23 +38,30 @@
                     <button class="btn btn-primary dropdown-toggle"
                             type="button"
                             id="shareDropdownButton"
-                            data-bs-toggle="dropdown"
-                            data-bs-auto-close="outside"
+                            @onclick="ToggleDropdown"
+                            aria-expanded="@showShareDropdown"
                             title="Share">
                         <i class="bi bi-upload me-1"></i>
                         <span class="d-none d-sm-inline">Share</span>
                     </button>
-                    <div class="dropdown-menu dropdown-menu-end"
+                    <div class="dropdown-menu dropdown-menu-end @(showShareDropdown ? "show" : "")"
                          aria-labelledby="shareDropdownButton">
                         <ShareDropdown Song="song"
                                        ShareLinkUrl="@shareLinkUrl"
-                                       ShowShareDropdown="@showShareDropdown"
                                        OnActionCompleted="CloseShareDropdown"
                                        OnCustomizeSong="(songId) => CustomizeSong(songId)" />
                     </div>
                 </div>
             </div>
         </div>
+
+        @if (showShareDropdown)
+        {
+            <button class="share-dropdown-backdrop"
+                    type="button"
+                    aria-label="Close share menu"
+                    @onclick="CloseShareDropdown"></button>
+        }
         }
 
         <!-- Main Playback Area (becomes fullscreen) -->
@@ -179,13 +186,54 @@
                     </button>
                 </div>
 
-                @if (showChordGrid)
+                @if (isRefetchingCharts)
+                {
+                    @if (showChordGrid)
+                    {
+                        <div class="chord-charts-grid">
+                            @for (int g = 0; g < uniqueSongChords.Count; g++)
+                            {
+                                <div class="chord-chart-card">
+                                    <div class="chord-chart-name-ghost"></div>
+                                    <ChordCarousel IsLoading="true"
+                                                   Size="CarouselSize.Medium"
+                                                   ShowActions="false"
+                                                   CarouselId="@($"ghost-carousel-{g}")" />
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="chord-charts-slider">
+                            <button class="slider-nav-btn slider-prev" disabled>
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <div class="chord-charts-track">
+                                @for (int g = 0; g < uniqueSongChords.Count; g++)
+                                {
+                                    <div class="chord-chart-card">
+                                        <div class="chord-chart-name-ghost"></div>
+                                        <ChordCarousel IsLoading="true"
+                                                       Size="CarouselSize.Medium"
+                                                       ShowActions="false"
+                                                       CarouselId="@($"ghost-carousel-{g}")" />
+                                    </div>
+                                }
+                            </div>
+                            <button class="slider-nav-btn slider-next" disabled>
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    }
+                }
+                else if (showChordGrid)
                 {
                     <div class="chord-charts-grid">
-                        @foreach (var chord in uniqueSongChords)
+                        @foreach (var chord in transposedChords)
                         {
                             <div class="chord-chart-card">
-                                <h6 class="chord-chart-name">@GetTransposedChordName(chord.ChordName)</h6>
+                                <h6 class="chord-chart-name">@chord.ChordName</h6>
                                 <ChordCarousel Chord="@chord"
                                                Size="CarouselSize.Medium"
                                                ShowActions="false"
@@ -202,10 +250,10 @@
                             <i class="bi bi-chevron-left"></i>
                         </button>
                         <div class="chord-charts-track" @ref="chordChartsTrackRef">
-                            @foreach (var chord in uniqueSongChords)
+                            @foreach (var chord in transposedChords)
                             {
                                 <div class="chord-chart-card">
-                                    <h6 class="chord-chart-name">@GetTransposedChordName(chord.ChordName)</h6>
+                                    <h6 class="chord-chart-name">@chord.ChordName</h6>
                                     <ChordCarousel Chord="@chord"
                                                    Size="CarouselSize.Medium"
                                                    ShowActions="false"
@@ -275,23 +323,43 @@
                     <i class="bi bi-arrows-fullscreen"></i>
                 </button>
             }
-        </div> @* Close song-playback-area *@
 
-        <!-- Chord Popover -->
-        @if (showChordPopover && hoveredChord != null)
-        {
-            <div class="chord-popover-overlay"
-                 style="top: @(popoverTop)px; left: @(popoverLeft)px;"
-                 @onmouseenter="() => isMouseOverPopover = true"
-                 @onmouseleave="HideChordPopover">
-                <div class="chord-popover-content">
-                    <ChordCarousel Chord="@hoveredChord"
-                                   Size="CarouselSize.Popover"
-                                   ShowActions="false"
-                                   CarouselId="@($"popover-carousel-{hoveredChord.Id}")" />
+            <!-- Chord Popover -->
+            @if (showChordPopover && hoveredChord != null)
+            {
+                <div class="chord-popover-overlay"
+                     style="top: @(popoverTop)px; left: @(popoverLeft)px;"
+                     @onmouseenter="() => isMouseOverPopover = true"
+                     @onmouseleave="HideChordPopover">
+                    <div class="chord-popover-content">
+                        <ChordCarousel Chord="@hoveredChord"
+                                       Size="CarouselSize.Popover"
+                                       ShowActions="false"
+                                       CarouselId="@($"popover-carousel-{hoveredChord.Id}")" />
+                    </div>
                 </div>
-            </div>
-        }
+            }
+
+            <!-- Fullscreen Toast Portal
+                 Rendered inside song-playback-area so it appears within the native Fullscreen API layer.
+                 position:fixed children of a fullscreen element position relative to the fullscreen viewport. -->
+            @if (isFullscreen && _toastService.IsVisible)
+            {
+                <div class="toast-container position-fixed top-0 start-50 translate-middle-x pt-2" style="z-index: 99999;">
+                    <div class="toast align-items-center text-bg-@ToastBsClass() border-0 show"
+                         role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body d-flex align-items-center gap-2">
+                                <i class="bi @ToastIcon()"></i>
+                                @_toastService.Message
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                                    @onclick="_toastService.Hide" aria-label="Close"></button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div> @* Close song-playback-area *@
 
         <div class="song-rating">
             <SongRating SongId="@SongId" ShowSummary="false" ShowPanel="true" />
@@ -345,6 +413,9 @@
 
     // Chord Charts
     private List<ChordDto> uniqueSongChords = new();
+    private List<ChordDto> transposedChords = new();
+    private bool isRefetchingCharts;
+    private CancellationTokenSource? _chartRefetchCts;
     private bool showChordGrid = false;
     private int chordScrollPosition = 0;
 
@@ -359,6 +430,12 @@
 
     private bool showCharts => songDisplayMode == SongDisplay.LyricsAndChordsAndCharts;
     private bool showShareDropdown = false;
+
+    protected override Task OnInitializedAsync()
+    {
+        _toastService.OnToast += OnToastChanged;
+        return base.OnInitializedAsync();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -463,7 +540,6 @@
     private void OnSettingsSaved(SettingDto settings)
     {
         ApplySettingsDto(settings);
-        ShowSuccessMessage("Settings saved successfully!");
         CloseSettingsDropdown();
         StateHasChanged();
     }
@@ -589,7 +665,18 @@
     {
         popoverTimer?.Dispose();
 
-        hoveredChord = await LoadChordWithCharts(chord.Id!);
+        // Resolve to the currently displayed (possibly transposed) chord so the
+        // popover shows the same charts as the chord-charts-section.
+        var transposedName = GetTransposedChordName(chord.ChordName);
+        var chordToLoad = transposedChords
+            .FirstOrDefault(c => c.ChordName.Equals(transposedName, StringComparison.OrdinalIgnoreCase))
+            ?? chord;
+
+        // Only fetch if the chord has a known ID; placeholders (not in DB yet) have no charts.
+        hoveredChord = string.IsNullOrEmpty(chordToLoad.Id)
+            ? null
+            : await LoadChordWithCharts(chordToLoad.Id);
+
         if (hoveredChord != null)
         {
             currentChartIndex = 0;
@@ -765,6 +852,9 @@
                 .GroupBy(c => c.ChordName)
                 .Select(g => g.First())
                 .ToList();
+
+            // Initialize displayed chords to originals; RefetchTransposedChords will replace when transposed
+            transposedChords = uniqueSongChords.ToList();
         }
     }
 
@@ -777,15 +867,82 @@
         return ChordTransposer.TransposeChord(originalChordName, totalSemitones, chordScale);
     }
 
-    private void IncreaseTranspose() { if (transpose < 12) { transpose++; StateHasChanged(); } }
-    private void DecreaseTranspose() { if (transpose > -12) { transpose--; StateHasChanged(); } }
-    private void IncreaseCapo() { if (capo < 12) { capo++; StateHasChanged(); } }
-    private void DecreaseCapo() { if (capo > 0) { capo--; StateHasChanged(); } }
-    private void ResetTranspose() { transpose = 0; StateHasChanged(); }
-    private void ResetCapo() { capo = 0; StateHasChanged(); }
+    private void IncreaseTranspose() { if (transpose < 12) { transpose++; _ = RefetchTransposedChords(); } }
+    private void DecreaseTranspose() { if (transpose > -12) { transpose--; _ = RefetchTransposedChords(); } }
+    private void IncreaseCapo() { if (capo < 12) { capo++; _ = RefetchTransposedChords(); } }
+    private void DecreaseCapo() { if (capo > 0) { capo--; _ = RefetchTransposedChords(); } }
+    private void ResetTranspose() { transpose = 0; _ = RefetchTransposedChords(); }
+    private void ResetCapo() { capo = 0; _ = RefetchTransposedChords(); }
 
-    private void ToggleDropdown()
+    private async Task RefetchTransposedChords()
     {
+        _chartRefetchCts?.Cancel();
+        _chartRefetchCts = new CancellationTokenSource();
+        var token = _chartRefetchCts.Token;
+
+        var totalSemitones = transpose - capo;
+
+        // No transposition — restore originals immediately without any network call
+        if (totalSemitones == 0)
+        {
+            isRefetchingCharts = false;
+            transposedChords = uniqueSongChords.ToList();
+            StateHasChanged();
+            return;
+        }
+
+        isRefetchingCharts = true;
+        StateHasChanged();
+
+        try
+        {
+            // Debounce: wait before firing so rapid +/− taps only resolve once
+            await Task.Delay(300, token);
+
+            var resolved = new List<ChordDto>();
+            foreach (var chord in uniqueSongChords)
+            {
+                if (token.IsCancellationRequested) break;
+
+                var transposedName = GetTransposedChordName(chord.ChordName);
+                try
+                {
+                    var response = await _chordsApi.SearchChords(transposedName, 0, 5);
+                    if (response.IsSuccessStatusCode && response.Content?.Data?.Any() == true)
+                    {
+                        // Prefer an exact name match; fall back to first result if none
+                        var match = response.Content.Data
+                            .FirstOrDefault(c => c.ChordName.Equals(transposedName, StringComparison.OrdinalIgnoreCase))
+                            ?? response.Content.Data.First();
+                        resolved.Add(match);
+                    }
+                    else
+                    {
+                        // Chord not in DB yet — show placeholder with correct name
+                        resolved.Add(new ChordDto { ChordName = transposedName });
+                    }
+                }
+                catch
+                {
+                    resolved.Add(new ChordDto { ChordName = transposedName });
+                }
+            }
+
+            if (!token.IsCancellationRequested)
+                transposedChords = resolved;
+        }
+        catch (TaskCanceledException) { }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                isRefetchingCharts = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void ToggleDropdown()    {
         showShareDropdown = !showShareDropdown;
         StateHasChanged();
     }
@@ -850,6 +1007,24 @@
         await JsRt.InvokeVoidAsync("goBack");
     }
 
+    private void OnToastChanged() => InvokeAsync(StateHasChanged);
+
+    private string ToastBsClass() => _toastService.Type switch
+    {
+        ToastType.Error => "danger",
+        ToastType.Warning => "warning",
+        ToastType.Info => "info",
+        _ => "success"
+    };
+
+    private string ToastIcon() => _toastService.Type switch
+    {
+        ToastType.Error => "bi-x-circle-fill",
+        ToastType.Warning => "bi-exclamation-triangle-fill",
+        ToastType.Info => "bi-info-circle-fill",
+        _ => "bi-check-circle-fill"
+    };
+
     private void ShowSuccessMessage(string message)
     {
         _modalService.Show(new ModalOptionDto
@@ -886,10 +1061,13 @@
 
     public void Dispose()
     {
+        _toastService.OnToast -= OnToastChanged;
         chordScale = null;
         originalChords = null;
         autoScrollTimer?.Dispose();
         popoverTimer?.Dispose();
+        _chartRefetchCts?.Cancel();
+        _chartRefetchCts?.Dispose();
         autoScrollTimer = null;
         popoverTimer = null;
         dotNetRef?.Dispose();

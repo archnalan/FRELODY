@@ -16,7 +16,7 @@
 @code {
     [Parameter] public bool ShowToast { get; set; }
     [Parameter] public string ToastMessage { get; set; } = "Operation completed successfully.";
-    [Parameter] public ToastType Type { get; set; } = ToastType.Success;
+    [Parameter] public Models.ToastType Type { get; set; } = ToastType.Success;
 
     private string GetToastClass()
     {

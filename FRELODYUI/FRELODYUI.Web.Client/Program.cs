@@ -120,6 +120,7 @@ builder.Services.AddScoped<IClipboardService, WebClipboardService>();
 builder.Services.AddScoped<ICameraService, WebCameraService>();
 builder.Services.AddScoped<IShareService, ShareService>();
 builder.Services.AddScoped<IModalService, ModalService>();
+builder.Services.AddScoped<IToastService, ToastService>();
 builder.Services.AddScoped<IStorageService, WebStorageService>();
 builder.Services.AddScoped<ChordLyricExtrator>();
 builder.Services.AddScoped<ISongExtractionAiService, SongExtractionAiService>();
