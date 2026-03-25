@@ -819,6 +819,38 @@ window.disposeTooltips = function (root) {
 };
 
 // ============================================
+// SCREEN ORIENTATION LOCK (fullscreen mobile)
+// ============================================
+
+/**
+ * Lock screen to a given orientation. Requires Fullscreen API to be active on most browsers.
+ * @param {string} orientation - 'landscape' or 'portrait'
+ */
+window.lockScreenOrientation = async function (orientation) {
+    try {
+        if (screen.orientation && screen.orientation.lock) {
+            var type = orientation === 'landscape' ? 'landscape-primary' : 'portrait-primary';
+            await screen.orientation.lock(type);
+        }
+    } catch (e) {
+        console.warn('Screen orientation lock not supported or failed:', e);
+    }
+};
+
+/**
+ * Unlock screen orientation, allowing the device to rotate freely.
+ */
+window.unlockScreenOrientation = function () {
+    try {
+        if (screen.orientation && screen.orientation.unlock) {
+            screen.orientation.unlock();
+        }
+    } catch (e) {
+        console.warn('Screen orientation unlock failed:', e);
+    }
+};
+
+// ============================================
 // INITIALIZE ON LOAD
 // ============================================
 
