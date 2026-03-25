@@ -13,6 +13,13 @@
     position: relative;
 }
 
+/* Scroll-body wraps chord charts + song content + FABs.
+   position:relative makes the FABs (position:absolute; bottom/right) anchor to
+   the actual content height instead of the viewport in fullscreen mode. */
+.song-scroll-body {
+    position: relative;
+}
+
 /* ============================================
    HEADER
    ============================================ */
@@ -757,7 +764,7 @@
     }
 
 .search-fab {
-    position: absolute;
+    position: fixed;
     bottom: 5rem;
     right: 1.5rem;
     display: flex;
@@ -899,6 +906,18 @@
         color: var(--text-secondary);
         margin-top: 1rem;
     }
+
+/* Loading spinner rendered INSIDE song-playback-area (used during fullscreen song loads) */
+.ssm-loading-inline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    gap: 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
 
 /* ============================================
    TABLET+ (768px)

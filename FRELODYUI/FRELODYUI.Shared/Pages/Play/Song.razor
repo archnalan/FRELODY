@@ -5,18 +5,9 @@
 @implements IDisposable
 
 <div class="song-container" @ref="songContainerRef">
-    @if (isLoading)
+    @if (!isLoading && song != null && !isFullscreen)
     {
-        <div class="loading-state">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p>Loading song...</p>
-        </div>
-    }
-    else if (song != null)
-    {
-        @if (!isFullscreen)
-        {
-            <!-- Header: back, title, share -->
+        <!-- Header: back, title, share -->
             <div class="song-header">
             <button class="header-action-btn back-btn" @onclick="GoBack" title="Go back">
                 <i class="bi bi-chevron-left"></i>
@@ -62,11 +53,19 @@
                     aria-label="Close share menu"
                     @onclick="CloseShareDropdown"></button>
         }
+    }
+
+    <!-- Main Playback Area — always rendered so the fullscreen element stays in DOM during song loads -->
+    <div class="song-playback-area @(isFullscreen ? "playback-fullscreen" : "")" @ref="songContentRef">
+        @if (isLoading)
+        {
+            <div class="ssm-loading-inline">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p>Loading song...</p>
+            </div>
         }
-
-        <!-- Main Playback Area (becomes fullscreen) -->
-        <div class="song-playback-area @(isFullscreen ? "playback-fullscreen" : "")" @ref="songContentRef">
-
+        else if (song != null)
+        {
             <!-- Sticky Controls Bar -->
             <div class="controls-bar">
             <div class="controls-bar-inner">
@@ -169,6 +168,10 @@
                     </div>
                 }
         </div>
+
+        <!-- Wrapper is position:relative so FABs (position:absolute; bottom/right) anchor to
+             the content height in both normal and fullscreen scroll modes. -->
+        <div class="song-scroll-body">
 
             <!-- Chord Charts Section -->
             @if (!isFullscreen && showCharts && uniqueSongChords.Any() && songDisplayMode != SongDisplay.LyricsOnly)
@@ -328,11 +331,9 @@
                     <i class="bi bi-arrows-fullscreen"></i>
                 </button>
             }
+        </div> @* close song-scroll-body *@
 
-            <!-- Song Search Modal (inside playback area for fullscreen compatibility) -->
-            <SongSearchModal @ref="_songSearchModal" OnSongSelected="NavigateToSong" />
-
-            <!-- Chord Popover -->
+            <!-- Chord Popover (outside song-scroll-body so position:absolute stays relative to song-playback-area) -->
             @if (showChordPopover && hoveredChord != null)
             {
                 <div class="chord-popover-overlay"
@@ -347,28 +348,35 @@
                     </div>
                 </div>
             }
+        }
+        @* end song != null — SongSearchModal and toast stay outside so they persist through loads *@
 
-            <!-- Fullscreen Toast Portal
-                 Rendered inside song-playback-area so it appears within the native Fullscreen API layer.
-                 position:fixed children of a fullscreen element position relative to the fullscreen viewport. -->
-            @if (isFullscreen && _toastService.IsVisible)
-            {
-                <div class="toast-container position-fixed top-0 start-50 translate-middle-x pt-2" style="z-index: 99999;">
-                    <div class="toast align-items-center text-bg-@ToastBsClass() border-0 show"
-                         role="alert" aria-live="assertive" aria-atomic="true">
-                        <div class="d-flex">
-                            <div class="toast-body d-flex align-items-center gap-2">
-                                <i class="bi @ToastIcon()"></i>
-                                @_toastService.Message
-                            </div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto"
-                                    @onclick="_toastService.Hide" aria-label="Close"></button>
+        <!-- Song Search Modal — always in DOM so it survives song loads in fullscreen -->
+        <SongSearchModal @ref="_songSearchModal" OnSongSelected="NavigateToSong" />
+
+        <!-- Fullscreen Toast Portal
+             Rendered inside song-playback-area so it appears within the native Fullscreen API layer.
+             position:fixed children of a fullscreen element position relative to the fullscreen viewport. -->
+        @if (isFullscreen && _toastService.IsVisible)
+        {
+            <div class="toast-container position-fixed top-0 start-50 translate-middle-x pt-2" style="z-index: 99999;">
+                <div class="toast align-items-center text-bg-@ToastBsClass() border-0 show"
+                     role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body d-flex align-items-center gap-2">
+                            <i class="bi @ToastIcon()"></i>
+                            @_toastService.Message
                         </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                                @onclick="_toastService.Hide" aria-label="Close"></button>
                     </div>
                 </div>
-            }
-        </div> @* Close song-playback-area *@
+            </div>
+        }
+    </div> @* Close song-playback-area *@
 
+    @if (!isLoading && song != null && !isFullscreen)
+    {
         <div class="song-rating">
             <SongRating SongId="@SongId" ShowSummary="false" ShowPanel="true" />
         </div>
@@ -388,7 +396,12 @@
 
     private SongSearchModal? _songSearchModal;
     private async Task OpenSongSearch() { if (_songSearchModal != null) await _songSearchModal.Open(); }
-    private void NavigateToSong(string songId) => _navManager.NavigateTo($"/songs/landing/{songId}");
+    private void NavigateToSong(string songId)
+    {
+        var isLanding = _navManager.Uri.Contains("/landing/", StringComparison.OrdinalIgnoreCase);
+        var path = isLanding ? $"/songs/landing/{songId}" : $"/songs/{songId}";
+        _navManager.NavigateTo(path);
+    }
 
     private SongDto? song;
     private bool isLoading = true;
@@ -416,6 +429,7 @@
     private bool isFullscreen = false;
     private ElementReference songContentRef;
     private ElementReference settingsPaletteRef;
+    private bool _scrollToTopAfterLoad = false;
 
     // Autoscroll
     private System.Threading.Timer? autoScrollTimer;
@@ -464,6 +478,13 @@
             {
                 _logger.LogError(ex, "JavaScript functions not loaded properly");
             }
+        }
+
+        if (_scrollToTopAfterLoad)
+        {
+            _scrollToTopAfterLoad = false;
+            try { await JsRt.InvokeVoidAsync("scrollToTop"); }
+            catch (Exception ex) { _logger.LogError(ex, "scrollToTop failed"); }
         }
     }
 
@@ -849,6 +870,7 @@
         finally
         {
             isLoading = false;
+            if (isFullscreen) _scrollToTopAfterLoad = true;
             StateHasChanged();
         }
     }
