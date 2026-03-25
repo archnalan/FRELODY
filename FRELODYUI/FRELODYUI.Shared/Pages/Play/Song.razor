@@ -232,12 +232,12 @@
                     <div class="chord-charts-grid">
                         @foreach (var chord in transposedChords)
                         {
-                            <div class="chord-chart-card">
+                            <div class="chord-chart-card" @key="chord.Id ?? chord.ChordName">
                                 <h6 class="chord-chart-name">@chord.ChordName</h6>
                                 <ChordCarousel Chord="@chord"
                                                Size="CarouselSize.Medium"
                                                ShowActions="false"
-                                               CarouselId="@($"inline-carousel-{chord.Id}")" />
+                                               CarouselId="@($"inline-carousel-{chord.Id ?? chord.ChordName}")" />
                             </div>
                         }
                     </div>
@@ -252,12 +252,12 @@
                         <div class="chord-charts-track" @ref="chordChartsTrackRef">
                             @foreach (var chord in transposedChords)
                             {
-                                <div class="chord-chart-card">
+                                <div class="chord-chart-card" @key="chord.Id ?? chord.ChordName">
                                     <h6 class="chord-chart-name">@chord.ChordName</h6>
                                     <ChordCarousel Chord="@chord"
                                                    Size="CarouselSize.Medium"
                                                    ShowActions="false"
-                                                   CarouselId="@($"inline-carousel-{chord.Id}")" />
+                                                   CarouselId="@($"inline-carousel-{chord.Id ?? chord.ChordName}")" />
                                 </div>
                             }
                         </div>
@@ -317,12 +317,20 @@
             }
             </div>
 
+            <!-- Song Search FAB — visible in both normal and fullscreen -->
+            <button class="search-fab" @onclick="OpenSongSearch" title="Search songs">
+                <i class="bi bi-search"></i>
+            </button>
+
             @if (!isFullscreen)
             {
                 <button class="maximize-fab" @onclick="EnterFullscreen" title="Enter fullscreen">
                     <i class="bi bi-arrows-fullscreen"></i>
                 </button>
             }
+
+            <!-- Song Search Modal (inside playback area for fullscreen compatibility) -->
+            <SongSearchModal @ref="_songSearchModal" OnSongSelected="NavigateToSong" />
 
             <!-- Chord Popover -->
             @if (showChordPopover && hoveredChord != null)
@@ -377,6 +385,10 @@
 
 @code {
     [Parameter] public string SongId { get; set; } = string.Empty;
+
+    private SongSearchModal? _songSearchModal;
+    private async Task OpenSongSearch() { if (_songSearchModal != null) await _songSearchModal.Open(); }
+    private void NavigateToSong(string songId) => _navManager.NavigateTo($"/songs/landing/{songId}");
 
     private SongDto? song;
     private bool isLoading = true;
@@ -668,9 +680,30 @@
         // Resolve to the currently displayed (possibly transposed) chord so the
         // popover shows the same charts as the chord-charts-section.
         var transposedName = GetTransposedChordName(chord.ChordName);
+
+        // First try the already-resolved transposedChords list (populated post-debounce).
         var chordToLoad = transposedChords
-            .FirstOrDefault(c => c.ChordName.Equals(transposedName, StringComparison.OrdinalIgnoreCase))
-            ?? chord;
+            .FirstOrDefault(c => c.ChordName.Equals(transposedName, StringComparison.OrdinalIgnoreCase));
+
+        // If not found (still within debounce window or chord not in DB list), search the API directly
+        // so we never fall back to the pre-transposition chord's charts.
+        if (chordToLoad == null && !transposedName.Equals(chord.ChordName, StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var searchResp = await _chordsApi.SearchChords(transposedName, 0, 5);
+                if (searchResp.IsSuccessStatusCode && searchResp.Content?.Data?.Any() == true)
+                {
+                    chordToLoad = searchResp.Content.Data
+                        .FirstOrDefault(c => c.ChordName.Equals(transposedName, StringComparison.OrdinalIgnoreCase))
+                        ?? searchResp.Content.Data.First();
+                }
+            }
+            catch { /* silently ignore — popover simply won't show */ }
+        }
+
+        // Fallback to original chord only when there is no transposition at all
+        chordToLoad ??= chord;
 
         // Only fetch if the chord has a known ID; placeholders (not in DB yet) have no charts.
         hoveredChord = string.IsNullOrEmpty(chordToLoad.Id)

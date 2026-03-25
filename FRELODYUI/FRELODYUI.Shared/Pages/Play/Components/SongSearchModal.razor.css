@@ -1,0 +1,490 @@
+/* ===========================================
+   SONG SEARCH MODAL — Scoped CSS
+   Positioned inside .song-playback-area so it
+   renders correctly under both the CSS-class
+   fullscreen fallback AND native Fullscreen API.
+   =========================================== */
+
+/* Backdrop */
+.ssm-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 99990;
+    animation: ssm-fade-in 0.15s ease;
+}
+
+/* Panel card */
+.ssm-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    max-width: 340px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-medium);
+    border-radius: 1rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    z-index: 99991;
+    overflow: hidden;
+    animation: ssm-slide-up 0.2s ease;
+}
+
+/* ---- Header ---- */
+.ssm-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.75rem 0.75rem 0.875rem;
+    border-bottom: 1px solid var(--border-medium);
+    background: var(--bg-subtle);
+}
+
+.ssm-mode-toggle {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-medium);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 1rem;
+}
+
+    .ssm-mode-toggle.active,
+    .ssm-mode-toggle:hover {
+        background: var(--bg-active);
+        color: #fff;
+        border-color: var(--bg-active);
+    }
+
+.ssm-selector-wrapper {
+    flex: 1;
+    position: relative;
+    min-width: 0;
+}
+
+.ssm-select {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: 1px solid var(--border-medium);
+    border-radius: 0.5rem;
+    padding: 0.375rem 1.75rem 0.375rem 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: border-color 0.15s;
+}
+
+    .ssm-select:focus {
+        outline: none;
+        border-color: var(--bg-active);
+    }
+
+.ssm-select-icon {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.ssm-ghost-select {
+    height: 2rem;
+    border-radius: 0.5rem;
+    background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--bg-hover) 50%, var(--bg-subtle) 75%);
+    background-size: 200% 100%;
+    animation: ssm-shimmer 1.2s infinite;
+}
+
+.ssm-close-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.5rem;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 0.875rem;
+}
+
+    .ssm-close-btn:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+/* ---- Body ---- */
+.ssm-body {
+    padding: 1rem;
+}
+
+/* ---- Numpad ---- */
+.ssm-numpad-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-subtle);
+    border: 1.5px solid var(--border-medium);
+    border-radius: 0.625rem;
+    padding: 0.625rem 0.875rem;
+    margin-bottom: 0.75rem;
+    min-height: 2.75rem;
+    transition: border-color 0.15s;
+}
+
+    .ssm-numpad-display.error {
+        border-color: var(--bs-danger, #dc3545);
+    }
+
+.ssm-num-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.ssm-clear-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+    transition: color 0.15s;
+}
+
+    .ssm-clear-btn:hover {
+        color: var(--bs-danger, #dc3545);
+    }
+
+.ssm-error-msg {
+    font-size: 0.75rem;
+    color: var(--bs-danger, #dc3545);
+    margin: -0.375rem 0 0.625rem;
+    text-align: center;
+}
+
+.ssm-numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.ssm-key {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 3rem;
+    border-radius: 0.625rem;
+    border: 1px solid var(--border-medium);
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    font-size: 1.125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    user-select: none;
+}
+
+    .ssm-key:hover:not(:disabled) {
+        background: var(--bg-hover);
+        border-color: var(--border-strong, var(--border-medium));
+    }
+
+    .ssm-key:active:not(:disabled) {
+        transform: scale(0.93);
+    }
+
+    .ssm-key:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+.ssm-key--back {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.ssm-key--go {
+    background: var(--bg-active);
+    border-color: var(--bg-active);
+    color: #fff;
+    font-size: 1rem;
+}
+
+    .ssm-key--go:hover:not(:disabled) {
+        filter: brightness(1.1);
+        border-color: transparent;
+    }
+
+/* ---- Artist song list ---- */
+.ssm-song-list {
+    max-height: 16rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    scrollbar-width: thin;
+}
+
+.ssm-song-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.625rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+    .ssm-song-item:hover {
+        background: var(--bg-hover);
+    }
+
+.ssm-song-num {
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 2rem;
+}
+
+.ssm-song-title {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ssm-song-arrow {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    opacity: 0;
+    transition: opacity 0.12s, transform 0.12s;
+}
+
+.ssm-song-item:hover .ssm-song-arrow {
+    opacity: 1;
+    transform: translateX(2px);
+}
+
+/* Ghost skeletons */
+.ssm-song-ghost {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.5rem;
+}
+
+.ssm-ghost-num {
+    width: 1.75rem;
+    height: 0.75rem;
+    border-radius: 0.25rem;
+    background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--bg-hover) 50%, var(--bg-subtle) 75%);
+    background-size: 200% 100%;
+    animation: ssm-shimmer 1.2s infinite;
+}
+
+.ssm-ghost-title {
+    flex: 1;
+    height: 0.75rem;
+    border-radius: 0.25rem;
+    background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--bg-hover) 50%, var(--bg-subtle) 75%);
+    background-size: 200% 100%;
+    animation: ssm-shimmer 1.2s infinite;
+    animation-delay: 0.1s;
+}
+
+/* Empty state */
+.ssm-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 2rem 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+    .ssm-empty i {
+        font-size: 1.75rem;
+        opacity: 0.45;
+    }
+
+/* Load more */
+.ssm-load-more {
+    width: 100%;
+    margin-top: 0.25rem;
+    padding: 0.5rem;
+    border: 1px dashed var(--border-medium);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+    .ssm-load-more:hover:not(:disabled) {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+/* ---- Results label (shown in header when displaying number search results) ---- */
+.ssm-results-label {
+    flex: 1;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 0.25rem;
+}
+
+    .ssm-results-label strong {
+        color: var(--text-primary);
+        font-weight: 700;
+    }
+
+/* ---- Number search result cards ---- */
+.ssm-result-card {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0.625rem 0.625rem 0.625rem 0.75rem;
+    border: 1px solid var(--border-medium);
+    border-radius: 0.625rem;
+    background: var(--bg-subtle);
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    gap: 0.5rem;
+}
+
+    .ssm-result-card + .ssm-result-card {
+        margin-top: 0.375rem;
+    }
+
+    .ssm-result-card:hover {
+        background: var(--bg-hover);
+        border-color: var(--bg-active);
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
+    }
+
+    .ssm-result-card:active {
+        transform: scale(0.985);
+    }
+
+.ssm-rc-left {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.ssm-rc-badge {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--bg-active);
+    letter-spacing: 0.04em;
+    margin-bottom: 0.1rem;
+}
+
+.ssm-rc-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.ssm-rc-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.15rem;
+}
+
+.ssm-rc-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+    .ssm-rc-meta-item i {
+        font-size: 0.625rem;
+        flex-shrink: 0;
+        opacity: 0.7;
+    }
+
+.ssm-rc-arrow {
+    flex-shrink: 0;
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    opacity: 0.4;
+    transition: opacity 0.15s, transform 0.15s;
+}
+
+.ssm-result-card:hover .ssm-rc-arrow {
+    opacity: 1;
+    color: var(--bg-active);
+    transform: translateX(3px);
+}
+
+/* ---- Animations ---- */
+@keyframes ssm-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes ssm-slide-up {
+    from { opacity: 0; transform: translate(-50%, -46%); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+@keyframes ssm-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

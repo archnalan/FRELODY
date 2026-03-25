@@ -756,6 +756,36 @@
         transform: scale(0.95);
     }
 
+.search-fab {
+    position: absolute;
+    bottom: 5rem;
+    right: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-medium);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transition: all 0.2s ease;
+    z-index: 10;
+    font-size: 0.95rem;
+}
+
+    .search-fab:hover {
+        background: var(--bg-hover);
+        transform: scale(1.08);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    }
+
+    .search-fab:active {
+        transform: scale(0.95);
+    }
+
 /* ============================================
    FULLSCREEN MODE
    ============================================ */
@@ -780,6 +810,7 @@
         margin: 0;
         padding: 0 1rem;
         border-top: none;
+        border-bottom: 1px solid var(--border-medium);
     }
 
     .playback-fullscreen .controls-bar-inner {
@@ -822,6 +853,8 @@
         border-radius: 0;
         margin: 0;
         padding: 0 1rem;
+        border-top: none;
+        border-bottom: 1px solid var(--border-medium);
     }
 
     .song-playback-area:fullscreen .controls-bar-inner {
@@ -1046,4 +1079,8 @@
 
 [data-bs-theme="dark"] .maximize-fab {
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+}
+
+[data-bs-theme="dark"] .search-fab {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
