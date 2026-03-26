@@ -6,7 +6,7 @@
 
 main {
     flex: 1;
-    position:relative;
+    z-index:0;
 }
 
 article {
@@ -19,6 +19,7 @@ article {
     border-right: 1px solid #374151;
     display: flex;
     flex-direction: column;
+    z-index:1;
 }
 
 /* ── Mobile top bar ── */
@@ -152,6 +153,10 @@ article {
 @media (min-width: 641px) {
     .page {
         flex-direction: row;
+    }
+
+    main {
+        height: 100vh;
     }
 
     .mobile-topbar {
