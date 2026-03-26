@@ -1,0 +1,29 @@
+.playlists-placeholder-container {
+    width: 100%;
+}
+
+.playlist-folder-skeleton {
+    border-radius: 0.5rem;
+}
+
+.folder-header-skeleton {
+    background-color: var(--modal-content-bg);
+    border-color: var(--border-light) !important;
+}
+
+.folder-icon-skeleton {
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+}
+
+.folder-content-skeleton {
+    background-color: var(--modal-content-bg);
+    border-color: var(--border-light) !important;
+}
+
+.song-row-skeleton {
+    border: 1px solid var(--border-light);
+    border-radius: 5px;
+    min-height: 2.5rem;
+}

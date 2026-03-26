@@ -154,26 +154,40 @@
             </div>
         </div>
 
-        @switch (viewMode)
+        @if (_isInitializing)
         {
-            case ViewMode.All:
-                <div class="row" style="z-index:0">
-                    <SongList @ref="songListRef"
-                              ViewStyle="activeView"
-                              OnSongLongPress="HandleSongLongPress"
-                              OnSelectionModeChanged="StateHasChanged"
-                              OnAuthenticationRequired="HandleAuthenticationRequired"
-                              SelectedSongIds="selectedSongIds" />
-                </div>
-                break;
-            case ViewMode.Playlists:
-                <SongPlaylist @ref="songPlaylistRef" ShowActions="false" ActiveView="activeView" />
-                break;
-            default:
-                <div class="row" style="z-index:0">
-                    <SongListView @ref="songListViewRef"  />
-                </div>
-                break;
+            @if (viewMode == ViewMode.Playlists)
+            {
+                <FRELODYUI.Shared.Pages.PlaceHolders.SongPlaylistPlaceholder ActiveView="activeView" />
+            }
+            else
+            {
+                <FRELODYUI.Shared.Pages.PlaceHolders.SongListViewPlaceholder ActiveView="activeView" />
+            }
+        }
+        else
+        {
+            @switch (viewMode)
+            {
+                case ViewMode.All:
+                    <div class="row" style="z-index:0">
+                        <SongList @ref="songListRef"
+                                  ViewStyle="activeView"
+                                  OnSongLongPress="HandleSongLongPress"
+                                  OnSelectionModeChanged="StateHasChanged"
+                                  OnAuthenticationRequired="HandleAuthenticationRequired"
+                                  SelectedSongIds="selectedSongIds" />
+                    </div>
+                    break;
+                case ViewMode.Playlists:
+                    <SongPlaylist @ref="songPlaylistRef" ShowActions="false" ActiveView="activeView" />
+                    break;
+                default:
+                    <div class="row" style="z-index:0">
+                        <SongListView @ref="songListViewRef" />
+                    </div>
+                    break;
+            }
         }
 
     </div>
@@ -196,6 +210,7 @@
 
     private string error = string.Empty;
     private bool IsNavigating = false;
+    private bool _isInitializing = true;
     private string? currentUserId;
 
     private ViewMode viewMode = ViewMode.All;
@@ -246,6 +261,9 @@
         {
             currentUserId = user.Data.Id;
         }
+
+        _isInitializing = false;
+        StateHasChanged();
     }
 
     private async Task SetViewMode(ViewMode mode)

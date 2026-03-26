@@ -1,0 +1,49 @@
+@using FRELODYSHRD.ModelTypes
+
+<div class="w-100 playlists-placeholder-container">
+    @for (int i = 0; i < 4; i++)
+    {
+        <div class="playlist-folder-skeleton mb-3 placeholder-glow">
+            <!-- Folder header -->
+            <div class="folder-header-skeleton border rounded-3 p-3 @(i == 0 ? "rounded-bottom-0" : "")">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3 flex-grow-1 pe-2">
+                        <!-- Folder icon -->
+                        <span class="folder-icon-skeleton placeholder rounded-2"></span>
+                        <div class="flex-grow-1">
+                            <!-- Title -->
+                            <div class="placeholder @(i % 2 == 0 ? "col-5" : "col-7") mb-1" style="height:1.1rem"></div>
+                            <!-- Theme/tag -->
+                            <div class="placeholder col-3" style="height:0.75rem"></div>
+                        </div>
+                        <!-- Song count badge -->
+                        <span class="placeholder col-1 rounded-pill" style="height:1.4rem"></span>
+                    </div>
+                    <!-- Action button -->
+                    <span class="placeholder ms-3 rounded-2" style="width:4rem; height:2rem; display:inline-block"></span>
+                </div>
+            </div>
+
+            @if (ActiveView == ActiveView.Expanded || i == 0)
+            {
+                <!-- Expanded songs list skeleton -->
+                <div class="folder-content-skeleton border border-top-0 rounded-bottom-3 p-2">
+                    @for (int k = 0; k < (i == 0 ? 4 : 2); k++)
+                    {
+                        <div class="song-row-skeleton d-flex justify-content-between align-items-center p-2 m-1">
+                            <div class="d-flex align-items-center gap-2 flex-grow-1">
+                                <span class="placeholder rounded-1" style="width:1.5rem; height:1.5rem; flex-shrink:0"></span>
+                                <span class="placeholder @(k % 3 == 0 ? "col-6" : k % 3 == 1 ? "col-8" : "col-5")"></span>
+                            </div>
+                            <span class="placeholder rounded-1" style="width:1.8rem; height:1.5rem; flex-shrink:0"></span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public ActiveView ActiveView { get; set; } = ActiveView.Collapsed;
+}

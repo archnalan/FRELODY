@@ -39,10 +39,7 @@
 
         @if (isLoading)
         {
-            <div class="mt-4 text-center">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p>Loading playlists...</p>
-            </div>
+            <FRELODYUI.Shared.Pages.PlaceHolders.SongPlaylistPlaceholder ActiveView="ActiveView" />
         }
         else if (collections.Any())
         {

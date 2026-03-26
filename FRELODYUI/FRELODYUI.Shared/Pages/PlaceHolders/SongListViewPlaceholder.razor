@@ -1,37 +1,45 @@
-﻿<div class="w-100 songbook-container">
+﻿@using FRELODYSHRD.ModelTypes
+
+<div class="w-100 songbook-container">
     @for (int i = 0; i < 3; i++)
     {
         <!-- Songbook placeholder -->
-        <div class="songbook-header bg-Indigo-30 my-2 placeholder-glow">
-            <div class="d-flex flex-column gap-3">
+        <div class="songbook-header my-2 placeholder-glow">
+            <div class="d-flex flex-column gap-2">
                 <span class="fs-5 fw-semibold placeholder col-6"></span>
                 <div class="d-flex gap-3">
                     <span class="placeholder col-3"></span>
                     <span class="placeholder col-3"></span>
                 </div>
             </div>
+            <span class="placeholder-toggle-icon placeholder"></span>
         </div>
 
-        @for (int j = 0; j < 2; j++)
+        @if (ActiveView == ActiveView.Expanded)
         {
-            <!-- Category placeholder -->
-            <div class="category-header mx-2 placeholder-glow">
-                <span class="placeholder col-4"></span>
-                <span class="placeholder col-2"></span>
-            </div>
+            @for (int j = 0; j < 2; j++)
+            {
+                <!-- Category placeholder -->
+                <div class="category-header mx-2 placeholder-glow">
+                    <span class="placeholder col-4"></span>
+                    <span class="placeholder col-2"></span>
+                </div>
 
-            <!-- Songs placeholder -->
-            <div class="border border-top-0 rounded-bottom-3 mx-2 mb-3">
-                <div class="songs-list">
+                <!-- Songs placeholder -->
+                <div class="songs-panel border border-top-0 rounded-bottom-3 mx-2 mb-3 placeholder-glow">
                     @for (int k = 0; k < 3; k++)
                     {
-                        <div class="song-item d-flex justify-content-between p-2 m-2">
-                            <span class="placeholder col-8"></span>
+                        <div class="song-row d-flex justify-content-between align-items-center p-2 m-2">
+                            <span class="placeholder col-7"></span>
                             <span class="placeholder col-1"></span>
                         </div>
                     }
                 </div>
-            </div>
+            }
         }
     }
 </div>
+
+@code {
+    [Parameter] public ActiveView ActiveView { get; set; } = ActiveView.Expanded;
+}
