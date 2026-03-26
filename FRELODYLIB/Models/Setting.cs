@@ -21,6 +21,8 @@ namespace FRELODYLIB.Models
         public ChordDisplay? ChordDisplay { get; set; }
         public ChordDifficulty? ChordDifficulty { get; set; }
         public PlayLevel? PlayLevel { get; set; }
+        public string? ChordColor { get; set; }
+        public string? LyricColor { get; set; }
     }
 
 }

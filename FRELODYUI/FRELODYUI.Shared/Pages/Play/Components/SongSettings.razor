@@ -25,121 +25,166 @@ else
 
     @if (!isMinimized)
     {
-    <div class="settings-content">
-        <!-- Autoscroll Speed -->
-        <div class="settings-row">
-            <label class="settings-label"><i class="bi bi-speedometer2"></i> Speed</label>
-            <div class="settings-inline-control">
-                <input type="range" class="settings-range" min="0" max="5" step="0.5"
-                       value="@scrollSpeed"
-                       @oninput="OnScrollSpeedInput"
-                       @onclick:stopPropagation />
-                <span class="slider-value">@scrollSpeed.ToString("0.0")x</span>
-            </div>
-        </div>
-
-        <!-- Chord Font Size -->
-        <div class="settings-row">
-            <label class="settings-label"><i class="bi bi-type"></i> Chord</label>
-            <div class="settings-inline-control">
-                <input type="range" class="settings-range" min="10" max="32" step="1"
-                       value="@chordFontSize"
-                       @oninput="OnChordFontSizeInput"
-                       @onclick:stopPropagation 
-                       disabled="@(songDisplayMode == SongDisplay.LyricsOnly)"/>
-                <span class="slider-value">@(chordFontSize)px</span>
-            </div>
-        </div>
-
-        <!-- Lyric Font Size -->
-        <div class="settings-row">
-            <label class="settings-label"><i class="bi bi-text-paragraph"></i> Lyric</label>
-            <div class="settings-inline-control">
-                <input type="range" class="settings-range" min="12" max="40" step="1"
-                       value="@lyricFontSize"
-                       @oninput="OnLyricFontSizeInput"
-                       @onclick:stopPropagation />
-                <span class="slider-value">@(lyricFontSize)px</span>
-            </div>
-        </div>
-
-        <!-- Display Mode -->
-        <div class="settings-row">
-            <label class="settings-label"><i class="bi bi-eye"></i> Mode</label>
-            <div class="segmented-control" @onclick:stopPropagation>
-                <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsAndChordsAndCharts ? "active" : "")"
-                        @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChordsAndCharts)" title="Full">
-                    <i class="bi bi-music-note-list"></i>
-                </button>
-                <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsAndChords ? "active" : "")"
-                        @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChords)" title="Chords + Lyrics">
-                    <i class="bi bi-music-note-beamed"></i>
-                </button>
-                <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsOnly ? "active" : "")"
-                        @onclick="() => SetDisplayMode(SongDisplay.LyricsOnly)" title="Lyrics only">
-                    <i class="bi bi-text-left"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Chord Display Position -->
-        @if (songDisplayMode != SongDisplay.LyricsOnly)
-        {
+        <div class="settings-content">
+            <!-- Autoscroll Speed -->
             <div class="settings-row">
-                <label class="settings-label"><i class="bi bi-music-note"></i> Pos</label>
-                <div class="segmented-control segmented-sm" @onclick:stopPropagation>
-                    <button class="segment-btn @(chordDisplayMode == ChordDisplay.Above ? "active" : "")"
-                            @onclick="() => SetChordDisplay(ChordDisplay.Above)">
-                        Above
+                <label class="settings-label"><i class="bi bi-speedometer2"></i> Speed</label>
+                <div class="settings-inline-control">
+                    <input type="range" class="settings-range" min="0" max="5" step="0.5"
+                           value="@scrollSpeed"
+                           @oninput="OnScrollSpeedInput"
+                           @onclick:stopPropagation />
+                    <span class="slider-value">@scrollSpeed.ToString("0.0")x</span>
+                </div>
+            </div>
+
+            <!-- Chord Font Size -->
+            <div class="settings-row">
+                <label class="settings-label"><i class="bi bi-type"></i> Chord</label>
+                <div class="settings-inline-control">
+                    <input type="range" class="settings-range" min="10" max="32" step="1"
+                           value="@chordFontSize"
+                           @oninput="OnChordFontSizeInput"
+                           @onclick:stopPropagation
+                           disabled="@(songDisplayMode == SongDisplay.LyricsOnly)" />
+                    <span class="slider-value">@(chordFontSize)px</span>
+                </div>
+            </div>
+
+            <!-- Lyric Font Size -->
+            <div class="settings-row">
+                <label class="settings-label"><i class="bi bi-text-paragraph"></i> Lyric</label>
+                <div class="settings-inline-control">
+                    <input type="range" class="settings-range" min="12" max="40" step="1"
+                           value="@lyricFontSize"
+                           @oninput="OnLyricFontSizeInput"
+                           @onclick:stopPropagation />
+                    <span class="slider-value">@(lyricFontSize)px</span>
+                </div>
+            </div>
+
+            <!-- Display Mode -->
+            <div class="settings-row">
+                <label class="settings-label"><i class="bi bi-eye"></i> Mode</label>
+                <div class="segmented-control" @onclick:stopPropagation>
+                    <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsAndChordsAndCharts ? "active" : "")"
+                            @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChordsAndCharts)" title="Full">
+                        <i class="bi bi-music-note-list"></i>
                     </button>
-                    <button class="segment-btn @(chordDisplayMode == ChordDisplay.Inline ? "active" : "")"
-                            @onclick="() => SetChordDisplay(ChordDisplay.Inline)">
-                        Inline
+                    <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsAndChords ? "active" : "")"
+                            @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChords)" title="Chords + Lyrics">
+                        <i class="bi bi-music-note-beamed"></i>
+                    </button>
+                    <button class="segment-btn @(songDisplayMode == SongDisplay.LyricsOnly ? "active" : "")"
+                            @onclick="() => SetDisplayMode(SongDisplay.LyricsOnly)" title="Lyrics only">
+                        <i class="bi bi-text-left"></i>
                     </button>
                 </div>
             </div>
-        }
 
-        <!-- Font Family -->
-        <div class="settings-row">
-            <label class="settings-label"><i class="bi bi-fonts"></i> Font</label>
-            <select class="settings-select" value="@fontFamily" @onchange="OnFontFamilyChanged" @onclick:stopPropagation>
-                <option value="system-ui, -apple-system, 'Segoe UI'">System</option>
-                <option value="'Georgia', serif">Georgia</option>
-                <option value="'Arial', sans-serif">Arial</option>
-                <option value="'Courier New', monospace">Courier</option>
-                <option value="'Times New Roman', serif">Times</option>
-                <option value="'Kanit','Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'">Kanit</option>
-                <option value="'Montserrat', sans-serif">Montserrat</option>
-            </select>
-        </div>
+            <!-- Chord Display Position -->
+            @if (songDisplayMode != SongDisplay.LyricsOnly)
+            {
+                <div class="settings-row">
+                    <label class="settings-label"><i class="bi bi-music-note"></i> Pos</label>
+                    <div class="segmented-control segmented-sm" @onclick:stopPropagation>
+                        <button class="segment-btn @(chordDisplayMode == ChordDisplay.Above ? "active" : "")"
+                                @onclick="() => SetChordDisplay(ChordDisplay.Above)">
+                            Above
+                        </button>
+                        <button class="segment-btn @(chordDisplayMode == ChordDisplay.Inline ? "active" : "")"
+                                @onclick="() => SetChordDisplay(ChordDisplay.Inline)">
+                            Inline
+                        </button>
+                    </div>
+                </div>
+            }
 
-        <!-- Show Verse Titles Toggle -->
-        <div class="settings-row">
-            <label class="settings-label" for="showVerseTitlesToggle"><i class="bi bi-card-heading"></i> Titles</label>
-            <div class="form-check form-switch mb-0">
-                <input class="form-check-input" type="checkbox" role="switch"
-                       id="showVerseTitlesToggle"
-                       checked="@showVerseTitles"
-                       @onchange="OnShowVerseTitlesChanged"
-                       @onclick:stopPropagation />
+            <!-- Font Family -->
+            <div class="settings-row">
+                <label class="settings-label"><i class="bi bi-fonts"></i> Font</label>
+                <select class="settings-select" value="@fontFamily" @onchange="OnFontFamilyChanged" @onclick:stopPropagation>
+                    <option value="system-ui, -apple-system, 'Segoe UI'">System</option>
+                    <option value="'Georgia', serif">Georgia</option>
+                    <option value="'Arial', sans-serif">Arial</option>
+                    <option value="'Courier New', monospace">Courier</option>
+                    <option value="'Times New Roman', serif">Times</option>
+                    <option value="'Kanit','Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'">Kanit</option>
+                    <option value="'Montserrat', sans-serif">Montserrat</option>
+                </select>
+            </div>
+
+            <!-- Show Verse Titles Toggle -->
+            <div class="settings-row">
+                <label class="settings-label" for="showVerseTitlesToggle"><i class="bi bi-card-heading"></i> Titles</label>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="showVerseTitlesToggle"
+                           checked="@showVerseTitles"
+                           @onchange="OnShowVerseTitlesChanged"
+                           @onclick:stopPropagation />
+                </div>
+            </div>
+
+            <!-- Chord Color -->
+            @if (songDisplayMode != SongDisplay.LyricsOnly)
+            {
+                <div class="settings-row">
+                    <label class="settings-label"><i class="bi bi-palette"></i> Chord</label>
+                    <div class="color-picker-control">
+                        <div class="color-swatch-wrapper" @onclick:stopPropagation>
+                            <input type="color" class="color-input"
+                                   value="@GetChordColorValue()"
+                                   @oninput="OnChordColorInput"
+                                   @onchange="OnChordColorInput" />
+                            <span class="color-swatch" style="background: @GetChordColorValue();"></span>
+                        </div>
+                        <span class="color-hex-label">@(string.IsNullOrEmpty(chordColor) ? "Theme" : chordColor)</span>
+                        @if (!string.IsNullOrEmpty(chordColor))
+                        {
+                            <button class="color-reset-btn" @onclick="ResetChordColor" @onclick:stopPropagation title="Reset to theme default">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Lyric Color -->
+            <div class="settings-row">
+                <label class="settings-label"><i class="bi bi-palette2"></i> Lyric</label>
+                <div class="color-picker-control">
+                    <div class="color-swatch-wrapper" @onclick:stopPropagation>
+                        <input type="color" class="color-input"
+                               value="@GetLyricColorValue()"
+                               @oninput="OnLyricColorInput"
+                               @onchange="OnLyricColorInput" />
+                        <span class="color-swatch" style="background: @GetLyricColorValue();"></span>
+                    </div>
+                    <span class="color-hex-label">@(string.IsNullOrEmpty(lyricColor) ? "Theme" : lyricColor)</span>
+                    @if (!string.IsNullOrEmpty(lyricColor))
+                    {
+                        <button class="color-reset-btn" @onclick="ResetLyricColor" @onclick:stopPropagation title="Reset to theme default">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                    }
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="settings-footer">
-        <button class="save-settings-btn" @onclick="HandleSave" @onclick:stopPropagation disabled="@isSaving">
-            @if (isSaving)
-            {
-                <span class="spinner-border spinner-border-sm me-1"></span>
-            }
-            else
-            {
-                <i class="bi bi-check-circle me-1"></i>
-            }
-            Save
-        </button>
-    </div>
+        <div class="settings-footer">
+            <button class="save-settings-btn" @onclick="HandleSave" @onclick:stopPropagation disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                else
+                {
+                    <i class="bi bi-check-circle me-1"></i>
+                }
+                Save
+            </button>
+        </div>
     }
 }
 
@@ -165,6 +210,14 @@ else
     private SongDisplay songDisplayMode = SongDisplay.LyricsAndChordsAndCharts;
     private ChordDisplay chordDisplayMode = ChordDisplay.Above;
     private bool showVerseTitles = false;
+    private string? chordColor = null;
+    private string? lyricColor = null;
+
+    // Default colors matching CSS variables per theme
+    private const string DefaultChordColorLight = "#3b82f6";
+    private const string DefaultChordColorDark = "#3b82f6";
+    private const string DefaultLyricColorLight = "#374151";
+    private const string DefaultLyricColorDark = "#f3f4f6";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -235,6 +288,8 @@ else
         songDisplayMode = settings.SongDisplay ?? SongDisplay.LyricsAndChordsAndCharts;
         chordDisplayMode = settings.ChordDisplay ?? ChordDisplay.Above;
         showVerseTitles = settings.ShowVerseTitles ?? false;
+        chordColor = settings.ChordColor;
+        lyricColor = settings.LyricColor;
     }
 
     private SettingDto BuildSettingDto()
@@ -247,7 +302,9 @@ else
             LyricFont = fontFamily,
             SongDisplay = songDisplayMode,
             ChordDisplay = chordDisplayMode,
-            ShowVerseTitles = showVerseTitles
+            ShowVerseTitles = showVerseTitles,
+            ChordColor = chordColor,
+            LyricColor = lyricColor
         };
     }
 
@@ -355,5 +412,32 @@ else
     private void ToggleMinimize()
     {
         isMinimized = !isMinimized;
+    }
+
+    private string GetChordColorValue() => string.IsNullOrEmpty(chordColor) ? DefaultChordColorLight : chordColor;
+    private string GetLyricColorValue() => string.IsNullOrEmpty(lyricColor) ? DefaultLyricColorLight : lyricColor;
+
+    private async Task OnChordColorInput(ChangeEventArgs e)
+    {
+        chordColor = e.Value?.ToString();
+        await NotifyChanged();
+    }
+
+    private async Task OnLyricColorInput(ChangeEventArgs e)
+    {
+        lyricColor = e.Value?.ToString();
+        await NotifyChanged();
+    }
+
+    private async Task ResetChordColor()
+    {
+        chordColor = null;
+        await NotifyChanged();
+    }
+
+    private async Task ResetLyricColor()
+    {
+        lyricColor = null;
+        await NotifyChanged();
     }
 }

@@ -320,3 +320,80 @@
     background: rgba(31, 41, 55, 0.5);
     border-color: rgba(75, 85, 99, 0.4);
 }
+
+/* ============================================
+   COLOR PICKER
+   ============================================ */
+
+.color-picker-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.color-swatch-wrapper {
+    position: relative;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+}
+
+.color-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+}
+
+.color-swatch {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    border: 2px solid var(--border-medium);
+    pointer-events: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.color-swatch-wrapper:hover .color-swatch {
+    border-color: var(--input-border-focus);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.color-hex-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-family: 'Courier New', monospace;
+    min-width: 3rem;
+    text-transform: uppercase;
+}
+
+.color-reset-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.375rem;
+    height: 1.375rem;
+    background: none;
+    border: 1px solid var(--border-medium);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.625rem;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.color-reset-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--input-border-focus);
+}

@@ -200,6 +200,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     existingSetting.ChordDifficulty = settingDto.ChordDifficulty ?? existingSetting.ChordDifficulty;
                     existingSetting.PlayLevel = settingDto.PlayLevel ?? existingSetting.PlayLevel;
                     existingSetting.ShowNotifications = settingDto.ShowNotifications ?? existingSetting.ShowNotifications;
+                    existingSetting.ChordColor = settingDto.ChordColor ?? existingSetting.ChordColor;
+                    existingSetting.LyricColor = settingDto.LyricColor ?? existingSetting.LyricColor;
 
                     _context.Settings.Update(existingSetting);
                     await _context.SaveChangesAsync();
@@ -291,6 +293,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 existingSetting.ChordDisplay = settingDto.ChordDisplay ?? existingSetting.ChordDisplay;
                 existingSetting.ChordDifficulty = settingDto.ChordDifficulty ?? existingSetting.ChordDifficulty;
                 existingSetting.PlayLevel = settingDto.PlayLevel ?? existingSetting.PlayLevel;
+                existingSetting.ChordColor = settingDto.ChordColor ?? existingSetting.ChordColor;
+                existingSetting.LyricColor = settingDto.LyricColor ?? existingSetting.LyricColor;
 
                 _context.Settings.Update(existingSetting);
                 await _context.SaveChangesAsync();

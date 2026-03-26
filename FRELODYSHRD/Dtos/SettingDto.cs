@@ -22,5 +22,7 @@ namespace FRELODYSHRD.Dtos
         public PlayLevel? PlayLevel { get; set; }
         public bool? ShowNotifications { get; set; }
         public bool? ShowVerseTitles { get; set; }
+        public string? ChordColor { get; set; }
+        public string? LyricColor { get; set; }
     }
 }
