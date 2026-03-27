@@ -72,7 +72,7 @@
                     @* Song title — shown only in fullscreen, before the control groups *@
                     @if (isFullscreen && song != null)
                     {
-                        <div class="cb-song-title" title="@song.Title">
+                        <div class="cb-song-title my-2" title="@song.Title">
                             @if (song.SongNumber.HasValue)
                             {
                                 <span class="cb-song-number">#@song.SongNumber.Value.ToString("D3")</span>
@@ -148,25 +148,25 @@
 
                     <div class="control-separator d-none d-sm-block"></div>
 
-                    <!-- Right-side actions -->
-                    <div class="controls-bar-actions">
-                        <button class="control-action-btn" @onclick="ToggleSettingsDropdown"
-                                title="Display settings">
-                            <i class="bi bi-@(showSettingsDropdown ? "x-lg" : "sliders")"></i>
+                </div>
+                <!-- Right-side actions -->
+                <div class="controls-bar-actions">
+                    <button class="control-action-btn" @onclick="ToggleSettingsDropdown"
+                            title="Display settings">
+                        <i class="bi bi-@(showSettingsDropdown ? "x-lg" : "sliders")"></i>
+                    </button>
+                    @if (isFullscreen)
+                    {
+                        <button class="control-action-btn" @onclick="ExitFullscreen" title="Exit fullscreen">
+                            <i class="bi bi-fullscreen-exit"></i>
                         </button>
-                        @if (isFullscreen)
-                        {
-                            <button class="control-action-btn" @onclick="ExitFullscreen" title="Exit fullscreen">
-                                <i class="bi bi-fullscreen-exit"></i>
-                            </button>
-                        }
-                        else
-                        {
-                            <button class="control-action-btn" @onclick="EnterFullscreen" title="Fullscreen">
-                                <i class="bi bi-arrows-fullscreen"></i>
-                            </button>
-                        }
-                    </div>
+                    }
+                    else
+                    {
+                        <button class="control-action-btn" @onclick="EnterFullscreen" title="Fullscreen">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    }
                 </div>
 
                 @if (showSettingsDropdown)
