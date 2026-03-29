@@ -1,0 +1,49 @@
+# ============================================================
+# FRELODY Web UI – Multi-stage Dockerfile (Blazor Web App)
+# Dependency chain:
+#   FRELODYUI.Web → FRELODYUI.Web.Client → FRELODYUI.Shared → FRELODYSHRD
+# ============================================================
+
+# ─── Stage 1: Restore & Build ────────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+WORKDIR /src
+
+# Copy project files first for optimal layer-caching of restore
+COPY FRELODYAPP.sln ./
+COPY FRELODYUI/FRELODYUI.Web/FRELODYUI.Web.csproj              FRELODYUI/FRELODYUI.Web/
+COPY FRELODYUI/FRELODYUI.Web.Client/FRELODYUI.Web.Client.csproj FRELODYUI/FRELODYUI.Web.Client/
+COPY FRELODYUI/FRELODYUI.Shared/FRELODYUI.Shared.csproj         FRELODYUI/FRELODYUI.Shared/
+COPY FRELODYSHRD/FRELODYSHRD.csproj                              FRELODYSHRD/
+
+RUN dotnet restore FRELODYUI/FRELODYUI.Web/FRELODYUI.Web.csproj
+
+# Copy full source (respects Dockerfile.web.dockerignore)
+COPY FRELODYUI/FRELODYUI.Web/        FRELODYUI/FRELODYUI.Web/
+COPY FRELODYUI/FRELODYUI.Web.Client/ FRELODYUI/FRELODYUI.Web.Client/
+COPY FRELODYUI/FRELODYUI.Shared/     FRELODYUI/FRELODYUI.Shared/
+COPY FRELODYSHRD/                    FRELODYSHRD/
+
+WORKDIR /src/FRELODYUI/FRELODYUI.Web
+RUN dotnet publish FRELODYUI.Web.csproj \
+        -c Release \
+        -o /app/publish \
+        /p:UseAppHost=false \
+        --no-restore
+
+# ─── Stage 2: Runtime Image ──────────────────────────────────
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
+WORKDIR /app
+
+# ICU needed for globalization; libstdc++ for itext7 native bits in FRELODYSHRD
+RUN apk add --no-cache icu-libs libstdc++
+
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+
+# Serve HTTP only inside the container
+ENV ASPNETCORE_URLS=http://+:5080
+
+COPY --from=build /app/publish .
+
+EXPOSE 5080
+
+ENTRYPOINT ["dotnet", "FRELODYUI.Web.dll"]

@@ -44,7 +44,7 @@ builder.Services.AddSingleton<ITimeHelper, TimeHelper>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ICurrencyConverter, CurrencyConverter>();
 builder.Services.AddScoped<ICurrencyDisplayService, CurrencyDisplayService>();
-var baseAddressApi = new Uri("https://localhost:7077");
+var baseAddressApi = new Uri(builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:8080");
 
 builder.Services.AddHttpClient("TokenRefresh", c => c.BaseAddress = baseAddressApi);
 

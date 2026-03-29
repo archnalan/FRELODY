@@ -1,0 +1,34 @@
+# Docker automatically uses this file when the dockerfile is named Dockerfile.web
+# (naming convention: {dockerfile}.dockerignore)
+
+# ── Build outputs ────────────────────────────────────────────
+**/bin/
+**/obj/
+
+# ── Windows executables ──────────────────────────────────────
+**/*.exe
+**/*.pdb
+
+# ── IDE / tooling artefacts ──────────────────────────────────
+**/.vs/
+**/.idea/
+**/*.user
+**/*.suo
+
+# ── Git ──────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Other projects not needed for the web build ─────────────
+FRELODYAPIs/
+FRELODYLIB/
+SongalUI/
+FRELODYUI/FRELODYUI/
+
+# ── Logs & temp ──────────────────────────────────────────────
+**/Logs/
+**/logs/
+**/*.log
+
+# ── Docs ─────────────────────────────────────────────────────
+*.md
