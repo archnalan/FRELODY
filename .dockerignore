@@ -1,0 +1,47 @@
+# ── Build outputs ────────────────────────────────────────────
+**/bin/
+**/obj/
+
+# ── Windows executables (excluded from Release publish anyway,
+#    but belt-and-suspenders to keep the build context clean) ──
+**/*.exe
+**/*.pdb
+**/*.mdb
+
+# ── IDE / tooling artefacts ──────────────────────────────────
+**/.vs/
+**/.idea/
+**/*.user
+**/*.suo
+**/*.DotSettings
+**/*.DotSettings.user
+
+# ── Git ──────────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+
+# ── NuGet local cache ────────────────────────────────────────
+**/*.nupkg
+**/packages/
+
+# ── Logs & temp ──────────────────────────────────────────────
+**/Logs/
+**/logs/
+**/*.log
+**/tmp/
+
+# ── Node / front-end (not needed for the API build) ─────────
+**/node_modules/
+
+# ── Blazor / other UI projects (excluded from API build) ────
+FRELODYUI/
+SongalUI/
+
+# ── Docs / README ────────────────────────────────────────────
+*.md
+*.txt
+docs/
+
+# ── Docker compose overrides ─────────────────────────────────
+docker-compose*.override.yml

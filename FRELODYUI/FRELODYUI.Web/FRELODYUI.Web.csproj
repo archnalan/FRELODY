@@ -5,6 +5,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>56887ebf-546d-4840-9407-dabeb9f4386a</UserSecretsId>
+    <!-- .NET 10: blazor.web.js is no longer embedded in assemblies.
+         The SDK heuristic that detects .razor files can fail in Docker builds.
+         This property explicitly includes ASP.NET framework JS assets. -->
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
   </PropertyGroup>
 
   <ItemGroup>

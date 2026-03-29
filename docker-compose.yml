@@ -1,0 +1,104 @@
+services:
+
+  # ── SQL Server 2022 ─────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: frelody-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Frelody@Strong1"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Frelody@Strong1' -Q 'SELECT 1' -No -C || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - frelody-net
+
+  # ── FRELODY API ──────────────────────────────────────────────
+  frelody-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: frelody-api:v1.0
+    container_name: frelody-api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+
+      ConnectionStrings__SongData: >-
+        Server=sqlserver,1433;
+        Database=SongData;
+        User Id=sa;
+        Password=Frelody@Strong1;
+        Encrypt=False;
+        TrustServerCertificate=True;
+        MultipleActiveResultSets=True
+
+      # $$ is the docker-compose escape for a literal dollar sign
+      Jwt__Key: "G#?fjlb4d$$eJ#8rksgdR$$eJ#v4wd$$eJ#8drRh$$epaJo#"
+      Jwt__Issuer: "frelody.com"
+      Jwt__Audience: "frelody.com"
+
+      # Include the web container's host port so CORS allows it
+      AllowedOrigins__0: "http://localhost:5080"
+      AllowedOrigins__1: "http://localhost:8080"
+      AllowedOrigins__2: "http://localhost:4200"
+      AllowedOrigins__3: "http://localhost:3000"
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    volumes:
+      - frelody_media:/app/media
+    networks:
+      - frelody-net
+
+  # ── FRELODY Web UI (Blazor) ──────────────────────────────────
+  frelody-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    image: frelody-web:v1.0
+    container_name: frelody-web
+    ports:
+      - "5080:5080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+
+      # Server-side Refit clients reach the API via the internal Docker network.
+      # The WASM (browser) portion always uses the exposed host port http://localhost:8080.
+      ApiSettings__BaseUrl: "http://frelody-api:8080"
+
+      # Disable HTTPS redirect – the container serves plain HTTP behind a
+      # potential reverse proxy; redirecting to HTTPS here would cause a blank page.
+      ASPNETCORE_HTTPS_PORT: ""
+
+      # Persist Data Protection keys in a named volume so that antiforgery
+      # tokens and auth cookies remain valid across container restarts.
+      # Without this, every restart generates a new key ring and existing
+      # browser cookies become undecryptable → blank screen.
+      ASPNETCORE_DataProtection__KeysDirectory: "/app/dp-keys"
+
+    volumes:
+      - frelody_dp_keys:/app/dp-keys
+    depends_on:
+      - frelody-api
+    networks:
+      - frelody-net
+
+volumes:
+  sqlserver_data:
+  frelody_media:
+  frelody_dp_keys:
+
+networks:
+  frelody-net:
+    driver: bridge

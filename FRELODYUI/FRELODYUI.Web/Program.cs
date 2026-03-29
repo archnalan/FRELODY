@@ -9,9 +9,19 @@ using FRELODYUI.Web.Components;
 using FRELODYUI.Web.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.AspNetCore.DataProtection;
 using Refit;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Persist Data Protection keys to a configurable directory.
+// In Docker this is a named volume mount so keys survive container restarts.
+// Without this, every restart rotates the key ring and existing browser
+// antiforgery cookies / auth tokens become undecryptable → blank screen.
+var dpKeysDir = builder.Configuration["ASPNETCORE_DataProtection__KeysDirectory"]
+                ?? Path.Combine(builder.Environment.ContentRootPath, "dp-keys");
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dpKeysDir));
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
@@ -44,7 +54,7 @@ builder.Services.AddSingleton<ITimeHelper, TimeHelper>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ICurrencyConverter, CurrencyConverter>();
 builder.Services.AddScoped<ICurrencyDisplayService, CurrencyDisplayService>();
-var baseAddressApi = new Uri("https://localhost:7077");
+var baseAddressApi = new Uri(builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:8080");
 
 builder.Services.AddHttpClient("TokenRefresh", c => c.BaseAddress = baseAddressApi);
 
@@ -154,7 +164,13 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Redirect to HTTPS only when an HTTPS port is actually configured.
+// In Docker the container runs plain HTTP (ASPNETCORE_HTTPS_PORT=""),
+// so this is skipped – preventing a blank page caused by a redirect loop.
+if (!string.IsNullOrEmpty(app.Configuration["ASPNETCORE_HTTPS_PORT"]))
+{
+    app.UseHttpsRedirection();
+}
 
 app.MapStaticAssets();
 app.UseAntiforgery();
