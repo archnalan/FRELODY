@@ -10,14 +10,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 
-# Copy every .csproj in the dependency chain so Docker can cache
-# the restore layer independently from source changes.
-# NOTE: We intentionally do NOT copy the .sln file. It references
-# projects (FRELODYAPIs, FRELODYLIB, SongalUI, FRELODYUI/FRELODYUI)
-# that are excluded from the web build context. When MSBuild finds
-# a solution with missing projects it can corrupt the static web
-# assets manifest, causing framework scripts like blazor.web.js to
-# be omitted from the endpoint routing → blank page.
+# Copy project files first for optimal layer-caching of restore
+COPY FRELODYAPP.sln ./
 COPY FRELODYUI/FRELODYUI.Web/FRELODYUI.Web.csproj              FRELODYUI/FRELODYUI.Web/
 COPY FRELODYUI/FRELODYUI.Web.Client/FRELODYUI.Web.Client.csproj FRELODYUI/FRELODYUI.Web.Client/
 COPY FRELODYUI/FRELODYUI.Shared/FRELODYUI.Shared.csproj         FRELODYUI/FRELODYUI.Shared/
@@ -26,7 +20,6 @@ COPY FRELODYSHRD/FRELODYSHRD.csproj                              FRELODYSHRD/
 # Restore all project dependencies following the ProjectReference chain
 RUN dotnet restore FRELODYUI/FRELODYUI.Web/FRELODYUI.Web.csproj
 
-# Copy the actual source (respects Dockerfile.web.dockerignore)
 COPY FRELODYUI/FRELODYUI.Web/        FRELODYUI/FRELODYUI.Web/
 COPY FRELODYUI/FRELODYUI.Web.Client/ FRELODYUI/FRELODYUI.Web.Client/
 COPY FRELODYUI/FRELODYUI.Shared/     FRELODYUI/FRELODYUI.Shared/
@@ -47,11 +40,6 @@ RUN dotnet publish FRELODYUI.Web.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
-# Install native dependencies required by:
-#   • .NET globalization (string ops, formatting)
-#     – icu-libs  : ICU data & libraries (full set)
-#   • itext7 native bits in FRELODYSHRD
-#     – libstdc++ : C++ runtime
 RUN apk add --no-cache icu-libs libstdc++
 
 # Enable full ICU globalization (Alpine .NET images default to invariant mode)
