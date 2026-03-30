@@ -53,6 +53,9 @@ services:
       AllowedOrigins__2: "http://localhost:4200"
       AllowedOrigins__3: "http://localhost:3000"
 
+      # Disable HTTPS redirect – container serves plain HTTP behind a proxy
+      ASPNETCORE_HTTPS_PORT: ""
+
     depends_on:
       sqlserver:
         condition: service_healthy

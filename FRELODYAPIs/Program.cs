@@ -269,7 +269,15 @@ using (var scope = app.Services.CreateScope())
 app.UseExceptionHandler();
 
 app.UseCors("AllowAll");
-app.UseHttpsRedirection();
+
+// Redirect to HTTPS only when an HTTPS port is configured.
+// In Docker the container runs plain HTTP behind Nginx, so skip this
+// to prevent redirect loops.
+if (!string.IsNullOrEmpty(app.Configuration["ASPNETCORE_HTTPS_PORT"]))
+{
+    app.UseHttpsRedirection();
+}
+
 app.MapStaticAssets();
 
 app.UseRouting();
