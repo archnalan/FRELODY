@@ -13,9 +13,7 @@ services:
       MSSQL_SA_PASSWORD: "${SA_PASSWORD}"
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '${SA_PASSWORD}' -Q 'SELECT 1' -No -C || exit 1"]
-    ports:
-      # Don't expose SQL Server to the internet — internal only
-      - "127.0.0.1:1433:1433"
+
 
   frelody-api:
     environment:
@@ -35,9 +33,10 @@ services:
 
       # CORS: allow the public IP and future domain
       AllowedOrigins__0: "http://${SERVER_HOST}"
-      AllowedOrigins__1: "https://${SERVER_HOST}"
-      AllowedOrigins__2: "https://frelody.com"
-      AllowedOrigins__3: "https://www.frelody.com"
+      AllowedOrigins__1: "http://${SERVER_HOST}:8080"
+      AllowedOrigins__2: "https://${SERVER_HOST}"
+      AllowedOrigins__3: "https://frelody.com"
+      AllowedOrigins__4: "https://www.frelody.com"
 
       # Google OAuth
       GoogleAuth__client_id: "${GOOGLE_CLIENT_ID}"
@@ -63,16 +62,14 @@ services:
       CurrencyConverter__AppId: "${OPENEXCHANGE_APP_ID}"
 
     ports:
-      # Only expose to localhost — Nginx proxies from port 80
-      - "127.0.0.1:8080:8080"
+      - "8080:8080"
 
   frelody-web:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
 
       # Server-side Refit calls → Docker-internal (unchanged)
-      ApiSettings__BaseUrl: "http://frelody-api:8080"
+      ApiSettings__BaseUrl: "http://${SERVER_HOST}:8080"
 
     ports:
-      # Only expose to localhost — Nginx proxies from port 80
-      - "127.0.0.1:5080:5080"
+      - "80:5080"
