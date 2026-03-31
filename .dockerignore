@@ -34,9 +34,15 @@
 # ── Node / front-end (not needed for the API build) ─────────
 **/node_modules/
 
-# ── Blazor / other UI projects (excluded from API build) ────
-FRELODYUI/
+# ── Projects not needed by either build ──────────────────────
+# NOTE: The per-Dockerfile .dockerignore convention (e.g.
+# Dockerfile.web.dockerignore) requires BuildKit. On servers
+# using the legacy builder, only THIS file is read for ALL
+# builds. So we can only exclude projects that NEITHER the
+# API nor the Web build needs.
 SongalUI/
+FRELODYUI/FRELODYUI/
+FRELODYAPP/
 
 # ── Docs / README ────────────────────────────────────────────
 *.md
