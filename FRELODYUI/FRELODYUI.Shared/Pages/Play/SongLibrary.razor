@@ -1,5 +1,6 @@
 ﻿@page "/songs-library"
 @using Microsoft.AspNetCore.Components.Web.Virtualization
+@using FRELODYUI.Shared.Pages.Play.Components
 @inject ILogger<SongLibrary> _logger
 @implements IDisposable
 
@@ -192,6 +193,13 @@
 
     </div>
 </div>
+<!-- Floating search FAB -->
+<button class="search-fab" @onclick="OpenSongSearch" title="Quick song search">
+    <i class="bi bi-search"></i>
+</button>
+
+<SongSearchModal @ref="_songSearchModal" OnSongSelected="NavigateToSong" />
+
 @if (showCollectionModal)
 {
     <SongCollectionAdd show="showCollectionModal"
@@ -211,6 +219,7 @@
     private string error = string.Empty;
     private bool IsNavigating = false;
     private bool _isInitializing = true;
+    private bool isFromLanding = false;
     private string? currentUserId;
 
     private ViewMode viewMode = ViewMode.All;
@@ -218,6 +227,7 @@
     private SongList? songListRef;
     private SongListView? songListViewRef;
     private SongPlaylist? songPlaylistRef;
+    private SongSearchModal? _songSearchModal;
 
     // UI input vs applied search term
     private string searchQuery = string.Empty;
@@ -249,10 +259,16 @@
             await SetActiveView(activeView);
         }
 
-        if (ShowSearch) 
+        if (ShowSearch)
+        {
             _heroDataService.SetRenderOrigin(false);
+            isFromLanding = false;
+        }
         else
+        {
             _heroDataService.SetRenderOrigin(true);
+            isFromLanding = true;
+        }
 
         _heroDataService.OnSearchChanged += HandleSearchChanged;
 
@@ -351,6 +367,18 @@
     private void AddSong()
     {
         _navManager.NavigateTo("/compose");
+    }
+
+    private async Task OpenSongSearch()
+    {
+        if (_songSearchModal != null)
+            await _songSearchModal.Open();
+    }
+
+    private void NavigateToSong(string songId)
+    {
+        var path = isFromLanding ? $"/songs/landing/{songId}" : $"/songs/{songId}";
+        _navManager.NavigateTo(path);
     }
 
     private void HandleSongLongPress(string songId)

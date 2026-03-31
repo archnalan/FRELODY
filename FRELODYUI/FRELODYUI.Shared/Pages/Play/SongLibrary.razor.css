@@ -11,3 +11,33 @@
 .btn-outline-secondary {
     color: var(--bs-gray-500);
 }
+
+.search-fab {
+    position: fixed;
+    bottom: 5rem;
+    right: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    background: var(--card-bg, #fff);
+    color: var(--text-primary, #212529);
+    border: 1px solid var(--border-medium, #dee2e6);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transition: all 0.2s ease;
+    z-index: 1050;
+    font-size: 0.95rem;
+}
+
+    .search-fab:hover {
+        background: var(--bg-hover, #f8f9fa);
+        transform: scale(1.08);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    }
+
+    .search-fab:active {
+        transform: scale(0.95);
+    }

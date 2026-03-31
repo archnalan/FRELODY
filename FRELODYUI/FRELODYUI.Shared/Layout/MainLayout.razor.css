@@ -181,8 +181,17 @@ article {
         overflow: visible;
     }
 
-    /* Allow floating labels to escape collapsed sidebar */
+    /* Allow floating labels to escape collapsed sidebar.
+       overflow: visible must be set on BOTH containers: nav-scrollable (direct ::deep child)
+       and nav-items-scrollable (which has overflow-y:auto; overflow-x:hidden in its own CSS).
+       CSS does not allow mixing overflow-x:visible with overflow-y:auto on the same element,
+       so we override the whole overflow to visible here. Vertical scroll is not needed in
+       collapsed mode since only icons are shown at 64px width. */
     .page.sidebar-collapsed .sidebar ::deep .nav-scrollable {
+        overflow: visible;
+    }
+
+    .page.sidebar-collapsed .sidebar ::deep .nav-items-scrollable {
         overflow: visible;
     }
 
