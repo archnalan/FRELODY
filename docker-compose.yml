@@ -74,7 +74,7 @@ services:
     ports:
       - "5080:5080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: Docker
 
       # Server-side Refit clients reach the API via the internal Docker network.
       # The WASM (browser) portion always uses the exposed host port http://localhost:8080.

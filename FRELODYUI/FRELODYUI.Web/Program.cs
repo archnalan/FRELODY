@@ -54,7 +54,7 @@ builder.Services.AddSingleton<ITimeHelper, TimeHelper>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ICurrencyConverter, CurrencyConverter>();
 builder.Services.AddScoped<ICurrencyDisplayService, CurrencyDisplayService>();
-var baseAddressApi = new Uri(builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:8080");
+var baseAddressApi = new Uri(builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7077");
 
 builder.Services.AddHttpClient("TokenRefresh", c => c.BaseAddress = baseAddressApi);
 
@@ -153,7 +153,10 @@ builder.Services.AddRefitClient<IOcrApi>()
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Treat both "Development" (local VS debug) and "Docker" (local container)
+// as dev-like environments so that debugging and error pages are available.
+var isDevLike = app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker");
+if (isDevLike)
 {
     app.UseWebAssemblyDebugging();
 }
