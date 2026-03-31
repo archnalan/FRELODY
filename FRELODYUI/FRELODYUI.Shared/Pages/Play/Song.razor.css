@@ -102,14 +102,14 @@
     flex-shrink: 0;
 }
 
-.header-actions .dropdown {
-    position: relative;
-    z-index: 1200;
-}
+    .header-actions .dropdown {
+        position: relative;
+        z-index: 1200;
+    }
 
-.header-actions .dropdown-menu {
-    z-index: 1210;
-}
+    .header-actions .dropdown-menu {
+        z-index: 1210;
+    }
 
 .share-dropdown-backdrop {
     position: fixed;
@@ -127,7 +127,7 @@
 
 .controls-bar {
     position: sticky;
-    display:flex;
+    display: flex;
     top: 0;
     z-index: 100;
     margin: 0 1rem;
@@ -139,9 +139,9 @@
 }
 
 .controls-bar-inner {
-    flex:1;
+    flex: 1;
     display: flex;
-    justify-content:center;
+    justify-content: center;
     align-items: flex-end;
     gap: 0.75rem;
     /* left padding only — right edge is handled by the sticky actions */
@@ -325,6 +325,7 @@
         opacity: 0;
         transform: translateY(-8px) scale(0.97);
     }
+
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -345,8 +346,13 @@
 }
 
 @keyframes name-ghost-shimmer {
-    0%, 100% { opacity: 0.4; }
-    50%       { opacity: 0.85; }
+    0%, 100% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 0.85;
+    }
 }
 
 /* ============================================
@@ -539,8 +545,15 @@
     }
 
 @keyframes popoverFadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .chord-popover-header {
@@ -614,8 +627,13 @@
         color: var(--gradient-primary-start);
     }
 
-    .carousel-nav-btn.prev { left: 0.25rem; }
-    .carousel-nav-btn.next { right: 0.25rem; }
+    .carousel-nav-btn.prev {
+        left: 0.25rem;
+    }
+
+    .carousel-nav-btn.next {
+        right: 0.25rem;
+    }
 
 .carousel-indicators {
     display: flex;
@@ -733,9 +751,17 @@
         transform: scale(1.08);
     }
 
-    .chord.chord-align-left { align-self: flex-start; }
-    .chord.chord-align-center { align-self: center; }
-    .chord.chord-align-right { align-self: flex-end; }
+    .chord.chord-align-left {
+        align-self: flex-start;
+    }
+
+    .chord.chord-align-center {
+        align-self: center;
+    }
+
+    .chord.chord-align-right {
+        align-self: flex-end;
+    }
 
 .lyric {
     color: var(--text-primary);
@@ -761,7 +787,7 @@
     gap: 0.375rem;
     padding: 0 0.5rem;
     min-width: 0;
-    max-width: 40%;        /* never crowd out the control groups on narrow screens */
+    max-width: 40%; /* never crowd out the control groups on narrow screens */
     overflow: hidden;
 }
 
@@ -872,19 +898,26 @@
 }
 
 @keyframes orient-fab-in {
-    from { opacity: 0; transform: scale(0.8); }
-    to   { opacity: 1; transform: scale(1); }
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
-    .orient-fab:hover {
-        background: var(--bg-hover);
-        transform: scale(1.08);
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-    }
+.orient-fab:hover {
+    background: var(--bg-hover);
+    transform: scale(1.08);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
 
-    .orient-fab:active {
-        transform: scale(0.95);
-    }
+.orient-fab:active {
+    transform: scale(0.95);
+}
 
 /* Hide orient-fab on desktop — orientation lock is a mobile-only concern */
 @media (min-width: 1024px) {
@@ -922,8 +955,10 @@
         padding: 0;
         border-top: none;
         border-bottom: 1px solid var(--border-medium);
-        /* Clip anything the inner scroll container can't contain itself */
-        overflow: hidden;
+        /* overflow: visible (default) — lets the settings-palette (position:absolute; top:100%)
+           render below the bar without being clipped. controls-bar-inner already handles
+           its own horizontal overflow via overflow-x:auto; controls-bar-actions stays at
+           the right edge via margin-left:auto independent of the outer overflow value. */
     }
 
     /* Revert to base overflow-x: auto + sticky actions pattern (same as normal mode).
@@ -947,12 +982,12 @@
         background: transparent;
     }
 
-    .playback-fullscreen .song-content .verse-section {
-        max-width: 800px;
-        width: 100%;
-        margin-left: auto;
-        margin-right: auto;
-    }
+        .playback-fullscreen .song-content .verse-section {
+            max-width: 800px;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+        }
 
 /* Fullscreen via Fullscreen API */
 .song-playback-area:fullscreen {
@@ -969,7 +1004,7 @@
         padding: 0;
         border-top: none;
         border-bottom: 1px solid var(--border-medium);
-        overflow: hidden;
+        /* overflow: visible (default) — same rationale as .playback-fullscreen above */
     }
 
     .song-playback-area:fullscreen .controls-bar-inner {
@@ -988,10 +1023,10 @@
         background: transparent;
     }
 
-    .song-playback-area:fullscreen .song-content .verse-section {
-        max-width: 800px;
-        width: 100%;
-    }
+        .song-playback-area:fullscreen .song-content .verse-section {
+            max-width: 800px;
+            width: 100%;
+        }
 
 /* ============================================
    LOADING STATE
@@ -1091,6 +1126,7 @@
     .slider-nav-btn {
         display: flex;
     }
+
     .chord-charts-section {
         padding: 1.5rem;
         margin-bottom: 1.5rem;
