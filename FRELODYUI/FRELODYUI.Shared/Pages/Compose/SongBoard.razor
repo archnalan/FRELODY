@@ -31,10 +31,13 @@
                         <i class="bi bi-tv"></i>
                         <span>Preview</span>
                     </button>
-                    <button type="button" class="btn btn-sm btn-primary" @onclick="RestoreFromCache">
-                        <i class="bi bi-arrow-clockwise"></i>
-                        <span>Restore</span>
-                    </button>
+                    @if (string.IsNullOrEmpty(SongId))
+                    {
+                        <button type="button" class="btn btn-sm btn-primary" @onclick="RestoreFromCache">
+                            <i class="bi bi-arrow-clockwise"></i>
+                            <span>Restore</span>
+                        </button>
+                    }
                     <button type="button" class="btn btn-sm btn-danger" @onclick="TryDiscardCache">
                         <i class="bi bi-x-circle"></i>
                         <span>Discard</span>
@@ -111,10 +114,7 @@
                  EnableAccessEdit="@(!string.IsNullOrEmpty(SongId))"
                  OnMarkPrivateAccess="HandleMarkPrivateAccess" />
 
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
+
 
 @code {
     [Parameter]
@@ -601,6 +601,11 @@
                 {
                     ActionType = "SongSaved",
                     Data = songResult.Content?.ToString() ?? "No content"
+                },
+                OnConfirmCallback = async () =>
+                {
+                    isSuccessRedirect = true;
+                    _navManager.NavigateTo("/songs-library");
                 }
             });
 
@@ -1047,62 +1052,6 @@
         }
     }
 
-    private async Task ConfirmModal()
-    {
-        // handle specific contexts awaiting confirmation
-        if (_modalService.CurrentModal.Context?.ActionType == "SongSaved")
-        {
-            _modalService.Close();
-            isSuccessRedirect = true;
-            _navManager.NavigateTo("/songs-library");
-        }
-        else if( _modalService.CurrentModal.Context?.ActionType == "DiscardCache")
-        {
-            await DiscardCache();
-            _modalService.Close();
-        }
-        else if (_modalService.CurrentModal.Context?.ActionType == "RestoreFromCache")
-        {
-            // Save current work first
-            await HandleSongSave(true);
-            _modalService.Close();
-            // Then restore from cache
-            if (cacheData != null)
-            {
-                bool success = await InitializeFromRecoveryData(cacheData);
-                if (success)
-                {
-                    cacheData = null;
-                    await _storageService.RemoveItemAsync("songDraft");
-                }
-
-            }
-        }
-        else
-        {
-            await CloseModal();
-        }
-    }
-
-    private async Task CloseModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "RestoreFromCache" &&
-                _modalService.CurrentModal?.Context?.Data.ToString() == "HasCurrentWork")
-        {
-            if (cacheData != null)
-            {
-                bool success = await InitializeFromRecoveryData(cacheData);
-                if (success)
-                {
-                    cacheData = null;
-                    await _storageService.RemoveItemAsync("songDraft");
-                }
-            }
-        }
-        _modalService.Close();
-        await Task.CompletedTask;
-    }
-
     private async Task RestoreFromCache()
     {
         // Check if there's unsaved current work
@@ -1122,6 +1071,31 @@
                 {
                     ActionType = "RestoreFromCache",
                     Data = "HasCurrentWork"
+                },
+                OnConfirmCallback = async () =>
+                {
+                    await HandleSongSave(true);
+                    if (cacheData != null)
+                    {
+                        bool success = await InitializeFromRecoveryData(cacheData);
+                        if (success)
+                        {
+                            cacheData = null;
+                            await _storageService.RemoveItemAsync("songDraft");
+                        }
+                    }
+                },
+                OnCloseCallback = async () =>
+                {
+                    if (cacheData != null)
+                    {
+                        bool success = await InitializeFromRecoveryData(cacheData);
+                        if (success)
+                        {
+                            cacheData = null;
+                            await _storageService.RemoveItemAsync("songDraft");
+                        }
+                    }
                 }
             });
             return;
@@ -1163,7 +1137,8 @@
             {
                 ActionType = "DiscardCache",
                 Data = "UserConfirmed"
-            }
+            },
+            OnConfirmCallback = async () => await DiscardCache()
         });
     }
 

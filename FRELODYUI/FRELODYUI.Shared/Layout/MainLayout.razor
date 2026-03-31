@@ -207,8 +207,11 @@ private (string Title, string Message, bool CanRetry) GetErrorDetails(Exception 
 
     private async Task CloseGlobalModal()
     {
+        var closeCallback = _modalService.CurrentModal?.OnCloseCallback;
         await Task.Delay(100);
         _modalService.Close();
+        if (closeCallback != null)
+            await closeCallback();
         StateHasChanged();
     }
 

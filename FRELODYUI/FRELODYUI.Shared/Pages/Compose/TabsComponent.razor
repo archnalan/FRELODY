@@ -92,13 +92,6 @@
     </div>
 </div>
 
-@if (_modalService.IsModalVisible)
-{
-    <DialogModal IsVisible="true"
-                 Modal="@_modalService.CurrentModal"
-                 OnCloseModal="CloseModal"
-                 OnConfirmModal="ConfirmModal" />
-}
 
 @code {
     [Parameter] public List<TabItem>? InitialItems { get; set; }
@@ -501,6 +494,23 @@
             {
                ActionType = "RemoveTab",
                 Data = tab.Id
+            },
+            OnConfirmCallback = async () =>
+            {
+                if (tabIdToRemove.HasValue)
+                {
+                    Items.RemoveAll(item => item.Id == tabIdToRemove.Value);
+                    _sectionNumberInputs.Remove(tabIdToRemove.Value);
+                    _tabsManager.TabItems = Items;
+                    if (SelectedTab == tabIdToRemove.Value && Items.Count > 0)
+                    {
+                        SelectedTab = Items[0].Id;
+                        _tabsManager.ActiveTab = Items[0];
+                    }
+                    await OnTabRemoved.InvokeAsync(tabIdToRemove.Value);
+                }
+                tabIdToRemove = null;
+                StateHasChanged();
             }
         });       
     }
@@ -540,69 +550,6 @@
         OnTabAdd.InvokeAsync(newId);
     }
 
-    private void CloseModal()
-    {
-        _modalService.Close();
-        if(_modalService.CurrentModal.Context?.ActionType == "RemoveTab")
-        {
-            tabIdToRemove = null;
-        }
-        else
-        {
-            _modalService.CurrentModal.Context = null; 
-        }
-        tabIdToRemove = null;
-        StateHasChanged();
-    }
-
-    private async Task ConfirmModal()
-    {
-        var context = _modalService.CurrentModal.Context;
-
-        if (context?.ActionType == "RemoveTab")
-        {
-            if (tabIdToRemove.HasValue)
-            {
-                Items.RemoveAll(item => item.Id == tabIdToRemove.Value);
-                _sectionNumberInputs.Remove(tabIdToRemove.Value);
-                _tabsManager.TabItems = Items;
-                if (SelectedTab == tabIdToRemove.Value && Items.Count > 0)
-                {
-                    SelectedTab = Items[0].Id;
-                    _tabsManager.ActiveTab = Items[0];
-                }
-                OnTabRemoved.InvokeAsync(tabIdToRemove.Value);
-            }
-            tabIdToRemove = null;
-            StateHasChanged();
-        }
-        else if (context?.ActionType == "HideSectionNumber")
-        {
-            if (context.Data is int itemId)
-            {
-                var tab = Items.FirstOrDefault(item => item.Id == itemId);
-                if (tab != null)
-                {
-                    // Add the section to SingleInstanceSections
-                    SingleInstanceSections.Add(tab.SectionName);
-
-                    // Reset section number to 1 and hide the input
-                    tab.SectionNumber = 1;
-                    ShowInputHide = false;
-
-                    // Notify parent of the change
-                    if (ActiveTabInfoChanged.HasDelegate)
-                    {
-                        await ActiveTabInfoChanged.InvokeAsync(tab);
-                    }
-
-                    StateHasChanged();
-                }
-            }
-        }
-
-        _modalService.Close();
-    }
 
     private async Task FocusElementAsync(int tabId)
     {
@@ -632,6 +579,19 @@
             {
                 ActionType = "HideSectionNumber",
                 Data = item.Id
+            },
+            OnConfirmCallback = async () =>
+            {
+                var tab = Items.FirstOrDefault(i => i.Id == item.Id);
+                if (tab != null)
+                {
+                    SingleInstanceSections.Add(tab.SectionName);
+                    tab.SectionNumber = 1;
+                    ShowInputHide = false;
+                    if (ActiveTabInfoChanged.HasDelegate)
+                        await ActiveTabInfoChanged.InvokeAsync(tab);
+                    StateHasChanged();
+                }
             }
         });
         await Task.CompletedTask;

@@ -18,6 +18,7 @@ namespace FRELODYUI.Shared.Models
         public ModalContext? Context { get; set; } 
         public bool? HideActionConfirmBtn { get; set; }
         public Func<Task>? OnConfirmCallback { get; set; }
+        public Func<Task>? OnCloseCallback { get; set; }
     }
     public enum OptionType
     {

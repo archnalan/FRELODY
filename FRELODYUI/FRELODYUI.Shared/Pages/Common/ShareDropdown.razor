@@ -48,13 +48,6 @@
     </div>
 }
 
-@if (_modalService.IsModalVisible)
-{
-    <DialogModal IsVisible="true"
-                 Modal="@_modalService.CurrentModal"
-                 OnCloseModal="CloseModal"
-                 OnConfirmModal="ConfirmModal" />
-}
 
 @code {
     [Parameter] public SongDto Song { get; set; } = default!;
@@ -220,22 +213,6 @@
             await OnCustomizeSong.InvokeAsync(songId);
             await OnActionCompleted.InvokeAsync();
         }
-    }
-
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal.Context?.ActionType == "GenerateShareLink")
-        {
-            // Handle specific action if needed
-        }
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 
 }

@@ -63,10 +63,7 @@
     }
 </div>
 
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-               Modal="@_modalService.CurrentModal"
-               OnConfirmModal="ConfirmModal"
-               OnCloseModal="CloseModal" />
+
 
 @code {
     [Parameter] public int SectionId { get; set; }
@@ -410,7 +407,8 @@
             {
                 ActionType = "DeleteLine",
                 Data = line
-            }
+            },
+            OnConfirmCallback = () => { DeleteLine(line); return Task.CompletedTask; }
         });
         StateHasChanged();
     }
@@ -460,56 +458,25 @@
                 {
                     ActionType = "DeleteSegment",
                     Data = segmentId
+                },
+                OnConfirmCallback = async () =>
+                {
+                    var affectedLine = Segments?.FirstOrDefault(s => s.Id == segmentId)?.LineNumber ?? 0;
+                    Segments?.RemoveAll(s => s.Id == segmentId);
+                    if (editingSegment?.Id == segmentId) editingSegment = null;
+                    var affectedRow = TryGetRowRef(affectedLine);
+                    if (affectedRow != null)
+                        await affectedRow.ClosePrevFormAsync();
+                    if (Segments != null && Segments.Count > 0)
+                        HandleSegmentsUpdate(Segments);
+                    else
+                        Segments = new();
+                    if (focusedRow.HasValue)
+                        await SetFocusedRow(focusedRow.Value);
                 }
             });
             StateHasChanged();
         }
-    }
-
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "DeleteLine")
-        {
-            var line = (int)_modalService.CurrentModal.Context.Data!;
-            DeleteLine(line);
-        }
-        else if (_modalService.CurrentModal?.Context?.ActionType == "DeleteSegment")
-        {
-            var segmentId = _modalService.CurrentModal.Context.Data?.ToString();
-            var affectedLine = Segments?.FirstOrDefault(s => s.Id == segmentId)?.LineNumber ?? 0;
-            await CloseModal();
-
-            Segments?.RemoveAll(s => s.Id == segmentId);
-            if (editingSegment?.Id == segmentId) editingSegment = null;
-
-            var affectedRow = TryGetRowRef(affectedLine);
-            if (affectedRow != null)
-            {
-                await affectedRow.ClosePrevFormAsync();
-            }
-
-            if (Segments != null && Segments.Count > 0)
-            {
-                HandleSegmentsUpdate(Segments);
-            }
-            else
-            {
-                Segments = new();
-            }
-
-            if (focusedRow.HasValue)
-            {
-                await SetFocusedRow(focusedRow.Value); 
-            }
-        }
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()
