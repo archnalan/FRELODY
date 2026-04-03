@@ -962,9 +962,10 @@
     }
 
     /* Revert to base overflow-x: auto + sticky actions pattern (same as normal mode).
-       justify-content: center is intentionally removed — centering in a scrollable
-       flex row clips the left side and prevents scrolling to hidden items. */
+       justify-content must be flex-start — centering in a scrollable flex row clips
+       the left side and prevents scrolling to hidden items on small screens. */
     .playback-fullscreen .controls-bar-inner {
+        justify-content: flex-start;
         padding-left: 1rem;
     }
 
@@ -1008,6 +1009,7 @@
     }
 
     .song-playback-area:fullscreen .controls-bar-inner {
+        justify-content: flex-start;
         padding-left: 1rem;
     }
 

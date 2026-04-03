@@ -22,12 +22,12 @@
             }
             else
             {
-                <!-- Normal mode: mode toggle + dropdown -->
-                <button class="ssm-mode-toggle @(mode == SearchMode.Book ? "active" : "")"
-                        @onclick="ToggleMode"
-                        title="@(mode == SearchMode.Book ? "Switch to Artist mode" : "Switch to Songbook mode")">
-                    <i class="bi bi-@(mode == SearchMode.Book ? "journal-bookmark-fill" : "person-fill")"></i>
-                </button>
+                <!-- Mode tabs -->
+                <div class="ssm-mode-tabs">
+                    <button class="ssm-tab @(mode == SearchMode.All ? "active" : "")" @onclick="() => SetMode(SearchMode.All)">All</button>
+                    <button class="ssm-tab @(mode == SearchMode.Book ? "active" : "")" @onclick="() => SetMode(SearchMode.Book)">Book</button>
+                    <button class="ssm-tab @(mode == SearchMode.Artist ? "active" : "")" @onclick="() => SetMode(SearchMode.Artist)">Artist</button>
+                </div>
 
                 @if (mode == SearchMode.Book)
                 {
@@ -48,7 +48,7 @@
                         }
                     </div>
                 }
-                else
+                else if (mode == SearchMode.Artist)
                 {
                     <div class="ssm-selector-wrapper">
                         @if (isLoadingArtists)
@@ -76,8 +76,58 @@
 
         <!-- Body -->
         <div class="ssm-body">
-            @if (mode == SearchMode.Book)
+            @if (mode == SearchMode.Artist)
             {
+                <!-- Artist song list -->
+                <div class="ssm-song-list">
+                    @if (isSearching)
+                    {
+                        @for (int i = 0; i < 6; i++)
+                        {
+                            <div class="ssm-song-ghost">
+                                <div class="ssm-ghost-num"></div>
+                                <div class="ssm-ghost-title"></div>
+                            </div>
+                        }
+                    }
+                    else if (artistSongs.Count == 0)
+                    {
+                        <div class="ssm-empty">
+                            <i class="bi bi-music-note-beamed"></i>
+                            <span>No songs found</span>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var s in artistSongs)
+                        {
+                            var song = s;
+                            <button class="ssm-song-item" @onclick="() => SelectSong(song)">
+                                @if (song.SongNumber.HasValue)
+                                {
+                                    <span class="ssm-song-num">#@song.SongNumber</span>
+                                }
+                                <span class="ssm-song-title">@song.Title</span>
+                                <i class="bi bi-arrow-right-short ssm-song-arrow"></i>
+                            </button>
+                        }
+
+                        @if (hasMoreArtistSongs)
+                        {
+                            <button class="ssm-load-more" @onclick="LoadMoreArtistSongs" disabled="@isLoadingMore">
+                                @if (isLoadingMore)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Load more
+                            </button>
+                        }
+                    }
+                </div>
+            }
+            else
+            {
+                <!-- Numpad (All / Book) -->
                 @if (showNumberResults)
                 {
                     <!-- Number search results list -->
@@ -162,55 +212,6 @@
                     </div>
                 }
             }
-            else
-            {
-                <!-- Artist song list -->
-                <div class="ssm-song-list">
-                    @if (isSearching)
-                    {
-                        @for (int i = 0; i < 6; i++)
-                        {
-                            <div class="ssm-song-ghost">
-                                <div class="ssm-ghost-num"></div>
-                                <div class="ssm-ghost-title"></div>
-                            </div>
-                        }
-                    }
-                    else if (artistSongs.Count == 0)
-                    {
-                        <div class="ssm-empty">
-                            <i class="bi bi-music-note-beamed"></i>
-                            <span>No songs found</span>
-                        </div>
-                    }
-                    else
-                    {
-                        @foreach (var s in artistSongs)
-                        {
-                            var song = s;
-                            <button class="ssm-song-item" @onclick="() => SelectSong(song)">
-                                @if (song.SongNumber.HasValue)
-                                {
-                                    <span class="ssm-song-num">#@song.SongNumber</span>
-                                }
-                                <span class="ssm-song-title">@song.Title</span>
-                                <i class="bi bi-arrow-right-short ssm-song-arrow"></i>
-                            </button>
-                        }
-
-                        @if (hasMoreArtistSongs)
-                        {
-                            <button class="ssm-load-more" @onclick="LoadMoreArtistSongs" disabled="@isLoadingMore">
-                                @if (isLoadingMore)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                Load more
-                            </button>
-                        }
-                    }
-                </div>
-            }
         </div>
     </div>
 }
@@ -220,8 +221,8 @@
 
     public bool IsOpen { get; private set; }
 
-    private enum SearchMode { Book, Artist }
-    private SearchMode mode = SearchMode.Book;
+    private enum SearchMode { All, Book, Artist }
+    private SearchMode mode = SearchMode.All;
 
     // Songbook state
     private List<SongBookDto> songBooks = new();
@@ -261,7 +262,7 @@
 
         // Restore previous selection from storage
         var savedMode = await _storageService.GetItemAsync<string>("ssm_mode");
-        mode = savedMode == "artist" ? SearchMode.Artist : SearchMode.Book;
+        mode = savedMode == "artist" ? SearchMode.Artist : savedMode == "book" ? SearchMode.Book : SearchMode.All;
 
         var savedBookId = await _storageService.GetItemAsync<string>("ssm_book");
         if (!string.IsNullOrEmpty(savedBookId) && songBooks.Any(b => b.Id == savedBookId))
@@ -331,12 +332,14 @@
         finally { isLoadingArtists = false; }
     }
 
-    private async Task ToggleMode()
+    private async Task SetMode(SearchMode newMode)
     {
-        mode = mode == SearchMode.Book ? SearchMode.Artist : SearchMode.Book;
+        mode = newMode;
         inputDigits = string.Empty;
         hasError = false;
-        await _storageService.SetItemAsync("ssm_mode", mode == SearchMode.Artist ? "artist" : "book");
+        showNumberResults = false;
+        numberSearchResults.Clear();
+        await _storageService.SetItemAsync("ssm_mode", newMode.ToString().ToLower());
 
         if (mode == SearchMode.Artist && !string.IsNullOrEmpty(selectedArtistId) && artistSongs.Count == 0)
             await FetchArtistSongs(reset: true);
@@ -425,7 +428,8 @@
 
     private async Task SearchByNumber()
     {
-        if (inputDigits.Length == 0 || string.IsNullOrEmpty(selectedBookId)) return;
+        if (inputDigits.Length == 0) return;
+        if (mode == SearchMode.Book && string.IsNullOrEmpty(selectedBookId)) return;
 
         if (!int.TryParse(inputDigits, out var number) || number <= 0)
         {
@@ -439,7 +443,8 @@
 
         try
         {
-            var resp = await _playlistsApi.GetPaginatedSongs(0, 20, songNumber: number, songBookId: selectedBookId);
+            var songBookId = mode == SearchMode.Book ? selectedBookId : (string?)null;
+            var resp = await _playlistsApi.GetPaginatedSongs(0, 50, songNumber: number, songBookId: songBookId);
             if (resp.IsSuccessStatusCode && resp.Content?.Data?.Any() == true)
             {
                 var results = resp.Content.Data;
@@ -456,7 +461,7 @@
             }
             else
             {
-                ShowError($"Song #{number} not found in this book");
+                ShowError(mode == SearchMode.Book ? $"Song #{number} not found in this book" : $"No songs found for #{number}");
             }
         }
         catch (Exception ex)

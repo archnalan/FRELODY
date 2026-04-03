@@ -127,9 +127,46 @@
     cursor: pointer;
     transition: all 0.15s ease;
     font-size: 0.875rem;
+    margin-left: auto;
 }
 
     .ssm-close-btn:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+/* ---- Mode tabs ---- */
+.ssm-mode-tabs {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-medium);
+    border-radius: 0.5rem;
+    padding: 0.1875rem;
+}
+
+.ssm-tab {
+    flex: 1;
+    padding: 0.25rem 0.5rem;
+    border: none;
+    border-radius: 0.35rem;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+    .ssm-tab.active {
+        background: var(--bg-active);
+        color: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+
+    .ssm-tab:not(.active):hover {
         background: var(--bg-hover);
         color: var(--text-primary);
     }
