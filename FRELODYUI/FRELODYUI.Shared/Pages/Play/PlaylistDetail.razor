@@ -3,8 +3,8 @@
 @inject ILogger<PlaylistDetail> _logger
 @implements IDisposable
 
-<div class="container-fluid vh-100 overflow-y-scroll position-relative">
-    <div class="container py-4" style="max-width: 55rem; min-height: 100vh;">
+<div class="container-fluid position-relative">
+    <div class="container py-4" style="max-width: 55rem;">
         
         @if (isLoading)
         {
@@ -136,6 +136,7 @@
                         <div class="mb-2 border-bottom">
                             <PlaylistSongItem Song="song"
                                             ShowActionBtns="ShowActions"
+                                            ActiveView="ActiveView"
                                             OnRemove="() => RemoveSongFromPlaylist(song.Id)"
                                             OnShare="() => ShareSong(song.Id)"/>
                         </div>
@@ -222,6 +223,7 @@
 <MessageToast ShowToast="@showSuccessMessage" ToastMessage="@successMessage" Type="ToastType.Success" />
 
 @code {
+    [Parameter] public ActiveView ActiveView { get; set; }
     [Parameter] public string PlaylistId { get; set; } = string.Empty;
     [Parameter] public bool ShowActions { get; set; } = true;
     [Parameter] public bool IsLandingView { get; set; } = false;
@@ -602,6 +604,19 @@
 
     private void OpenSong(string songId)
     {
+                _ = Task.Run(async () =>
+        {
+           try
+           {
+               await _storageService.SetItemAsync("ActiveView", ActiveView);
+               await _storageService.SetItemAsync("ViewMode", ViewMode.Playlists);
+               await _playHistoryApi.LogSongPlay(songId, "SongList");
+           }
+           catch (Exception ex)
+           {
+               _logger.LogWarning(ex, "Failed to log song play from list for song {SongId}", songId);
+           }
+        });
         if (IsLandingContext)
             _navManager.NavigateTo($"/songs/landing/{songId}");
         else

@@ -220,7 +220,10 @@
                 errorMessage = "Passwords do not match.";
                 return;
             }
-
+            if (isPersonalMode && !string.IsNullOrEmpty(registerModel.UserFullName))
+            {
+                registerModel.TenantName = registerModel.UserFullName;
+            }
             var response = await _tenantsApi.CreateTenant(registerModel, password);
 
             if (response.IsSuccessStatusCode && response.Content != null)

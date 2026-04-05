@@ -41,6 +41,7 @@
 </div>
 
 @code {
+    [Parameter] public ActiveView ActiveView { get; set; }
     [Parameter] public PlaylistSongDto Song { get; set; } = new();
     [Parameter] public EventCallback OnRemove { get; set; }
     [Parameter] public EventCallback OnShare { get; set; }
@@ -52,6 +53,8 @@
             {
                 try
                 {
+                    await _storageService.SetItemAsync("ActiveView", ActiveView);
+                    await _storageService.SetItemAsync("ViewMode", ViewMode.Playlists);
                     await _playHistoryApi.LogSongPlay(songId, "Playlist");
                 }
                 catch (Exception ex)
