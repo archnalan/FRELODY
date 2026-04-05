@@ -198,7 +198,8 @@
                                        Source="@monitorSource"
                                        IsAuthenticated="@isAuthenticated"
                                        PastedText="@pastedText"
-                                       OnClearRequested="ClearMonitor" />
+                                       OnClearRequested="ClearMonitor"
+                                       OnPlayPreview="HandlePlayPreview" />
                     </div>
                 }
 
@@ -492,6 +493,14 @@
     }
 
     // ── Extraction logic (from SongImport) ──
+    private void HandlePlayPreview()
+    {
+        // previewSong already stored in localStorage by StudioMonitor
+        var isLanding = _navManager.Uri.Contains("/landing", StringComparison.OrdinalIgnoreCase);
+        var path = isLanding ? "/songs/landing/preview" : "/songs/preview";
+        _navManager.NavigateTo(path);
+    }
+
     private async Task ProcessPastedText()
     {
         if (string.IsNullOrWhiteSpace(pastedText)) return;

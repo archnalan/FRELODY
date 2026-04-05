@@ -1,0 +1,88 @@
+@using FRELODYSHRD.ModelTypes
+
+@if (IsSingleItem)
+{
+    @if (ActiveView == ActiveView.Expanded)
+    {
+        <div class="slp-row placeholder-glow">
+            <span class="slp-num placeholder"></span>
+            <span class="slp-title placeholder col-4"></span>
+            <span class="slp-meta d-none d-md-flex placeholder col-2"></span>
+            <span class="slp-meta d-none d-lg-flex placeholder col-2"></span>
+            <span class="slp-rating d-none d-sm-flex placeholder col-1"></span>
+            <span class="slp-actions placeholder col-1"></span>
+        </div>
+    }
+    else
+    {
+        <div class="col-12 col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 placeholder-wave shadow" style="border-radius:0.5rem">
+                <div class="card-body">
+                    <h5 class="card-title"><span class="placeholder col-7 mb-3"></span></h5>
+                    <span class="placeholder col-3"></span>
+                    <div class="d-flex justify-content-end mt-3">
+                        <span class="placeholder col-3 me-2"></span>
+                        <span class="placeholder col-2"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+else
+{
+    @if (ActiveView == ActiveView.Expanded)
+    {
+        @if (ShowHeader)
+        {
+            <div class="slp-header">
+                <span class="slp-num">#</span>
+                <span class="slp-title">Title</span>
+                <span class="slp-meta d-none d-md-flex">Category</span>
+                <span class="slp-meta d-none d-lg-flex">Artist</span>
+                <span class="slp-rating d-none d-sm-flex">Rating</span>
+                <span class="slp-actions"></span>
+            </div>
+        }
+        <div class="placeholder-glow">
+            @for (int i = 0; i < Count; i++)
+            {
+                <div class="slp-row">
+                    <span class="slp-num placeholder"></span>
+                    <span class="slp-title placeholder col-4"></span>
+                    <span class="slp-meta d-none d-md-flex placeholder col-2"></span>
+                    <span class="slp-meta d-none d-lg-flex placeholder col-2"></span>
+                    <span class="slp-rating d-none d-sm-flex placeholder col-1"></span>
+                    <span class="slp-actions placeholder col-1"></span>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="row placeholder-glow">
+            @for (int i = 0; i < Count; i++)
+            {
+                <div class="col-12 col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 placeholder-wave shadow" style="border-radius:0.5rem">
+                        <div class="card-body">
+                            <h5 class="card-title"><span class="placeholder col-7 mb-3"></span></h5>
+                            <span class="placeholder col-3"></span>
+                            <div class="d-flex justify-content-end mt-3">
+                                <span class="placeholder col-3 me-2"></span>
+                                <span class="placeholder col-2"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public ActiveView ActiveView { get; set; } = ActiveView.Expanded;
+    [Parameter] public bool ShowHeader { get; set; } = false;
+    [Parameter] public bool IsSingleItem { get; set; } = false;
+    [Parameter] public int Count { get; set; } = 8;
+}

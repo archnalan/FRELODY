@@ -1391,5 +1391,157 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
         #endregion
+
+        #region Get Song List (with joins)
+        public async Task<ServiceResult<PaginationDetails<SongListItemDto>>> GetSongListAsync(int offset, int limit)
+        {
+            try
+            {
+                limit = limit <= 0 ? 10 : limit;
+
+                var query = from s in _context.Songs
+                            join c in _context.Categories on s.CategoryId equals c.Id into cg
+                            from c in cg.DefaultIfEmpty()
+                            join sb in _context.SongBooks on s.SongBookId equals sb.Id into sbg
+                            from sb in sbg.DefaultIfEmpty()
+                            join al in _context.Albums on s.AlbumId equals al.Id into alg
+                            from al in alg.DefaultIfEmpty()
+                            join ar in _context.Artists on s.ArtistId equals ar.Id into arg
+                            from ar in arg.DefaultIfEmpty()
+                            orderby s.SongNumber, s.Rating descending
+                            select new SongListItemDto
+                            {
+                                Id = s.Id,
+                                SongNumber = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
+                                Title = s.Title,
+                                WrittenBy = s.WrittenBy,
+                                CategoryName = c != null ? c.Name : null,
+                                SongBookTitle = sb != null ? sb.Title : null,
+                                AlbumTitle = al != null ? al.Title : null,
+                                ArtistName = ar != null ? ar.Name : null,
+                                Rating = s.Rating,
+                                CreatedBy = s.CreatedBy,
+                            };
+
+                var page = await query.ToPaginatedResultAsync(offset, limit);
+
+                return ServiceResult<PaginationDetails<SongListItemDto>>.Success(page);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetSongListAsync");
+                return ServiceResult<PaginationDetails<SongListItemDto>>.Failure(ex);
+            }
+        }
+
+        public async Task<ServiceResult<PaginationDetails<SongListItemDto>>> SearchSongListAsync(string? keywords, int offset, int limit)
+        {
+            try
+            {
+                limit = limit <= 0 ? 10 : limit;
+
+                var baseQuery = _context.Songs.AsQueryable();
+
+                if (!string.IsNullOrWhiteSpace(keywords))
+                {
+                    var kw = keywords.Trim();
+                    if (int.TryParse(kw, out var songNumber))
+                    {
+                        baseQuery = baseQuery.Where(s =>
+                            (s.SongNumber ?? 0) == songNumber ||
+                            EF.Functions.Like(s.Title, $"%{kw}%") ||
+                            (s.Slug != null && EF.Functions.Like(s.Slug, $"%{kw}%")));
+                    }
+                    else
+                    {
+                        baseQuery = baseQuery.Where(s =>
+                            EF.Functions.Like(s.Title, $"%{kw}%") ||
+                            (s.Slug != null && EF.Functions.Like(s.Slug, $"%{kw}%")));
+                    }
+                }
+
+                var query = from s in baseQuery
+                            join c in _context.Categories on s.CategoryId equals c.Id into cg
+                            from c in cg.DefaultIfEmpty()
+                            join sb in _context.SongBooks on s.SongBookId equals sb.Id into sbg
+                            from sb in sbg.DefaultIfEmpty()
+                            join al in _context.Albums on s.AlbumId equals al.Id into alg
+                            from al in alg.DefaultIfEmpty()
+                            join ar in _context.Artists on s.ArtistId equals ar.Id into arg
+                            from ar in arg.DefaultIfEmpty()
+                            orderby s.SongNumber, s.Rating descending
+                            select new SongListItemDto
+                            {
+                                Id = s.Id,
+                                SongNumber = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
+                                Title = s.Title,
+                                WrittenBy = s.WrittenBy,
+                                CategoryName = c != null ? c.Name : null,
+                                SongBookTitle = sb != null ? sb.Title : null,
+                                AlbumTitle = al != null ? al.Title : null,
+                                ArtistName = ar != null ? ar.Name : null,
+                                Rating = s.Rating,
+                                CreatedBy = s.CreatedBy,
+                            };
+
+                var page = await query.ToPaginatedResultAsync(offset, limit);
+
+                return ServiceResult<PaginationDetails<SongListItemDto>>.Success(page);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in SearchSongListAsync");
+                return ServiceResult<PaginationDetails<SongListItemDto>>.Failure(ex);
+            }
+        }
+
+        public async Task<ServiceResult<PaginationDetails<SongListItemDto>>> GetFavoriteSongListAsync(string? userId = null, int? offset = 0, int? limit = 10)
+        {
+            try
+            {
+                userId ??= _userId;
+                if (string.IsNullOrEmpty(userId))
+                    return ServiceResult<PaginationDetails<SongListItemDto>>.Failure(new BadRequestException("User must be authenticated."));
+
+                offset = Math.Max(0, offset ?? 0);
+                limit = Math.Min(limit ?? 10, 100);
+
+                var query = from f in _context.SongUserFavorites
+                            where f.UserId == userId
+                            join s in _context.Songs on f.SongId equals s.Id
+                            join c in _context.Categories on s.CategoryId equals c.Id into cg
+                            from c in cg.DefaultIfEmpty()
+                            join sb in _context.SongBooks on s.SongBookId equals sb.Id into sbg
+                            from sb in sbg.DefaultIfEmpty()
+                            join al in _context.Albums on s.AlbumId equals al.Id into alg
+                            from al in alg.DefaultIfEmpty()
+                            join ar in _context.Artists on s.ArtistId equals ar.Id into arg
+                            from ar in arg.DefaultIfEmpty()
+                            orderby f.FavoritedAt descending
+                            select new SongListItemDto
+                            {
+                                Id = s.Id,
+                                SongNumber = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
+                                Title = s.Title,
+                                WrittenBy = s.WrittenBy,
+                                CategoryName = c != null ? c.Name : null,
+                                SongBookTitle = sb != null ? sb.Title : null,
+                                AlbumTitle = al != null ? al.Title : null,
+                                ArtistName = ar != null ? ar.Name : null,
+                                Rating = s.Rating,
+                                CreatedBy = s.CreatedBy,
+                            };
+
+                var page = await query.ToPaginatedResultAsync(offset.Value, limit.Value);
+
+                return ServiceResult<PaginationDetails<SongListItemDto>>.Success(page);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetFavoriteSongListAsync");
+                return ServiceResult<PaginationDetails<SongListItemDto>>.Failure(ex);
+            }
+        }
+        #endregion
     }
 }

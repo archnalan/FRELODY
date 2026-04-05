@@ -1,0 +1,9 @@
+@page "/playlists/landing"
+@page "/playlists/landing/{CollectionId}"
+@layout LandingLayout
+
+<SongPlaylist CollectionId="@CollectionId" />
+
+@code {
+    [Parameter] public string? CollectionId { get; set; }
+}

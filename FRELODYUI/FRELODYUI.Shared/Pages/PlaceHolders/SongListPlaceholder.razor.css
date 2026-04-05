@@ -1,0 +1,83 @@
+/* ── Sticky table header ── */
+.slp-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--modal-content-bg);
+    border-bottom: 2px solid var(--border-light);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary, #6b7280);
+}
+
+/* ── Placeholder row ── */
+.slp-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    min-height: 48px;
+    border-bottom: 1px solid var(--border-light);
+    pointer-events: none;
+}
+
+/* Number column */
+.slp-num {
+    flex: 0 0 2.5rem;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary, #6b7280);
+    line-height: 1;
+}
+
+/* Title — takes remaining space */
+.slp-title {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 0.88rem;
+    text-align: left;
+}
+
+/* Meta columns (category, artist) */
+.slp-meta {
+    flex: 0 0 8rem;
+    min-width: 0;
+    font-size: 0.78rem;
+    text-align: left;
+}
+
+/* Rating */
+.slp-rating {
+    flex: 0 0 3.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+}
+
+/* Actions */
+.slp-actions {
+    flex: 0 0 auto;
+    min-width: 2rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 575.98px) {
+    .slp-header,
+    .slp-row {
+        padding: 6px 8px;
+        gap: 6px;
+    }
+
+    .slp-num {
+        flex: 0 0 2rem;
+        font-size: 0.75rem;
+    }
+}

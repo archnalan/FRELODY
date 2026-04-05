@@ -81,6 +81,13 @@
                             }
                         </a>
                     }
+                    else if (!IsAuthenticated)
+                    {
+                        <button class="mon-btn mon-btn--play" type="button" @onclick="PlayPreview">
+                            <i class="bi bi-play-fill"></i>
+                            <span>Play</span>
+                        </button>
+                    }
                     else
                     {
                         <button class="mon-btn mon-btn--save" type="button" @onclick="SaveSong"
@@ -188,6 +195,7 @@
     [Parameter] public bool IsAuthenticated { get; set; }
     [Parameter] public string? PastedText { get; set; }
     [Parameter] public EventCallback OnClearRequested { get; set; }
+    [Parameter] public EventCallback OnPlayPreview { get; set; }
 
     private bool isSaving;
     private bool isRefining;
@@ -316,6 +324,14 @@
                 seg.PartName = seg.PartName == SongSection.unknown ? SongSection.Verse : seg.PartName;
             }
         }
+    }
+
+    private async Task PlayPreview()
+    {
+        if (Song == null) return;
+        PrepareSegments();
+        await _storageService.SetItemAsync("previewSong", Song);
+        await OnPlayPreview.InvokeAsync();
     }
 
     private async Task<string?> PerformSaveSong()

@@ -71,5 +71,14 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Delete("/api/songs/delete-song")]
         Task<IApiResponse<bool>> DeleteSong([Query] string songId);
+
+        [Get("/api/songs/get-song-list")]
+        Task<IApiResponse<PaginationDetails<SongListItemDto>>> GetSongList([Query] int offset, [Query] int limit);
+
+        [Get("/api/songs/search-song-list")]
+        Task<IApiResponse<PaginationDetails<SongListItemDto>>> SearchSongList([Query] string keywords, [Query] int offset, [Query] int limit);
+
+        [Get("/api/songs/get-favorite-song-list")]
+        Task<IApiResponse<PaginationDetails<SongListItemDto>>> GetFavoriteSongList([Query] string? userId = null, [Query] int? offset = 0, [Query] int? limit = 10);
     }
 }

@@ -25,6 +25,8 @@
             </div>
 
             <div class="header-actions">
+                @if (!IsPreview)
+                {
                 <div class="dropdown">
                     <button class="btn btn-primary dropdown-toggle"
                             type="button"
@@ -43,6 +45,7 @@
                                        OnCustomizeSong="(songId) => CustomizeSong(songId)" />
                     </div>
                 </div>
+                }
             </div>
         </div>
 
@@ -406,6 +409,7 @@
 
 @code {
     [Parameter] public string SongId { get; set; } = string.Empty;
+    [Parameter] public bool IsPreview { get; set; }
 
     private SongSearchModal? _songSearchModal;
     private async Task OpenSongSearch() { if (_songSearchModal != null) await _songSearchModal.Open(); }
@@ -505,8 +509,14 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (!string.IsNullOrEmpty(SongId) && SongId != loadedSongId)
+        if (IsPreview && song == null)
+        {
+            await LoadPreviewSong();
+        }
+        else if (!string.IsNullOrEmpty(SongId) && SongId != loadedSongId)
+        {
             await LoadSong();
+        }
 
         var userResult = await _globalAuth.GetAuthenticatedUserAsync();
         if (userResult.IsSuccess && userResult.Data != null)
@@ -898,6 +908,76 @@
         {
             isLoading = false;
             if (isFullscreen) _scrollToTopAfterLoad = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPreviewSong()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var preview = await _storageService.GetItemAsync<SimpleSongCreateDto>("previewSong");
+            if (preview?.SongLyrics == null || !preview.SongLyrics.Any())
+            {
+                ShowErrorMessage("No preview data found. Please go back to Studio and process a song.");
+                return;
+            }
+
+            // Remove from storage so it doesn't leak into unrelated flows
+            await _storageService.RemoveItemAsync("previewSong");
+
+            // Convert SimpleSongCreateDto → SongDto for the player
+            song = new SongDto
+            {
+                Id = "preview",
+                Title = preview.Title ?? "Untitled",
+                SongNumber = preview.SongNumber,
+                SongParts = preview.SongLyrics
+                    .GroupBy(s => new { s.PartNumber, s.PartName })
+                    .OrderBy(g => g.Key.PartNumber)
+                    .Select(partGroup => new SongPartDto
+                    {
+                        PartNumber = partGroup.Key.PartNumber,
+                        PartName = partGroup.Key.PartName,
+                        LyricLines = partGroup
+                            .GroupBy(s => s.LineNumber)
+                            .OrderBy(lg => lg.Key)
+                            .Select(lineGroup => new LyricLineDto
+                            {
+                                LyricLineOrder = lineGroup.Key,
+                                PartNumber = partGroup.Key.PartNumber,
+                                LyricSegments = lineGroup
+                                    .OrderBy(s => s.LyricOrder)
+                                    .Select(seg => new LyricSegmentDto
+                                    {
+                                        Lyric = seg.Lyric,
+                                        LyricOrder = seg.LyricOrder,
+                                        LineNumber = seg.LineNumber,
+                                        ChordId = seg.ChordId,
+                                        ChordAlignment = seg.ChordAlignment,
+                                        Chord = !string.IsNullOrEmpty(seg.ChordName)
+                                            ? new ChordDto { ChordName = seg.ChordName }
+                                            : null
+                                    }).ToList()
+                            }).ToList()
+                    }).ToList()
+            };
+
+            loadedSongId = "preview";
+            InitializeChordScale();
+            ExtractUniqueChords();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading preview song from storage");
+            ShowErrorMessage("Failed to load preview. Please try again from Studio.");
+        }
+        finally
+        {
+            isLoading = false;
             StateHasChanged();
         }
     }

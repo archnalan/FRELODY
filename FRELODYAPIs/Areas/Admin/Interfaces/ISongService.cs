@@ -29,5 +29,8 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<bool>> MarkSongAccessStatus(string songId, Access access);
         Task<ServiceResult<bool>> RenameSong(string songId, string newTitle);
         Task<ServiceResult<bool>> ArchiveSong(string songId);
+        Task<ServiceResult<PaginationDetails<SongListItemDto>>> GetSongListAsync(int offset, int limit);
+        Task<ServiceResult<PaginationDetails<SongListItemDto>>> SearchSongListAsync(string? keywords, int offset, int limit);
+        Task<ServiceResult<PaginationDetails<SongListItemDto>>> GetFavoriteSongListAsync(string? userId = null, int? offset = 0, int? limit = 10);
     }
 }

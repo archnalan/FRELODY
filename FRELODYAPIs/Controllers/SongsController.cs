@@ -235,5 +235,35 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
             return Ok(result.Data);
         }
 
+        [HttpGet]
+        [ProducesResponseType(typeof(PaginationDetails<SongListItemDto>), 200)]
+        public async Task<IActionResult> GetSongList([FromQuery] int offset, [FromQuery] int limit)
+        {
+            var result = await _songService.GetSongListAsync(offset, limit);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            return Ok(result.Data);
+        }
+
+        [HttpGet]
+        [ProducesResponseType(typeof(PaginationDetails<SongListItemDto>), 200)]
+        public async Task<IActionResult> SearchSongList([FromQuery] string? keywords, [FromQuery] int offset, [FromQuery] int limit)
+        {
+            var result = await _songService.SearchSongListAsync(keywords, offset, limit);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            return Ok(result.Data);
+        }
+
+        [HttpGet]
+        [ProducesResponseType(typeof(PaginationDetails<SongListItemDto>), 200)]
+        public async Task<IActionResult> GetFavoriteSongList([FromQuery] string? userId = null, [FromQuery] int? offset = 0, [FromQuery] int? limit = 10)
+        {
+            var result = await _songService.GetFavoriteSongListAsync(userId, offset, limit);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            return Ok(result.Data);
+        }
+
     }
 }

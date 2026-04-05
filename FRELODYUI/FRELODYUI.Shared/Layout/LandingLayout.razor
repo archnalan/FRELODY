@@ -2,145 +2,130 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 
-<div class="landing-container d-flex flex-column vh-100">
+<div class="app-shell d-flex flex-column vh-100">
     <!-- Header -->
-    <header class="landing-header bg-primary sticky-top border-bottom shadow-sm">
-            <nav class="navbar navbar-expand-lg px-3 px-lg-5" data-bs-theme="light">
-                <div class="container-fluid">
-                    <!-- Brand -->
-                    <a class="navbar-brand fw-bold fs-4" href="/">
-                        <span class="text-secondary me-1">FRE</span><span class="text-warning">LODY</span>
-                    </a>
+    <header class="app-header sticky-top">
+        <div class="app-header-inner">
 
-                    <!-- Mobile Toggle -->
-                    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" 
-                            data-bs-target="#navbarContent" aria-controls="navbarContent" 
-                            aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
+            <!-- LEFT -->
+            <div class="left-group">
+                <button class="icon-btn d-lg-none" @onclick="ToggleDrawer" aria-label="Toggle menu">
+                    <i class="bi bi-list"></i>
+                </button>
 
-                    <!-- Navbar Content -->
-                    <div class="collapse navbar-collapse" id="navbarContent">
-                        <div class="d-none d-lg-flex justify-content-center flex-grow-1 mx-4">
-                            <div class="search-trigger" @onclick="OpenSearchModal">
-                                <div class="trigger-input-wrapper" style="max-width: 750px; cursor: pointer;">
-                                    <i class="bi bi-search text-muted trigger-icon"></i>
-                                    <input type="text"
-                                           class="trigger-input"
-                                           placeholder="Search songs..."
-                                           readonly />
-                                <span class="trigger-kbd">
-                                        <kbd class="small p-1">Ctrl+K</kbd>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Right Side Actions -->
-                        <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
-                            <!--Pricing-->
-                            <a class="btn btn-link text-decoration-none p-2"
-                               href="/pricing"
-                               title="View Pricing">
-                                <i class="bi bi-tag-fill fs-5"></i>
-                            </a>
-                            <!-- Theme Toggle -->
-                            <span class="btn btn-link text-decoration-none p-2" 
-                                    @onclick="ToggleTheme"
-                                    title="Toggle theme">
-                                @if (isDarkTheme)
-                                {
-                                    <i class="bi bi-sun-fill fs-5"></i>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-moon-fill fs-5"></i>
-                                }
-                            </span>
+                <a class="brand" href="/">
+                    <span class="brand-fre">FRE</span><span class="brand-lody">LODY</span>
+                </a>
+            </div>
 
-                            <!-- User Profile or Sign In -->
-                            <CascadingAuthenticationState>
-                                <AuthorizeView>
-                                    <Authorized>
-                                        @{
-                                            var firstName = context.User.FindFirst("FirstName")?.Value;
-                                            var lastName = context.User.FindFirst("LastName")?.Value;
-                                            var userId = context.User.FindFirst("UserId")?.Value;
-                                            //var fullName = $"{firstName} {lastName}";
-                                            var displayName = firstName?.Length > 7 ? firstName.Substring(0, 7) + "..." : firstName;
-                                        }
-                                        <div class="dropdown">
-                                            <button class="btn btn-secondary dropdown-toggle d-flex align-items-center" 
-                                                    type="button" 
-                                                    data-bs-toggle="dropdown" 
-                                                    aria-expanded="false">
-                                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2" 
-                                                     style="width: 32px; height: 32px;">
-                                                    <span class="text-secondary fw-bold" style="font-size: 0.875rem;">
-                                                        @(firstName?.FirstOrDefault())@(lastName?.FirstOrDefault())
-                                                    </span>
-                                                </div>
-                                                <span class="d-none d-md-inline">@displayName</span>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                <li>
-                                                    <a class="dropdown-item" href="/user-profile/@userId">
-                                                        <i class="bi bi-person me-2"></i>View Profile
-                                                    </a>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="dropdown-item" href="/studio">
-                                                    <i class="bi bi-easel me-2"></i>Chord Flow
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="/dashboard">
-                                                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                <a class="dropdown-item" href="/playlists">
-                                                    <i class="bi bi-music-note-list me-2"></i>Playlists
-                                                    </a>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <button class="dropdown-item text-danger" @onclick="LogoutUser">
-                                                        <i class="bi bi-box-arrow-right me-2"></i>Log out
-                                                    </button>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </Authorized>
-                                    <NotAuthorized>
-                                        <!-- Sign In Button -->
-                                        <button class="btn btn-secondary px-4" @onclick="NavigateToLogin">
-                                            Sign In
-                                        </button>
-                                    </NotAuthorized>
-                                </AuthorizeView>
-                            </CascadingAuthenticationState>
-                        </div>
-                    </div>
-                </div>
+            <!-- CENTER (DESKTOP NAV LINKS) -->
+            <nav class="center-nav d-none d-lg-flex">
+                <a href="/" class="@NavActive("/")">Songs</a>
+                <a href="/studio/landing" class="@NavActive("/studio/landing")">Studio</a>
+                <a href="/pricing" class="@NavActive("/pricing")">Pricing</a>
+                <a href="/playlists/landing" class="@NavActive("/playlists/landing")">Playlists</a>
             </nav>
 
-        <!-- Mobile Search -->
-        <div class="d-lg-none px-3 pb-3">
-            <div class="trigger-input-wrapper" style="cursor: pointer;">
-                <i class="bi bi-search text-muted trigger-icon"></i>
-                <input type="text" 
-                       class="trigger-input"
-                       placeholder="Search songs..."
-                       @bind-value="searchQuery"
-                       @bind-value:event="oninput"
-                       @bind-value:after="OnSearchInput" />
+            <!-- RIGHT -->
+            <div class="right-group">
+                <button class="search-trigger" @onclick="OpenSearchModal" aria-label="Search">
+                    <kbd class="search-kbd d-none d-lg-inline">Ctrl+K</kbd>
+                    <i class="bi bi-search"></i>
+                </button>
+
+                <button class="icon-btn" @onclick="ToggleTheme" aria-label="Toggle theme">
+                    <i class="bi @(isDarkTheme ? "bi-sun-fill" : "bi-moon-fill")"></i>
+                </button>
+
+                <CascadingAuthenticationState>
+                    <AuthorizeView>
+                        <Authorized>
+                            @{
+                                var firstName = context.User.FindFirst("FirstName")?.Value;
+                                var lastName = context.User.FindFirst("LastName")?.Value;
+                                var userId = context.User.FindFirst("UserId")?.Value;
+                            }
+                            <div class="dropdown">
+                                <button class="user-avatar" type="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span>@(firstName?.FirstOrDefault())@(lastName?.FirstOrDefault())</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="/user-profile/@userId">
+                                            <i class="bi bi-person me-2"></i>View Profile
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="/studio/landing">
+                                            <i class="bi bi-easel me-2"></i>Chord Flow
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="/dashboard">
+                                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="/playlists/landing">
+                                            <i class="bi bi-music-note-list me-2"></i>Playlists
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <button class="dropdown-item text-danger" @onclick="LogoutUser">
+                                            <i class="bi bi-box-arrow-right me-2"></i>Log out
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </Authorized>
+                        <NotAuthorized>
+                            <button class="icon-btn signin-btn" @onclick="NavigateToLogin" aria-label="Sign in">
+                                <i class="bi bi-person-circle"></i>
+                            </button>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </CascadingAuthenticationState>
             </div>
+
         </div>
     </header>
 
+    <!-- Mobile Drawer -->
+    <div class="app-drawer @(isDrawerOpen ? "open" : "")" @onclick:stopPropagation>
+        <div class="drawer-header">
+            <a class="brand" href="/">
+                <span class="brand-fre">FRE</span><span class="brand-lody">LODY</span>
+            </a>
+            <button class="icon-btn" @onclick="CloseDrawer" aria-label="Close menu">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <nav class="drawer-nav">
+            <a href="/" class="@NavActive("/")" @onclick="CloseDrawer">
+                <i class="bi bi-music-note-beamed me-2"></i>Songs
+            </a>
+            <a href="/studio/landing" class="@NavActive("/studio/landing")" @onclick="CloseDrawer">
+                <i class="bi bi-easel me-2"></i>Studio
+            </a>
+            <a href="/pricing" class="@NavActive("/pricing")" @onclick="CloseDrawer">
+                <i class="bi bi-tag me-2"></i>Pricing
+            </a>
+            <a href="/playlists/landing" class="@NavActive("/playlists/landing")" @onclick="CloseDrawer">
+                <i class="bi bi-music-note-list me-2"></i>Playlists
+            </a>
+        </nav>
+    </div>
+
+    @if (isDrawerOpen)
+    {
+        <div class="drawer-backdrop show" @onclick="CloseDrawer"></div>
+    }
+
     <!-- Body Content (Scrollable) -->
-    <main class="position-relative landing-body flex-grow-1 overflow-auto">
+    <main class="app-body flex-grow-1 overflow-auto">
         <GlobalErrorBoundary @ref="errorBoundaryRef">
             <ChildContent>
                 @Body
@@ -163,16 +148,15 @@
     </main>
 
     <!-- Footer -->
-    <footer class="landing-footer border-top py-2">
+    <footer class="app-footer py-2">
         <div class="container-fluid px-4">
             <div class="row gy-2">
-                <!-- Brand & Description -->
                 <div class="col-12 col-md-6">
                     <p class="text-center small mb-0 d-none d-md-block">
                         Your ultimate music companion. Explore, play, and share songs with ease.
                     </p>
                 </div>
-                <div class="col-12 col-md-6 ">
+                <div class="col-12 col-md-6">
                     <p class="text-center small mb-0">
                         &copy; @DateTime.Now.Year FRELODY. All rights reserved.
                     </p>
@@ -180,9 +164,6 @@
             </div>
         </div>
     </footer>
-
-    <!-- Chat Bubble -->
-    @* <FRELODYUI.Shared.Components.ChatBubble /> *@
 </div>
 
 <!-- Global Toast -->
@@ -205,13 +186,12 @@
              OnResultSelected="HandleResultSelected" />
 @code {
     private GlobalErrorBoundary errorBoundaryRef = default!;
-    private string searchQuery = string.Empty;
     private bool isDarkTheme = false;
+    private bool isDrawerOpen = false;
     private SearchModal? searchModalRef = default!;
 
     protected override async Task OnInitializedAsync()
     {
-        // Load theme preference
         var theme = await _storageService.GetItemAsync<string>("Theme");
         isDarkTheme = theme == "dark";
 
@@ -221,6 +201,7 @@
         }
 
         _toastService.OnToast += OnToastChanged;
+        _navManager.LocationChanged += OnLocationChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -228,18 +209,12 @@
         if (firstRender)
         {
             await JsRt.InvokeVoidAsync("setupSearchShortcut");
-            // var sessionModel = await _localStorage.GetItemAsync<LoginResponseDto>("sessionState");
-            // if (sessionModel == null)
-            // {
-            //     await _globalAuth.MarkUserAsLoggedOutAsync();
-            //     _navManager.NavigateTo("/login", replace: true);
-            // }
         }
     }
 
     private async Task HandleSearch()
     {
-        await OnSearchInput();
+        await Task.CompletedTask;
     }
 
     private async Task HandleResultSelected(SearchResult songResult)
@@ -255,10 +230,9 @@
             await searchModalRef.Open();
         }
     }
-    private async Task OnSearchInput()
-    {
-        await _heroDataService.UpdateSearchQuery(searchQuery);
-    }
+
+    private void ToggleDrawer() => isDrawerOpen = !isDrawerOpen;
+    private void CloseDrawer() => isDrawerOpen = false;
 
     private async Task ToggleTheme()
     {
@@ -270,7 +244,7 @@
 
     private async Task ApplyTheme(string theme)
     {
-        await JsRt.InvokeVoidAsync("eval", 
+        await JsRt.InvokeVoidAsync("eval",
             $"document.documentElement.setAttribute('data-bs-theme', '{theme}')");
     }
 
@@ -316,9 +290,27 @@
     private string GenerateErrorId() =>
         $"ERR-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
-    public void Dispose() => _toastService.OnToast -= OnToastChanged;
+    public void Dispose()
+    {
+        _toastService.OnToast -= OnToastChanged;
+        _navManager.LocationChanged -= OnLocationChanged;
+    }
 
     private void OnToastChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => InvokeAsync(StateHasChanged);
+
+    private string NavActive(string href)
+    {
+        var relativePath = _navManager.ToBaseRelativePath(_navManager.Uri);
+        var path = "/" + relativePath.Split('?')[0].Split('#')[0].TrimEnd('/');
+
+        if (href == "/")
+            return path == "/" || path.StartsWith("/songs") ? "active" : "";
+
+        return path.StartsWith(href, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    }
 
     private string ToastBsClass() => _toastService.Type switch
     {

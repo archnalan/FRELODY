@@ -1,8 +1,12 @@
 ﻿@page "/songs/{SongId}"
+@page "/songs/preview"
 @layout MainLayout
 
-<Song SongId="@SongId"/>
+<Song SongId="@SongId" IsPreview="@IsPreview" />
 
 @code {
     [Parameter] public string SongId { get; set; } = string.Empty;
+
+    private bool IsPreview => string.IsNullOrEmpty(SongId)
+        && _navManager.Uri.Contains("/preview", StringComparison.OrdinalIgnoreCase);
 }

@@ -4,7 +4,7 @@
 @inject ILogger<SongLibrary> _logger
 @implements IDisposable
 
-<div class="container-fluid vh-100" style="max-width:55rem;justify-self:center">
+<div class="container-fluid vh-100 song-library-page" style="max-width:55rem;justify-self:center">
     <div class="container text-center mt-3" >
         @if (ShowSearch)
         {
@@ -60,99 +60,78 @@
             </div>
         }
         
-        <div class="view-mode-container d-flex flex-column justify-content-center align-items-center flex-md-row gap-2 p-2 mb-2 border">
-            <div class="d-flex align-items-center bg-light border rounded rounded-3 gap-3 p-2 shadow">
-                <button class="btn @(viewMode == ViewMode.All ? "btn-outline-primary" : "btn-outline-secondary")"
-                        data-bs-toggle="tooltip"
-                        title="View All Songs"
-                        @onclick="() => SetViewMode(ViewMode.All)" style="width:3.5rem">
-                    @if (viewMode == ViewMode.All)
-                    {
-                        <i class="bi bi-collection-play-fill"></i>
-                    }
-                    else
-                    {
-                        <i class="bi bi-collection-play"></i>
-                    }
+        <!-- Layout toggle pill (mobile: inline, desktop: merged into bar) -->
+        <div class="layout-pill">
+            <button class="lp-btn @(activeView == ActiveView.Expanded ? "active" : "")"
+                    @onclick="() => SetActiveView(ActiveView.Expanded)" aria-label="List view">
+                <i class="bi @(activeView == ActiveView.Expanded ? "bi-list" : "bi-list-task")"></i>
+                <span class="lp-label">List</span>
+            </button>
+            <button class="lp-btn @(activeView == ActiveView.Collapsed ? "active" : "")"
+                    @onclick="() => SetActiveView(ActiveView.Collapsed)" aria-label="Grid view">
+                <i class="bi @(activeView == ActiveView.Collapsed ? "bi-grid-fill" : "bi-grid")"></i>
+                <span class="lp-label">Grid</span>
+            </button>
+            @if (selectedSongIds.Any())
+            {
+                <button class="lp-btn lp-btn-add"
+                        @onclick="HandleCollectionAdd" aria-label="Add to collection">
+                    <i class="bi bi-folder-plus"></i>
+                    <span class="lp-label">Add</span>
                 </button>
-                <button class="btn @(viewMode == ViewMode.Catalogue ? "btn-outline-primary" : "btn-outline-secondary")"
-                        data-bs-toggle="tooltip"
-                        title="View by Catalogue"
-                        @onclick="() => SetViewMode(ViewMode.Catalogue)" 
-                        style="width:3.5rem"
+            }
+        </div>
+
+        <!-- Primary view mode tabs (mobile: bottom bar, desktop: sticky bar) -->
+        <div class="view-mode-container">
+            <button class="vm-btn @(viewMode == ViewMode.All ? "active" : "")"
+                    @onclick="() => SetViewMode(ViewMode.All)">
+                <i class="bi @(viewMode == ViewMode.All ? "bi-collection-play-fill" : "bi-collection-play")"></i>
+                <span class="vm-label">All</span>
+            </button>
+            <button class="vm-btn @(viewMode == ViewMode.Catalogue ? "active" : "")"
+                    @onclick="() => SetViewMode(ViewMode.Catalogue)"
+                    disabled="@isInSelectionMode">
+                <i class="bi @(viewMode == ViewMode.Catalogue ? "bi-journals" : "bi-journal")"></i>
+                <span class="vm-label">Catalogue</span>
+            </button>
+            @if (!string.IsNullOrEmpty(currentUserId))
+            {
+                <button class="vm-btn @(viewMode == ViewMode.Favorites ? "active" : "")"
+                        @onclick="() => SetViewMode(ViewMode.Favorites)"
                         disabled="@isInSelectionMode">
-                    @if (viewMode == ViewMode.Catalogue)
-                    {
-                        <i class="bi bi-journals"></i>
-                    }
-                    else
-                    {
-                        <i class="bi bi-journal"></i>
-                    }
+                    <i class="bi @(viewMode == ViewMode.Favorites ? "bi-heart-fill" : "bi-heart")"></i>
+                    <span class="vm-label">Favorites</span>
                 </button>
-                @if (!string.IsNullOrEmpty(currentUserId))
-                {
-                    <button class="btn @(viewMode == ViewMode.Favorites ? "btn-outline-primary" : "btn-outline-secondary")"
-                    data-bs-toggle="tooltip"
-                    title="View Favorites"
-                    @onclick="() => SetViewMode(ViewMode.Favorites)" style="width:3.5rem"
-                    disabled="@isInSelectionMode">                        
-                        @if (viewMode == ViewMode.Favorites)
-                        {
-                            <i class="bi bi-heart-fill"></i>
-                        }
-                        else
-                        {
-                            <i class="bi bi-heart"></i>
-                        }
-                    </button>
-                    <button class="btn @(viewMode == ViewMode.Playlists ? "btn-outline-primary" : "btn-outline-secondary")"
-                        data-bs-toggle="tooltip"
-                        title="View Playlists"
-                        @onclick="() => SetViewMode(ViewMode.Playlists)" style="width:3.5rem" 
+                <button class="vm-btn @(viewMode == ViewMode.Playlists ? "active" : "")"
+                        @onclick="() => SetViewMode(ViewMode.Playlists)"
                         disabled="@isInSelectionMode">
-                        <i class="bi bi-music-note-list"></i>
-                    </button>
-                }
-            </div>
-            <div class="d-flex align-items-center bg-light border rounded rounded-3 gap-3 p-2 shadow">
-                <button class="btn @(activeView == ActiveView.Expanded ? "btn-outline-primary" : "btn-outline-secondary")"
-                        data-bs-toggle="tooltip"
-                        title="Expanded View"
-                        @onclick="() => SetActiveView(ActiveView.Expanded)" style="width:3.5rem">
-                    @if (activeView == ActiveView.Expanded)
-                    {
-                        <i class="bi bi-list"></i>
-                    }
-                    else
-                    {
-                        <i class="bi bi-list-task"></i>
-                    }
+                    <i class="bi bi-music-note-list"></i>
+                    <span class="vm-label">Playlists</span>
                 </button>
-                <button class="btn @(activeView == ActiveView.Collapsed ? "btn-outline-primary" : "btn-outline-secondary")"
-                        data-bs-toggle="tooltip"
-                        title="Collapsed View"
-                        @onclick="() => SetActiveView(ActiveView.Collapsed)" style="width:3.5rem">
-                    @if (activeView == ActiveView.Collapsed)
-                    {
-                        <i class="bi bi-grid-fill"></i>
-                    }
-                    else
-                    {
-                        <i class="bi bi-grid"></i>
-                    }
+            }
+
+            <!-- Desktop-only: layout toggle inline in the bar -->
+            <span class="vm-divider d-none d-md-block"></span>
+
+            <button class="vm-btn d-none d-md-flex @(activeView == ActiveView.Expanded ? "active" : "")"
+                    @onclick="() => SetActiveView(ActiveView.Expanded)">
+                <i class="bi @(activeView == ActiveView.Expanded ? "bi-list" : "bi-list-task")"></i>
+                <span class="vm-label">List</span>
+            </button>
+            <button class="vm-btn d-none d-md-flex @(activeView == ActiveView.Collapsed ? "active" : "")"
+                    @onclick="() => SetActiveView(ActiveView.Collapsed)">
+                <i class="bi @(activeView == ActiveView.Collapsed ? "bi-grid-fill" : "bi-grid")"></i>
+                <span class="vm-label">Grid</span>
+            </button>
+            @if (selectedSongIds.Any())
+            {
+                <button class="vm-btn vm-btn-add d-none d-md-flex"
+                        @onclick="HandleCollectionAdd">
+                    <i class="bi bi-folder-plus"></i>
+                    <span class="vm-label">Add</span>
                 </button>
-                @if (selectedSongIds.Any())
-                {
-                    <button class="btn btn-outline-success"
-                            data-bs-toggle="tooltip"
-                            title="Add to Collection"
-                            @onclick="HandleCollectionAdd"
-                            style="width:3.5rem">
-                        <i class="bi bi-folder-plus"></i>
-                    </button>
-                }
-            </div>
+            }
         </div>
 
         @if (_isInitializing)
