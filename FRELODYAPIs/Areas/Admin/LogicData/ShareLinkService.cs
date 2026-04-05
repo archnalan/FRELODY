@@ -5,6 +5,7 @@ using FRELODYAPP.Dtos;
 using FRELODYLIB.Models;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Dtos;
+using FRELODYUI.Shared.Models.PlaylistModels;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -29,28 +30,51 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         {
             try
             {
-                // Validate that the song exists
-                var songExists = await _context.Songs.AnyAsync(s => s.Id == request.SongId);
-                if (!songExists)
+                bool isSongLink = !string.IsNullOrEmpty(request.SongId);
+                bool isPlaylistLink = !string.IsNullOrEmpty(request.PlaylistId);
+
+                if (!isSongLink && !isPlaylistLink)
                 {
-                    return ServiceResult<ShareLinkDto>.Failure(new KeyNotFoundException("Song not found"));
+                    return ServiceResult<ShareLinkDto>.Failure(new ArgumentException("Either SongId or PlaylistId must be provided"));
                 }
 
-                // 1. Try to find an existing active, non-expired share link for this song
+                // Validate that the referenced entity exists
+                if (isSongLink)
+                {
+                    var songExists = await _context.Songs.AnyAsync(s => s.Id == request.SongId);
+                    if (!songExists)
+                        return ServiceResult<ShareLinkDto>.Failure(new KeyNotFoundException("Song not found"));
+                }
+
+                if (isPlaylistLink)
+                {
+                    var playlistExists = await _context.Playlists.AnyAsync(p => p.Id == request.PlaylistId);
+                    if (!playlistExists)
+                        return ServiceResult<ShareLinkDto>.Failure(new KeyNotFoundException("Playlist not found"));
+                }
+
+                // 1. Try to find an existing active, non-expired share link
                 var now = DateTime.UtcNow;
-                var existing = await _context
-                    .ShareLinks
-                    .Where(sl =>
-                        sl.SongId != null && sl.SongId == request.SongId &&
-                        (!sl.ExpiresAt.HasValue || sl.ExpiresAt > now))
+                var query = _context.ShareLinks
+                    .Where(sl => !sl.ExpiresAt.HasValue || sl.ExpiresAt > now);
+
+                if (isSongLink)
+                    query = query.Where(sl => sl.SongId != null && sl.SongId == request.SongId && sl.PlaylistId == null);
+                else
+                    query = query.Where(sl => sl.PlaylistId != null && sl.PlaylistId == request.PlaylistId);
+
+                var existing = await query
                     .OrderByDescending(sl => sl.CreatedAt)
                     .FirstOrDefaultAsync();
 
                 if (existing is not null)
                 {
                     var existingDto = existing.Adapt<ShareLinkDto>();
-                    existingDto.ShareUrl = $"{baseUrl}/shared/{existing.ShareToken}";
-                    _logger.LogInformation("Returned existing share link (Id: {Id}) for song {SongId}", existing.Id, request.SongId);
+                    existingDto.ShareUrl = isSongLink
+                        ? $"{baseUrl}/shared/{existing.ShareToken}"
+                        : $"{baseUrl}/shared/playlist/{existing.ShareToken}";
+                    _logger.LogInformation("Returned existing share link (Id: {Id}) for {Type} {EntityId}",
+                        existing.Id, isSongLink ? "song" : "playlist", isSongLink ? request.SongId : request.PlaylistId);
                     return ServiceResult<ShareLinkDto>.Success(existingDto);
                 }
 
@@ -64,7 +88,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 var shareLink = new ShareLink
                 {
                     Id = Guid.NewGuid().ToString(),
-                    SongId = request.SongId,
+                    SongId = isSongLink ? request.SongId : null,
+                    PlaylistId = isPlaylistLink ? request.PlaylistId : null,
                     ShareToken = shareToken,
                     CreatedAt = now,
                     ExpiresAt = expiresAt,
@@ -75,19 +100,20 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 await _context.SaveChangesAsync();
 
                 var shareLinkDto = shareLink.Adapt<ShareLinkDto>();
-                shareLinkDto.ShareUrl = $"{baseUrl}/shared/{shareToken}";
+                shareLinkDto.ShareUrl = isSongLink
+                    ? $"{baseUrl}/shared/{shareToken}"
+                    : $"{baseUrl}/shared/playlist/{shareToken}";
 
-                _logger.LogInformation("New share link generated for song {SongId} with token {ShareToken}", request.SongId, shareToken);
+                _logger.LogInformation("New share link generated for {Type} {EntityId} with token {ShareToken}",
+                    isSongLink ? "song" : "playlist", isSongLink ? request.SongId : request.PlaylistId, shareToken);
 
                 return ServiceResult<ShareLinkDto>.Success(shareLinkDto);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error generating (or retrieving) share link for song {SongId}", request.SongId);
+                _logger.LogError(ex, "Error generating (or retrieving) share link for request {@Request}", request);
                 return ServiceResult<ShareLinkDto>.Failure(new Exception("An error occurred while generating the share link"));
             }
-
-
         }
 
         public async Task<ServiceResult<SongDto>> GetSharedSong([Required] string shareToken)
@@ -158,6 +184,72 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError(ex, "Error revoking share link for token {ShareToken}", shareToken);
                 return ServiceResult<bool>.Failure(new Exception("An error occurred while revoking the share link"));
+            }
+        }
+
+        public async Task<ServiceResult<PlaylistSongs>> GetSharedPlaylist([Required] string shareToken)
+        {
+            try
+            {
+                var shareLink = await _context.ShareLinks
+                    .FirstOrDefaultAsync(sl => sl.ShareToken == shareToken);
+
+                if (shareLink == null)
+                {
+                    return ServiceResult<PlaylistSongs>.Failure(new KeyNotFoundException("Share link not found"));
+                }
+
+                if (shareLink.ExpiresAt.HasValue && shareLink.ExpiresAt.Value < DateTime.UtcNow)
+                {
+                    return ServiceResult<PlaylistSongs>.Failure(new UnauthorizedAccessException("Share link has expired"));
+                }
+
+                if (string.IsNullOrEmpty(shareLink.PlaylistId))
+                {
+                    return ServiceResult<PlaylistSongs>.Failure(new ArgumentException("This share link is not for a playlist"));
+                }
+
+                var playlist = await _context.Playlists
+                    .FirstOrDefaultAsync(p => p.Id == shareLink.PlaylistId);
+
+                if (playlist == null)
+                {
+                    _logger.LogWarning("Playlist {PlaylistId} not found for share token {ShareToken}",
+                        shareLink.PlaylistId, shareToken);
+                    return ServiceResult<PlaylistSongs>.Failure(new KeyNotFoundException("Playlist not found"));
+                }
+
+                var userPlaylist = await _context.SongUserPlaylists
+                    .Where(sc => sc.PlaylistId == shareLink.PlaylistId)
+                    .Include(sc => sc.Song)
+                    .OrderBy(sc => sc.SortOrder)
+                    .ToListAsync();
+
+                var playlistSongs = new PlaylistSongs
+                {
+                    Playlist = playlist.Adapt<PlaylistDto>(),
+                    Songs = userPlaylist
+                        .Where(uc => uc.Song != null)
+                        .Select(uc => new PlaylistSongDto
+                    {
+                        Id = uc.Song!.Id,
+                        Title = uc.Song.Title,
+                        SongNumber = uc.Song.SongNumber,
+                        WrittenBy = uc.Song.WrittenBy,
+                        SortOrder = uc.SortOrder,
+                        DateScheduled = uc.DateScheduled
+                    }).ToList()
+                };
+
+                _logger.LogInformation("Shared playlist {PlaylistId} accessed via token {ShareToken}",
+                    playlist.Id, shareToken);
+
+                return ServiceResult<PlaylistSongs>.Success(playlistSongs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving shared playlist for token {ShareToken}", shareToken);
+                return ServiceResult<PlaylistSongs>.Failure(new Exception("An error occurred while retrieving the shared playlist"));
             }
         }
 

@@ -195,6 +195,7 @@ else
 
 @code {
     [Parameter] public ActiveView ViewStyle { get; set; }
+    [Parameter]public ViewMode ViewMode { get; set; }
     [Parameter] public EventCallback<string> OnSongLongPress { get; set; }
     [Parameter] public EventCallback OnSelectionModeChanged { get; set; }
     [Parameter] public EventCallback OnAuthenticationRequired { get; set; }
@@ -438,16 +439,18 @@ else
             StateHasChanged();
             // Log the song play from list (fire and forget)
             _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await _playHistoryApi.LogSongPlay(songId, "SongList");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to log song play from list for song {SongId}", songId);
-                }
-            });
+          {
+              try
+              {
+                  await _storageService.SetItemAsync("ActiveView", ViewStyle);
+                  await _storageService.SetItemAsync("ViewMode", ViewMode);
+                  await _playHistoryApi.LogSongPlay(songId, "SongList");
+              }
+              catch (Exception ex)
+              {
+                  _logger.LogWarning(ex, "Failed to log song play from list for song {SongId}", songId);
+              }
+          });
             if (IsFromLanding)
             {
                 _navManager.NavigateTo($"/songs/landing/{songId}");

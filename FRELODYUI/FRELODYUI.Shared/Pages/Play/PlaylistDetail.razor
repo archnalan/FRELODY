@@ -24,41 +24,44 @@
                             <i class="bi bi-chevron-left"></i>
                         </button>
                     </div>
-                    <h3 class="mb-0">@playlistCollection.Playlist.Title</h3>
+                    <h3 class="mb-0" style="color: var(--text-primary)">@playlistCollection.Playlist.Title</h3>
                 </div>
                 
-                <!-- Actions Dropdown -->
-                <div class="dropdown">
-                    <button class="btn btn-outline-primary dropdown-toggle" 
-                            type="button" 
-                            data-bs-toggle="dropdown" 
-                            aria-expanded="false">
-                            More
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                            <button class="dropdown-item" @onclick="EditPlaylist">
-                                <i class="bi bi-pencil me-2"></i>Edit Playlist
-                            </button>
-                        </li>
-                        <li>
-                            <button class="dropdown-item" @onclick="SharePlaylist">
-                                <i class="bi bi-share me-2"></i>Share Playlist
-                            </button>
-                        </li>
-                        <li>
-                            <button class="dropdown-item" @onclick="AddSongToPlaylist">
-                                <i class="bi bi-plus-circle me-2"></i>Add Song
-                            </button>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <button class="dropdown-item text-danger" @onclick="DeletePlaylist">
-                                <i class="bi bi-trash me-2"></i>Delete Playlist
-                            </button>
-                        </li>
-                    </ul>
-                </div>
+                @if (ShowActions)
+                {
+                    <!-- Actions Dropdown (only for authenticated owners) -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-primary dropdown-toggle" 
+                                type="button" 
+                                data-bs-toggle="dropdown" 
+                                aria-expanded="false">
+                                More
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <button class="dropdown-item" @onclick="EditPlaylist">
+                                    <i class="bi bi-pencil me-2"></i>Edit Playlist
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item" @onclick="SharePlaylist">
+                                    <i class="bi bi-share me-2"></i>Share Playlist
+                                </button>
+                            </li>
+                            <li>
+                                <button class="dropdown-item" @onclick="AddSongToPlaylist">
+                                    <i class="bi bi-plus-circle me-2"></i>Add Song
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button class="dropdown-item text-danger" @onclick="DeletePlaylist">
+                                    <i class="bi bi-trash me-2"></i>Delete Playlist
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                }
             </div>
 
             <!-- Playlist Information Card -->
@@ -132,6 +135,7 @@
                     {
                         <div class="mb-2 border-bottom">
                             <PlaylistSongItem Song="song"
+                                            ShowActionBtns="ShowActions"
                                             OnRemove="() => RemoveSongFromPlaylist(song.Id)"
                                             OnShare="() => ShareSong(song.Id)"/>
                         </div>
@@ -142,8 +146,8 @@
             {
                 <!-- No Search Results -->
                 <div class="text-center my-5 p-5">
-                    <i class="bi bi-search fs-1 text-muted"></i>
-                    <h5 class="mt-3">No songs match "@searchQuery"</h5>
+                    <i class="bi bi-search fs-1" style="color: var(--text-muted)"></i>
+                    <h5 class="mt-3" style="color: var(--text-primary)">No songs match "@searchQuery"</h5>
                     <button class="btn btn-primary mt-3" @onclick="ClearSearch">
                         Clear Search
                     </button>
@@ -153,12 +157,19 @@
             {
                 <!-- Empty Playlist State -->
                 <div class="text-center my-5 p-5">
-                    <i class="bi bi-music-note fs-1 text-muted"></i>
-                    <h5 class="mt-3">No Songs Yet</h5>
-                    <p class="text-muted">Add songs to this playlist to get started</p>
-                    <button class="btn btn-primary mt-3" @onclick="AddSongToPlaylist">
-                        <i class="bi bi-plus-circle me-2"></i>Add Song
-                    </button>
+                    <i class="bi bi-music-note fs-1" style="color: var(--text-muted)"></i>
+                    <h5 class="mt-3" style="color: var(--text-primary)">No Songs Yet</h5>
+                    @if (ShowActions)
+                    {
+                        <p style="color: var(--text-muted)">Add songs to this playlist to get started</p>
+                        <button class="btn btn-primary mt-3" @onclick="AddSongToPlaylist">
+                            <i class="bi bi-plus-circle me-2"></i>Add Song
+                        </button>
+                    }
+                    else
+                    {
+                        <p style="color: var(--text-muted)">This playlist doesn't have any songs yet</p>
+                    }
                 </div>
             }
 
@@ -212,6 +223,8 @@
 
 @code {
     [Parameter] public string PlaylistId { get; set; } = string.Empty;
+    [Parameter] public bool ShowActions { get; set; } = true;
+    [Parameter] public bool IsLandingView { get; set; } = false;
 
     private PlaylistSongs? playlistCollection;
     private List<PlaylistSongDto> filteredSongs = new();
@@ -233,6 +246,31 @@
     private SearchModal? searchModalRef;
     private bool showSuccessMessage = false;
     private string successMessage = string.Empty;
+    
+    private bool IsLandingContext
+    {
+        get
+        {
+            if (IsLandingView) return true;
+
+            // Use BaseRelativePath to reliably determine if we're at the app root or landing routes.
+            var relative = _navManager.ToBaseRelativePath(_navManager.Uri ?? string.Empty);
+
+            // Root of the app returns empty string => treat as landing/home.
+            if (string.IsNullOrEmpty(relative)) return true;
+
+            // Normalize and trim any trailing slashes for comparisons.
+            relative = relative.Trim('/');
+
+            if (relative.Equals("landing", StringComparison.OrdinalIgnoreCase) ||
+                relative.StartsWith("landing/", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return false;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -240,6 +278,13 @@
         if (user.IsSuccess && user.Data != null)
         {
             currentUserId = user.Data.Id;
+        }
+        else if (IsLandingContext)
+        {
+            // Non-authenticated users visiting a shared playlist link get redirected to login
+            var returnUrl = Uri.EscapeDataString(_navManager.Uri);
+            _navManager.NavigateTo($"/login?returnUrl={returnUrl}");
+            return;
         }
 
         await LoadPlaylist();
@@ -260,21 +305,30 @@
 
         try
         {
-            if (string.IsNullOrEmpty(currentUserId))
+            if (string.IsNullOrEmpty(PlaylistId))
             {
-                ShowAuthenticationRequired();
                 return;
             }
 
-            var response = await _playlistsApi.GetUserPlaylists(currentUserId);
+            // Try to load directly by playlist ID first (works for both landing and authenticated views)
+            var response = await _playlistsApi.GetPlaylistById(PlaylistId);
 
             if (response.IsSuccessStatusCode && response.Content != null)
             {
-                playlistCollection = response.Content.FirstOrDefault(p => p.Playlist.Id == PlaylistId);
-                
-                if (playlistCollection != null)
+                playlistCollection = response.Content;
+                filteredSongs = playlistCollection.Songs.ToList();
+            }
+            else if (!string.IsNullOrEmpty(currentUserId))
+            {
+                // Fallback: try loading from user playlists
+                var userResponse = await _playlistsApi.GetUserPlaylists(currentUserId);
+                if (userResponse.IsSuccessStatusCode && userResponse.Content != null)
                 {
-                    filteredSongs = playlistCollection.Songs.ToList();
+                    playlistCollection = userResponse.Content.FirstOrDefault(p => p.Playlist.Id == PlaylistId);
+                    if (playlistCollection != null)
+                    {
+                        filteredSongs = playlistCollection.Songs.ToList();
+                    }
                 }
             }
             else
@@ -326,7 +380,7 @@
 
         try
         {
-            var shareLink = await _shareService.GenerateShareLinkAsync(playlistCollection.Playlist.Id);
+            var shareLink = await _shareService.GeneratePlaylistShareLinkAsync(playlistCollection.Playlist.Id);
             if (shareLink != null)
             {
                 await _clipboardService.CopyToClipboardAsync(shareLink.ShareUrl);
@@ -548,7 +602,10 @@
 
     private void OpenSong(string songId)
     {
-        _navManager.NavigateTo($"/songs/{songId}");
+        if (IsLandingContext)
+            _navManager.NavigateTo($"/songs/landing/{songId}");
+        else
+            _navManager.NavigateTo($"/songs/{songId}");
     }
 
     private async Task OnSearchInput()
@@ -595,11 +652,15 @@
 
     private void GoBack()
     {
-        _navManager.NavigateTo("/playlists");
+        if (IsLandingContext)
+            _navManager.NavigateTo("/playlists/landing");
+        else
+            _navManager.NavigateTo("/playlists");
     }
 
     private void ShowAuthenticationRequired()
     {
+        var returnUrl = Uri.EscapeDataString(_navManager.Uri);
         _modalService.Show(new ModalOptionDto
         {
             Title = "Login Required",
@@ -610,7 +671,7 @@
             Context = new ModalContext
             {
                 ActionType = "NavigateToLogin",
-                Data = "/login"
+                Data = $"/login?returnUrl={returnUrl}"
             }
         });
     }
@@ -636,7 +697,8 @@
         }
         else if (_modalService.CurrentModal?.Context?.ActionType == "NavigateToLogin")
         {
-            _navManager.NavigateTo("/login");
+            var loginUrl = _modalService.CurrentModal.Context.Data?.ToString() ?? "/login";
+            _navManager.NavigateTo(loginUrl);
         }
 
         await CloseModal();

@@ -74,6 +74,15 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     .OrderBy(c => c.SortOrder)
                     .ThenBy(c => c.Title)
                     .ToListAsync();
+
+                // Resolve curator display names
+                var curatorIds = userplaylists
+                    .Where(p => !string.IsNullOrEmpty(p.Curator))
+                    .Select(p => p.Curator!)
+                    .Distinct()
+                    .ToList();
+                var curatorNames = await ResolveCuratorNames(curatorIds);
+
                 var playlistsWithSongs = new List<PlaylistSongs>();
                 foreach (var up in userplaylists)
                 {
@@ -82,9 +91,12 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         .Include(sc => sc.Song)
                         .OrderBy(sc => sc.SortOrder)
                         .ToListAsync();
+                    var playlistDto = up.Adapt<PlaylistDto>();
+                    if (!string.IsNullOrEmpty(up.Curator) && curatorNames.TryGetValue(up.Curator, out var name))
+                        playlistDto.Curator = name;
                     PlaylistSongs playlist = new()
                     {
-                        Playlist = up.Adapt<PlaylistDto>(),
+                        Playlist = playlistDto,
                         Songs = userplaylistSongs.Select(uc => new PlaylistSongDto
                         {
                             Id = uc.Song.Id,
@@ -127,9 +139,16 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     .Include(sc => sc.Song)
                     .OrderBy(sc => sc.SortOrder)
                     .ToListAsync();
+                var playlistDto = playlist.Adapt<PlaylistDto>();
+                if (!string.IsNullOrEmpty(playlist.Curator))
+                {
+                    var names = await ResolveCuratorNames(new List<string> { playlist.Curator });
+                    if (names.TryGetValue(playlist.Curator, out var curatorName))
+                        playlistDto.Curator = curatorName;
+                }
                 PlaylistSongs playlistSongs = new()
                 {
-                    Playlist = playlist.Adapt<PlaylistDto>(),
+                    Playlist = playlistDto,
                     Songs = userPlaylist.Select(uc => new PlaylistSongDto
                     {
                         Id = uc.Song.Id,
@@ -1201,6 +1220,23 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 return ServiceResult<PaginationDetails<SearchSongResult>>.Failure(
                     new ServerErrorException("An error occurred while searching songs."));
             }
+        }
+        #endregion
+
+        #region Helpers
+        private async Task<Dictionary<string, string>> ResolveCuratorNames(List<string> curatorIds)
+        {
+            if (curatorIds == null || curatorIds.Count == 0)
+                return new Dictionary<string, string>();
+
+            var users = await _context.Users
+                .Where(u => curatorIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.FirstName, u.LastName })
+                .ToListAsync();
+
+            return users.ToDictionary(
+                u => u.Id,
+                u => $"{u.FirstName} {u.LastName}".Trim());
         }
         #endregion
     }

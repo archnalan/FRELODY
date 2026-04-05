@@ -347,35 +347,19 @@
         if (activeView != view)
         {
             activeView = view;
-            switch (activeView)
+            bool expand = (activeView == ActiveView.Expanded);
+            foreach (var book in SongBooks)
             {
-                case ActiveView.Expanded:
-                    // Expand all song books and categories
-                    foreach (var book in SongBooks)
-                    {
-                        _songBookExpansionState[book.Id ?? ""] = true;
-                        foreach (var cat in book.Categories)
-                        {
-                            _categoryExpansionState[cat.Id ?? ""] = true;
-                        }
-                    }
-                    break;
-                case ActiveView.Collapsed:
-                    // Collapse all song books and categories
-                    foreach (var book in SongBooks)
-                    {
-                        _songBookExpansionState[book.Id ?? ""] = false;
-                        foreach (var cat in book.Categories)
-                        {
-                            _categoryExpansionState[cat.Id ?? ""] = false;
-                        }
-                    }
-                    break;
-                default:
-                    // Default: keep current expansion state
-                    break;
+                book.IsExpanded = expand;
+                _songBookExpansionState[book.Id ?? ""] = expand;
+                foreach (var cat in book.Categories)
+                {
+                    cat.IsExpanded = expand;
+                    _categoryExpansionState[cat.Id ?? ""] = expand;
+                }
             }
-            await LoadData();
+            StateHasChanged();
+            await Task.CompletedTask;
         }
     }
 
@@ -389,7 +373,9 @@
             _ = Task.Run(async () =>
            {
                try
-               {
+               { 
+                   await _storageService.SetItemAsync("ActiveView",activeView);
+                   await _storageService.SetItemAsync("ViewMode", viewMode);
                    await _playHistoryApi.LogSongPlay(songId, "SongList");
                }
                catch (Exception ex)

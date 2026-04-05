@@ -16,6 +16,8 @@ namespace FRELODYLIB.Models
 
         public string? SongId { get; set; } = string.Empty;
 
+        public string? PlaylistId { get; set; }
+
         [Required]
         [StringLength(100)]
         [Column(TypeName = "varchar(100)")]
@@ -29,5 +31,8 @@ namespace FRELODYLIB.Models
 
         [ForeignKey(nameof(SongId))]
         public virtual Song? Song { get; set; }
+
+        [ForeignKey(nameof(PlaylistId))]
+        public virtual Playlist? Playlist { get; set; }
     }
 }

@@ -10,6 +10,7 @@ namespace FRELODYUI.Services
     public interface IShareService
     {
         Task<ShareLinkDto?> GenerateShareLinkAsync(string songId);
+        Task<ShareLinkDto?> GeneratePlaylistShareLinkAsync(string playlistId);
         Task<string> GetShareUrlAsync(string shareToken);
         Task NotifyLinkCopiedAsync();
     }

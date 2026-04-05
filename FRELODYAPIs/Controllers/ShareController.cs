@@ -39,6 +39,17 @@ namespace FRELODYAPIs.Controllers
             return Ok(result.Data);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetSharedPlaylist([FromQuery] string shareToken)
+        {
+            var result = await _shareLinkService.GetSharedPlaylist(shareToken);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error.Message);
+            }
+            return Ok(result.Data);
+        }
+
         [HttpDelete]
         public async Task<IActionResult> RevokeShareLink([FromQuery] string shareToken)
         {

@@ -4,7 +4,7 @@
 @inject ILogger<SongLibrary> _logger
 @implements IDisposable
 
-<div class="container-fluid vh-100 song-library-page" style="max-width:55rem;justify-self:center">
+<div class="container-fluid song-library-page" style="max-width:55rem;justify-self:center">
     <div class="container text-center mt-3" >
         @if (ShowSearch)
         {
@@ -134,11 +134,15 @@
             }
         </div>
 
-        @if (_isInitializing)
+        @if (_isViewTransitioning)
         {
             @if (viewMode == ViewMode.Playlists)
             {
                 <FRELODYUI.Shared.Pages.PlaceHolders.SongPlaylistPlaceholder ActiveView="activeView" />
+            }
+            else if (viewMode == ViewMode.All)
+            {
+                <FRELODYUI.Shared.Pages.PlaceHolders.SongListPlaceholder ActiveView="activeView" ShowHeader="@(activeView == ActiveView.Expanded)" Count="@(activeView == ActiveView.Expanded ? 8 : 6)" />
             }
             else
             {
@@ -153,6 +157,7 @@
                     <div class="row" style="z-index:0">
                         <SongList @ref="songListRef"
                                   ViewStyle="activeView"
+                                  ViewMode ="viewMode"
                                   OnSongLongPress="HandleSongLongPress"
                                   OnSelectionModeChanged="StateHasChanged"
                                   OnAuthenticationRequired="HandleAuthenticationRequired"
@@ -197,7 +202,7 @@
 
     private string error = string.Empty;
     private bool IsNavigating = false;
-    private bool _isInitializing = true;
+    private bool _isViewTransitioning = true;
     private bool isFromLanding = false;
     private string? currentUserId;
 
@@ -257,7 +262,7 @@
             currentUserId = user.Data.Id;
         }
 
-        _isInitializing = false;
+        _isViewTransitioning = false;
         StateHasChanged();
     }
 
@@ -265,13 +270,15 @@
     {
         if (viewMode != mode)
         {
+            _isViewTransitioning = true;
             viewMode = mode;
-            if (songListViewRef != null)
-            {
-                await songListViewRef.SetViewMode(mode);
-                await songListViewRef.SetActiveView(activeView);
-            }
+            StateHasChanged();
+
             await _storageService.SetItemAsync("ViewMode", mode);
+            await Task.Delay(80);
+
+            _isViewTransitioning = false;
+            StateHasChanged();
         }
     }
 
@@ -280,22 +287,12 @@
         if (activeView != view)
         {
             activeView = view;
-            if (songListViewRef != null)
-            {
-                await songListViewRef.SetActiveView(view);
-                await songListViewRef.SetViewMode(viewMode);
-            }
             if (songListRef != null)
-            {
                 await songListRef.SetActiveView(view);
-                //await songListRef.SetViewMode(viewMode);
-
-            }
+            if (songListViewRef != null)
+                await songListViewRef.SetActiveView(view);
             if (songPlaylistRef != null)
-            {
-
                 await songPlaylistRef.ApplyViewState(view);
-            }
             await _storageService.SetItemAsync("ActiveView", view);
         }
     }

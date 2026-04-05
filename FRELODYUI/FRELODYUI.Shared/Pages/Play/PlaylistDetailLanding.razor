@@ -1,0 +1,8 @@
+@page "/playlists/landing/{PlaylistId}/detail"
+@layout LandingLayout
+
+<PlaylistDetail PlaylistId="@PlaylistId" ShowActions="true" IsLandingView="true" />
+
+@code {
+    [Parameter] public string PlaylistId { get; set; } = string.Empty;
+}

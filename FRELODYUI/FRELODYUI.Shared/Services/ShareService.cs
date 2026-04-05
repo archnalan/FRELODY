@@ -54,6 +54,29 @@ namespace FRELODYUI.Services
             }
         }
 
+        public async Task<ShareLinkDto?> GeneratePlaylistShareLinkAsync(string playlistId)
+        {
+            try
+            {
+                var request = new ShareLinkCreateDto { PlaylistId = playlistId };
+                var response = await _shareApi.GenerateShareLink(request);
+
+                if (response.IsSuccessStatusCode && response.Content != null)
+                {
+                    response.Content.ShareUrl = $"{_baseUrl}/playlists/landing/{response.Content.ShareToken}/detail";
+                    return response.Content;
+                }
+
+                _logger.LogWarning("Failed to generate share link for playlist {PlaylistId}", playlistId);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating share link for playlist {PlaylistId}", playlistId);
+                return null;
+            }
+        }
+
         public Task<string> GetShareUrlAsync(string shareToken)
         {
             return Task.FromResult($"{_baseUrl}/songs/{shareToken}");

@@ -1,6 +1,7 @@
 ﻿using FRELODYAPP.Dtos;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Dtos;
+using FRELODYUI.Shared.Models.PlaylistModels;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 
@@ -10,6 +11,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
     {
         Task<ServiceResult<ShareLinkDto>> GenerateShareLink([FromBody] ShareLinkCreateDto request, string? baseUrl);
         Task<ServiceResult<SongDto>> GetSharedSong([Required] string shareToken);
+        Task<ServiceResult<PlaylistSongs>> GetSharedPlaylist([Required] string shareToken);
         Task<ServiceResult<bool>> RevokeShareLink([FromRoute] string shareToken);
     }
 }
