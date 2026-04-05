@@ -1,20 +1,480 @@
-.form-control:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+/* ============================================================
+   Register Page — Scoped Component Styles
+   Mirrors login page tokens from app.css for theme support.
+   ============================================================ */
+
+/* ── Page shell ──────────────────────────────────────────────── */
+
+.reg-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 1rem;
 }
 
-.btn-primary {
+.reg-container {
+    width: 100%;
+    max-width: 28rem;
+}
+
+/* ── Branding ─────────────────────────────────────────────────── */
+
+.reg-branding {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.reg-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
     background: linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-end) 100%);
-    border: none;
+    border-radius: 1rem;
+    margin-bottom: 1rem;
 }
 
-    .btn-primary:hover {
-        background: linear-gradient(135deg, var(--gradient-primary-hover-start) 0%, var(--gradient-primary-hover-end) 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+.reg-logo-icon {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.reg-app-name {
+    font-size: 1.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem;
+}
+
+.reg-tagline {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ── Card ─────────────────────────────────────────────────────── */
+
+.reg-card {
+    background: var(--card-bg);
+    backdrop-filter: var(--card-backdrop-filter);
+    border-radius: 1.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+    padding: 2rem;
+}
+
+/* ── Step indicators ──────────────────────────────────────────── */
+
+.reg-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 1.75rem;
+}
+
+.reg-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    flex-shrink: 0;
+}
+
+.reg-step-dot {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--btn-bg);
+    color: var(--text-muted);
+    border: 2px solid var(--border-light);
+    transition: all 0.3s ease;
+}
+
+.reg-step-active .reg-step-dot {
+    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.35);
+}
+
+.reg-step-done .reg-step-dot {
+    background: #16a34a;
+    color: #fff;
+    border-color: transparent;
+}
+
+.reg-step-label {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.reg-step-active .reg-step-label {
+    color: var(--text-primary);
+}
+
+.reg-step-done .reg-step-label {
+    color: #16a34a;
+}
+
+.reg-step-line {
+    width: 2.5rem;
+    height: 2px;
+    background: var(--border-light);
+    margin: 0 0.25rem;
+    margin-bottom: 1.25rem;
+    border-radius: 1px;
+    transition: background 0.3s ease;
+}
+
+.reg-step-line-done {
+    background: #16a34a;
+}
+
+/* ── Step content ─────────────────────────────────────────────── */
+
+.reg-step-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.reg-heading {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.reg-subtext {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: -0.25rem 0 0;
+    line-height: 1.4;
+}
+
+/* ── Account type toggle ──────────────────────────────────────── */
+
+.reg-toggle-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.reg-toggle {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.75rem;
+    background: var(--input-bg);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1.5px solid var(--input-border);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.reg-toggle:hover {
+    border-color: var(--border-medium);
+    background: var(--bg-hover);
+}
+
+.reg-toggle-active {
+    background: linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-end) 100%);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.reg-toggle-active:hover {
+    background: linear-gradient(135deg, var(--gradient-primary-hover-start) 0%, var(--gradient-primary-hover-end) 100%);
+    border-color: transparent;
+}
+
+/* ── Form fields ──────────────────────────────────────────────── */
+
+.reg-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.reg-field-row {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.reg-field-row .reg-field {
+    flex: 1;
+}
+
+.reg-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.reg-input-wrapper {
+    position: relative;
+}
+
+.reg-input-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+}
+
+.reg-input {
+    display: block;
+    width: 100%;
+    height: 2.875rem;
+    padding: 0 1rem 0 2.75rem;
+    border: 1px solid var(--input-border);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    color: var(--input-color);
+    background: var(--input-bg);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.reg-input-plain {
+    padding-left: 1rem;
+}
+
+.reg-input-password {
+    padding-right: 3rem;
+}
+
+.reg-input::placeholder {
+    color: var(--input-placeholder);
+}
+
+.reg-input:focus {
+    border-color: var(--input-border-focus);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.reg-password-toggle {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.reg-password-toggle:hover {
+    color: var(--text-primary);
+}
+
+.reg-validation {
+    font-size: 0.75rem;
+    color: #e50000;
+    margin: 0;
+}
+
+/* ── Alerts ───────────────────────────────────────────────────── */
+
+.reg-alert {
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.reg-alert-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+}
+
+.reg-alert-success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #16a34a;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+
+.reg-btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    height: 2.875rem;
+    background: linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-end) 100%);
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.reg-btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--gradient-primary-hover-start) 0%, var(--gradient-primary-hover-end) 100%);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+    transform: translateY(-1px);
+}
+
+.reg-btn-primary:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.reg-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.reg-btn-secondary {
+    height: 2.875rem;
+    padding: 0 1.5rem;
+    background: var(--btn-bg);
+    color: var(--btn-color);
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid var(--border-light);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.reg-btn-secondary:hover:not(:disabled) {
+    background: var(--btn-hover-bg);
+}
+
+.reg-btn-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.reg-btn-row .reg-btn-primary {
+    flex: 1;
+}
+
+/* Spinner */
+.reg-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: reg-spin 0.7s linear infinite;
+}
+
+.reg-spinner-sm {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    border-top-color: var(--gradient-primary-start);
+    border-radius: 50%;
+    animation: reg-spin 0.7s linear infinite;
+}
+
+@keyframes reg-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Sign-in row ──────────────────────────────────────────────── */
+
+.reg-signin-row {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 1.5rem;
+}
+
+.reg-signin-link {
+    color: var(--gradient-primary-start);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-weight: 500;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.reg-signin-link:hover {
+    color: var(--gradient-primary-hover-start);
+    text-decoration: underline;
+}
+
+/* ── Footer ───────────────────────────────────────────────────── */
+
+.reg-footer {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.reg-footer p {
+    margin: 0;
+}
+
+/* ── Dark-mode alert overrides ────────────────────────────────── */
+
+:global([data-bs-theme="dark"]) .reg-alert-error {
+    background: rgba(220, 38, 38, 0.12);
+    border-color: rgba(220, 38, 38, 0.25);
+    color: #fca5a5;
+}
+
+:global([data-bs-theme="dark"]) .reg-alert-success {
+    background: rgba(22, 163, 74, 0.12);
+    border-color: rgba(22, 163, 74, 0.25);
+    color: #86efac;
+}
+
+:global([data-bs-theme="dark"]) .reg-input:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.4);
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+
+@media (min-width: 640px) {
+    .reg-page {
+        padding: 1.5rem;
     }
 
-.card {
-    backdrop-filter: var(--card-backdrop-filter);
-    background-color: var(--card-bg);
+    .reg-card {
+        padding: 2.5rem;
+    }
 }

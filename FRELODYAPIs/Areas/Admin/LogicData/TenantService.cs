@@ -31,7 +31,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             _roleManager = roleManager;
         }
 
-        public async Task<ServiceResult<TenantDto>> CreateTenant(TenantCreateDto dto, string password)
+        public async Task<ServiceResult<TenantDto>> CreateTenant(TenantCreateDto dto)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -56,10 +56,12 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         LastName = names.Length > 1 ? names[1] : "",
                         UserName = userEmailParts != null && userEmailParts.Length > 0
                             && !string.IsNullOrWhiteSpace(userEmailParts[0])
-                            ? $"@{userEmailParts[0]}"
+                            ? $"{userEmailParts[0]}"
                             : dto.UserEmail,
                         Email = dto.UserEmail,
                         EmailConfirmed = true,
+                        IsActive = true,
+                        DateCreated = DateTimeOffset.UtcNow,
                         TenantId = tenant.Id
                     };
                 }
@@ -79,14 +81,17 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     var emailParts = dto.Email?.Split('@');
                     user = new User
                     {
-                        FirstName = "Power",
+                        FirstName = "Admin",
                         LastName = "User",                        
                         UserName = emailParts != null && emailParts.Length > 0 
                         && !string.IsNullOrWhiteSpace(emailParts[0])
-                            ? $"@{emailParts[0]}"
+                            ? $"{emailParts[0]}"
                             : dto.Email,
+                        Email = dto.Email,
                         EmailConfirmed = true,
+                        IsActive = true,
                         UserType = UserType.Admin,
+                        DateCreated = DateTimeOffset.UtcNow,
                         TenantId = tenant.Id
                     };
                 }
@@ -94,7 +99,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 await _context.Tenants.AddAsync(tenant);
                 await _context.SaveChangesAsync();
 
-                var result = await _userManager.CreateAsync(user, password);
+                var result = await _userManager.CreateAsync(user, dto.Password);
                 if (!result.Succeeded)
                 {
                     await transaction.RollbackAsync();

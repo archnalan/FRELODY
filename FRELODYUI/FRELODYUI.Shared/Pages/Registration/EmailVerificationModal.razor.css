@@ -1,0 +1,242 @@
+/* ============================================================
+   Email Verification Modal — Scoped Component Styles
+   ============================================================ */
+
+.reg-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--modal-overlay-bg);
+    backdrop-filter: blur(var(--modal-overlay-blur));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    padding: 1rem;
+}
+
+.reg-modal {
+    background: var(--modal-content-bg);
+    color: var(--modal-content-color);
+    border-radius: 1rem;
+    box-shadow: var(--modal-shadow);
+    width: 100%;
+    max-width: 24rem;
+    padding: 1.75rem;
+}
+
+.reg-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.reg-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.reg-modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.reg-modal-close:hover {
+    color: var(--text-primary);
+}
+
+.reg-modal-desc {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0 0 1.25rem;
+    line-height: 1.5;
+}
+
+/* ── OTP Inputs ───────────────────────────────────────────────── */
+
+.reg-otp-group {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.reg-otp-input {
+    width: 3rem;
+    height: 3.25rem;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    color: var(--input-color);
+    background: var(--input-bg);
+    border: 1.5px solid var(--input-border);
+    border-radius: 0.5rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    caret-color: var(--gradient-primary-start);
+}
+
+.reg-otp-input:focus {
+    border-color: var(--input-border-focus);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.reg-otp-error {
+    border-color: #dc2626 !important;
+    animation: reg-shake 0.4s ease;
+}
+
+@keyframes reg-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+/* ── Actions ──────────────────────────────────────────────────── */
+
+.reg-modal-actions {
+    margin-bottom: 0.75rem;
+}
+
+.reg-btn-verify {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    height: 2.75rem;
+    background: linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-end) 100%);
+    color: #ffffff;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.reg-btn-verify:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--gradient-primary-hover-start) 0%, var(--gradient-primary-hover-end) 100%);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+}
+
+.reg-btn-verify:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Resend ───────────────────────────────────────────────────── */
+
+.reg-resend-row {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.reg-resend-timer {
+    color: var(--text-muted);
+}
+
+.reg-resend-link {
+    color: var(--gradient-primary-start);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    transition: color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.reg-resend-link:hover {
+    color: var(--gradient-primary-hover-start);
+    text-decoration: underline;
+}
+
+/* ── Alerts ───────────────────────────────────────────────────── */
+
+.reg-alert {
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.reg-alert-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+}
+
+.reg-alert-success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #16a34a;
+}
+
+/* ── Spinner ──────────────────────────────────────────────────── */
+
+.reg-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: reg-spin 0.7s linear infinite;
+}
+
+.reg-spinner-sm {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    border-top-color: var(--gradient-primary-start);
+    border-radius: 50%;
+    animation: reg-spin 0.7s linear infinite;
+}
+
+@keyframes reg-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Dark-mode overrides ──────────────────────────────────────── */
+
+:global([data-bs-theme="dark"]) .reg-alert-error {
+    background: rgba(220, 38, 38, 0.12);
+    border-color: rgba(220, 38, 38, 0.25);
+    color: #fca5a5;
+}
+
+:global([data-bs-theme="dark"]) .reg-alert-success {
+    background: rgba(22, 163, 74, 0.12);
+    border-color: rgba(22, 163, 74, 0.25);
+    color: #86efac;
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+
+@media (max-width: 360px) {
+    .reg-otp-input {
+        width: 2.5rem;
+        height: 2.75rem;
+        font-size: 1.25rem;
+    }
+
+    .reg-otp-group {
+        gap: 0.375rem;
+    }
+}

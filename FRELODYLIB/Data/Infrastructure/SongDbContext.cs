@@ -496,15 +496,16 @@ namespace FRELODYAPP.Data.Infrastructure
                     entity.Entity.DateCreated = DateTime.UtcNow;
                     entity.Entity.DateModified = DateTime.UtcNow;
                     entity.Entity.ModifiedBy = _userId;
-                    if (string.IsNullOrEmpty(entity.Entity.TenantId) && !_isSuperAdmin)
+                    if (_isSuperAdmin)
+                    {
+                        entity.Entity.TenantId = null;
+                    }
+                    else if (string.IsNullOrEmpty(entity.Entity.TenantId))
                     {
                         if(!string.IsNullOrEmpty(_tenantId))
                             entity.Entity.TenantId = _tenantId;
                     }
-                    else
-                    {
-                        entity.Entity.TenantId = null;
-                    }
+                    // else: TenantId was explicitly set — leave it alone
                     entity.Entity.CreatedBy = _userId;
                 }
                 else if (entity.State == EntityState.Modified)

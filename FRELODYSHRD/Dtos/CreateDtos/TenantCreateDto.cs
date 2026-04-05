@@ -1,4 +1,5 @@
 ﻿using FRELODYAPP.Dtos.SubDtos;
+using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYSHRD.Dtos.CreateDtos
 {
@@ -11,5 +12,9 @@ namespace FRELODYSHRD.Dtos.CreateDtos
         public string? Email { get; set; }
         public string? UserFullName { get; set; }
         public string? UserEmail { get; set; }
+
+        [Required]
+        [MinLength(4)]
+        public string Password { get; set; } = string.Empty;
     }
 }

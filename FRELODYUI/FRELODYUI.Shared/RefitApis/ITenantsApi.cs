@@ -9,7 +9,7 @@ namespace FRELODYUI.Shared.RefitApis
     public interface ITenantsApi
     {
         [Post("/api/tenants/create-tenant")]
-        Task<IApiResponse<TenantDto>> CreateTenant([Body] TenantCreateDto dto, [Query] string password);
+        Task<IApiResponse<TenantDto>> CreateTenant([Body] TenantCreateDto dto);
 
         [Get("/api/tenants/get-all-tenants")]
         Task<IApiResponse<PaginationDetails<TenantDto>>> GetAllTenants(

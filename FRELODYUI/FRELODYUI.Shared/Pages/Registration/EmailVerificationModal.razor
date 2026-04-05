@@ -1,0 +1,333 @@
+@inject ISmtpSenderApi _smtpSender
+@inject ILogger<EmailVerificationModal> _logger
+
+<div class="reg-modal-overlay" @onclick="HandleOverlayClick">
+    <div class="reg-modal" @onclick:stopPropagation="true">
+        <div class="reg-modal-header">
+            <h3 class="reg-modal-title">Verify your email</h3>
+            <button type="button" class="reg-modal-close" @onclick="Close" aria-label="Close" disabled="@isVerifying">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+
+        <p class="reg-modal-desc">
+            We sent a 6-digit code to <strong>@Email</strong>. Enter it below to continue.
+        </p>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="reg-alert reg-alert-error" role="alert">@errorMessage</div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="reg-alert reg-alert-success" role="status">@successMessage</div>
+        }
+
+        <!-- OTP Input -->
+        <div class="reg-otp-group">
+            @for (int i = 0; i < 6; i++)
+            {
+                var idx = i;
+                <input type="text"
+                       inputmode="numeric"
+                       pattern="[0-9]*"
+                       class="reg-otp-input @(hasError ? "reg-otp-error" : "")"
+                       value="@otpDigits[idx]"
+                       disabled="@isVerifying"
+                       @oninput="(e) => HandleOtpInput(idx, e)"
+                       @onkeydown="(e) => HandleOtpKeyDown(idx, e)"
+                       @ref="otpInputs[idx]"
+                       autocomplete="one-time-code" />
+            }
+        </div>
+
+        <!-- Actions -->
+        <div class="reg-modal-actions">
+            <button type="button"
+                    class="reg-btn-verify"
+                    @onclick="VerifyCode"
+                    disabled="@(isVerifying || string.Join("", otpDigits).Length < 6)">
+                @if (isVerifying)
+                {
+                    <span class="reg-spinner" aria-hidden="true"></span>
+                    <span>Verifying...</span>
+                }
+                else
+                {
+                    <span>Verify</span>
+                }
+            </button>
+        </div>
+
+        <div class="reg-resend-row">
+            @if (resendCountdown > 0)
+            {
+                <span class="reg-resend-timer">Resend in @resendCountdown s</span>
+            }
+            else
+            {
+                <button type="button" class="reg-resend-link" @onclick="ResendCode" disabled="@isSending">
+                    @if (isSending)
+                    {
+                        <span class="reg-spinner-sm" aria-hidden="true"></span>
+                    }
+                    Resend code
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Email { get; set; } = "";
+    [Parameter] public EventCallback OnVerified { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string[] otpDigits = new string[6];
+    private ElementReference[] otpInputs = new ElementReference[6];
+    private string generatedCode = "";
+
+    private bool isVerifying;
+    private bool isSending;
+    private bool hasError;
+    private string errorMessage = "";
+    private string successMessage = "";
+    private int resendCountdown;
+    private Timer? resendTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SendCode();
+    }
+
+    private async Task SendCode()
+    {
+        try
+        {
+            isSending = true;
+            errorMessage = "";
+            StateHasChanged();
+
+            generatedCode = Random.Shared.Next(100000, 999999).ToString();
+
+            var emailDto = new EmailDto(true)
+            {
+                ToEmail = Email,
+                Subject = "Your FRELODY verification code",
+                Body = BuildVerificationEmailHtml(generatedCode)
+            };
+
+            var result = await _smtpSender.SendMail(emailDto);
+            if (result.IsSuccessStatusCode)
+            {
+                successMessage = "Code sent! Check your inbox.";
+                StartResendTimer();
+            }
+            else
+            {
+                errorMessage = "Failed to send code. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending verification email to {Email}", Email);
+            errorMessage = "Something went wrong. Please try again.";
+        }
+        finally
+        {
+            isSending = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task VerifyCode()
+    {
+        var entered = string.Join("", otpDigits);
+        if (entered.Length < 6)
+        {
+            errorMessage = "Please enter the full 6-digit code.";
+            return;
+        }
+
+        isVerifying = true;
+        hasError = false;
+        errorMessage = "";
+        StateHasChanged();
+
+        // Small delay to feel intentional
+        await Task.Delay(400);
+
+        if (entered == generatedCode)
+        {
+            await OnVerified.InvokeAsync();
+        }
+        else
+        {
+            hasError = true;
+            errorMessage = "Invalid code. Please check and try again.";
+            isVerifying = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleOtpInput(int index, ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString() ?? "";
+        var digits = new string(value.Where(char.IsDigit).ToArray());
+
+        // Handle paste or multi-char input — distribute across boxes
+        if (digits.Length > 1)
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                var offset = i - index;
+                otpDigits[i] = (offset >= 0 && offset < digits.Length)
+                    ? digits[offset].ToString()
+                    : otpDigits[i];
+            }
+            hasError = false;
+            var focusIdx = Math.Min(index + digits.Length, 5);
+            _ = FocusInput(focusIdx);
+            StateHasChanged();
+            return;
+        }
+
+        // Single digit typed
+        if (digits.Length == 1)
+        {
+            otpDigits[index] = digits;
+            hasError = false;
+            if (index < 5)
+            {
+                _ = FocusInput(index + 1);
+            }
+        }
+        else
+        {
+            otpDigits[index] = "";
+        }
+
+        StateHasChanged();
+    }
+
+    private void HandleOtpKeyDown(int index, KeyboardEventArgs e)
+    {
+        if (e.Key == "Backspace" && string.IsNullOrEmpty(otpDigits[index]) && index > 0)
+        {
+            otpDigits[index - 1] = "";
+            _ = FocusInput(index - 1);
+            StateHasChanged();
+        }
+        else if (e.Key == "Enter")
+        {
+            _ = VerifyCode();
+        }
+    }
+
+    private async Task FocusInput(int index)
+    {
+        await Task.Yield();
+        try { await otpInputs[index].FocusAsync(); } catch { }
+    }
+
+    private async Task ResendCode()
+    {
+        otpDigits = new string[6];
+        hasError = false;
+        successMessage = "";
+        await SendCode();
+    }
+
+    private void StartResendTimer()
+    {
+        resendCountdown = 45;
+        resendTimer?.Dispose();
+        resendTimer = new Timer(_ =>
+        {
+            resendCountdown--;
+            if (resendCountdown <= 0)
+            {
+                resendTimer?.Dispose();
+            }
+            InvokeAsync(StateHasChanged);
+        }, null, 1000, 1000);
+    }
+
+    private void Close()
+    {
+        resendTimer?.Dispose();
+        OnClose.InvokeAsync();
+    }
+
+    private void HandleOverlayClick()
+    {
+        if (!isVerifying)
+            Close();
+    }
+
+    public void Dispose()
+    {
+        resendTimer?.Dispose();
+    }
+
+    private string BuildVerificationEmailHtml(string code)
+    {
+        return $@"
+<!DOCTYPE html>
+<html lang=""en"">
+<head><meta charset=""UTF-8""><meta name=""viewport"" content=""width=device-width,initial-scale=1""></head>
+<body style=""margin:0;padding:0;background-color:#f4f4f7;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"">
+<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#f4f4f7;"">
+<tr><td align=""center"" style=""padding:40px 20px;"">
+<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);"">
+
+  <!-- Header -->
+  <tr>
+    <td style=""background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:32px 32px 24px;text-align:center;"">
+      <h1 style=""margin:0;font-size:24px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;"">FRELODY</h1>
+      <p style=""margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.85);"">Email Verification</p>
+    </td>
+  </tr>
+
+  <!-- Body -->
+  <tr>
+    <td style=""padding:32px;"">
+      <p style=""margin:0 0 8px;font-size:18px;font-weight:600;color:#1a1a2e;"">Hi there,</p>
+      <p style=""margin:0 0 24px;font-size:15px;color:#4a4a68;line-height:1.6;"">
+        Use the code below to verify your email address. It expires in <strong>5 minutes</strong>.
+      </p>
+
+      <!-- Code box -->
+      <div style=""text-align:center;margin:0 0 24px;"">
+        <div style=""display:inline-block;background:#f0f0ff;border:2px dashed #667eea;border-radius:10px;padding:16px 32px;"">
+          <span style=""font-size:32px;font-weight:700;letter-spacing:8px;color:#667eea;font-family:'Courier New',monospace;"">{code}</span>
+        </div>
+      </div>
+
+      <p style=""margin:0;font-size:13px;color:#8888a0;line-height:1.5;"">
+        If you didn't request this, you can safely ignore this email.
+      </p>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style=""padding:20px 32px;background:#fafafe;border-top:1px solid #eeeeee;text-align:center;"">
+      <p style=""margin:0;font-size:12px;color:#aaaacc;"">
+        &copy; {DateTime.UtcNow.Year} Frelody &middot; Your music, beautifully organized
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>";
+    }
+}

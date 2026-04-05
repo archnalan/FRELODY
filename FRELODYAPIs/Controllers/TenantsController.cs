@@ -21,10 +21,11 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(TenantDto), 200)]
-        public async Task<IActionResult> CreateTenant([FromBody] TenantCreateDto dto, [FromQuery] string password)
+        public async Task<IActionResult> CreateTenant([FromBody] TenantCreateDto dto)
         {
-            var result = await _tenantService.CreateTenant(dto, password);
+            var result = await _tenantService.CreateTenant(dto);
             if (!result.IsSuccess)
             {
                 return StatusCode(500, result.Error.Message);

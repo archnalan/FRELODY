@@ -97,6 +97,18 @@ services:
     networks:
       - frelody-net
 
+  # ── smtp4dev (dev mail catcher) ──────────────────────────────
+  # Catches all outgoing emails – no real mail is sent.
+  # Web UI: http://localhost:5000   SMTP: localhost:1025
+  maildev:
+    image: rnwood/smtp4dev:v3
+    container_name: frelody-maildev
+    ports:
+      - "1025:25"      # SMTP
+      - "5000:80"      # Web UI
+    networks:
+      - frelody-net
+
 volumes:
   sqlserver_data:
   frelody_media:

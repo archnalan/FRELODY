@@ -5,207 +5,475 @@
 
 <PageTitle>Register - FRELODY</PageTitle>
 
-<div class="min-vh-100 d-flex align-items-center justify-content-center">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="@(FullBody ? "col-12" : "col-11 col-sm-8 col-md-6 col-lg-5 col-xl-4")">
-                <!-- Register Card -->
-                <div class="card shadow-lg border-0" style="border-radius: 1rem;">
-                    <div class="card-body p-4 p-sm-5">
-                        <!-- Header -->
-                        <div class="text-center mb-4">
-                            <div class="mb-3">
-                                <i class="bi bi-music-note-beamed fs-1 text-primary"></i>
-                            </div>
-                            <h2 class="fw-bold text-dark mb-2">Join FRELODY</h2>
-                            <p class="text-muted mb-0">@(isPersonalMode ? "Create your personal account" : "Create your tenant account")</p>
-                        </div>
+<div class="reg-page">
+    <div class="reg-container">
 
-                        <!-- Mode Toggle -->
-                        <div class="d-flex justify-content-center mb-4">
-                            <button type="button" 
-                                    class="btn @(isPersonalMode ? "btn-outline-primary" : "btn-primary") me-2" 
-                                    @onclick="() => SetMode(false)">
-                                Company
-                            </button>
-                            <button type="button" 
-                                    class="btn @(isPersonalMode ? "btn-primary" : "btn-outline-primary")" 
-                                    @onclick="() => SetMode(true)">
-                                Personal
-                            </button>
-                        </div>
+        <!-- Branding -->
+        <div class="reg-branding">
+            <div class="reg-logo" aria-hidden="true">
+                <span class="reg-logo-icon">
+                    <img width="100" height="100" src="_content/FRELODYUI.Shared/fet_melody_logo.png" alt="Frelody" class="nav-logo-img" />
+                </span>
+            </div>
+            <h1 class="reg-app-name">FRELODY</h1>
+            <p class="reg-tagline">Create your account</p>
+        </div>
 
-                        <!-- Register Form -->
-                        <EditForm Model="@registerModel" OnValidSubmit="@HandleRegister" FormName="registerForm">
-                            <DataAnnotationsValidator />
+        <!-- Card -->
+        <div class="reg-card">
 
-                            @if (!string.IsNullOrEmpty(errorMessage))
+            <!-- Step indicators -->
+            <div class="reg-steps">
+                @for (int i = 1; i <= totalSteps; i++)
+                {
+                    var s = i;
+                    <div class="reg-step @(s < currentStep ? "reg-step-done" : s == currentStep ? "reg-step-active" : "")">
+                        <div class="reg-step-dot">
+                            @if (s < currentStep)
                             {
-                                <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
-                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                    <div>@errorMessage</div>
-                                </div>
-                            }
-
-                            @if (!string.IsNullOrEmpty(successMessage))
-                            {
-                                <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
-                                    <i class="bi bi-check-circle-fill me-2"></i>
-                                    <div>@successMessage</div>
-                                </div>
-                            }
-
-                            @if (isPersonalMode)
-                            {
-                                <!-- User Full Name Field -->
-                                <div class="mb-3">
-                                    <label class="form-label text-dark fw-medium">Full Name</label>
-                                    <InputText @bind-Value="registerModel.UserFullName" 
-                                              class="form-control" 
-                                              placeholder="Enter your full name" />
-                                    <ValidationMessage For="@(() => registerModel.UserFullName)" class="text-danger small mt-1" />
-                                </div>
-
-                                <!-- User Email Field -->
-                                <div class="mb-3">
-                                    <label class="form-label text-dark fw-medium">Email</label>
-                                    <InputText @bind-Value="registerModel.UserEmail" 
-                                              type="email"
-                                              class="form-control" 
-                                              placeholder="Enter your email" />
-                                    <ValidationMessage For="@(() => registerModel.UserEmail)" class="text-danger small mt-1" />
-                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="3"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
                             }
                             else
                             {
-                                <!-- Tenant Name Field -->
-                                <div class="mb-3">
-                                    <label class="form-label text-dark fw-medium">Company Name</label>
-                                    <InputText @bind-Value="registerModel.TenantName" 
-                                              class="form-control" 
-                                              placeholder="Enter your company name" />
-                                    <ValidationMessage For="@(() => registerModel.TenantName)" class="text-danger small mt-1" />
-                                </div>
-
-                                <!-- Email Field -->
-                                <div class="mb-3">
-                                    <label class="form-label text-dark fw-medium">Email</label>
-                                    <InputText @bind-Value="registerModel.Email" 
-                                              type="email"
-                                              class="form-control" 
-                                              placeholder="Enter company email" />
-                                    <ValidationMessage For="@(() => registerModel.Email)" class="text-danger small mt-1" />
-                                </div>
-
-                                <!-- Address Field -->
-                                <div class="mb-3">
-                                    <label class="form-label text-dark fw-medium">Address</label>
-                                    <InputText @bind-Value="registerModel.Address" 
-                                              class="form-control" 
-                                              placeholder="Enter your address" />
-                                    <ValidationMessage For="@(() => registerModel.Address)" class="text-danger small mt-1" />
-                                </div>
-
-                                <!-- City Field -->
-                                <div class="mb-3">
-                                    <label class="form-label text-dark fw-medium">City</label>
-                                    <InputText @bind-Value="registerModel.City" 
-                                              class="form-control" 
-                                              placeholder="Enter your city" />
-                                    <ValidationMessage For="@(() => registerModel.City)" class="text-danger small mt-1" />
-                                </div>
-
-                                <!-- Country Field -->
-                                <div class="mb-3">
-                                    <label class="form-label text-dark fw-medium">Country</label>
-                                    <InputText @bind-Value="registerModel.Country" 
-                                              class="form-control" 
-                                              placeholder="Enter your country" />
-                                    <ValidationMessage For="@(() => registerModel.Country)" class="text-danger small mt-1" />
-                                </div>
+                                <span>@s</span>
                             }
+                        </div>
+                        <span class="reg-step-label">@stepLabels[s - 1]</span>
+                    </div>
+                    @if (s < totalSteps)
+                    {
+                        <div class="reg-step-line @(s < currentStep ? "reg-step-line-done" : "")"></div>
+                    }
+                }
+            </div>
 
-                            <!-- Password Field -->
-                            <div class="mb-3">
-                                <label class="form-label text-dark fw-medium">Password</label>
-                                <div class="input-group">
-                                    <InputText @bind-Value="password" 
-                                              type="@(showPassword ? "text" : "password")"
-                                              class="form-control border-end-0" 
-                                              placeholder="Enter your password" />
-                                    <button type="button" 
-                                            class="btn btn-outline-secondary border-start-0"
-                                            @onclick="TogglePasswordVisibility">
-                                        <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
-                                    </button>
-                                </div>
-                                <ValidationMessage For="@(() => password)" class="text-danger small mt-1" />
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="reg-alert reg-alert-error" role="alert">@errorMessage</div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="reg-alert reg-alert-success" role="status">@successMessage</div>
+            }
+
+            <!-- Step 1: Account type + Name + Email -->
+            @if (currentStep == 1)
+            {
+                <div class="reg-step-content">
+                    <h2 class="reg-heading">How will you use FRELODY?</h2>
+
+                    <div class="reg-toggle-group">
+                        <button type="button"
+                                class="reg-toggle @(!isPersonalMode ? "reg-toggle-active" : "")"
+                                @onclick="() => SetMode(false)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                            <span>Organization</span>
+                        </button>
+                        <button type="button"
+                                class="reg-toggle @(isPersonalMode ? "reg-toggle-active" : "")"
+                                @onclick="() => SetMode(true)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            <span>Personal</span>
+                        </button>
+                    </div>
+
+                    @if (isPersonalMode)
+                    {
+                        <div class="reg-field">
+                            <label class="reg-label">Full name</label>
+                            <div class="reg-input-wrapper">
+                                <span class="reg-input-icon" aria-hidden="true" tabindex="-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                                        <circle cx="12" cy="7" r="4" />
+                                    </svg>
+                                </span>
+                                <input type="text" class="reg-input" placeholder="Enter your full name"
+                                       @bind="registerModel.UserFullName" @bind:event="oninput" />
                             </div>
+                        </div>
 
-                            <!-- Confirm Password Field -->
-                            <div class="mb-4">
-                                <label class="form-label text-dark fw-medium">Confirm Password</label>
-                                <div class="input-group">
-                                    <InputText @bind-Value="confirmPassword" 
-                                              type="@(showConfirmPassword ? "text" : "password")"
-                                              class="form-control border-end-0" 
-                                              placeholder="Confirm your password" />
-                                    <button type="button" 
-                                            class="btn btn-outline-secondary border-start-0"
-                                            @onclick="ToggleConfirmPasswordVisibility">
-                                        <i class="bi @(showConfirmPassword ? "bi-eye-slash" : "bi-eye")"></i>
-                                    </button>
-                                </div>
-                                <ValidationMessage For="@(() => confirmPassword)" class="text-danger small mt-1" />
+                        <div class="reg-field">
+                            <label class="reg-label">Email</label>
+                            <div class="reg-input-wrapper">
+                                <span class="reg-input-icon" aria-hidden="true" tabindex="-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                                    </svg>
+                                </span>
+                                <input type="email" class="reg-input" placeholder="you@example.com"
+                                       @bind="registerModel.UserEmail" @bind:event="oninput" />
                             </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="reg-field">
+                            <label class="reg-label">Organization name</label>
+                            <div class="reg-input-wrapper">
+                                <span class="reg-input-icon" aria-hidden="true" tabindex="-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                                    </svg>
+                                </span>
+                                <input type="text" class="reg-input" placeholder="Your company or church name"
+                                       @bind="registerModel.TenantName" @bind:event="oninput" />
+                            </div>
+                        </div>
 
-                            <!-- Register Button -->
-                            <button type="submit" 
-                                    class="btn btn-primary w-100 py-2 fw-medium" 
-                                    style="border-radius: 0.5rem;"
-                                    disabled="@isLoading">
+                        <div class="reg-field">
+                            <label class="reg-label">Email</label>
+                            <div class="reg-input-wrapper">
+                                <span class="reg-input-icon" aria-hidden="true" tabindex="-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                                    </svg>
+                                </span>
+                                <input type="email" class="reg-input" placeholder="admin@company.com"
+                                       @bind="registerModel.Email" @bind:event="oninput" />
+                            </div>
+                        </div>
+                    }
+
+                    <button type="button" class="reg-btn-primary" @onclick="GoToStep2" disabled="@(!IsStep1Valid)">
+                        <span>Continue</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+            }
+
+            <!-- Step 2: Create password -->
+            @if (currentStep == 2)
+            {
+                <div class="reg-step-content">
+                    <h2 class="reg-heading">Set your password</h2>
+                    <p class="reg-subtext">At least 4 characters. Make it something you'll remember.</p>
+
+                    <div class="reg-field">
+                        <label class="reg-label">Password</label>
+                        <div class="reg-input-wrapper">
+                            <span class="reg-input-icon" aria-hidden="true" tabindex="-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                            </span>
+                            <input type="@(showPassword ? "text" : "password")"
+                                   class="reg-input reg-input-password"
+                                   placeholder="Enter a password"
+                                   @bind="password" @bind:event="oninput"
+                                   autocomplete="new-password" />
+                            <button type="button" class="reg-password-toggle" @onclick="() => showPassword = !showPassword"
+                                    aria-label="Toggle password visibility">
+                                @if (showPassword)
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                                        <line x1="1" y1="1" x2="23" y2="23" />
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                }
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="reg-field">
+                        <label class="reg-label">Confirm password</label>
+                        <div class="reg-input-wrapper">
+                            <span class="reg-input-icon" aria-hidden="true" tabindex="-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                            </span>
+                            <input type="@(showConfirmPassword ? "text" : "password")"
+                                   class="reg-input reg-input-password"
+                                   placeholder="Re-enter your password"
+                                   @bind="confirmPassword" @bind:event="oninput"
+                                   autocomplete="new-password" />
+                            <button type="button" class="reg-password-toggle" @onclick="() => showConfirmPassword = !showConfirmPassword"
+                                    aria-label="Toggle password visibility">
+                                @if (showConfirmPassword)
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                                        <line x1="1" y1="1" x2="23" y2="23" />
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                         fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                }
+                            </button>
+                        </div>
+                        @if (!string.IsNullOrEmpty(password) && !string.IsNullOrEmpty(confirmPassword) && password != confirmPassword)
+                        {
+                            <span class="reg-validation">Passwords do not match</span>
+                        }
+                    </div>
+
+                    <div class="reg-btn-row">
+                        <button type="button" class="reg-btn-secondary" @onclick="() => GoBack()">Back</button>
+                        <button type="button" class="reg-btn-primary" @onclick="GoToStep3" disabled="@(!IsStep2Valid)">
+                            @if (isPersonalMode)
+                            {
                                 @if (isLoading)
                                 {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    <span>Creating account...</span>
+                                    <span class="reg-spinner" aria-hidden="true"></span>
+                                    <span>Creating...</span>
                                 }
                                 else
                                 {
                                     <span>Create Account</span>
                                 }
-                            </button>
-                        </EditForm>
-
-                        <!-- Sign In Link -->
-                        <div class="text-center mt-4">
-                            <span class="text-muted small">Already have an account? </span>
-                            <button type="button" 
-                                    class="btn btn-link p-0 text-decoration-none small fw-medium"
-                                    @onclick="()=>NavigateToLogin()">
-                                Sign in
-                            </button>
-                        </div>
+                            }
+                            else
+                            {
+                                <span>Continue</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+                                </svg>
+                            }
+                        </button>
                     </div>
                 </div>
+            }
+
+            <!-- Step 3: Company details (company mode only) -->
+            @if (currentStep == 3 && !isPersonalMode)
+            {
+                <div class="reg-step-content">
+                    <h2 class="reg-heading">Organization details</h2>
+                    <p class="reg-subtext">Optional — you can fill these in later.</p>
+
+                    <div class="reg-field">
+                        <label class="reg-label">Address</label>
+                        <div class="reg-input-wrapper">
+                            <span class="reg-input-icon" aria-hidden="true" tabindex="-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                    <circle cx="12" cy="10" r="3" />
+                                </svg>
+                            </span>
+                            <input type="text" class="reg-input" placeholder="Street address"
+                                   @bind="registerModel.Address" @bind:event="oninput" />
+                        </div>
+                    </div>
+
+                    <div class="reg-field-row">
+                        <div class="reg-field">
+                            <label class="reg-label">City</label>
+                            <input type="text" class="reg-input reg-input-plain" placeholder="City"
+                                   @bind="registerModel.City" @bind:event="oninput" />
+                        </div>
+                        <div class="reg-field">
+                            <label class="reg-label">Country</label>
+                            <input type="text" class="reg-input reg-input-plain" placeholder="Country"
+                                   @bind="registerModel.Country" @bind:event="oninput" />
+                        </div>
+                    </div>
+
+                    <div class="reg-btn-row">
+                        <button type="button" class="reg-btn-secondary" @onclick="() => GoBack()">Back</button>
+                        <button type="button" class="reg-btn-primary" @onclick="HandleRegister" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="reg-spinner" aria-hidden="true"></span>
+                                <span>Creating...</span>
+                            }
+                            else
+                            {
+                                <span>Create Account</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <!-- Sign in link -->
+            <div class="reg-signin-row">
+                <span>Already have an account? </span>
+                <button type="button" class="reg-signin-link" @onclick="() => NavigateToLogin()">
+                    Sign in
+                </button>
             </div>
         </div>
+
+        <footer class="reg-footer">
+            <p>Secure access powered by FRELODY</p>
+        </footer>
     </div>
 </div>
+
+<!-- Email verification OTP modal -->
+@if (showEmailVerification)
+{
+    <FRELODYUI.Shared.Pages.Registration.EmailVerificationModal
+        Email="@currentEmail"
+        OnVerified="OnEmailVerified"
+        OnClose="() => showEmailVerification = false" />
+}
 
 @code {
     [Parameter] public bool FullBody { get; set; } = false;
     [Parameter] public EventCallback<TenantDto?> OnRegisterSuccess { get; set; }
-    [Parameter]public EventCallback<bool> GoBackToSignInModal  { get; set; }
+    [Parameter] public EventCallback<bool> GoBackToSignInModal { get; set; }
 
     private TenantCreateDto registerModel = new();
     private string password = "";
     private string confirmPassword = "";
+
+    private int currentStep = 1;
+    private int totalSteps => isPersonalMode ? 2 : 3;
+    private string[] stepLabels => isPersonalMode
+        ? new[] { "Info", "Password" }
+        : new[] { "Info", "Password", "Details" };
+
+    private bool isPersonalMode = true;
     private bool isLoading = false;
     private bool showPassword = false;
     private bool showConfirmPassword = false;
-    private bool isPersonalMode = false;
+    private bool showEmailVerification = false;
+    private bool emailVerified = false;
+    private string verifiedEmail = "";
     private string errorMessage = "";
     private string successMessage = "";
+
+    private string currentEmail => isPersonalMode
+        ? (registerModel.UserEmail ?? "")
+        : (registerModel.Email ?? "");
+
+    private bool IsStep1Valid
+    {
+        get
+        {
+            if (isPersonalMode)
+                return !string.IsNullOrWhiteSpace(registerModel.UserFullName)
+                    && IsValidEmail(registerModel.UserEmail);
+            else
+                return !string.IsNullOrWhiteSpace(registerModel.TenantName)
+                    && IsValidEmail(registerModel.Email);
+        }
+    }
+
+    private bool IsStep2Valid =>
+        !string.IsNullOrEmpty(password) && password.Length >= 4 && password == confirmPassword;
+
+    private void SetMode(bool personal)
+    {
+        isPersonalMode = personal;
+        registerModel = new TenantCreateDto();
+        emailVerified = false;
+        currentStep = 1;
+        ClearMessages();
+    }
+
+    private void GoToStep2()
+    {
+        ClearMessages();
+        if (!IsStep1Valid) return;
+
+        // Re-verify if email changed since last verification
+        if (!emailVerified || !string.Equals(verifiedEmail, currentEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            emailVerified = false;
+            verifiedEmail = "";
+            showEmailVerification = true;
+            return;
+        }
+
+        currentStep = 2;
+    }
+
+    private void OnEmailVerified()
+    {
+        emailVerified = true;
+        verifiedEmail = currentEmail;
+        showEmailVerification = false;
+        currentStep = 2;
+        StateHasChanged();
+    }
+
+    private async Task GoToStep3()
+    {
+        ClearMessages();
+        if (!IsStep2Valid) return;
+
+        if (isPersonalMode)
+        {
+            await HandleRegister();
+        }
+        else
+        {
+            currentStep = 3;
+        }
+    }
+
+    private void GoBack()
+    {
+        ClearMessages();
+        if (currentStep > 1)
+            currentStep--;
+    }
 
     private async Task HandleRegister()
     {
@@ -215,24 +483,23 @@
             isLoading = true;
             StateHasChanged();
 
-            if (password != confirmPassword)
+            if (isPersonalMode)
             {
-                errorMessage = "Passwords do not match.";
-                return;
+                registerModel.TenantName = registerModel.UserFullName ?? "";
             }
-            if (isPersonalMode && !string.IsNullOrEmpty(registerModel.UserFullName))
-            {
-                registerModel.TenantName = registerModel.UserFullName;
-            }
-            var response = await _tenantsApi.CreateTenant(registerModel, password);
+
+            registerModel.Password = password;
+
+            var response = await _tenantsApi.CreateTenant(registerModel);
 
             if (response.IsSuccessStatusCode && response.Content != null)
             {
                 _logger.LogInformation("Tenant registered successfully");
-                successMessage = "Registration successful! You can now log in.";
+                successMessage = "Account created! Redirecting to sign in...";
                 StateHasChanged();
 
-                await Task.Delay(2000); // Brief delay to show success message
+                await Task.Delay(1500);
+
                 var userEmail = isPersonalMode ? registerModel.UserEmail : registerModel.Email;
                 if (OnRegisterSuccess.HasDelegate)
                 {
@@ -240,7 +507,7 @@
                 }
                 else
                 {
-                    NavigateToLogin(userEmail);                    
+                    NavigateToLogin(userEmail);
                 }
             }
             else
@@ -261,24 +528,6 @@
         }
     }
 
-    private void SetMode(bool personal)
-    {
-        isPersonalMode = personal;
-        // Reset model when switching modes
-        registerModel = new TenantCreateDto();
-        StateHasChanged();
-    }
-
-    private void TogglePasswordVisibility()
-    {
-        showPassword = !showPassword;
-    }
-
-    private void ToggleConfirmPasswordVisibility()
-    {
-        showConfirmPassword = !showConfirmPassword;
-    }
-
     private void NavigateToLogin(string? email = null)
     {
         if (GoBackToSignInModal.HasDelegate)
@@ -287,21 +536,23 @@
         }
         else
         {
-            if (!string.IsNullOrEmpty(email))
-            {
-                _navManager.NavigateTo($"/login?email={Uri.EscapeDataString(email)}");
-            }
-            else
-            {
-                _navManager.NavigateTo("/login");
-            }            
-        }       
+            _navManager.NavigateTo(!string.IsNullOrEmpty(email)
+                ? $"/login?email={Uri.EscapeDataString(email)}"
+                : "/login");
+        }
     }
 
     private void ClearMessages()
     {
         errorMessage = "";
         successMessage = "";
+    }
+
+    private static bool IsValidEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return false;
+        var idx = email.IndexOf('@');
+        return idx > 0 && idx < email.Length - 1 && email.IndexOf('.', idx) > idx + 1;
     }
 
     private string GetErrorMessage<T>(Refit.IApiResponse<T> response)
