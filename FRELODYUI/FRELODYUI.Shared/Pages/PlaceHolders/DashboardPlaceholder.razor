@@ -1,0 +1,122 @@
+<!-- Welcome skeleton -->
+<div class="welcome-section mb-4">
+    <div class="container-fluid placeholder-glow">
+        <div class="row align-items-center">
+            <div class="col-12 col-md-8">
+                <span class="placeholder col-5 d-block mb-2" style="height:2rem;border-radius:6px"></span>
+                <span class="placeholder col-7 d-block" style="height:1rem;border-radius:4px"></span>
+            </div>
+            <div class="col-12 col-md-4 mt-3 mt-md-0 d-flex gap-2 justify-content-md-end">
+                <span class="placeholder col-3 rounded-pill" style="height:2rem"></span>
+                <span class="placeholder col-3 rounded-pill" style="height:2rem"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stat cards skeleton -->
+<div class="container-fluid mb-4">
+    <div class="row g-3 placeholder-glow">
+        @for (var i = 0; i < 4; i++)
+        {
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card">
+                    <span class="stat-icon placeholder" style="opacity:0.2"></span>
+                    <div class="stat-content">
+                        <span class="placeholder col-5 d-block mb-2" style="height:1.8rem;border-radius:4px"></span>
+                        <span class="placeholder col-8 d-block" style="height:0.875rem;border-radius:4px"></span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Main content skeleton -->
+<div class="container-fluid">
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <!-- Chart skeleton -->
+            <div class="dashboard-card mb-4 placeholder-glow">
+                <div class="card-header">
+                    <span class="placeholder col-4" style="height:1.1rem;border-radius:4px"></span>
+                </div>
+                <div class="card-body">
+                    <span class="placeholder col-12 d-block" style="height:260px;border-radius:8px"></span>
+                </div>
+            </div>
+            <!-- Recent songs skeleton -->
+            <div class="dashboard-card placeholder-glow">
+                <div class="card-header">
+                    <span class="placeholder col-4" style="height:1.1rem;border-radius:4px"></span>
+                </div>
+                <div class="song-list">
+                    @for (var i = 0; i < 5; i++)
+                    {
+                        <div class="song-item">
+                            <span class="song-icon placeholder" style="opacity:0.2"></span>
+                            <div class="song-details">
+                                <span class="placeholder @(i % 2 == 0 ? "col-6" : "col-8") d-block mb-1" style="height:0.9rem;border-radius:4px"></span>
+                                <span class="placeholder col-4 d-block" style="height:0.75rem;border-radius:4px"></span>
+                            </div>
+                            <span class="btn-play placeholder" style="opacity:0.2"></span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <!-- Quick actions skeleton -->
+            <div class="dashboard-card mb-4 placeholder-glow">
+                <div class="card-header">
+                    <span class="placeholder col-5" style="height:1.1rem;border-radius:4px"></span>
+                </div>
+                <div class="card-body">
+                    <div class="quick-actions-grid">
+                        @for (var i = 0; i < 4; i++)
+                        {
+                            <span class="placeholder" style="height:5rem;border-radius:12px;opacity:0.2"></span>
+                        }
+                    </div>
+                </div>
+            </div>
+            <!-- Playlists skeleton -->
+            <div class="dashboard-card placeholder-glow">
+                <div class="card-header">
+                    <span class="placeholder col-5" style="height:1.1rem;border-radius:4px"></span>
+                </div>
+                <div class="playlist-list">
+                    @for (var i = 0; i < 4; i++)
+                    {
+                        <div class="playlist-item">
+                            <span class="playlist-icon placeholder" style="opacity:0.2"></span>
+                            <div class="playlist-details">
+                                <span class="placeholder @(i % 2 == 0 ? "col-7" : "col-5") d-block mb-1" style="height:0.9rem;border-radius:4px"></span>
+                                <span class="placeholder col-3 d-block" style="height:0.75rem;border-radius:4px"></span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <!-- Top songs skeleton -->
+            <div class="dashboard-card mt-4 placeholder-glow">
+                <div class="card-header">
+                    <span class="placeholder col-4" style="height:1.1rem;border-radius:4px"></span>
+                </div>
+                <div class="top-songs-list">
+                    @for (var i = 0; i < 5; i++)
+                    {
+                        <div class="top-song-item">
+                            <span class="song-rank placeholder" style="opacity:0.2"></span>
+                            <div class="song-details">
+                                <span class="placeholder @(i % 3 == 0 ? "col-6" : i % 3 == 1 ? "col-8" : "col-5") d-block mb-1" style="height:0.9rem;border-radius:4px"></span>
+                                <span class="placeholder col-3 d-block" style="height:0.75rem;border-radius:4px"></span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

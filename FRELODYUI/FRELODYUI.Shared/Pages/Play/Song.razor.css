@@ -1009,7 +1009,7 @@
     }
 
     .song-playback-area:fullscreen .controls-bar-inner {
-        justify-content: flex-start;
+        justify-content: center;
         padding-left: 1rem;
     }
 
