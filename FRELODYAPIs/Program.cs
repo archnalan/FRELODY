@@ -26,6 +26,11 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using FRELODYSHRD.Services;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.Interfaces;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -225,6 +230,109 @@ builder.Services.AddOpenApi("v1", options =>
         return Task.CompletedTask;
     });
 });
+
+// ── OpenTelemetry observability ─────────────────────────────────────────────
+//
+//  Local development  → console exporter only  (OpenTelemetry:EnableConsole=true)
+//  Local Docker       → OTLP→otel-collector    (OpenTelemetry:Endpoint set via env vars)
+//  Docker Production  → OTLP→logs.frelody.com  (OpenTelemetry:Endpoint set via env vars)
+//
+var otelEndpoint    = builder.Configuration["OpenTelemetry:Endpoint"];
+var otelServiceName = builder.Configuration["OpenTelemetry:ServiceName"]    ?? "frelody-api";
+var otelServiceVer  = builder.Configuration["OpenTelemetry:ServiceVersion"] ?? "1.0.0";
+var otelHeaders     = builder.Configuration["OpenTelemetry:Headers"];
+var enableConsole   = builder.Configuration.GetValue<bool>("OpenTelemetry:EnableConsole");
+var hasOtlp         = !string.IsNullOrWhiteSpace(otelEndpoint);
+
+// Auto-compute Basic auth header from superuser credentials when no explicit
+// header is supplied but an OTLP endpoint IS configured (used in production).
+if (hasOtlp && string.IsNullOrEmpty(otelHeaders))
+{
+    var otelUser = builder.Configuration["UserSettings:UserName"]     ?? "superuser";
+    var otelPass = builder.Configuration["UserSettings:UserPassword"] ?? string.Empty;
+    otelHeaders  = "Authorization=Basic " +
+        Convert.ToBase64String(Encoding.UTF8.GetBytes($"{otelUser}:{otelPass}"));
+}
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(res => res
+        .AddService(
+            serviceName:       otelServiceName,
+            serviceVersion:    otelServiceVer,
+            serviceInstanceId: Environment.MachineName)
+        .AddAttributes(new Dictionary<string, object>
+        {
+            ["deployment.environment"] = builder.Environment.EnvironmentName,
+            ["host.name"]              = Environment.MachineName,
+        }))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation(opts =>
+            {
+                opts.RecordException = true;
+                // Exclude health / metrics / framework paths from trace noise
+                opts.Filter = ctx =>
+                    !ctx.Request.Path.StartsWithSegments("/health") &&
+                    !ctx.Request.Path.StartsWithSegments("/metrics") &&
+                    !ctx.Request.Path.StartsWithSegments("/_");
+            })
+            .AddHttpClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation();
+
+        // Local development: human-readable console output
+        if (enableConsole)
+            tracing.AddConsoleExporter();
+
+        // Docker (local or production): push to OTLP collector / backend
+        if (hasOtlp)
+            tracing.AddOtlpExporter(opts =>
+            {
+                opts.Endpoint = new Uri($"{otelEndpoint!.TrimEnd('/')}/v1/traces");
+                opts.Protocol = OtlpExportProtocol.HttpProtobuf;
+                if (!string.IsNullOrEmpty(otelHeaders))
+                    opts.Headers = otelHeaders;
+            });
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation();
+
+        if (enableConsole)
+            metrics.AddConsoleExporter();
+
+        if (hasOtlp)
+            metrics.AddOtlpExporter(opts =>
+            {
+                opts.Endpoint = new Uri($"{otelEndpoint!.TrimEnd('/')}/v1/metrics");
+                opts.Protocol = OtlpExportProtocol.HttpProtobuf;
+                if (!string.IsNullOrEmpty(otelHeaders))
+                    opts.Headers = otelHeaders;
+            });
+    });
+
+builder.Logging.AddOpenTelemetry(otelLogging =>
+{
+    otelLogging.IncludeFormattedMessage = true;
+    otelLogging.IncludeScopes           = true;
+    otelLogging.ParseStateValues        = true;
+
+    if (enableConsole)
+        otelLogging.AddConsoleExporter();
+
+    if (hasOtlp)
+        otelLogging.AddOtlpExporter(opts =>
+        {
+            opts.Endpoint = new Uri($"{otelEndpoint!.TrimEnd('/')}/v1/logs");
+            opts.Protocol = OtlpExportProtocol.HttpProtobuf;
+            if (!string.IsNullOrEmpty(otelHeaders))
+                opts.Headers = otelHeaders;
+        });
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 var app = builder.Build();
 

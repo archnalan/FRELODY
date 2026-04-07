@@ -62,6 +62,17 @@ services:
       # Currency converter
       CurrencyConverter__AppId: "${OPENEXCHANGE_APP_ID}"
 
+      # ── OpenTelemetry: push to logs.frelody.com ──────────────────────────
+      # The OTLP endpoint.  Override via .env if the address ever changes.
+      OpenTelemetry__Endpoint: "${OTEL_ENDPOINT:-https://logs.frelody.com}"
+      # Headers are auto-computed from UserSettings:UserName/Password below.
+      # Set OTEL_HEADERS in .env to supply an explicit value (e.g. an API key).
+      OpenTelemetry__Headers: "${OTEL_HEADERS:-}"
+      OpenTelemetry__EnableConsole: "false"
+      # Superuser credentials used to authenticate against logs.frelody.com
+      UserSettings__UserName:     "${SUPERUSER_NAME:-superuser}"
+      UserSettings__UserPassword: "${SUPERUSER_PASSWORD}"
+
     ports:
       - "8080:8080"
 

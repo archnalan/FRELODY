@@ -56,6 +56,11 @@ services:
       # Disable HTTPS redirect – container serves plain HTTP behind a proxy
       ASPNETCORE_HTTPS_PORT: ""
 
+      # ── OpenTelemetry: push to local collector ──────────────────────────────
+      OpenTelemetry__Endpoint: "http://otel-collector:4318"
+      OpenTelemetry__EnableConsole: "false"
+      OpenTelemetry__Headers: ""
+
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -106,6 +111,34 @@ services:
     ports:
       - "1025:25"      # SMTP
       - "5000:80"      # Web UI
+    networks:
+      - frelody-net
+
+  # ── OpenTelemetry Collector ──────────────────────────────────
+  # Receives OTLP from frelody-api and fans out to Jaeger + console.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.123.0
+    container_name: frelody-otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4318:4318"    # OTLP/HTTP receiver (host → container)
+    depends_on:
+      - jaeger
+    networks:
+      - frelody-net
+
+  # ── Jaeger all-in-one (trace UI) ─────────────────────────────
+  # Trace explorer: http://localhost:16686
+  jaeger:
+    image: jaegertracing/all-in-one:1.67
+    container_name: frelody-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP/gRPC (used by collector → jaeger)
     networks:
       - frelody-net
 
