@@ -15,12 +15,13 @@ public class SongExtractionAiService : ISongExtractionAiService
     public bool IsAvailable => true;
 
     public async Task<List<SegmentCreateDto>> RefineExtractionAsync(
-        string originalContent, ICollection<SegmentCreateDto> segments)
+        string originalContent, ICollection<SegmentCreateDto> segments, string? imageBase64 = null)
     {
         var request = new SongAiRefineRequest
         {
             OriginalContent = originalContent,
-            Segments = segments.ToList()
+            Segments = segments.ToList(),
+            ImageBase64 = imageBase64
         };
 
         var response = await _songAiApi.RefineExtraction(request);

@@ -8,7 +8,16 @@
 <PageTitle>Studio</PageTitle>
 
 <div class="ii-page">
-    <div class="ii-scroll-root">
+    @if (isScanning)
+    {
+        <div class="ii-scan-overlay">
+            <div class="ii-scan-overlay-content">
+                <div class="ii-scan-pulse"></div>
+                <span class="ii-scan-overlay-label">Processing image…</span>
+            </div>
+        </div>
+    }
+    <div class="ii-scroll-root" style="@(isScanning ? "pointer-events:none;" : "")">
 
         @* ── Auth pill header ── *@
         <header class="ii-header">
@@ -198,6 +207,7 @@
                                        Source="@monitorSource"
                                        IsAuthenticated="@isAuthenticated"
                                        PastedText="@pastedText"
+                                       ScannedImageBase64="@scannedImageBase64"
                                        OnClearRequested="ClearMonitor"
                                        OnPlayPreview="HandlePlayPreview" />
                     </div>
@@ -528,6 +538,11 @@
             var file = e.File;
             if (file == null) return;
 
+            // Clear all previous state before processing new input
+            extractedSong = null;
+            databaseSong = null;
+            pastedText = "";
+            scannedImageBase64 = null;
             isProcessing = true;
             showSuggestions = false;
             detectedFormat = null;
@@ -615,11 +630,15 @@
 
     private async Task ProcessCapturedImage(CameraResult imageResult)
     {
+        // Clear all previous state before processing new scan
+        extractedSong = null;
+        databaseSong = null;
+        pastedText = "";
+        scannedImageBase64 = null;
         isProcessing = true;
         isScanning = true;
         showSuggestions = false;
         detectedFormat = null;
-        extractedSong = null;
         StateHasChanged();
 
         try

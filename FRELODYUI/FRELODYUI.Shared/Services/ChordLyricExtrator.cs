@@ -722,6 +722,9 @@ public class ChordLyricExtrator
             l = Regex.Replace(l, @"\b8b\b", "Bb", RegexOptions.IgnoreCase);
             l = Regex.Replace(l, @"\b([A-G])rnaj\b", "$1maj"); // Arnaj→Amaj
             l = Regex.Replace(l, @"\b([A-G])irn\b", "$1im"); // misread dim
+            l = Regex.Replace(l, @"\b([A-G])rn(\d)\b", "$1m$2"); // Arn7→Am7
+            l = l.Replace("\u00e9", "6"); // Gmé→Gm6 (OCR misreads 6 as é)
+            l = l.Replace("\u00a9", ""); // © copyright symbol artifact
 
             // Remove stray ] [ that aren't part of inline chord [X] notation
             if (!InlineBracketChordRegex.IsMatch(l))
@@ -731,6 +734,19 @@ public class ChordLyricExtrator
 
             // Collapse multiple spaces
             l = Regex.Replace(l, @"\s{2,}", " ").Trim();
+
+            // Strip metadata preamble lines (not part of the song)
+            if (Regex.IsMatch(l, @"(?i)^hymn\s*no\b") ||
+                Regex.IsMatch(l, @"(?i)^category\s*:") ||
+                Regex.IsMatch(l, @"(?i)^key\s*:") ||
+                Regex.IsMatch(l, @"(?i)^tempo\s*:") ||
+                Regex.IsMatch(l, @"(?i)^capo\s*:") ||
+                Regex.IsMatch(l, @"(?i)^time\s*signature\s*:") ||
+                Regex.IsMatch(l, @"^\d+/\d+\s*time\b", RegexOptions.IgnoreCase))
+            {
+                cleaned.Add("");
+                continue;
+            }
 
             cleaned.Add(l);
         }

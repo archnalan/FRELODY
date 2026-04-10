@@ -5,7 +5,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
 {
     public interface ISongAiService
     {
-        Task<ServiceResult<List<SegmentCreateDto>>> RefineExtractionAsync(string originalContent, List<SegmentCreateDto> segments);
+        Task<ServiceResult<List<SegmentCreateDto>>> RefineExtractionAsync(string originalContent, List<SegmentCreateDto> segments, string? imageBase64 = null);
 
         /// <summary>
         /// Uses an AI vision model to refine OCR-extracted text by comparing it against the original image.

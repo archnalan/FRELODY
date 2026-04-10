@@ -11,5 +11,7 @@ namespace FRELODYSHRD.Dtos.CreateDtos
         public string ExtractedText { get; set; } = string.Empty;
         public bool Success { get; set; }
         public string? ErrorMessage { get; set; }
+        public float Confidence { get; set; }
+        public bool WasAutoRefined { get; set; }
     }
 }

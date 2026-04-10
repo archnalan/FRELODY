@@ -1,4 +1,5 @@
 using FRELODYUI.Shared.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace FRELODYUI.Shared.Services
@@ -6,10 +7,12 @@ namespace FRELODYUI.Shared.Services
     public class WebCameraService : ICameraService
     {
         private readonly IJSRuntime _jsRuntime;
+        private readonly ILogger<WebCameraService> _logger;
 
-        public WebCameraService(IJSRuntime jsRuntime)
+        public WebCameraService(IJSRuntime jsRuntime, ILogger<WebCameraService> logger)
         {
             _jsRuntime = jsRuntime;
+            _logger = logger;
         }
 
         // Web browsers generally support camera via file input
@@ -19,7 +22,7 @@ namespace FRELODYUI.Shared.Services
         {
             try
             {
-                var result = await _jsRuntime.InvokeAsync<CameraJsResult?>("cameraInterop.capturePhoto");
+                var result = await _jsRuntime.InvokeAsync<CameraJsResult?>("cameraInterop.capturePhoto", TimeSpan.FromMinutes(10));
                 if (result == null || string.IsNullOrEmpty(result.Base64))
                     return null;
 
@@ -29,8 +32,9 @@ namespace FRELODYUI.Shared.Services
                     FileName = result.FileName ?? "captured_photo.jpg"
                 };
             }
-            catch
+            catch(Exception ex)
             {
+                _logger.LogError(ex, "Error capturing photo from camera.");
                 return null;
             }
         }
@@ -39,7 +43,7 @@ namespace FRELODYUI.Shared.Services
         {
             try
             {
-                var result = await _jsRuntime.InvokeAsync<CameraJsResult?>("cameraInterop.pickPhoto");
+                var result = await _jsRuntime.InvokeAsync<CameraJsResult?>("cameraInterop.pickPhoto", TimeSpan.FromMinutes(10));
                 if (result == null || string.IsNullOrEmpty(result.Base64))
                     return null;
 
@@ -49,8 +53,9 @@ namespace FRELODYUI.Shared.Services
                     FileName = result.FileName ?? "selected_photo.jpg"
                 };
             }
-            catch
+            catch(Exception ex)
             {
+                _logger.LogError(ex, "Error picking photo from gallery.");
                 return null;
             }
         }

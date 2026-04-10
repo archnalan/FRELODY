@@ -4,5 +4,6 @@ namespace FRELODYSHRD.Dtos.CreateDtos
     {
         public string OriginalContent { get; set; } = string.Empty;
         public List<SegmentCreateDto> Segments { get; set; } = new();
+        public string? ImageBase64 { get; set; }
     }
 }

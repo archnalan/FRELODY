@@ -194,6 +194,7 @@
     [Parameter] public MonitorSource Source { get; set; }
     [Parameter] public bool IsAuthenticated { get; set; }
     [Parameter] public string? PastedText { get; set; }
+    [Parameter] public string? ScannedImageBase64 { get; set; }
     [Parameter] public EventCallback OnClearRequested { get; set; }
     [Parameter] public EventCallback OnPlayPreview { get; set; }
 
@@ -240,7 +241,7 @@
 
         try
         {
-            var refined = await _aiService.RefineExtractionAsync(PastedText ?? "", Song.SongLyrics);
+            var refined = await _aiService.RefineExtractionAsync(PastedText ?? "", Song.SongLyrics, ScannedImageBase64);
             Song.SongLyrics = refined;
 
             if (!string.IsNullOrEmpty(savedSongId))

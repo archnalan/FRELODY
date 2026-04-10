@@ -39,15 +39,25 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
 # Install native dependencies required by:
-#   • Tesseract OCR NuGet (ships glibc-linked .so files)
-#     – gcompat  : provides libc.so.6 shim so glibc binaries run on musl
-#     – libstdc++ : C++ runtime needed by libleptonica / libtesseract
-#   • .NET globalization (SQL Server collations, string ops)
-#     – icu-libs  : ICU data & libraries (full set)
+#   • Tesseract OCR NuGet wrapper (charlesw/tesseract 5.2.0)
+#     – tesseract-ocr       : native Tesseract 5 engine + libleptonica
+#     – tesseract-ocr-data-eng : English LSTM data (fallback; app also ships its own)
+#     – gcompat             : glibc shim so the NuGet's P/Invoke resolves on musl
+#     – libstdc++           : C++ runtime needed by native libs
+#   • .NET globalization (SQL Server / EF Core string ops)
+#     – icu-libs            : ICU data & libraries
 RUN apk add --no-cache \
         gcompat \
         libstdc++ \
-        icu-libs
+        icu-libs \
+        tesseract-ocr \
+        tesseract-ocr-data-eng
+
+# Create symlinks so the .NET Tesseract NuGet can find the native libraries
+# The NuGet looks for exact names under <app>/x64/
+RUN mkdir -p /app/x64 \
+    && ln -sf /usr/lib/liblept.so.5    /app/x64/libleptonica-1.82.0.so \
+    && ln -sf /usr/lib/libtesseract.so.5 /app/x64/libtesseract50.so
 
 # Enable full ICU globalization (required for SQL Server / EF Core string ops).
 # Alpine .NET images default to invariant mode; we override that here.
@@ -59,7 +69,7 @@ ENV ASPNETCORE_URLS=http://+:8080
 # Copy the published output from the build stage
 COPY --from=build /app/publish .
 
-# Copy tessdata next to the DLLs (AppContext.BaseDirectory/tessdata).
+# Copy tessdata (tessdata_best – most accurate LSTM models) next to the DLLs.
 # Only the English traineddata is shipped – add more languages here if needed.
 COPY FRELODYAPIs/tessdata/ ./tessdata/
 

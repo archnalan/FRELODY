@@ -34,6 +34,7 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
     <PackageReference Include="Refit.HttpClientFactory" Version="10.0.1" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.13.8" />
+    <PackageReference Include="SkiaSharp" Version="3.*" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
     <!-- OpenTelemetry observability -->
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.1" />
@@ -47,6 +48,10 @@
 
   <ItemGroup>
     <Folder Include="ViewModels\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="tessdata\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
