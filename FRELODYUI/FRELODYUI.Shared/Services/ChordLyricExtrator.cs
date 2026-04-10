@@ -112,18 +112,40 @@ public class ChordLyricExtrator
                     }
                     else
                     {
-                        foreach (var word in currentLine)
+                        // Reconstruct full line text from PDF words
+                        var lineText = string.Join(" ", currentLine.Select(w => w.Text));
+
+                        // Normalize spacing inside chord brackets that PDF extraction may fragment
+                        // e.g. "[ F ]" → "[F]", "[F ]" → "[F]", "[ Dm ]" → "[Dm]"
+                        var normalized = Regex.Replace(lineText, @"\[\s+", "[");
+                        normalized = Regex.Replace(normalized, @"\s+\]", "]");
+
+                        if (InlineBracketChordRegex.IsMatch(normalized))
                         {
-                            song.SongLyrics.Add(new SegmentCreateDto
+                            // Line contains inline chord notation like [F]Praise [Dm]Lord
+                            var segments = ParseInlineLine(normalized);
+                            foreach (var (chord, lyric) in segments)
                             {
-                                Id = Guid.NewGuid().ToString(),
-                                Lyric = word.Text,
-                                LineNumber = lineNumber,
-                                PartNumber = 0,
-                                PartName = SongSection.unknown,
-                                LyricOrder = lyricOrder++,
-                                ChordAlignment = Alignment.Left
-                            });
+                                if (string.IsNullOrEmpty(lyric) && string.IsNullOrEmpty(chord))
+                                    continue;
+                                song.SongLyrics.Add(CreateSegment(chord, lyric ?? string.Empty, lineNumber, ref lyricOrder));
+                            }
+                        }
+                        else
+                        {
+                            foreach (var word in currentLine)
+                            {
+                                song.SongLyrics.Add(new SegmentCreateDto
+                                {
+                                    Id = Guid.NewGuid().ToString(),
+                                    Lyric = word.Text,
+                                    LineNumber = lineNumber,
+                                    PartNumber = 0,
+                                    PartName = SongSection.unknown,
+                                    LyricOrder = lyricOrder++,
+                                    ChordAlignment = Alignment.Left
+                                });
+                            }
                         }
                         lineNumber++;
                         i++;
