@@ -780,6 +780,7 @@ window.initDraggablePalette = function (paletteEl) {
 
 /**
  * Initialize Bootstrap tooltips on all elements with a title attribute.
+ * Moves native title → data-bs-title to prevent ghost native tooltips.
  * Safely disposes existing instances to avoid duplicates during Blazor re-renders.
  * @param {HTMLElement} [root=document] - Root element to search within
  */
@@ -789,16 +790,37 @@ window.initializeTooltips = function (root) {
 
     var elements = root.querySelectorAll('[title]:not([data-bs-tooltip-init])');
     elements.forEach(function (el) {
+        var titleText = el.getAttribute('title');
         // Skip elements with empty titles
-        if (!el.getAttribute('title')) return;
+        if (!titleText) return;
 
         // Dispose any existing tooltip instance
         var existing = bootstrap.Tooltip.getInstance(el);
         if (existing) existing.dispose();
 
+        // Move native title to data-bs-title so no orphaned native tooltip appears
+        el.setAttribute('data-bs-title', titleText);
+        el.removeAttribute('title');
         el.setAttribute('data-bs-toggle', 'tooltip');
         el.setAttribute('data-bs-tooltip-init', '');
         new bootstrap.Tooltip(el);
+    });
+};
+
+/**
+ * Hide every visible Bootstrap tooltip (removes orphaned tooltip DOM nodes).
+ * Call before navigation, opening modals, or any major DOM swap.
+ */
+window.hideAllTooltips = function () {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) return;
+    document.querySelectorAll('[data-bs-tooltip-init]').forEach(function (el) {
+        var instance = bootstrap.Tooltip.getInstance(el);
+        if (instance) {
+            instance.hide();
+            // Force-remove any leftover tooltip DOM element
+            var tip = instance.tip;
+            if (tip && tip.parentNode) tip.parentNode.removeChild(tip);
+        }
     });
 };
 
@@ -871,8 +893,28 @@ window.unlockScreenOrientation = function () {
     });
 
     // Re-initialize tooltips when Blazor updates the DOM
+    // Also dispose tooltips whose trigger elements were removed (prevents orphans)
     var tooltipInitTimer = null;
-    var tooltipObserver = new MutationObserver(function () {
+    var tooltipObserver = new MutationObserver(function (mutations) {
+        // Dispose tooltips on any removed nodes so their tip DOM is cleaned up
+        mutations.forEach(function (m) {
+            m.removedNodes.forEach(function (node) {
+                if (node.nodeType !== 1) return;
+                var targets = node.querySelectorAll
+                    ? node.querySelectorAll('[data-bs-tooltip-init]')
+                    : [];
+                // Also check the node itself
+                if (node.matches && node.matches('[data-bs-tooltip-init]')) {
+                    var inst = bootstrap.Tooltip.getInstance(node);
+                    if (inst) inst.dispose();
+                }
+                targets.forEach(function (el) {
+                    var inst = bootstrap.Tooltip.getInstance(el);
+                    if (inst) inst.dispose();
+                });
+            });
+        });
+
         clearTimeout(tooltipInitTimer);
         tooltipInitTimer = setTimeout(function () {
             window.initializeTooltips();
@@ -889,11 +931,22 @@ window.unlockScreenOrientation = function () {
 
     // Hide all Bootstrap tooltips when the user clicks anywhere
     document.addEventListener('click', function () {
-        if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) return;
-        document.querySelectorAll('[data-bs-toggle="tooltip"],[data-bs-tooltip-init]').forEach(function (el) {
-            var tooltip = bootstrap.Tooltip.getInstance(el);
-            if (tooltip) tooltip.hide();
-        });
+        window.hideAllTooltips();
     }, true);
+
+    // Hide all tooltips on Blazor enhanced navigation (popstate / pushState)
+    window.addEventListener('popstate', function () { window.hideAllTooltips(); });
+    // Intercept pushState/replaceState so SPA navigations also clean up
+    ['pushState', 'replaceState'].forEach(function (method) {
+        var original = history[method];
+        history[method] = function () {
+            window.hideAllTooltips();
+            return original.apply(this, arguments);
+        };
+    });
+    // Also hide when the page becomes hidden (tab switch, app switch on mobile)
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) window.hideAllTooltips();
+    });
 })();
 

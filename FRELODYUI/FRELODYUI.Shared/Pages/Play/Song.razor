@@ -27,7 +27,7 @@
             <div class="header-actions">
                 @if (!IsPreview)
                 {
-                <div class="dropdown">
+                <div class="dropdown" @ref="shareDropdownRef">
                     <button class="btn btn-primary dropdown-toggle"
                             type="button"
                             id="shareDropdownButton"
@@ -38,6 +38,7 @@
                         <span class="d-none d-sm-inline">Share</span>
                     </button>
                     <div class="dropdown-menu dropdown-menu-end @(showShareDropdown ? "show" : "")"
+                         style="@shareDropdownStyle"
                          aria-labelledby="shareDropdownButton">
                         <ShareDropdown Song="song"
                                        ShareLinkUrl="@shareLinkUrl"
@@ -475,6 +476,8 @@
 
     private bool showCharts => songDisplayMode == SongDisplay.LyricsAndChordsAndCharts;
     private bool showShareDropdown = false;
+    private ElementReference shareDropdownRef;
+    private string shareDropdownStyle = string.Empty;
 
     protected override Task OnInitializedAsync()
     {
@@ -1104,11 +1107,30 @@
         }
     }
 
-    private void ToggleDropdown()
+    private async Task ToggleDropdown()
     {
         showShareDropdown = !showShareDropdown;
+        if (showShareDropdown)
+        {
+            shareDropdownStyle = string.Empty;
+            StateHasChanged();
+            // After render, measure and reposition if the menu overflows the viewport
+            await Task.Yield();
+            try
+            {
+                var rect = await JsRt.InvokeAsync<BoundingRect>("getBoundingClientRect", shareDropdownRef);
+                var vp = await JsRt.InvokeAsync<ViewportSize>("getViewportDimensions");
+                // If menu overflows bottom, flip upward
+                if (rect.Bottom + 260 > vp.Height)
+                    shareDropdownStyle = "top:auto;bottom:100%;margin-bottom:0.25rem;";
+            }
+            catch { /* JS interop may not be available during prerender */ }
+        }
         StateHasChanged();
     }
+
+    private record BoundingRect(double Top, double Left, double Right, double Bottom, double Width, double Height);
+    private record ViewportSize(double Width, double Height);
 
     private void CloseShareDropdown()
     {
