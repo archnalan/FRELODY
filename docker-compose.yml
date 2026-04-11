@@ -132,7 +132,7 @@ services:
   # ── Jaeger all-in-one (trace UI) ─────────────────────────────
   # Trace explorer: http://localhost:16686
   jaeger:
-    image: jaegertracing/all-in-one:1.67
+    image: jaegertracing/all-in-one:1.76.0
     container_name: frelody-jaeger
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
