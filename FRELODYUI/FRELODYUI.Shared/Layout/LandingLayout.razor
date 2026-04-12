@@ -184,6 +184,14 @@
 <SearchModal @ref="searchModalRef"
              OnSearch="HandleSearch"
              OnResultSelected="HandleResultSelected" />
+
+@if (_modalService.IsModalVisible)
+{
+    <DialogModal IsVisible="true"
+                 Modal="@_modalService.CurrentModal"
+                 OnCloseModal="CloseGlobalModal"
+                 OnConfirmModal="ConfirmGlobalModal" />
+}
 @code {
     private GlobalErrorBoundary errorBoundaryRef = default!;
     private bool isDarkTheme = false;
@@ -202,6 +210,8 @@
 
         _toastService.OnToast += OnToastChanged;
         _navManager.LocationChanged += OnLocationChanged;
+        _modalService.OnShow += OnModalStateChanged;
+        _modalService.OnClose += OnModalStateChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -294,9 +304,12 @@
     {
         _toastService.OnToast -= OnToastChanged;
         _navManager.LocationChanged -= OnLocationChanged;
+        _modalService.OnShow -= OnModalStateChanged;
+        _modalService.OnClose -= OnModalStateChanged;
     }
 
     private void OnToastChanged() => InvokeAsync(StateHasChanged);
+    private void OnModalStateChanged() => InvokeAsync(StateHasChanged);
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
         => InvokeAsync(StateHasChanged);
@@ -327,4 +340,23 @@
         ToastType.Info => "bi-info-circle-fill",
         _ => "bi-check-circle-fill"
     };
+
+    private async Task CloseGlobalModal()
+    {
+        var closeCallback = _modalService.CurrentModal?.OnCloseCallback;
+        await Task.Delay(100);
+        _modalService.Close();
+        if (closeCallback != null)
+            await closeCallback();
+        StateHasChanged();
+    }
+
+    private async Task ConfirmGlobalModal()
+    {
+        var callback = _modalService.CurrentModal?.OnConfirmCallback;
+        _modalService.Close();
+        if (callback != null)
+            await callback();
+        StateHasChanged();
+    }
 }

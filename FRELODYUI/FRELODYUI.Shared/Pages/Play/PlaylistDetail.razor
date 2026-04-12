@@ -31,11 +31,12 @@
                 {
                     <!-- Actions Dropdown (only for authenticated owners) -->
                     <div class="dropdown">
-                        <button class="btn btn-outline-primary dropdown-toggle" 
+                        <button class="btn btn-link text-muted p-1" 
                                 type="button" 
                                 data-bs-toggle="dropdown" 
-                                aria-expanded="false">
-                                More
+                                aria-expanded="false"
+                                title="More actions">
+                            <i class="bi bi-three-dots-vertical fs-5"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li>
@@ -110,19 +111,15 @@
             <!-- Search Bar -->
             @if (playlistCollection.Songs.Any())
             {
-                <div class="w-75 card shadow-sm mb-3" style="justify-self:center">
-                    <div class="card-body p-3">
-                        <div class="d-flex position-relative">
-                            <input type="text"
-                                   class="form-control ps-5"
-                                   placeholder="Search songs in this playlist..."
-                                   @bind-value="searchQuery"
-                                   @bind-value:event="oninput"
-                                   @bind-value:after="OnSearchInput" />
-                            <button class="btn btn-link position-absolute border-0 start-0 top-0 h-100">
-                                <i class="bi bi-search"></i>
-                            </button>
-                        </div>
+                <div class="rounded-3 border shadow p-3 mb-3" style="max-width:30rem; margin:0 auto">
+                    <div class="position-relative">
+                        <input type="text"
+                               class="form-control ps-5 rounded-3"
+                               placeholder="Search songs in this playlist..."
+                               @bind-value="searchQuery"
+                               @bind-value:event="oninput"
+                               @bind-value:after="OnSearchInput" />
+                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
                     </div>
                 </div>
             }
@@ -133,13 +130,11 @@
                 <div class="songs-container">
                     @foreach (var song in filteredSongs)
                     {
-                        <div class="mb-2 border-bottom">
-                            <PlaylistSongItem Song="song"
-                                            ShowActionBtns="ShowActions"
-                                            ActiveView="ActiveView"
-                                            OnRemove="() => RemoveSongFromPlaylist(song.Id)"
-                                            OnShare="() => ShareSong(song.Id)"/>
-                        </div>
+                        <PlaylistSongItem Song="song"
+                                          ShowActionBtns="ShowActions"
+                                          ActiveView="ActiveView"
+                                          OnRemove="() => RemoveSongFromPlaylist(song.Id)"
+                                          OnShare="() => ShareSong(song.Id)"/>
                     }
                 </div>
             }
@@ -214,11 +209,6 @@
 }
 
 <SearchModal @ref="searchModalRef" OnResultSelected="HandleSongSelected" />
-
-<DialogModal IsVisible="_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
 
 <MessageToast ShowToast="@showSuccessMessage" ToastMessage="@successMessage" Type="ToastType.Success" />
 
@@ -462,6 +452,7 @@
     private void DeletePlaylist()
     {
         if (playlistCollection == null) return;
+        var playlistId = playlistCollection.Playlist.Id;
 
         _modalService.Show(new ModalOptionDto
         {
@@ -470,11 +461,7 @@
             DangerText = $"This will remove the playlist and all its {playlistCollection.Songs.Count} songs.",
             ButtonText = "Delete",
             OptionType = OptionType.Confirmation,
-            Context = new ModalContext
-            {
-                ActionType = "DeletePlaylist",
-                Data = playlistCollection.Playlist.Id
-            }
+            OnConfirmCallback = () => ExecuteDeletePlaylist(playlistId)
         });
     }
 
@@ -526,11 +513,7 @@
             Message = $"Remove '{song.Title}' from this playlist?",
             ButtonText = "Remove",
             OptionType = OptionType.Confirmation,
-            Context = new ModalContext
-            {
-                ActionType = "RemoveSong",
-                Data = new { PlaylistId = PlaylistId, SongId = songId }
-            }
+            OnConfirmCallback = () => ExecuteRemoveSong(songId)
         });
     }
 
@@ -683,40 +666,12 @@
             HyperlinkText = "Go to Login",
             ButtonText = "Close",
             OptionType = OptionType.Info,
-            Context = new ModalContext
+            OnConfirmCallback = () =>
             {
-                ActionType = "NavigateToLogin",
-                Data = $"/login?returnUrl={returnUrl}"
+                _navManager.NavigateTo($"/login?returnUrl={returnUrl}");
+                return Task.CompletedTask;
             }
         });
-    }
-
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "DeletePlaylist")
-        {
-            var playlistId = _modalService.CurrentModal.Context.Data?.ToString();
-            if (!string.IsNullOrEmpty(playlistId))
-            {
-                await ExecuteDeletePlaylist(playlistId);
-            }
-        }
-        else if (_modalService.CurrentModal?.Context?.ActionType == "RemoveSong")
-        {
-            var data = _modalService.CurrentModal.Context.Data as dynamic;
-            if (data != null)
-            {
-                string songId = data.SongId;
-                await ExecuteRemoveSong(songId);
-            }
-        }
-        else if (_modalService.CurrentModal?.Context?.ActionType == "NavigateToLogin")
-        {
-            var loginUrl = _modalService.CurrentModal.Context.Data?.ToString() ?? "/login";
-            _navManager.NavigateTo(loginUrl);
-        }
-
-        await CloseModal();
     }
 
     private async Task ShowSuccessMessage(string message)
@@ -728,13 +683,6 @@
         // Auto-hide after 3 seconds
         await Task.Delay(3000);
         showSuccessMessage = false;
-        StateHasChanged();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
         StateHasChanged();
     }
 

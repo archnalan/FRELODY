@@ -1,44 +1,50 @@
 @inject ILogger<PlaylistSongItem> _logger    
 
-<div class="song-item p-2 m-1 rounded-2"
-     @onclick="@(()=>OnSongDisplay(Song.Id))"
-     style="cursor:pointer; transition: all 0.2s;">
-
-    <span class="badge bg-dark me-2" style="min-width:40px;">
+<div class="psi-item" @onclick="@(() => OnSongDisplay(Song.Id))">
+    <span class="psi-number">
         @((Song.SongNumber.HasValue ? Song.SongNumber.Value : 0).ToString("000"))
     </span>
 
-    <div class="text-start flex-grow-1" style="min-width:0;">
-        <div class="fw-semibold text-truncate">@Song.Title</div>
+    <div class="psi-info">
+        <span class="psi-title">@Song.Title</span>
         @if (!string.IsNullOrEmpty(Song.WrittenBy))
         {
-            <small class="text-muted text-truncate d-block">@Song.WrittenBy</small>
+            <span class="psi-artist">@Song.WrittenBy</span>
         }
     </div>
+
     @if (ShowActionBtns)
     {
-        <div class="d-flex gap-1" @onclick:stopPropagation>
-            <button class="btn btn-sm btn-outline-primary"
-                    data-bs-toggle="tooltip"
-                    title="Play Song"
-                    @onclick="@(() => OnSongDisplay(Song.Id))">
-                <i class="bi bi-play-fill"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-dark"
-                    data-bs-toggle="tooltip"
-                    title="Share Song"
-                    @onclick="() => OnShare.InvokeAsync()">
-                <i class="bi bi-upload"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger"
-                    data-bs-toggle="tooltip"
-                    title="Remove from Playlist"
-                    @onclick="() => OnRemove.InvokeAsync()">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-    }    
+        <button class="psi-menu-btn" @ref="menuBtnRef" type="button"
+                @onclick="ToggleMenu" @onclick:stopPropagation
+                title="Song actions">
+            <i class="bi bi-three-dots"></i>
+        </button>
+    }
 </div>
+
+@if (menuOpen)
+{
+    <div class="psi-menu-backdrop" @onclick="CloseMenu"></div>
+    <ul class="dropdown-menu show" style="@menuStyle">
+        <li>
+            <button class="dropdown-item" @onclick="() => { CloseMenu(); OnSongDisplay(Song.Id); }">
+                <i class="bi bi-play-fill me-2"></i>Play
+            </button>
+        </li>
+        <li>
+            <button class="dropdown-item" @onclick="async () => { CloseMenu(); await OnShare.InvokeAsync(); }">
+                <i class="bi bi-link-45deg me-2"></i>Share
+            </button>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+            <button class="dropdown-item text-danger" @onclick="async () => { CloseMenu(); await OnRemove.InvokeAsync(); }">
+                <i class="bi bi-x-lg me-2"></i>Remove
+            </button>
+        </li>
+    </ul>
+}
 
 @code {
     [Parameter] public ActiveView ActiveView { get; set; }
@@ -46,6 +52,30 @@
     [Parameter] public EventCallback OnRemove { get; set; }
     [Parameter] public EventCallback OnShare { get; set; }
     [Parameter] public bool ShowActionBtns { get; set; } = true;
+
+    private bool menuOpen;
+    private string menuStyle = "";
+    private ElementReference menuBtnRef;
+
+    private async Task ToggleMenu()
+    {
+        if (menuOpen) { CloseMenu(); return; }
+        var rect = await JsRt.InvokeAsync<BoundingRect>("getBoundingClientRect", menuBtnRef);
+        var vp = await JsRt.InvokeAsync<ViewportSize>("getViewportDimensions");
+        double top = rect.Bottom + 4;
+        double right = vp.Width - rect.Right;
+        if (top + 200 > vp.Height) top = Math.Max(8, rect.Top - 200);
+        menuStyle = $"position:fixed;top:{(int)top}px;right:{(int)right}px;z-index:1050;display:block;";
+        menuOpen = true;
+    }
+
+    private void CloseMenu() => menuOpen = false;
+
+    private record BoundingRect(double Top, double Left, double Bottom, double Right, double Width, double Height);
+    private record ViewportSize(double Width, double Height);
+
+    private bool IsLandingContext => _navManager.Uri.Contains("/landing/", StringComparison.OrdinalIgnoreCase) ||
+        _navManager.Uri.EndsWith("/landing", StringComparison.OrdinalIgnoreCase);
 
     private void OnSongDisplay(string songId)
     {
@@ -62,8 +92,7 @@
                     _logger.LogWarning(ex, "Failed to log song play from playlists page {SongId}", songId);
                 }
             });
-        bool IsFromLanding = _heroDataService.GetRenderOrigin();
-        if (IsFromLanding)
+        if (IsLandingContext)
         {
             _navManager.NavigateTo($"/songs/landing/{songId}");
         }

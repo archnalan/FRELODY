@@ -1,122 +1,95 @@
 @inject ILogger<PlaylistFolder> _logger
 
-<div class="playlist-folder mb-3">
-    <div class="folder-header border rounded-3 p-3 @(IsExpanded ? "rounded-bottom-0" : "")"
-         @onclick="HandleToggle"
-         style="cursor:pointer;">
-        <div class="d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-3 flex-grow-1 pe-2">
-                <span class="folder-icon fs-4">
-                    @if (IsExpanded)
+<div class="pf-folder">
+    <!-- Folder Header -->
+    <div class="pf-header @(IsExpanded ? "pf-expanded" : "")" @onclick="HandleToggle" role="button" tabindex="0">
+        <i class="bi @(IsExpanded ? "bi-chevron-down" : "bi-chevron-right") pf-chevron"></i>
+
+        <div class="pf-info">
+            <span class="pf-name">@Collection.Playlist.Title</span>
+            @if (!string.IsNullOrEmpty(Collection.Playlist.Theme) || !string.IsNullOrEmpty(Collection.Playlist.Curator))
+            {
+                <span class="pf-meta">
+                    @if (!string.IsNullOrEmpty(Collection.Playlist.Theme))
                     {
-                        <i class="bi bi-folder2-open text-primary"></i>
+                        <span>@Collection.Playlist.Theme</span>
                     }
-                    else
+                    @if (!string.IsNullOrEmpty(Collection.Playlist.Curator))
                     {
-                        <i class="bi bi-folder2" style="color: var(--text-secondary)"></i>
-                    }
-                </span>
-                <div class="flex-grow-1 text-start">
-                    <h5 class="mb-0 fw-semibold" style="color: var(--text-primary)">@Collection.Playlist.Title</h5>
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        @if (!string.IsNullOrEmpty(Collection.Playlist.Theme))
-                        {
-                            <small style="color: var(--text-muted)">
-                                <i class="bi bi-tag me-1"></i>@Collection.Playlist.Theme
-                            </small>
-                        }
-                        @if (!string.IsNullOrEmpty(Collection.Playlist.Curator))
-                        {
-                            <small style="color: var(--text-muted)">
-                                <i class="bi bi-person me-1"></i>@Collection.Playlist.Curator
-                            </small>
-                        }
-                    </div>
-                </div>
-                <span class="badge rounded-pill" style="background-color: var(--bg-active); color: #fff;">@Collection.Songs.Count</span>
-            </div>
-            <div class="d-flex gap-2" @onclick:stopPropagation>
-                 @if (ShowActionButtons)
-                {
-                    <!-- Actions Dropdown -->
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" 
-                                type="button" 
-                                data-bs-toggle="dropdown" 
-                                aria-expanded="false"
-                                title="More Actions">
-                            More
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <button class="dropdown-item" @onclick="() => NavigateToDetail()">
-                                    <i class="bi bi-list-ul me-2"></i>Playlist Details<i class="ms-2 bi bi-chevron-right"></i>
-                                </button>
-                            </li>
-                            <li>
-                                <button class="dropdown-item" @onclick="() => OnEdit.InvokeAsync()">
-                                    <i class="bi bi-pencil-square me-2"></i>Edit Playlist
-                                </button>
-                            </li>
-                            <li>
-                                <button class="dropdown-item" @onclick="() => SharePlaylist(Collection.Playlist.Id)">
-                                    <i class="bi bi-share me-2"></i>Share Playlist
-                                </button>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <button class="dropdown-item text-danger" @onclick="() => DeletePlaylist(Collection)">
-                                    <i class="bi bi-trash me-2"></i>Delete Playlist
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                }
-                
-                <span class="toggle-icon" @onclick="@(()=>IsExpanded = !IsExpanded)">
-                    @if (IsExpanded)
-                    {
-                        <i class="bi bi-chevron-up"></i>
-                    }
-                    else
-                    {
-                        <i class="bi bi-chevron-down"></i>
+                        <span>&middot; @Collection.Playlist.Curator</span>
                     }
                 </span>
-            </div>
+            }
         </div>
 
-        @if (!string.IsNullOrEmpty(Collection.Playlist.Description) && IsExpanded)
+        <span class="pf-count">@Collection.Songs.Count</span>
+
+        @if (ShowActionButtons)
         {
-            <p class="small mt-2 mb-0" style="color: var(--text-muted)">@Collection.Playlist.Description</p>
+            <button class="pf-menu-btn" @ref="menuBtnRef" type="button"
+                    @onclick="ToggleMenu" @onclick:stopPropagation
+                    title="More actions">
+                <i class="bi bi-three-dots-vertical"></i>
+            </button>
         }
     </div>
 
+    @if (menuOpen)
+    {
+        <div class="pf-menu-backdrop" @onclick="CloseMenu"></div>
+        <ul class="dropdown-menu show" style="@menuStyle">
+            <li>
+                <button class="dropdown-item" @onclick="() => { CloseMenu(); NavigateToDetail(); }">
+                    <i class="bi bi-list-ul me-2"></i>View Details
+                </button>
+            </li>
+            <li>
+                <button class="dropdown-item" @onclick="async () => { CloseMenu(); await OnEdit.InvokeAsync(); }">
+                    <i class="bi bi-pencil me-2"></i>Edit
+                </button>
+            </li>
+            <li>
+                <button class="dropdown-item" @onclick="() => { CloseMenu(); SharePlaylist(Collection.Playlist.Id); }">
+                    <i class="bi bi-link-45deg me-2"></i>Share
+                </button>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <button class="dropdown-item text-danger" @onclick="() => { CloseMenu(); DeletePlaylist(Collection); }">
+                    <i class="bi bi-trash me-2"></i>Delete
+                </button>
+            </li>
+        </ul>
+    }
+
+    <!-- Expanded Content -->
     @if (IsExpanded)
     {
-        <div class="folder-content border border-top-0 rounded-bottom-3" style="background-color: var(--modal-content-bg);">
+        <div class="pf-body">
+            @if (!string.IsNullOrEmpty(Collection.Playlist.Description))
+            {
+                <p class="pf-description">@Collection.Playlist.Description</p>
+            }
+
             @if (Collection.Songs.Any())
             {
-                <!-- Songs list with scrollable container -->
-                <div class="songs-list-container" style="max-height: 400px; overflow-y: auto;">
+                <div class="pf-song-list">
                     @foreach (var song in Collection.Songs)
                     {
                         <PlaylistSongItem Song="song"
                                           ShowActionBtns="ShowActionButtons"
-                                          OnRemove="() => RemoveSongFromPlaylist(Collection.Playlist.Id,song.Id)"
-                                          OnShare="() => ShareSong(song.Id)"/>
+                                          OnRemove="() => RemoveSongFromPlaylist(Collection.Playlist.Id, song.Id)"
+                                          OnShare="() => ShareSong(song.Id)" />
                     }
                 </div>
-                <!-- Footer with view details link (always visible) + action buttons for owners -->
-                <div class="playlist-footer border-top p-2 d-flex justify-content-between align-items-center" @onclick:stopPropagation>
-                    <button class="btn btn-sm btn-primary"
-                            @onclick="() => NavigateToDetail()">
+
+                <div class="pf-footer">
+                    <button class="pf-footer-btn" @onclick="NavigateToDetail" @onclick:stopPropagation>
                         <i class="bi bi-list-ul me-1"></i>View Full Playlist
                     </button>
                     @if (ShowActionButtons)
                     {
-                        <button class="btn btn-outline-primary btn-sm"
-                                @onclick="() => OnAddSong.InvokeAsync()">
+                        <button class="pf-footer-btn pf-add-btn" @onclick="() => OnAddSong.InvokeAsync()" @onclick:stopPropagation>
                             <i class="bi bi-plus me-1"></i>Add Song
                         </button>
                     }
@@ -124,32 +97,20 @@
             }
             else
             {
-                <!-- Empty state with Add Song button -->
-                <div class="p-4 text-center" style="color: var(--text-muted)" @onclick:stopPropagation>
-                    <i class="bi bi-music-note fs-3"></i>
-                    <p class="mb-3 mt-2">No songs in this playlist</p>
-
+                <div class="pf-empty">
+                    <i class="bi bi-music-note"></i>
+                    <span>No songs yet</span>
                     @if (ShowActionButtons)
                     {
-                        <button class="btn btn-primary btn-sm"
-                                @onclick="() => OnAddSong.InvokeAsync()">
-                            <i class="bi bi-plus-circle me-2"></i>Add Song
+                        <button class="pf-footer-btn pf-add-btn" @onclick="() => OnAddSong.InvokeAsync()" @onclick:stopPropagation>
+                            <i class="bi bi-plus-circle me-1"></i>Add Song
                         </button>
                     }
-                    else
-                    {
-                        <p style="color: var(--text-muted)">Your playlist songs will be listed here</p>
-                    }
-                  
                 </div>
             }
         </div>
     }
 </div>
-<DialogModal IsVisible="_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
 
 <MessageToast ShowToast="@showSuccessMessage" ToastMessage="@successMessage" Type="ToastType.Success" />
 
@@ -163,6 +124,9 @@
     [Parameter] public bool ShowActionButtons { get; set; } = true;
 
     private bool isGeneratingLink = false;
+    private bool menuOpen;
+    private string menuStyle = "";
+    private ElementReference menuBtnRef;
 
     private bool showSuccessMessage = false;
     private string successMessage = string.Empty;
@@ -171,6 +135,23 @@
     {
         OnToggle.InvokeAsync();
     }
+
+    private async Task ToggleMenu()
+    {
+        if (menuOpen) { CloseMenu(); return; }
+        var rect = await JsRt.InvokeAsync<BoundingRect>("getBoundingClientRect", menuBtnRef);
+        var vp = await JsRt.InvokeAsync<ViewportSize>("getViewportDimensions");
+        double top = rect.Bottom + 4;
+        double right = vp.Width - rect.Right;
+        if (top + 200 > vp.Height) top = Math.Max(8, rect.Top - 200);
+        menuStyle = $"position:fixed;top:{(int)top}px;right:{(int)right}px;z-index:1050;display:block;";
+        menuOpen = true;
+    }
+
+    private void CloseMenu() => menuOpen = false;
+
+    private record BoundingRect(double Top, double Left, double Bottom, double Right, double Width, double Height);
+    private record ViewportSize(double Width, double Height);
 
     private bool IsLandingContext => _navManager.Uri.Contains("/landing/", StringComparison.OrdinalIgnoreCase) ||
         _navManager.Uri.EndsWith("/landing", StringComparison.OrdinalIgnoreCase);
@@ -260,6 +241,7 @@
 
     private void DeletePlaylist(PlaylistSongs collection)
     {
+        var collectionId = collection.Playlist.Id;
         _modalService.Show(new ModalOptionDto
         {
             Title = "Delete Playlist",
@@ -267,11 +249,7 @@
             DangerText = $"This will remove the playlist and all its {collection.Songs.Count} songs.",
             ButtonText = "Delete",
             OptionType = OptionType.Confirmation,
-            Context = new ModalContext
-            {
-                ActionType = "DeletePlaylist",
-                Data = collection.Playlist.Id
-            }
+            OnConfirmCallback = () => ExecuteDeletePlaylist(collectionId)
         });
     }
 
@@ -283,33 +261,11 @@
             Message = "Remove this song from the playlist?",
             ButtonText = "Remove",
             OptionType = OptionType.Confirmation,
-            Context = new ModalContext
-            {
-                ActionType = "RemoveSong",
-                Data = new { CollectionId = collectionId, SongId = songId }
-            }
+            OnConfirmCallback = () => ExecuteRemoveSong(collectionId, songId)
         });
     }
 
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "DeletePlaylist")
-        {
-            var playlistId = _modalService.CurrentModal.Context.Data;
-            await DeletePlaylist(playlistId.ToString() ??"");
-            
-        }
-        else if(_modalService.CurrentModal?.Context?.ActionType == "RemoveSong")
-        {
-            var data = _modalService.CurrentModal.Context.Data as dynamic;
-            string collectionId = data.CollectionId;
-            string songId = data.SongId;
-            await ExecuteRemoveSong(collectionId, songId);
-        }
-        await CloseModal();
-    }
-
-    private async Task DeletePlaylist(string collectionId)
+    private async Task ExecuteDeletePlaylist(string collectionId)
     {
         try
         {
@@ -372,13 +328,6 @@
         {
             _logger.LogError(ex, "Error removing song from playlist");
         }
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 
     private async Task ShowSuccessMessage(string message)
