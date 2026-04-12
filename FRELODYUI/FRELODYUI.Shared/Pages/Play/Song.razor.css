@@ -30,7 +30,7 @@
     display: flex;
     align-items: flex-start;
     gap: 0.5rem;
-    margin-bottom: 1rem;
+    margin-bottom: .5rem;
     padding: 0.625rem;
     background: var(--card-bg);
     border: 1px solid var(--border-light);
@@ -146,10 +146,9 @@
     display: flex;
     top: 0;
     z-index: 100;
-    margin: 0 1rem;
+    margin-bottom: 0.5rem;
     padding: 0; /* horizontal padding lives on inner + actions */
     background: var(--card-bg);
-    border-bottom: 1px solid var(--border-light);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
 }
@@ -977,9 +976,8 @@
            the right edge via margin-left:auto independent of the outer overflow value. */
     }
 
-    /* Revert to base overflow-x: auto + sticky actions pattern (same as normal mode).
-       justify-content must be flex-start — centering in a scrollable flex row clips
-       the left side and prevents scrolling to hidden items on small screens. */
+    /* flex-start on small screens so all items are reachable via scroll;
+       centered on wider viewports for a balanced look (see media query below). */
     .playback-fullscreen .controls-bar-inner {
         justify-content: flex-start;
         padding-left: 1rem;
@@ -1025,7 +1023,8 @@
     }
 
     .song-playback-area:fullscreen .controls-bar-inner {
-        justify-content: center;
+        justify-content: flex-start;
+        overflow-x: auto;
         padding-left: 1rem;
     }
 
@@ -1190,6 +1189,15 @@
         .playback-fullscreen .song-content {
             padding: 2rem 3rem;
         }
+
+    /* Center fullscreen controls on wider screens where everything fits */
+    .playback-fullscreen .controls-bar-inner {
+        justify-content: center;
+    }
+
+    .song-playback-area:fullscreen .controls-bar-inner {
+        justify-content: center;
+    }
 }
 
 /* ============================================
