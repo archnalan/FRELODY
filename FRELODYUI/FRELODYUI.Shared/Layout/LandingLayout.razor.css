@@ -9,8 +9,9 @@
     background: var(--modal-content-bg);
     display: flex;
     align-items: center;
-    z-index: 1000;
+    z-index: 2;
     flex-shrink: 0;
+    position: relative;
 }
 
 .app-header-inner {
@@ -250,12 +251,16 @@
 /* ── Body ── */
 .app-body {
     height: 0;
+    position: relative;
+    z-index: 0;
     background-color: var(--modal-content-bg);
 }
 
 /* ── Footer ── */
 .app-footer {
     flex-shrink: 0;
+    position: relative;
+    z-index: 1;
     background-color: var(--modal-content-bg);
     color: var(--bs-secondary-color);
 }
