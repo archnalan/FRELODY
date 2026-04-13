@@ -124,6 +124,17 @@ namespace FRELODYAPIs.Controllers
                 return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
             return Ok(result.Data);
         }
+
+        [HttpPut]
+        [Authorize]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> ReorderPlaylistSongs([FromQuery] string playlistId, [FromBody] List<string> songIds)
+        {
+            var result = await _playlistService.ReorderPlaylistSongsAsync(playlistId, songIds);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
+            return Ok(result.Data);
+        }
         
         [HttpDelete]
         [ProducesResponseType(typeof(bool), 200)]

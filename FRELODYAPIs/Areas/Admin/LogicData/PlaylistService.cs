@@ -457,11 +457,16 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         new InvalidOperationException($"Song is already in the playlist."));
                 }
 
+                var maxSortOrder = await _context.SongUserPlaylists
+                    .Where(sp => sp.PlaylistId == playlistId)
+                    .MaxAsync(sp => (int?)sp.SortOrder) ?? 0;
+
                 var songplaylist = new SongUserPlaylist
                 {
                     PlaylistId = playlistId,
                     SongId = songId,
                     AddedByUserId = _userId,
+                    SortOrder = maxSortOrder + 1,
                     DateScheduled = DateTimeOffset.UtcNow
                 };
 
@@ -479,6 +484,38 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError("Error adding song with Id {SongId} to playlist {playlistId}: {Error}", songId, playlistId, ex);
                 return ServiceResult<PlaylistDto>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Reorder playlist songs
+        public async Task<ServiceResult<bool>> ReorderPlaylistSongsAsync(string playlistId, List<string> songIds)
+        {
+            try
+            {
+                var entries = await _context.SongUserPlaylists
+                    .Where(sp => sp.PlaylistId == playlistId)
+                    .ToListAsync();
+
+                if (!entries.Any())
+                    return ServiceResult<bool>.Failure(new KeyNotFoundException("Playlist not found or has no songs."));
+
+                for (int i = 0; i < songIds.Count; i++)
+                {
+                    var entry = entries.FirstOrDefault(e => e.SongId == songIds[i]);
+                    if (entry != null)
+                    {
+                        entry.SortOrder = i + 1;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error reordering songs in playlist {PlaylistId}: {Error}", playlistId, ex);
+                return ServiceResult<bool>.Failure(ex);
             }
         }
         #endregion

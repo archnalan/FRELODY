@@ -23,6 +23,12 @@ namespace FRELODYUI.Shared.Services
         // Static in-memory cache so we don't lose state across scoped instances or when storage is temporarily unavailable
         private static LoginResponseDto? _cachedSession;
 
+        /// <summary>
+        /// Returns the in-memory cached session. Used by AuthHeaderHandler as a fallback
+        /// when localStorage is unavailable (e.g. during server-side prerendering).
+        /// </summary>
+        public static LoginResponseDto? CachedSession => _cachedSession;
+
         public GlobalAuthStateProvider(
             IStorageService localStorage, 
             NavigationManager navigationManager,

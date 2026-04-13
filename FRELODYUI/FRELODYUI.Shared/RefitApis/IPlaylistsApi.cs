@@ -41,6 +41,9 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Put("/api/playlists/update-playlist")]
         Task<IApiResponse<PlaylistDto>> UpdatePlaylist([Query] string id, [Body] PlaylistDto updatedPlaylist);
+
+        [Put("/api/playlists/reorder-playlist-songs")]
+        Task<IApiResponse<bool>> ReorderPlaylistSongs([Query] string playlistId, [Body] List<string> songIds);
         
         [Delete("/api/playlists/remove-song-from-playlist")]
         Task<IApiResponse<bool>> RemoveSongFromPlaylist([Query] string playlistId, [Query] string songId);

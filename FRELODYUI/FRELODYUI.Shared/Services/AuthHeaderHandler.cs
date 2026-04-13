@@ -32,6 +32,10 @@ namespace FRELODYUI.Shared.Services
             {
                 var sessionModel = await _localStorage.GetItemAsync<LoginResponseDto>("sessionState");
 
+                // Fall back to the static in-memory cache when localStorage is unavailable
+                // (e.g. during server-side prerendering where JS interop isn't available)
+                sessionModel ??= GlobalAuthStateProvider.CachedSession;
+
                 if (sessionModel != null && IsTokenExpired(sessionModel.Token))
                 {
                     sessionModel = await TryRefreshTokenAsync(sessionModel);

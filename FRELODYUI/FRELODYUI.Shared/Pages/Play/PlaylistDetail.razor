@@ -1,5 +1,6 @@
 @page "/playlists/{PlaylistId}/detail"
 @using FRELODYUI.Shared.Pages.Play.Components
+@using FRELODYUI.Shared.Pages.Common
 @inject ILogger<PlaylistDetail> _logger
 @implements IDisposable
 
@@ -72,43 +73,83 @@
             <!-- Playlist Information Card -->
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-8">
-                            @if (!string.IsNullOrEmpty(playlistCollection.Playlist.Description))
-                            {
-                                <p class="text-muted mb-3">
-                                    <i class="bi bi-file-text me-2"></i>@playlistCollection.Playlist.Description
-                                </p>
-                            }
-                            @if (!string.IsNullOrEmpty(playlistCollection.Playlist.Theme))
-                            {
-                                <p class="mb-2">
-                                    <i class="bi bi-tag me-2"></i>
-                                    <span class="badge bg-primary">@playlistCollection.Playlist.Theme</span>
-                                </p>
-                            }
-                            @if (!string.IsNullOrEmpty(playlistCollection.Playlist.Curator))
-                            {
-                                <p class="text-muted mb-2">
-                                    <i class="bi bi-person me-2"></i>Curated by @playlistCollection.Playlist.Curator
-                                </p>
-                            }
-                            @if (playlistCollection.Playlist.PlaylistDate.HasValue)
-                            {
-                                <p class="text-muted mb-0">
-                                    <i class="bi bi-calendar-event me-2"></i>@playlistCollection.Playlist.PlaylistDate.Value.ToString("MMMM dd, yyyy")
-                                </p>
-                            }
+                    @if (isEditingInfo && IsOwner)
+                    {
+                        <!-- Inline Edit Mode -->
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Title</label>
+                                <input type="text" class="form-control" @bind="editTitle" placeholder="Playlist title" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Description</label>
+                                <textarea class="form-control" rows="2" @bind="editDescription" placeholder="Optional description..."></textarea>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold">Theme</label>
+                                <input type="text" class="form-control" @bind="editTheme" placeholder="e.g., Gospel, Country" />
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold">Scheduled Date</label>
+                                <input type="date" class="form-control" @bind="editPlaylistDate" />
+                            </div>
+                            <div class="col-12 d-flex gap-2 justify-content-end">
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEditInfo">Cancel</button>
+                                <button class="btn btn-sm btn-primary" @onclick="SavePlaylistInfo">
+                                    <i class="bi bi-check-lg me-1"></i>Save
+                                </button>
+                            </div>
                         </div>
-                        <div class="col-md-4 text-md-end">
-                            <div class="display-6 text-primary fw-bold">@playlistCollection.Songs.Count</div>
-                            <p class="text-muted">Song@(playlistCollection.Songs.Count != 1 ? "s" : "")</p>
-                            <span class="badge @(playlistCollection.Playlist.IsPublic == true ? "bg-success" : "bg-secondary")">
-                                <i class="bi @(playlistCollection.Playlist.IsPublic == true ? "bi-globe" : "bi-lock") me-1"></i>
-                                @(playlistCollection.Playlist.IsPublic == true ? "Public" : "Private")
-                            </span>
+                    }
+                    else
+                    {
+                        <!-- Read Mode -->
+                        <div class="row">
+                            <div class="col-md-8">
+                                @if (!string.IsNullOrEmpty(playlistCollection.Playlist.Description))
+                                {
+                                    <p class="text-muted mb-3">
+                                        <i class="bi bi-file-text me-2"></i>@playlistCollection.Playlist.Description
+                                    </p>
+                                }
+                                @if (!string.IsNullOrEmpty(playlistCollection.Playlist.Theme))
+                                {
+                                    <p class="mb-2">
+                                        <i class="bi bi-tag me-2"></i>
+                                        <span class="badge bg-primary">@playlistCollection.Playlist.Theme</span>
+                                    </p>
+                                }
+                                @if (!string.IsNullOrEmpty(playlistCollection.Playlist.Curator))
+                                {
+                                    <p class="text-muted mb-2">
+                                        <i class="bi bi-person me-2"></i>Curated by @playlistCollection.Playlist.Curator
+                                    </p>
+                                }
+                                @if (playlistCollection.Playlist.PlaylistDate.HasValue)
+                                {
+                                    <p class="text-muted mb-0">
+                                        <i class="bi bi-calendar-event me-2"></i>@playlistCollection.Playlist.PlaylistDate.Value.ToString("MMMM dd, yyyy")
+                                    </p>
+                                }
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <div class="display-6 text-primary fw-bold">@playlistCollection.Songs.Count</div>
+                                <p class="text-muted">Song@(playlistCollection.Songs.Count != 1 ? "s" : "")</p>
+                                <span class="badge @(playlistCollection.Playlist.IsPublic == true ? "bg-success" : "bg-secondary")">
+                                    <i class="bi @(playlistCollection.Playlist.IsPublic == true ? "bi-globe" : "bi-lock") me-1"></i>
+                                    @(playlistCollection.Playlist.IsPublic == true ? "Public" : "Private")
+                                </span>
+                            </div>
                         </div>
-                    </div>
+                        @if (IsOwner)
+                        {
+                            <div class="mt-2 text-end">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="StartEditInfo">
+                                    <i class="bi bi-pencil me-1"></i>Edit Info
+                                </button>
+                            </div>
+                        }
+                    }
                 </div>
             </div>
 
@@ -131,16 +172,36 @@
             <!-- Songs List -->
             @if (filteredSongs.Any())
             {
-                <div class="songs-container">
-                    @foreach (var song in filteredSongs)
-                    {
-                        <PlaylistSongItem Song="song"
-                                          ShowActionBtns="@(ShowActions && IsOwner)"
-                                          ActiveView="ActiveView"
-                                          OnRemove="() => RemoveSongFromPlaylist(song.Id)"
-                                          OnShare="() => ShareSong(song.Id)"/>
-                    }
-                </div>
+                @if (ShowActions && IsOwner && string.IsNullOrEmpty(searchQuery))
+                {
+                    <SortableList Items="filteredSongs"
+                                  Handle=".psi-drag-handle"
+                                  Class="songs-container"
+                                  Group="@($"detail-{PlaylistId}")"
+                                  OnUpdate="HandleSongReorder">
+                        <SortableItemTemplate>
+                            <PlaylistSongItem Song="context"
+                                              ShowActionBtns="true"
+                                              IsDraggable="true"
+                                              ActiveView="ActiveView"
+                                              OnRemove="() => RemoveSongFromPlaylist(context.Id)"
+                                              OnShare="() => ShareSong(context.Id)"/>
+                        </SortableItemTemplate>
+                    </SortableList>
+                }
+                else
+                {
+                    <div class="songs-container">
+                        @foreach (var song in filteredSongs)
+                        {
+                            <PlaylistSongItem Song="song"
+                                              ShowActionBtns="@(ShowActions && IsOwner)"
+                                              ActiveView="ActiveView"
+                                              OnRemove="() => RemoveSongFromPlaylist(song.Id)"
+                                              OnShare="() => ShareSong(song.Id)"/>
+                        }
+                    </div>
+                }
             }
             else if (!string.IsNullOrEmpty(searchQuery))
             {
@@ -230,6 +291,13 @@
 
     // Editing state
     private bool showPlaylistModal = false;
+
+    // Inline editing state
+    private bool isEditingInfo = false;
+    private string editTitle = string.Empty;
+    private string? editDescription;
+    private string? editTheme;
+    private DateTime? editPlaylistDate;
 
     // Moving song between playlists
     private MovingContext? movingContext;
@@ -374,6 +442,86 @@
     private void ClosePlaylistModal()
     {
         showPlaylistModal = false;
+    }
+
+    private void StartEditInfo()
+    {
+        if (playlistCollection == null) return;
+        editTitle = playlistCollection.Playlist.Title ?? string.Empty;
+        editDescription = playlistCollection.Playlist.Description;
+        editTheme = playlistCollection.Playlist.Theme;
+        editPlaylistDate = playlistCollection.Playlist.PlaylistDate;
+        isEditingInfo = true;
+    }
+
+    private void CancelEditInfo()
+    {
+        isEditingInfo = false;
+    }
+
+    private async Task SavePlaylistInfo()
+    {
+        if (playlistCollection == null) return;
+
+        var updated = playlistCollection.Playlist;
+        updated.Title = editTitle;
+        updated.Description = editDescription;
+        updated.Theme = editTheme;
+        updated.PlaylistDate = editPlaylistDate;
+
+        try
+        {
+            var response = await _playlistsApi.UpdatePlaylist(updated.Id, updated);
+            if (response.IsSuccessStatusCode)
+            {
+                isEditingInfo = false;
+                await ShowSuccessMessage("Playlist updated.");
+                await LoadPlaylist();
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating playlist info");
+        }
+    }
+
+    private async Task HandleSongReorder((int oldIndex, int newIndex) indices)
+    {
+        if (indices.oldIndex == indices.newIndex) return;
+
+        var item = filteredSongs[indices.oldIndex];
+        filteredSongs.RemoveAt(indices.oldIndex);
+        filteredSongs.Insert(indices.newIndex, item);
+
+        // Sync back to the source collection
+        if (playlistCollection != null)
+        {
+            playlistCollection.Songs.Clear();
+            playlistCollection.Songs.AddRange(filteredSongs);
+        }
+
+        StateHasChanged();
+
+        try
+        {
+            var songIds = filteredSongs.Select(s => s.Id).ToList();
+            await _playlistsApi.ReorderPlaylistSongs(PlaylistId, songIds);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error persisting song reorder");
+        }
     }
 
     private async Task SharePlaylist()

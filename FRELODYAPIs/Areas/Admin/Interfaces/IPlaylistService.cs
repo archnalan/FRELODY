@@ -36,5 +36,6 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<PlaylistDto>> AddPlaylistAsync([Required] PlaylistCreateDto playlistCreateDto);
         Task<ServiceResult<bool>> RemoveSongFromPlaylistAsync(string playlistId, string songId);
         Task<ServiceResult<PlaylistDto>> AddSongToPlaylistAsync(string playlistId, string songId);
+        Task<ServiceResult<bool>> ReorderPlaylistSongsAsync(string playlistId, List<string> songIds);
     }
 }

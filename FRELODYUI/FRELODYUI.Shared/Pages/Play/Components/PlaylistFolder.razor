@@ -1,3 +1,4 @@
+@using FRELODYUI.Shared.Pages.Common
 @inject ILogger<PlaylistFolder> _logger
 
 <div class="pf-folder">
@@ -92,35 +93,60 @@
 
             @if (Collection.Songs.Any())
             {
-                <div class="pf-song-list">
-                    @foreach (var song in Collection.Songs)
-                    {
-                        var isRestricted = song.Access != null && song.Access != FRELODYSHRD.Dtos.SubDtos.Access.Public;
-                        <div class="@(isRestricted ? "pf-song-restricted" : "")">
-                            <PlaylistSongItem Song="song"
-                                              ShowActionBtns="@(ShowActionButtons && !IsReadOnly)"
-                                              OnRemove="() => RemoveSongFromPlaylist(Collection.Playlist.Id, song.Id)"
-                                              OnShare="() => ShareSong(song.Id)" />
-                            @if (isRestricted && !IsReadOnly)
-                            {
-                                <div class="pf-restricted-badge">
-                                    <i class="bi bi-lock-fill"></i>
-                                    <span>@(song.Access == FRELODYSHRD.Dtos.SubDtos.Access.Private ? "Private" : "Protected")</span>
-                                    <button class="pf-make-public-btn" @onclick="() => PreviewAndMakePublic(song.Id)" @onclick:stopPropagation title="Preview & make public">
-                                        <i class="bi bi-globe me-1"></i>Make Public
-                                    </button>
-                                </div>
+                @if (ShowActionButtons && !IsReadOnly)
+                {
+                    <SortableList Items="Collection.Songs"
+                                  Handle=".psi-drag-handle"
+                                  Class="pf-song-list"
+                                  Group="@($"playlist-{Collection.Playlist.Id}")"
+                                  OnUpdate="HandleSongReorder">
+                        <SortableItemTemplate>
+                            @{
+                                var song = context;
+                                var isRestricted = song.Access != null && song.Access != FRELODYSHRD.Dtos.SubDtos.Access.Public;
                             }
-                            else if (isRestricted)
-                            {
-                                <div class="pf-restricted-badge">
-                                    <i class="bi bi-lock-fill"></i>
-                                    <span>@(song.Access == FRELODYSHRD.Dtos.SubDtos.Access.Private ? "Private" : "Protected")</span>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
+                            <div class="@(isRestricted ? "pf-song-restricted" : "")">
+                                <PlaylistSongItem Song="song"
+                                                  ShowActionBtns="true"
+                                                  IsDraggable="true"
+                                                  OnRemove="() => RemoveSongFromPlaylist(Collection.Playlist.Id, song.Id)"
+                                                  OnShare="() => ShareSong(song.Id)" />
+                                @if (isRestricted)
+                                {
+                                    <div class="pf-restricted-badge">
+                                        <i class="bi bi-lock-fill"></i>
+                                        <span>@(song.Access == FRELODYSHRD.Dtos.SubDtos.Access.Private ? "Private" : "Protected")</span>
+                                        <button class="pf-make-public-btn" @onclick="() => PreviewAndMakePublic(song.Id)" @onclick:stopPropagation title="Preview & make public">
+                                            <i class="bi bi-globe me-1"></i>Make Public
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </SortableItemTemplate>
+                    </SortableList>
+                }
+                else
+                {
+                    <div class="pf-song-list">
+                        @foreach (var song in Collection.Songs)
+                        {
+                            var isRestricted = song.Access != null && song.Access != FRELODYSHRD.Dtos.SubDtos.Access.Public;
+                            <div class="@(isRestricted ? "pf-song-restricted" : "")">
+                                <PlaylistSongItem Song="song"
+                                                  ShowActionBtns="false"
+                                                  OnRemove="() => RemoveSongFromPlaylist(Collection.Playlist.Id, song.Id)"
+                                                  OnShare="() => ShareSong(song.Id)" />
+                                @if (isRestricted)
+                                {
+                                    <div class="pf-restricted-badge">
+                                        <i class="bi bi-lock-fill"></i>
+                                        <span>@(song.Access == FRELODYSHRD.Dtos.SubDtos.Access.Private ? "Private" : "Protected")</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
 
                 <div class="pf-footer">
                     <button class="pf-footer-btn" @onclick="NavigateToDetail" @onclick:stopPropagation>
@@ -197,6 +223,27 @@
     private void HandleToggle()
     {
         OnToggle.InvokeAsync();
+    }
+
+    private async Task HandleSongReorder((int oldIndex, int newIndex) indices)
+    {
+        if (indices.oldIndex == indices.newIndex) return;
+
+        var songs = Collection.Songs;
+        var item = songs[indices.oldIndex];
+        songs.RemoveAt(indices.oldIndex);
+        songs.Insert(indices.newIndex, item);
+        StateHasChanged();
+
+        try
+        {
+            var songIds = songs.Select(s => s.Id).ToList();
+            await _playlistsApi.ReorderPlaylistSongs(Collection.Playlist.Id, songIds);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error persisting song reorder");
+        }
     }
 
     private async Task ToggleMenu()
