@@ -495,7 +495,7 @@ namespace FRELODYAPP.Data.Infrastructure
                 {
                     entity.Entity.DateCreated = DateTime.UtcNow;
                     entity.Entity.DateModified = DateTime.UtcNow;
-                    entity.Entity.ModifiedBy = _userId;
+                    entity.Entity.CreatedBy = _userId;
                     if (_isSuperAdmin)
                     {
                         entity.Entity.TenantId = null;
@@ -505,8 +505,7 @@ namespace FRELODYAPP.Data.Infrastructure
                         if(!string.IsNullOrEmpty(_tenantId))
                             entity.Entity.TenantId = _tenantId;
                     }
-                    // else: TenantId was explicitly set — leave it alone
-                    entity.Entity.CreatedBy = _userId;
+                    // else: TenantId was explicitly set — leave it alone                    
                 }
                 else if (entity.State == EntityState.Modified)
                 {

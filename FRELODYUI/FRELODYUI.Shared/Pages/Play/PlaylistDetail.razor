@@ -27,7 +27,7 @@
                     <h3 class="mb-0" style="color: var(--text-primary)">@playlistCollection.Playlist.Title</h3>
                 </div>
                 
-                @if (ShowActions)
+                @if (ShowActions && IsOwner)
                 {
                     <!-- Actions Dropdown (only for authenticated owners) -->
                     <div class="dropdown">
@@ -47,6 +47,10 @@
                             <li>
                                 <button class="dropdown-item" @onclick="SharePlaylist">
                                     <i class="bi bi-share me-2"></i>Share Playlist
+                                    @if (HasRestrictedSongs)
+                                    {
+                                        <i class="bi bi-exclamation-triangle-fill text-warning ms-1"></i>
+                                    }
                                 </button>
                             </li>
                             <li>
@@ -131,7 +135,7 @@
                     @foreach (var song in filteredSongs)
                     {
                         <PlaylistSongItem Song="song"
-                                          ShowActionBtns="ShowActions"
+                                          ShowActionBtns="@(ShowActions && IsOwner)"
                                           ActiveView="ActiveView"
                                           OnRemove="() => RemoveSongFromPlaylist(song.Id)"
                                           OnShare="() => ShareSong(song.Id)"/>
@@ -155,7 +159,7 @@
                 <div class="text-center my-5 p-5">
                     <i class="bi bi-music-note fs-1" style="color: var(--text-muted)"></i>
                     <h5 class="mt-3" style="color: var(--text-primary)">No Songs Yet</h5>
-                    @if (ShowActions)
+                    @if (ShowActions && IsOwner)
                     {
                         <p style="color: var(--text-muted)">Add songs to this playlist to get started</p>
                         <button class="btn btn-primary mt-3" @onclick="AddSongToPlaylist">
@@ -238,6 +242,12 @@
     private SearchModal? searchModalRef;
     private bool showSuccessMessage = false;
     private string successMessage = string.Empty;
+
+    private bool IsOwner => !string.IsNullOrEmpty(currentUserId) && playlistCollection != null &&
+        (playlistCollection.Playlist.CreatedBy == currentUserId || playlistCollection.Playlist.Curator == currentUserId);
+
+    private bool HasRestrictedSongs => playlistCollection?.Songs.Any(s =>
+        s.Access != null && s.Access != FRELODYSHRD.Dtos.SubDtos.Access.Public) ?? false;
     
     private bool IsLandingContext
     {
@@ -367,6 +377,27 @@
     }
 
     private async Task SharePlaylist()
+    {
+        if (playlistCollection == null) return;
+
+        if (HasRestrictedSongs)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Sharing Warning",
+                Message = "This playlist contains private or protected songs that won't be visible to others. Would you like to share anyway?",
+                DangerText = "Recipients will only see public songs in the shared link.",
+                ButtonText = "Share Anyway",
+                OptionType = OptionType.Confirmation,
+                OnConfirmCallback = async () => await ExecuteSharePlaylist()
+            });
+            return;
+        }
+
+        await ExecuteSharePlaylist();
+    }
+
+    private async Task ExecuteSharePlaylist()
     {
         if (playlistCollection == null) return;
 

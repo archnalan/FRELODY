@@ -18,8 +18,14 @@ namespace FRELODYUI.Shared.RefitApis
         [Get("/api/playlists/get-user-playlists")]
         Task<IApiResponse<List<PlaylistSongs>>> GetUserPlaylists([Query] string userId);
 
-        [Get("/api/playlists/get-playlists-by-id")]
+        [Get("/api/playlists/get-playlist-by-id")]
         Task<IApiResponse<PlaylistSongs>> GetPlaylistById([Query] string id);
+
+        [Get("/api/playlists/get-public-playlists")]
+        Task<IApiResponse<List<PlaylistSongs>>> GetPublicPlaylists([Query] string? excludeUserId = null);
+
+        [Post("/api/playlists/clone-playlist")]
+        Task<IApiResponse<PlaylistDto>> ClonePlaylist([Query] string playlistId, [Query] string userId);
 
         [Post("/api/playlists/create-playlist")]
         Task<IApiResponse<PlaylistDto>> CreatePlaylist([Body] PlaylistDto playlist);

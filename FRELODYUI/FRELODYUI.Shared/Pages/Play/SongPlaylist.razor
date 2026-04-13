@@ -10,7 +10,10 @@
         @if (ShowActions)
         {
             <div class="text-center top-0" style="z-index:5">
-                <h3 class="m-3">Playlists</h3>
+                @if (!IsLandingContext)
+                {
+                    <h3 class="m-3">Playlists</h3>
+                }
                 <!-- Search Bar -->
                 <div class="rounded-3 border shadow p-3 mb-2">
                     <div class="d-flex align-items-center gap-2">
@@ -37,54 +40,100 @@
         {
             <FRELODYUI.Shared.Pages.PlaceHolders.SongPlaylistPlaceholder ActiveView="ActiveView" />
         }
-        else if (collections.Any())
-        {
-            <!-- Collections/Playlists Folder Structure -->
-            <div class="w-100 playlists-container">
-                @{
-                    var collectionFilter = collections.Where(c => string.IsNullOrEmpty(searchQuery) ||
-                    c.Playlist.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true ||
-                    c.Playlist.Theme?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true ||
-                    c.Songs.Any(s => s.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)));
-                }
-                @foreach (var colSong in collectionFilter)
-                {
-                    <PlaylistFolder Collection="colSong"
-                                    ShowActionButtons="ShowActions"
-                                    IsExpanded="expandedCollections.Contains(colSong.Playlist.Id)"
-                                    OnToggle="() => ToggleCollection(colSong.Playlist.Id)"
-                                    OnEdit="() => EditPlaylist(colSong)"
-                                    OnRefresh="LoadPlaylists"
-                                    OnAddSong="() => OpenAddSongModal(colSong.Playlist.Id)"/>
-                }
-            </div>
-
-            @if (!collectionFilter.Any())
-            {
-                <div class="text-center my-5">
-                    <i class="bi bi-search fs-1 text-muted"></i>
-                    <h6 class="mt-3">No playlists match "@searchQuery"</h6>
-                </div>
-            }
-        }
         else
         {
-            <!-- Empty State -->
-            <div class="text-center my-5 p-5">
-                <i class="bi bi-music-note-list fs-1 text-muted"></i>
-                <h5 class="mt-3">No Playlists Yet</h5>
-                @if (ShowActions)
-                {
-                    <p class="text-muted">Create your first playlist to organize songs for performances</p>
-                    <button class="btn btn-primary mt-3" @onclick="CreateNewPlaylist">
-                        <i class="bi bi-plus-lg me-2"></i>Create Playlist
-                    </button>
-                }
-                else
-                {
-                    <p class="text-muted">Your playlists will be listed here.</p>
-                }              
-            </div>
+            <!-- My Playlists Section -->
+            @if (myPlaylists.Any())
+            {
+                <div class="w-100 mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-2 px-1">
+                        <i class="bi bi-collection" style="color: var(--text-secondary)"></i>
+                        <h6 class="mb-0 fw-semibold" style="color: var(--text-primary)">My Playlists</h6>
+                        <span class="badge rounded-pill" style="background: var(--bg-active); font-size: 0.7rem;">@myPlaylists.Count</span>
+                    </div>
+                    <div class="playlists-container">
+                        @{
+                            var myFilter = myPlaylists.Where(c => string.IsNullOrEmpty(searchQuery) ||
+                                c.Playlist.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true ||
+                                c.Playlist.Theme?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true ||
+                                c.Songs.Any(s => s.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)));
+                        }
+                        @foreach (var colSong in myFilter)
+                        {
+                            <PlaylistFolder Collection="colSong"
+                                            ShowActionButtons="ShowActions"
+                                            IsExpanded="expandedCollections.Contains(colSong.Playlist.Id)"
+                                            OnToggle="() => ToggleCollection(colSong.Playlist.Id)"
+                                            OnEdit="() => EditPlaylist(colSong)"
+                                            OnRefresh="LoadPlaylists"
+                                            OnAddSong="() => OpenAddSongModal(colSong.Playlist.Id)"/>
+                        }
+                        @if (!myFilter.Any())
+                        {
+                            <div class="text-center my-3">
+                                <i class="bi bi-search text-muted"></i>
+                                <small class="text-muted ms-1">No matches in your playlists</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else if (!explorePlaylists.Any())
+            {
+                <!-- Empty State (no playlists at all) -->
+                <div class="text-center my-5 p-5">
+                    <i class="bi bi-music-note-list fs-1 text-muted"></i>
+                    <h5 class="mt-3">No Playlists Yet</h5>
+                    @if (ShowActions)
+                    {
+                        <p class="text-muted">Create your first playlist to organize songs for performances</p>
+                        <button class="btn btn-primary mt-3" @onclick="CreateNewPlaylist">
+                            <i class="bi bi-plus-lg me-2"></i>Create Playlist
+                        </button>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Your playlists will be listed here.</p>
+                    }
+                </div>
+            }
+
+            <!-- Explore Playlists Section -->
+            @if (explorePlaylists.Any())
+            {
+                <div class="w-100">
+                    <div class="d-flex align-items-center gap-2 mb-2 px-1">
+                        <i class="bi bi-globe2" style="color: var(--text-secondary)"></i>
+                        <h6 class="mb-0 fw-semibold" style="color: var(--text-primary)">Explore</h6>
+                        <span class="badge rounded-pill" style="background: var(--text-muted); font-size: 0.7rem;">@explorePlaylists.Count</span>
+                    </div>
+                    <div class="playlists-container">
+                        @{
+                            var exploreFilter = explorePlaylists.Where(c => string.IsNullOrEmpty(searchQuery) ||
+                                c.Playlist.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true ||
+                                c.Playlist.Theme?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true ||
+                                c.Songs.Any(s => s.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)));
+                        }
+                        @foreach (var colSong in exploreFilter)
+                        {
+                            <PlaylistFolder Collection="colSong"
+                                            ShowActionButtons="false"
+                                            IsExpanded="expandedCollections.Contains(colSong.Playlist.Id)"
+                                            OnToggle="() => ToggleCollection(colSong.Playlist.Id)"
+                                            IsReadOnly="true"
+                                            OnClone="() => ClonePlaylist(colSong.Playlist.Id)"
+                                            OnRefresh="LoadPlaylists" />
+                        }
+                        @if (!exploreFilter.Any())
+                        {
+                            <div class="text-center my-3">
+                                <i class="bi bi-search text-muted"></i>
+                                <small class="text-muted ms-1">No matches in explore playlists</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
         }
 
         <!-- Moving Mode Banner -->
@@ -122,7 +171,8 @@
     [Parameter] public bool ShowActions { get; set; } = true;
     [Parameter] public ActiveView ActiveView { get; set; } = ActiveView.Collapsed;
 
-    private List<PlaylistSongs> collections = new();
+    private List<PlaylistSongs> myPlaylists = new();
+    private List<PlaylistSongs> explorePlaylists = new();
     private bool isLoading = true;
     private string searchQuery = string.Empty;
     private HashSet<string> expandedCollections = new();
@@ -146,6 +196,9 @@
     private string successMessage = string.Empty;
     private bool IsAddingSong = false;
     private bool IsRemovingSong = false;
+
+    private bool IsLandingContext => _navManager.Uri.Contains("/landing/", StringComparison.OrdinalIgnoreCase) ||
+        _navManager.Uri.EndsWith("/landing", StringComparison.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
@@ -174,21 +227,34 @@
         {
             if (string.IsNullOrEmpty(currentUserId))
             {
-                ShowAuthenticationRequired();
+                // Still load public playlists for unauthenticated users
+                var publicResponse = await _playlistsApi.GetPublicPlaylists();
+                if (publicResponse.IsSuccessStatusCode && publicResponse.Content != null)
+                {
+                    explorePlaylists = publicResponse.Content;
+                }
+                myPlaylists = new();
                 return;
             }
 
-            var response = await _playlistsApi.GetUserPlaylists(currentUserId);
-
-            if (response.IsSuccessStatusCode && response.Content != null)
+            // Load user playlists
+            var userResponse = await _playlistsApi.GetUserPlaylists(currentUserId);
+            if (userResponse.IsSuccessStatusCode && userResponse.Content != null)
             {
-                collections = response.Content;
+                myPlaylists = userResponse.Content;
                 await ApplyViewState(ActiveView);
             }
             else
             {
-                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(userResponse);
                 _logger.LogError("Error loading playlists: {Error}", errorMessage);
+            }
+
+            // Load public/explore playlists (excluding user's own)
+            var exploreResponse = await _playlistsApi.GetPublicPlaylists(currentUserId);
+            if (exploreResponse.IsSuccessStatusCode && exploreResponse.Content != null)
+            {
+                explorePlaylists = exploreResponse.Content;
             }
         }
         catch (Exception ex)
@@ -214,8 +280,7 @@
     {
         if (view == ActiveView.Expanded)
         {
-            // Expand all playlists
-            foreach (var collection in collections)
+            foreach (var collection in myPlaylists)
             {
                 if (!string.IsNullOrEmpty(collection.Playlist.Id))
                 {
@@ -225,7 +290,6 @@
         }
         else if (view == ActiveView.Collapsed)
         {
-            // Collapse all playlists (except if specifically navigated to)
             var specificId = CollectionId;
             expandedCollections.Clear();
             if (!string.IsNullOrEmpty(specificId))
@@ -287,7 +351,7 @@
 
     private void InitiateSongMove(string sourceCollectionId, string songId)
     {
-        var collection = collections.FirstOrDefault(c => c.Playlist.Id == sourceCollectionId);
+        var collection = myPlaylists.FirstOrDefault(c => c.Playlist.Id == sourceCollectionId);
         var song = collection?.Songs.FirstOrDefault(s => s.Id == songId);
 
         if (song != null)
@@ -319,7 +383,7 @@
 
             // Add to destination (This might need a new API endpoint to add single song)
             // For now, we'll need to update the entire collection
-            var destCollection = collections.FirstOrDefault(c => c.Playlist.Id == destinationCollectionId);
+            var destCollection = myPlaylists.FirstOrDefault(c => c.Playlist.Id == destinationCollectionId);
             if (destCollection != null)
             {
                 var createDto = new PlaylistCreateDto
@@ -369,7 +433,7 @@
         if (string.IsNullOrEmpty(activeCollectionId) || selectedSong == null)
             return;
 
-        var targetPlaylist = collections.FirstOrDefault(c => c.Playlist.Id == activeCollectionId);
+        var targetPlaylist = myPlaylists.FirstOrDefault(c => c.Playlist.Id == activeCollectionId);
         if (targetPlaylist != null && targetPlaylist.Songs.Any(s => s.Id == selectedSong.Id))
         {
             _modalService.Show(new ModalOptionDto
@@ -464,6 +528,47 @@
                 return Task.CompletedTask;
             }
         });
+    }
+
+    private async Task ClonePlaylist(string playlistId)
+    {
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            ShowAuthenticationRequired();
+            return;
+        }
+
+        try
+        {
+            var response = await _playlistsApi.ClonePlaylist(playlistId, currentUserId);
+            if (response.IsSuccessStatusCode)
+            {
+                await ShowSuccessMessage("Playlist copied to your library!");
+                await LoadPlaylists();
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cloning playlist");
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Error",
+                Message = "Failed to copy playlist.",
+                ButtonText = "Close",
+                OptionType = OptionType.Error
+            });
+        }
     }
 
     private async Task GoBack()

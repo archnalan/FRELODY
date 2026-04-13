@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FRELODYSHRD.Dtos.SubDtos;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,5 +15,6 @@ namespace FRELODYUI.Shared.Models.PlaylistModels
         public string? WrittenBy { get; set; }
         public int? SortOrder { get; set; }
         public DateTimeOffset DateScheduled { get; set; }
+        public Access? Access { get; set; }
     }
 }

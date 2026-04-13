@@ -212,3 +212,67 @@
 [data-bs-theme="dark"] .pf-footer-btn:hover {
     background: rgba(255, 255, 255, 0.06);
 }
+
+/* ── Restricted Song Indicator ── */
+.pf-song-restricted {
+    position: relative;
+    opacity: 0.55;
+}
+
+.pf-restricted-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.65rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    background: rgba(220, 53, 69, 0.12);
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.pf-make-public-btn {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.375rem;
+    padding: 0.1rem 0.375rem;
+    font-size: 0.6rem;
+    font-weight: 600;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    background: none;
+    color: var(--bs-primary);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+    .pf-make-public-btn:hover {
+        background: var(--bs-primary);
+        color: #fff;
+    }
+
+[data-bs-theme="dark"] .pf-restricted-badge {
+    background: rgba(220, 53, 69, 0.2);
+    color: #f87171;
+}
+
+/* ── Restricted Notice ── */
+.pf-restricted-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    color: #b45309;
+    background: rgba(251, 191, 36, 0.1);
+    border-bottom: 1px solid var(--border-light);
+}
+
+[data-bs-theme="dark"] .pf-restricted-notice {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.08);
+}

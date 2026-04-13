@@ -168,6 +168,10 @@
                     {
                         <span>Recover</span>
                     }
+                    else if (!string.IsNullOrEmpty(ConfirmButtonText))
+                    {
+                        <span>@ConfirmButtonText</span>
+                    }
                     else
                     {
                         <span>Save</span>
@@ -185,6 +189,7 @@
     [Parameter] public EventCallback OnSave { get; set; }
     [Parameter] public bool EnableAccessEdit { get; set; }
     [Parameter] public EventCallback<bool?> OnMarkPrivateAccess { get; set; }
+    [Parameter] public string? ConfirmButtonText { get; set; }
 
     private int activePartIndex = 0;
     private bool _disposed = false;

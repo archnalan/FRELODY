@@ -104,7 +104,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             SongNumber = uc.Song.SongNumber,
                             WrittenBy = uc.Song.WrittenBy,
                             SortOrder = uc.SortOrder,
-                            DateScheduled = uc.DateScheduled
+                            DateScheduled = uc.DateScheduled,
+                            Access = uc.Song.Access
                         }).ToList()
                     };
                     playlistsWithSongs.Add(playlist);
@@ -115,6 +116,139 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError("Error retrieving song playlists for user {UserId}: {Error}", userId, ex);
                 return ServiceResult<List<PlaylistSongs>>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Get Public Playlists
+        public async Task<ServiceResult<List<PlaylistSongs>>> GetPublicPlaylistsAsync(string? excludeUserId = null)
+        {
+            try
+            {
+                var query = _context.Playlists
+                    .Where(c => c.Access == Access.Public || c.IsPublic == true);
+
+                if (!string.IsNullOrEmpty(excludeUserId))
+                {
+                    query = query.Where(c => c.CreatedBy != excludeUserId && c.Curator != excludeUserId);
+                }
+
+                var publicPlaylists = await query
+                    .OrderByDescending(c => c.DateCreated)
+                    .ThenBy(c => c.Title)
+                    .Take(50)
+                    .ToListAsync();
+
+                var curatorIds = publicPlaylists
+                    .Where(p => !string.IsNullOrEmpty(p.Curator))
+                    .Select(p => p.Curator!)
+                    .Distinct()
+                    .ToList();
+                var curatorNames = await ResolveCuratorNames(curatorIds);
+
+                var playlistsWithSongs = new List<PlaylistSongs>();
+                foreach (var up in publicPlaylists)
+                {
+                    var userplaylistSongs = await _context.SongUserPlaylists
+                        .Where(sc => sc.PlaylistId == up.Id)
+                        .Include(sc => sc.Song)
+                        .OrderBy(sc => sc.SortOrder)
+                        .ToListAsync();
+                    var playlistDto = up.Adapt<PlaylistDto>();
+                    if (!string.IsNullOrEmpty(up.Curator) && curatorNames.TryGetValue(up.Curator, out var name))
+                        playlistDto.Curator = name;
+                    PlaylistSongs playlist = new()
+                    {
+                        Playlist = playlistDto,
+                        Songs = userplaylistSongs
+                            .Where(uc => uc.Song != null)
+                            .Select(uc => new PlaylistSongDto
+                            {
+                                Id = uc.Song.Id,
+                                Title = uc.Song.Title,
+                                SongNumber = uc.Song.SongNumber,
+                                WrittenBy = uc.Song.WrittenBy,
+                                SortOrder = uc.SortOrder,
+                                DateScheduled = uc.DateScheduled,
+                                Access = uc.Song.Access
+                            }).ToList()
+                    };
+                    playlistsWithSongs.Add(playlist);
+                }
+                return ServiceResult<List<PlaylistSongs>>.Success(playlistsWithSongs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error retrieving public playlists: {Error}", ex);
+                return ServiceResult<List<PlaylistSongs>>.Failure(ex);
+            }
+        }
+        #endregion
+
+        #region Clone Playlist
+        public async Task<ServiceResult<PlaylistDto>> ClonePlaylistAsync(string playlistId, string userId)
+        {
+            try
+            {
+                var sourcePlaylist = await _context.Playlists
+                    .FirstOrDefaultAsync(c => c.Id == playlistId);
+
+                if (sourcePlaylist == null)
+                {
+                    return ServiceResult<PlaylistDto>.Failure(
+                        new KeyNotFoundException($"Playlist with Id {playlistId} not found."));
+                }
+
+                var sourceSongs = await _context.SongUserPlaylists
+                    .Where(sc => sc.PlaylistId == playlistId)
+                    .Include(sc => sc.Song)
+                    .OrderBy(sc => sc.SortOrder)
+                    .ToListAsync();
+
+                var newPlaylist = new Playlist
+                {
+                    Title = sourcePlaylist.Title,
+                    Description = sourcePlaylist.Description,
+                    Theme = sourcePlaylist.Theme,
+                    Curator = userId,
+                    PlaylistDate = sourcePlaylist.PlaylistDate,
+                    Slug = GenerateSlug(sourcePlaylist.Title + "-copy"),
+                    IsPublic = true,
+                    IsFeatured = false,
+                    Access = Access.Public,
+                    TenantId = _tenantId,
+                    CreatedBy = userId
+                };
+
+                await _context.Playlists.AddAsync(newPlaylist);
+                await _context.SaveChangesAsync();
+
+                if (sourceSongs.Any())
+                {
+                    var clonedSongs = sourceSongs
+                        .Where(s => s.Song != null)
+                        .Select((s, idx) => new SongUserPlaylist
+                        {
+                            SongId = s.SongId,
+                            PlaylistId = newPlaylist.Id,
+                            AddedByUserId = userId,
+                            SortOrder = idx + 1,
+                            DateScheduled = DateTimeOffset.UtcNow,
+                            TenantId = _tenantId,
+                            CreatedBy = userId
+                        }).ToList();
+
+                    await _context.SongUserPlaylists.AddRangeAsync(clonedSongs);
+                    await _context.SaveChangesAsync();
+                }
+
+                var playlistDto = newPlaylist.Adapt<PlaylistDto>();
+                return ServiceResult<PlaylistDto>.Success(playlistDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error cloning playlist {PlaylistId}: {Error}", playlistId, ex);
+                return ServiceResult<PlaylistDto>.Failure(ex);
             }
         }
         #endregion
@@ -156,7 +290,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         SongNumber = uc.Song.SongNumber,
                         WrittenBy = uc.Song.WrittenBy,
                         SortOrder = uc.SortOrder,
-                        DateScheduled = uc.DateScheduled
+                        DateScheduled = uc.DateScheduled,
+                        Access = uc.Song.Access
                     }).ToList()
                 };
                 return ServiceResult<PlaylistSongs>.Success(playlistSongs);
@@ -181,6 +316,10 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         new ArgumentNullException(nameof(playlistDto)));
                 }
                 var playlist = playlistDto.Adapt<Playlist>();
+                playlist.Access ??= Access.Public;
+                playlist.TenantId ??= _tenantId;
+                playlist.CreatedBy ??= _userId;
+                playlist.Curator ??= _userId;
                 await _context.Playlists.AddAsync(playlist);
                 await _context.SaveChangesAsync();
                 var playlistDtoResult = playlist.Adapt<PlaylistDto>();
@@ -213,7 +352,10 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             PlaylistDate = playlistCreateDto.SheduledDate?.DateTime,
                             Slug = GenerateSlug(playlistCreateDto.Title),
                             IsPublic = true,
-                            IsFeatured = false
+                            IsFeatured = false,
+                            Access = Access.Public,
+                            TenantId = _tenantId,
+                            CreatedBy = _userId
                         };
 
                         await _context.Playlists.AddAsync(playlist);
@@ -355,6 +497,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         new KeyNotFoundException($"Song playlist with Id {id} not found."));
                 }
                 playlist.IsPublic = false;
+                playlist.Access = Access.Private;
                 await _context.SaveChangesAsync();
                 var playlistDto = playlist.Adapt<PlaylistDto>();
                 return ServiceResult<PlaylistDto>.Success(playlistDto);

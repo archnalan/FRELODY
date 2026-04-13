@@ -54,6 +54,26 @@ namespace FRELODYAPIs.Controllers
             return Ok(result.Data);
         }
 
+        [HttpGet]
+        [ProducesResponseType(typeof(List<PlaylistSongs>), 200)]
+        public async Task<IActionResult> GetPublicPlaylists([FromQuery] string? excludeUserId = null)
+        {
+            var result = await _playlistService.GetPublicPlaylistsAsync(excludeUserId);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
+            return Ok(result.Data);
+        }
+
+        [HttpPost]
+        [ProducesResponseType(typeof(PlaylistDto), 201)]
+        public async Task<IActionResult> ClonePlaylist([FromQuery] string playlistId, [FromQuery] string userId)
+        {
+            var result = await _playlistService.ClonePlaylistAsync(playlistId, userId);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result.Error?.Message ?? "Error");
+            return CreatedAtAction(nameof(GetPlaylistById), new { id = result.Data.Id }, result.Data);
+        }
+
         [HttpPost]
         [ProducesResponseType(typeof(PlaylistDto), 201)]
         public async Task<IActionResult> CreatePlaylist([FromBody] PlaylistDto playlist)

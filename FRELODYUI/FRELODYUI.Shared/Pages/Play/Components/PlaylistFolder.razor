@@ -24,12 +24,19 @@
 
         <span class="pf-count">@Collection.Songs.Count</span>
 
-        @if (ShowActionButtons)
+        @if (ShowActionButtons && !IsReadOnly)
         {
             <button class="pf-menu-btn" @ref="menuBtnRef" type="button"
                     @onclick="ToggleMenu" @onclick:stopPropagation
                     title="More actions">
                 <i class="bi bi-three-dots-vertical"></i>
+            </button>
+        }
+        else if (IsReadOnly)
+        {
+            <button class="pf-menu-btn" @onclick="() => OnClone.InvokeAsync()" @onclick:stopPropagation
+                    title="Copy to my playlists">
+                <i class="bi bi-copy"></i>
             </button>
         }
     </div>
@@ -51,6 +58,10 @@
             <li>
                 <button class="dropdown-item" @onclick="() => { CloseMenu(); SharePlaylist(Collection.Playlist.Id); }">
                     <i class="bi bi-link-45deg me-2"></i>Share
+                    @if (HasRestrictedSongs)
+                    {
+                        <i class="bi bi-exclamation-triangle-fill text-warning ms-1" title="Contains non-public songs"></i>
+                    }
                 </button>
             </li>
             <li><hr class="dropdown-divider"></li>
@@ -71,15 +82,43 @@
                 <p class="pf-description">@Collection.Playlist.Description</p>
             }
 
+            @if (HasRestrictedSongs && !IsReadOnly)
+            {
+                <div class="pf-restricted-notice">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <span>Some songs are private/protected and won't be visible when shared. Update their access to Public first.</span>
+                </div>
+            }
+
             @if (Collection.Songs.Any())
             {
                 <div class="pf-song-list">
                     @foreach (var song in Collection.Songs)
                     {
-                        <PlaylistSongItem Song="song"
-                                          ShowActionBtns="ShowActionButtons"
-                                          OnRemove="() => RemoveSongFromPlaylist(Collection.Playlist.Id, song.Id)"
-                                          OnShare="() => ShareSong(song.Id)" />
+                        var isRestricted = song.Access != null && song.Access != FRELODYSHRD.Dtos.SubDtos.Access.Public;
+                        <div class="@(isRestricted ? "pf-song-restricted" : "")">
+                            <PlaylistSongItem Song="song"
+                                              ShowActionBtns="@(ShowActionButtons && !IsReadOnly)"
+                                              OnRemove="() => RemoveSongFromPlaylist(Collection.Playlist.Id, song.Id)"
+                                              OnShare="() => ShareSong(song.Id)" />
+                            @if (isRestricted && !IsReadOnly)
+                            {
+                                <div class="pf-restricted-badge">
+                                    <i class="bi bi-lock-fill"></i>
+                                    <span>@(song.Access == FRELODYSHRD.Dtos.SubDtos.Access.Private ? "Private" : "Protected")</span>
+                                    <button class="pf-make-public-btn" @onclick="() => PreviewAndMakePublic(song.Id)" @onclick:stopPropagation title="Preview & make public">
+                                        <i class="bi bi-globe me-1"></i>Make Public
+                                    </button>
+                                </div>
+                            }
+                            else if (isRestricted)
+                            {
+                                <div class="pf-restricted-badge">
+                                    <i class="bi bi-lock-fill"></i>
+                                    <span>@(song.Access == FRELODYSHRD.Dtos.SubDtos.Access.Private ? "Private" : "Protected")</span>
+                                </div>
+                            }
+                        </div>
                     }
                 </div>
 
@@ -87,10 +126,16 @@
                     <button class="pf-footer-btn" @onclick="NavigateToDetail" @onclick:stopPropagation>
                         <i class="bi bi-list-ul me-1"></i>View Full Playlist
                     </button>
-                    @if (ShowActionButtons)
+                    @if (ShowActionButtons && !IsReadOnly)
                     {
                         <button class="pf-footer-btn pf-add-btn" @onclick="() => OnAddSong.InvokeAsync()" @onclick:stopPropagation>
                             <i class="bi bi-plus me-1"></i>Add Song
+                        </button>
+                    }
+                    else if (IsReadOnly)
+                    {
+                        <button class="pf-footer-btn pf-add-btn" @onclick="() => OnClone.InvokeAsync()" @onclick:stopPropagation>
+                            <i class="bi bi-copy me-1"></i>Copy Playlist
                         </button>
                     }
                 </div>
@@ -100,7 +145,7 @@
                 <div class="pf-empty">
                     <i class="bi bi-music-note"></i>
                     <span>No songs yet</span>
-                    @if (ShowActionButtons)
+                    @if (ShowActionButtons && !IsReadOnly)
                     {
                         <button class="pf-footer-btn pf-add-btn" @onclick="() => OnAddSong.InvokeAsync()" @onclick:stopPropagation>
                             <i class="bi bi-plus-circle me-1"></i>Add Song
@@ -112,6 +157,13 @@
     }
 </div>
 
+<SongDataPreview @ref="songPreviewRef"
+                 IsVisible="showSongPreview"
+                 SongData="previewSongData"
+                 ConfirmButtonText="Make Public"
+                 OnCancel="HandlePreviewCancel"
+                 OnSave="HandleMakePublicConfirm" />
+
 <MessageToast ShowToast="@showSuccessMessage" ToastMessage="@successMessage" Type="ToastType.Success" />
 
 @code {
@@ -121,7 +173,9 @@
     [Parameter] public EventCallback OnEdit { get; set; }
     [Parameter] public EventCallback OnRefresh { get; set; }
     [Parameter] public EventCallback OnAddSong { get; set; }
+    [Parameter] public EventCallback OnClone { get; set; }
     [Parameter] public bool ShowActionButtons { get; set; } = true;
+    [Parameter] public bool IsReadOnly { get; set; } = false;
 
     private bool isGeneratingLink = false;
     private bool menuOpen;
@@ -130,7 +184,16 @@
 
     private bool showSuccessMessage = false;
     private string successMessage = string.Empty;
-    
+
+    private bool HasRestrictedSongs => Collection.Songs.Any(s =>
+        s.Access != null && s.Access != FRELODYSHRD.Dtos.SubDtos.Access.Public);
+
+    // Song preview state
+    private SongDataPreview? songPreviewRef;
+    private bool showSongPreview = false;
+    private SimpleSongCreateDto? previewSongData;
+    private string? previewSongId;
+
     private void HandleToggle()
     {
         OnToggle.InvokeAsync();
@@ -189,6 +252,25 @@
 
     private async void SharePlaylist(string playlistId)
     {
+        if (HasRestrictedSongs)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Sharing Warning",
+                Message = "This playlist contains private or protected songs that won't be visible to others. Would you like to share anyway?",
+                DangerText = "Recipients will only see public songs in the shared link.",
+                ButtonText = "Share Anyway",
+                OptionType = OptionType.Confirmation,
+                OnConfirmCallback = async () => await ExecuteSharePlaylist(playlistId)
+            });
+            return;
+        }
+
+        await ExecuteSharePlaylist(playlistId);
+    }
+
+    private async Task ExecuteSharePlaylist(string playlistId)
+    {
         isGeneratingLink = true;
         StateHasChanged();
 
@@ -207,12 +289,7 @@
                     Title = "Share Link Error",
                     Message = "Failed to generate share link. Please try again later.",
                     ButtonText = "Close",
-                    OptionType = OptionType.Error,
-                    Context = new ModalContext
-                    {
-                        ActionType = "GenerateShareLink",
-                        Data = "Share link generation failed for playlist ID: " + playlistId
-                    }
+                    OptionType = OptionType.Error
                 });
             }
         }
@@ -224,12 +301,7 @@
                 Title = "Error",
                 Message = "An error occurred while generating the share link.",
                 ButtonText = "Close",
-                OptionType = OptionType.Error,
-                Context = new ModalContext
-                {
-                    ActionType = "GenerateShareLink",
-                    Data = ex.Message
-                }
+                OptionType = OptionType.Error
             });
         }
         finally
@@ -328,6 +400,118 @@
         {
             _logger.LogError(ex, "Error removing song from playlist");
         }
+    }
+
+    private async Task PreviewAndMakePublic(string songId)
+    {
+        try
+        {
+            var response = await _songsApi.GetSongWithChordsById(songId);
+            if (!response.IsSuccessStatusCode || response.Content == null)
+            {
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = "Failed to load song details.",
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+                return;
+            }
+
+            var song = response.Content;
+            previewSongId = songId;
+            previewSongData = MapSongToPreview(song);
+            showSongPreview = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading song {SongId} for preview", songId);
+        }
+    }
+
+    private SimpleSongCreateDto MapSongToPreview(SongDto song)
+    {
+        var segments = new List<SegmentCreateDto>();
+
+        if (song.SongParts != null)
+        {
+            foreach (var part in song.SongParts.OrderBy(p => p.PartNumber))
+            {
+                if (part.LyricLines == null) continue;
+                foreach (var line in part.LyricLines.OrderBy(l => l.LyricLineOrder))
+                {
+                    if (line.LyricSegments == null) continue;
+                    foreach (var seg in line.LyricSegments.OrderBy(s => s.LyricOrder))
+                    {
+                        segments.Add(new SegmentCreateDto
+                        {
+                            Id = seg.Id,
+                            Lyric = seg.Lyric,
+                            ChordId = seg.ChordId,
+                            ChordName = seg.Chord?.ChordName,
+                            ChordAlignment = seg.ChordAlignment,
+                            LineNumber = line.LyricLineOrder,
+                            PartNumber = part.PartNumber,
+                            PartName = part.PartName ?? SongSection.Verse,
+                            LyricOrder = seg.LyricOrder
+                        });
+                    }
+                }
+            }
+        }
+
+        return new SimpleSongCreateDto
+        {
+            Title = song.Title,
+            SongNumber = song.SongNumber,
+            SongLyrics = segments
+        };
+    }
+
+    private async Task HandleMakePublicConfirm()
+    {
+        if (string.IsNullOrEmpty(previewSongId)) return;
+
+        try
+        {
+            var response = await _songsApi.MarkSongAccessStatus(previewSongId, FRELODYSHRD.Dtos.SubDtos.Access.Public);
+            if (response.IsSuccessStatusCode)
+            {
+                showSongPreview = false;
+                previewSongData = null;
+                await ShowSuccessMessage("Song is now public.");
+                await OnRefresh.InvokeAsync();
+            }
+            else
+            {
+                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = errorMessage,
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error making song {SongId} public", previewSongId);
+        }
+        finally
+        {
+            previewSongId = null;
+        }
+    }
+
+    private void HandlePreviewCancel()
+    {
+        showSongPreview = false;
+        previewSongData = null;
+        previewSongId = null;
+        StateHasChanged();
     }
 
     private async Task ShowSuccessMessage(string message)
