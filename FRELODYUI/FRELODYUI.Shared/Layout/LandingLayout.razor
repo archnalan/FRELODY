@@ -260,7 +260,11 @@
 
     private void NavigateToLogin()
     {
-        _navManager.NavigateTo("/login");
+        var currentPath = _navManager.ToBaseRelativePath(_navManager.Uri);
+        var returnUrl = string.IsNullOrEmpty(currentPath) || currentPath == "login" || currentPath == "register"
+            ? ""
+            : $"?returnUrl={Uri.EscapeDataString("/" + currentPath)}";
+        _navManager.NavigateTo($"/login{returnUrl}");
     }
 
     private async Task LogoutUser()

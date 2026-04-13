@@ -323,12 +323,6 @@
     }
 </div>
 
-<!-- Modals -->
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
-
 @code {
     // User data
     private UpdateUserProfileOutDto userProfile = new();
@@ -595,18 +589,6 @@
         }            
         activitySummary = null;
         // Optionally save dismissal preference to user preferences
-        StateHasChanged();
-    }
-
-    private async Task ConfirmModal()
-    {
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
         StateHasChanged();
     }
 

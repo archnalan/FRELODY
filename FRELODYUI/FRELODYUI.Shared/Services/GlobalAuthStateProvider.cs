@@ -20,8 +20,8 @@ namespace FRELODYUI.Shared.Services
         private readonly NavigationManager _navigationManager;
         private readonly ILogger<GlobalAuthStateProvider> _logger;
         
-        // In-memory cache so we don't lose state when storage is temporarily unavailable
-        private LoginResponseDto? _cachedSession;
+        // Static in-memory cache so we don't lose state across scoped instances or when storage is temporarily unavailable
+        private static LoginResponseDto? _cachedSession;
 
         public GlobalAuthStateProvider(
             IStorageService localStorage, 

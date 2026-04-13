@@ -31,7 +31,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             try
             {
                 var user = await _context.Users.AsNoTracking()
-                    .Where(u => u.Id == userId)
+                    .IgnoreQueryFilters()
+                    .Where(u => u.Id == userId && (u.IsDeleted == false || u.IsDeleted == null))
                     .Select(x => new UpdateUserProfileOutDto
                     {
                         Id = x.Id,

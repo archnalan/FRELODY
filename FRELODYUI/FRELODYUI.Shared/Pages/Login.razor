@@ -5,7 +5,7 @@
 <PageTitle>Login - FRELODY</PageTitle>
 @if (showSignUp)
 {
-    <Register FullBody="true" OnRegisterSuccess="@HandleRegisterSuccess" GoBackToSignInModal=@(() => showSignUp=false) />
+    <Register FullBody="true" ReturnUrl="@ReturnUrl" OnRegisterSuccess="@HandleRegisterSuccess" GoBackToSignInModal=@(() => showSignUp=false) />
 }
 else
 {
@@ -289,7 +289,7 @@ else
 }
 
 @code {
-    [Parameter] public string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
     [Parameter] public EventCallback OnLoginSuccess { get; set; }
     [Parameter] public EventCallback OnCloseLoginModal { get; set; }
     [Parameter] public EventCallback<TenantDto?> HandleRegisterSuccess { get; set; }
@@ -318,17 +318,23 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // Parse returnUrl from query string if not already set via SupplyParameterFromQuery
+        var uri = _navManager.ToAbsoluteUri(_navManager.Uri);
+        var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        if (string.IsNullOrEmpty(ReturnUrl))
+        {
+            ReturnUrl = queryParams["returnUrl"];
+        }
+
         // Check if user is already authenticated
         var authState = await _globalAuth.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            _navManager.NavigateTo("/dashboard");
+            NavigateToReturnUrl();
             return;
         }
 
         // Detect Google OAuth callback — defer to OnAfterRenderAsync where JS interop is available
-        var uri = _navManager.ToAbsoluteUri(_navManager.Uri);
-        var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
         _pendingOAuthCode = queryParams["code"];
         if (!string.IsNullOrEmpty(_pendingOAuthCode))
         {
@@ -618,7 +624,10 @@ else
         }
         else
         {
-            _navManager.NavigateTo("/register");
+            var returnUrlParam = !string.IsNullOrEmpty(ReturnUrl)
+                ? $"?returnUrl={Uri.EscapeDataString(ReturnUrl)}"
+                : "";
+            _navManager.NavigateTo($"/register{returnUrlParam}");
         }
     }
 

@@ -40,6 +40,13 @@ namespace FRELODYUI.Shared.Services
                 using var jsonDoc = JsonDocument.Parse(errorContent);
                 var root = jsonDoc.RootElement;
 
+                if (root.ValueKind == JsonValueKind.String)
+                {
+                    var plainMessage = root.GetString();
+                    _logger.LogError("API Error: {Message}", plainMessage);
+                    return plainMessage ?? "An error occurred, operation not completed.";
+                }
+
                 string? message = root.TryGetProperty("message", out var msgProp)
                     ? msgProp.GetString()
                     : "An error occurred, operation not completed.";
@@ -50,7 +57,7 @@ namespace FRELODYUI.Shared.Services
             catch (JsonException)
             {
                 _logger.LogError("Failed to parse error response.");
-                return "Error! Operation not completed";
+                return errorContent;
             }
         }
     }

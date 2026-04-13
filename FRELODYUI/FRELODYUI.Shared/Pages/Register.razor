@@ -375,6 +375,8 @@
 
 @code {
     [Parameter] public bool FullBody { get; set; } = false;
+    [Parameter] public string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery] public string? ReturnUrlQuery { get; set; }
     [Parameter] public EventCallback<TenantDto?> OnRegisterSuccess { get; set; }
     [Parameter] public EventCallback<bool> GoBackToSignInModal { get; set; }
 
@@ -530,15 +532,19 @@
 
     private void NavigateToLogin(string? email = null)
     {
+        var effectiveReturnUrl = ReturnUrl ?? ReturnUrlQuery;
         if (GoBackToSignInModal.HasDelegate)
         {
             GoBackToSignInModal.InvokeAsync(true);
         }
         else
         {
+            var returnUrlParam = !string.IsNullOrEmpty(effectiveReturnUrl)
+                ? $"&returnUrl={Uri.EscapeDataString(effectiveReturnUrl)}"
+                : "";
             _navManager.NavigateTo(!string.IsNullOrEmpty(email)
-                ? $"/login?email={Uri.EscapeDataString(email)}"
-                : "/login");
+                ? $"/login?email={Uri.EscapeDataString(email)}{returnUrlParam}"
+                : $"/login{(string.IsNullOrEmpty(returnUrlParam) ? "" : "?" + returnUrlParam.TrimStart('&'))}");
         }
     }
 

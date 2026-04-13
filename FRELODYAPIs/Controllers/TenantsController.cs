@@ -28,7 +28,7 @@ namespace FRELODYAPIs.Controllers
             var result = await _tenantService.CreateTenant(dto);
             if (!result.IsSuccess)
             {
-                return StatusCode(500, result.Error.Message);
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
             }
             return Ok(result.Data);
         }
