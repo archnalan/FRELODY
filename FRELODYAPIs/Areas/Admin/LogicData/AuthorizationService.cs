@@ -408,6 +408,25 @@ namespace FRELODYAPP.Data
                 {
                     try
                     {
+                        // Ensure TenantId is set — fall back to the authenticated user's tenant
+                        if (string.IsNullOrEmpty(createUserDto.TenantId))
+                        {
+                            createUserDto.TenantId = _tenantId;
+                        }
+
+                        if (string.IsNullOrEmpty(createUserDto.TenantId))
+                        {
+                            return ServiceResult<CreateUserResponseDto>.Failure(
+                                new BadRequestException("A valid Tenant is required to create a user."));
+                        }
+
+                        var tenantExists = await _context.Tenants.AnyAsync(t => t.Id == createUserDto.TenantId);
+                        if (!tenantExists)
+                        {
+                            return ServiceResult<CreateUserResponseDto>.Failure(
+                                new BadRequestException("The specified Tenant does not exist."));
+                        }
+
                         //var usernameExists = await _context.Users
                         //    .Where(x => x.TenantId == tenantId)
                         //    .AnyAsync(x => x.UserName == createUserDto.UserName);
