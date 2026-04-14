@@ -292,11 +292,6 @@
     </div>
 </div>
 
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
-
 @code {
     // ── State ──
     private string pastedText = "";
@@ -759,21 +754,4 @@
         _ => "Plain Text"
     };
 
-    // ── Modal handlers ──
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal.Context?.ActionType == "SongSaved")
-        {
-            _modalService.Close();
-            return;
-        }
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
-    }
 }

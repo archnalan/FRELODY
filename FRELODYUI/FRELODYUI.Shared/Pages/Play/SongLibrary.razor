@@ -191,10 +191,6 @@
                        OnSave="HandleCollectionSave"
                        OnCancel="CloseCollectionModal" />
 }
-<DialogModal IsVisible="_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
 
 @code {
     [Parameter] public bool ShowSearch { get; set; } = true;
@@ -472,27 +468,6 @@
     {
         showCollectionModal = false;
         collectionDto = new();
-    }
-
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "NavigateToLogin")
-        {
-            var loginUrl = _modalService.CurrentModal.Context.Data?.ToString() ?? "/login";
-           // _navManager.NavigateTo(loginUrl);
-        }
-        else
-        {
-            _modalService.Close();
-        }
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 
     private async Task HandleSearchChanged(string searchTerm)

@@ -120,14 +120,6 @@
             </div>
         </div>
     }
-
-    @if (_modalService.IsModalVisible)
-    {
-        <DialogModal IsVisible="true"
-                     Modal="@_modalService.CurrentModal"
-                     OnCloseModal="CloseModal"
-                     OnConfirmModal="ConfirmModal" />
-    }
 </div>
 
 @code {
@@ -408,19 +400,6 @@
             IsNavigating = false;
             StateHasChanged();
         }
-    }
-
-    private async Task ConfirmModal()
-    {
-        // Handle confirmation logic here
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 
 }

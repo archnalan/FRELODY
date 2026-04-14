@@ -397,13 +397,6 @@
     }
 </div>
 
-@if (_modalService.IsModalVisible)
-{
-    <DialogModal IsVisible="true"
-                 Modal="@_modalService.CurrentModal"
-                 OnCloseModal="CloseModal"
-                 OnConfirmModal="ConfirmModal" />
-}
 
 @code {
     [Parameter] public string SongId { get; set; } = string.Empty;
@@ -1227,18 +1220,6 @@
             ButtonText = "OK",
             OptionType = OptionType.Error
         });
-    }
-
-    private async Task ConfirmModal()
-    {
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 
     public void Dispose()

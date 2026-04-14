@@ -94,11 +94,6 @@
                  OnCancel="HandlePreviewCancel"
                  OnSave="HandlePreviewRestore"/>
 
-<!-- Confirmation Modal -->
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
 
 @code {
     [Parameter] public string? UserId { get; set; }
@@ -204,42 +199,36 @@
             {
                 ActionType = "DeleteRecoveryItem",
                 Data = item.Id
+            },
+            OnConfirmCallback = async () =>
+            {
+                try
+                {
+                    var response = await _songsApi.DeleteRecoverySongItem(itemToDelete!.Id!);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        recoveryItems.Remove(itemToDelete);
+                        totalItems--;
+                        ShowSuccessModal("Recovery item deleted successfully.");
+                    }
+                    else
+                    {
+                        var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                        ShowErrorModal($"Failed to delete recovery item: {errorMessage}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error deleting recovery item {RecoveryId}", itemToDelete?.Id);
+                    ShowErrorModal("Failed to delete recovery item. Please try again.");
+                }
+                finally
+                {
+                    itemToDelete = null;
+                }
             }
         });
-    }
-
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "DeleteRecoveryItem" && itemToDelete != null)
-        {
-            try
-            {
-                var response = await _songsApi.DeleteRecoverySongItem(itemToDelete.Id!);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    recoveryItems.Remove(itemToDelete);
-                    totalItems--;
-                    ShowSuccessModal("Recovery item deleted successfully.");
-                }
-                else
-                {
-                    var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
-                    ShowErrorModal($"Failed to delete recovery item: {errorMessage}");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting recovery item {RecoveryId}", itemToDelete.Id);
-                ShowErrorModal("Failed to delete recovery item. Please try again.");
-            }
-            finally
-            {
-                itemToDelete = null;
-            }
-        }
-
-        await CloseModal();
     }
 
     private async Task PreviewSong(SongRecoveryDto item)
@@ -282,12 +271,6 @@
         {
             ShowErrorModal("Failed to restore draft. Please try again.");
         }
-    }
-
-    private async Task CloseModal()
-    {
-        _modalService.Close();
-        await Task.CompletedTask;
     }
 
     private void ShowSuccessModal(string message)

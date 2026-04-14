@@ -1,4 +1,5 @@
-﻿using FRELODYAPIs.Areas.Admin.Interfaces;
+﻿using DocumentFormat.OpenXml.Bibliography;
+using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Dtos;
@@ -754,6 +755,10 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                 .AnyAsync(a => a.Id == songDto.ArtistAlbum.AlbumId
                                 && a.ArtistId == songDto.ArtistAlbum.ArtistId);
                     }
+                    song.SongBookId = songBookExists ? songDto.BookCategory?.SongBookId : null;
+                    song.CategoryId = categoryExists ? songDto.BookCategory?.CategoryId : null;
+                    song.AlbumId = albumExists ? songDto.ArtistAlbum?.AlbumId : null;
+                    song.ArtistId = artistExists ? songDto.ArtistAlbum?.ArtistId : null;
 
                     if (songDto.IsRecoveryCopy == true && songDto.RecoveryDto != null &&
                         !string.IsNullOrEmpty(songDto.RecoveryDto.RecoveryName))

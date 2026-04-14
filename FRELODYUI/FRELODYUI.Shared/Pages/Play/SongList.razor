@@ -188,11 +188,6 @@ else
     </div>
 }
 
-<DialogModal IsVisible="_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
-
 @code {
     [Parameter] public ActiveView ViewStyle { get; set; }
     [Parameter]public ViewMode ViewMode { get; set; }
@@ -397,7 +392,27 @@ else
                 DangerText = "This action cannot be undone.",
                 ButtonText = "Delete",
                 OptionType = OptionType.Confirmation,
-                Context = new ModalContext { ActionType = "DeleteSong", Data = songId }
+                Context = new ModalContext { ActionType = "DeleteSong", Data = songId },
+                OnConfirmCallback = async () =>
+                {
+                    var response = await _songsApi.DeleteSong(songId);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        await Refresh();
+                    }
+                    else
+                    {
+                        var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                        _modalService.Show(new ModalOptionDto
+                        {
+                            Title = "Error Deleting Song",
+                            Message = errorMessage,
+                            ButtonText = "Close",
+                            OptionType = OptionType.Error
+                        });
+                    }
+                }
             });
         }         
     }
@@ -539,42 +554,6 @@ else
         // Auto-hide after 3 seconds
         await Task.Delay(3000);
         showSuccessMessage = false;
-        StateHasChanged();
-    }
-
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "DeleteSong")
-        {
-            var response = await _songsApi.DeleteSong(_modalService.CurrentModal.Context.Data?.ToString() ?? string.Empty);
-
-            if(response.IsSuccessStatusCode)
-            {
-                await Refresh();
-            }
-            else
-            {
-                var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
-                _modalService.Show(new ModalOptionDto
-                {
-                    Title = "Error Deleting Song",
-                    Message = errorMessage,
-                    ButtonText = "Close",
-                    OptionType = OptionType.Error
-                });
-            }
-        }
-        else
-        {
-            _modalService.Close();
-        }
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
         StateHasChanged();
     }
 

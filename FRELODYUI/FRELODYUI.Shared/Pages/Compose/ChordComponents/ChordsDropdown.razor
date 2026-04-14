@@ -50,14 +50,6 @@
                     OnCancel="CloseCustomizeModal" />
 }
 
-@if (_modalService.IsModalVisible)
-{
-    <DialogModal IsVisible="true"
-                 Modal="@_modalService.CurrentModal"
-                 OnCloseModal="CloseModal"
-                 OnConfirmModal="ConfirmModal" />
-}
-
 
 @code {
     [Parameter] public ChordDto SelectedChord { get; set; } = new();
@@ -211,16 +203,4 @@
         return true;
     }
 
-    private async Task ConfirmModal()
-    {
-        //Handle specific contexts
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
-    }
 }

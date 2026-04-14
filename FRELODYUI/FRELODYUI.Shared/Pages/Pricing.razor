@@ -481,12 +481,6 @@
     </div>
 }
 
-<div style="@(_modalService.IsModalVisible ? "" : "display:none"); z-index:2055">
-    <DialogModal IsVisible="_modalService.IsModalVisible"
-                 Modal="@_modalService.CurrentModal"
-                 OnCloseModal="CloseModal"
-                 OnConfirmModal="ConfirmModal" />
-</div>
 
 @code {
     private const string MAX_WIDTH = "70rem";
@@ -691,6 +685,11 @@
                 {
                     ActionType = "ContactSales",
                     Data = product
+                },
+                OnConfirmCallback = async () =>
+                {
+                    _logger.LogInformation("Contact sales request for Studio plan");
+                    await Task.CompletedTask;
                 }
             });
             return;
@@ -856,25 +855,4 @@
         StateHasChanged();
     }
 
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "NavigateToLogin")
-        {
-            await _storageService.SetItemAsync("returnUrl", "/pricing");
-            _navManager.NavigateTo("/login");
-        }
-        else if (_modalService.CurrentModal?.Context?.ActionType == "ContactSales")
-        {
-            _logger.LogInformation("Contact sales request for Studio plan");
-        }
-        
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
-    }
 }

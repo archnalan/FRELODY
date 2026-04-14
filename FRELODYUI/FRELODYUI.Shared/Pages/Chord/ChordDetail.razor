@@ -188,10 +188,6 @@
                     OnCancel="CloseChordModal" />
 }
 
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
 
 @code {
     [Parameter]
@@ -348,16 +344,4 @@
         showChordModal = true;
     }
 
-    private async Task ConfirmModal()
-    {
-        _modalService.Close();
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
-    }
 }

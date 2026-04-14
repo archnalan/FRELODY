@@ -153,11 +153,6 @@
     </div>
 </div>
 
-<DialogModal IsVisible="_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
-
 @code {
     [Parameter] public ActiveView ViewStyle { get; set; } = ActiveView.Expanded;
 
@@ -278,57 +273,38 @@
                 DangerText = "This action cannot be undone.",
                 ButtonText = "Delete",
                 OptionType = OptionType.Confirmation,
-                Context = new ModalContext { ActionType = "DeleteUser", Data = userId }
+                Context = new ModalContext { ActionType = "DeleteUser", Data = userId },
+                OnConfirmCallback = async () =>
+                {
+                    if (!string.IsNullOrEmpty(userId))
+                    {
+                        try
+                        {
+                            _modalService.Show(new ModalOptionDto
+                            {
+                                Title = "Success",
+                                Message = "User deleted successfully.",
+                                ButtonText = "OK",
+                                OptionType = OptionType.Success
+                            });
+
+                            await Refresh();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error deleting user {UserId}", userId);
+                            _modalService.Show(new ModalOptionDto
+                            {
+                                Title = "Error",
+                                Message = "Failed to delete user. Please try again.",
+                                ButtonText = "OK",
+                                OptionType = OptionType.Error
+                            });
+                        }
+                    }
+                }
             });
         }
-    }
-
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "DeleteUser")
-        {
-            var userId = _modalService.CurrentModal.Context.Data?.ToString();
-            if (!string.IsNullOrEmpty(userId))
-            {
-                try
-                {
-                    // Note: Using IAuthApi since IUsersApi doesn't have delete method
-                    // You may need to add this method to IUsersApi or use appropriate API
-                    // var response = await _authApi.DeleteUser(userId);
-                    
-                    // For now, show success message - implement actual deletion when API is available
-                    _modalService.Show(new ModalOptionDto
-                    {
-                        Title = "Success",
-                        Message = "User deleted successfully.",
-                        ButtonText = "OK",
-                        OptionType = OptionType.Success
-                    });
-
-                    await Refresh();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error deleting user {UserId}", userId);
-                    _modalService.Show(new ModalOptionDto
-                    {
-                        Title = "Error",
-                        Message = "Failed to delete user. Please try again.",
-                        ButtonText = "OK",
-                        OptionType = OptionType.Error
-                    });
-                }
-            }
-        }
-        
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 
     public void Dispose()

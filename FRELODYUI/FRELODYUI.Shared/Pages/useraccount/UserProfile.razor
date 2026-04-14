@@ -125,12 +125,6 @@
     </div>
 </div>
 
-<!-- Modals -->
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
-
 @code {
     [Parameter] public string? userId { get; set; }
 
@@ -431,6 +425,19 @@
             {
                 ActionType = "DeleteAccount",
                 Data = userProfile.Id
+            },
+            OnConfirmCallback = async () =>
+            {
+                try
+                {
+                    await Task.Delay(1000);
+                    ShowSuccessModal("Account deletion initiated. You will receive a confirmation email.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error deleting account");
+                    ShowErrorModal("Failed to delete account");
+                }
             }
         });
     }
@@ -469,33 +476,6 @@
             OptionType = OptionType.Info,
             Context = new ModalContext { ActionType = "Info" }
         });
-    }
-
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "DeleteAccount")
-        {
-            try
-            {
-                // Implement account deletion logic
-                await Task.Delay(1000); // Simulate API call
-                ShowSuccessModal("Account deletion initiated. You will receive a confirmation email.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting account");
-                ShowErrorModal("Failed to delete account");
-            }
-        }
-        
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 
     public void Dispose()

@@ -385,11 +385,6 @@
     </div>
 </div>
 
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
-
 @code {
     [Parameter] public string? UserId { get; set; }
 
@@ -998,31 +993,18 @@
                 DangerText = "This action cannot be undone.",
                 ButtonText = "Yes, Leave",
                 OptionType = OptionType.Warning,
-                Context = new ModalContext { ActionType = "navigateBack" }
+                Context = new ModalContext { ActionType = "navigateBack" },
+                OnConfirmCallback = async () =>
+                {
+                    _modalService.Close();
+                    await JsRt.InvokeVoidAsync("goBack");
+                }
             });
         }
         else
         {
             await JsRt.InvokeVoidAsync("goBack");
         }
-    }
-
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "navigateBack")
-        {
-            _modalService.Close();
-            await JsRt.InvokeVoidAsync("goBack");
-        }
-        // Handle confirmation logic here
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 
     public void Dispose()

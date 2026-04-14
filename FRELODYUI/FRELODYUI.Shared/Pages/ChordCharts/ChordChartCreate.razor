@@ -196,10 +196,6 @@
                     OnCancel="CloseCustomizeModal" />
 }
 
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
 
 @code {
     [Parameter] public string? chordId { get; set; }
@@ -642,19 +638,6 @@
     {
         //_navManager.NavigateTo("/songs-list");
         await JsRt.InvokeVoidAsync("goBack");
-    }
-
-    private async Task ConfirmModal()
-    {
-        //Handle specific contexts
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 
     public void Dispose()

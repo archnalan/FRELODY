@@ -196,11 +196,6 @@
     }
 </div>
 
-<DialogModal IsVisible="_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
-
 @code {
     [Parameter] public string UserId { get; set; } = string.Empty;
 
@@ -300,7 +295,8 @@
                 DangerText = "This action will prevent the user from accessing the system.",
                 ButtonText = "Disable",
                 OptionType = OptionType.Confirmation,
-                Context = new ModalContext { ActionType = "DisableUser", Data = UserId }
+                Context = new ModalContext { ActionType = "DisableUser", Data = UserId },
+                OnConfirmCallback = async () => await DisableUser()
             });
         }
     }
@@ -348,19 +344,4 @@
         }
     }
 
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "DisableUser")
-        {
-            await DisableUser();
-        }
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
-    }
 }

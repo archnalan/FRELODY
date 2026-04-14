@@ -95,11 +95,6 @@ else
     </div>
 }
 
-<DialogModal IsVisible="_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
-
 @code {
     [Parameter]
     public string ChordId { get; set; } = string.Empty;
@@ -349,51 +344,35 @@ else
             {
                 ActionType = "DeleteChart",
                 Data = chartId
+            },
+            OnConfirmCallback = async () =>
+            {
+                var chartToRemove = Charts.FirstOrDefault(c => c.Id == chartId);
+                if (chartToRemove != null)
+                {
+                    var response = await _chordChartsApi.DeleteChordChart(chartId);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var errorMsg = _apiResponseHandler.GetApiErrorMessage(response);
+                        _modalService.Show(new ModalOptionDto
+                        {
+                            Title = "Error",
+                            Message = $"Failed to delete chart. {errorMsg}",
+                            OptionType = OptionType.Error,
+                            Context = new ModalContext { ActionType = "DeleteChart", Data = chartId }
+                        });
+                    }
+                    else
+                    {
+                        Charts.Remove(chartToRemove);
+                    }
+                    StateHasChanged();
+                }
             }
         });
         await Task.CompletedTask;       
     }
 
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "DeleteChart")
-        {
-            var chartId = _modalService.CurrentModal.Context.Data as string;
-            var chartToRemove = Charts.FirstOrDefault(c => c.Id == chartId);
-            if (chartToRemove != null)
-            {
-                var response = await _chordChartsApi.DeleteChordChart(chartId ?? "");
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorMsg = _apiResponseHandler.GetApiErrorMessage(response);
-                    _modalService.Show(new ModalOptionDto
-                    {
-                        Title = "Error",
-                        Message = $"Failed to delete chart. {errorMsg}",
-                        OptionType = OptionType.Error,
-                        Context = new ModalContext { ActionType = "DeleteChart", Data = chartId }
-                    });
-                }
-                else
-                {
-                    Charts.Remove(chartToRemove);
-                }
-                StateHasChanged();
-            }
-        }
-        else
-        {
-            _modalService.Close();
-        }
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
-    }
 
 
     [JSInvokable]

@@ -161,11 +161,6 @@
         }
     </div>
 </div>
-<!-- Modals -->
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
 
 @code {
     [Parameter] public string UserId { get; set; } = string.Empty;
@@ -289,18 +284,6 @@
         PlayLevel.Advanced => "Advanced",
         _ => level.ToString()
     };
-
-    private async Task ConfirmModal()
-    {
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
-    }
 
     private void ShowErrorModal(string message)
     {

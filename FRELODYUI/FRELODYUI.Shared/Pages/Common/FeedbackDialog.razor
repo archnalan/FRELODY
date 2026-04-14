@@ -59,10 +59,6 @@
     <div class="modal-backdrop fade show" style="z-index:100"></div>
 }
 
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
 
 @code {
     [Parameter] public bool IsVisible { get; set; }
@@ -145,19 +141,4 @@
         }
     }
 
-    private async Task ConfirmModal()
-    {
-        if (_modalService.CurrentModal?.Context?.ActionType == "CreateFeedback")
-        {
-            
-        }
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
-    }
 }

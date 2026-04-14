@@ -91,11 +91,6 @@
                     OnCancel="CloseChordCreateModal" />
 }
 
-<DialogModal IsVisible="@_modalService.IsModalVisible"
-             Modal="@_modalService.CurrentModal"
-             OnCloseModal="CloseModal"
-             OnConfirmModal="ConfirmModal" />
-
 @code {
     private List<ChordDto> chords = new();
     private List<ChordDto> filteredChords = new();
@@ -179,7 +174,8 @@
                     {
                         Data = response,
                         ActionType = "LoadChords"
-                    }
+                    },
+                    OnConfirmCallback = async () => await LoadChords()
                 });
             }
         }
@@ -244,7 +240,8 @@
                 {
                     ActionType = "DeleteChord",
                     Data = chord.Id!
-                }
+                },
+                OnConfirmCallback = async () => await HandleDelete(chord.Id!)
         });
         showConfirmDeleteModal = true;
     }
@@ -273,7 +270,6 @@
             }
             await LoadChords();
             CloseDeleteModal();
-            await CloseModal();
             if (chordCardRef != null) await chordCardRef.Refresh();
         }
         catch (Exception ex)
@@ -337,27 +333,6 @@
     private void CloseDeleteModal()
     {
         showConfirmDeleteModal = false;
-    }
-
-    private async Task ConfirmModal()
-    {
-        if(_modalService.CurrentModal?.Context?.ActionType == "LoadChords")
-        {
-            await LoadChords();
-        }
-        else if(_modalService.CurrentModal?.Context?.ActionType == "DeleteChord" && _modalService.CurrentModal.Context.Data is string chordId)
-        {
-            await HandleDelete(chordId);
-            return; //avoid closing modal yet
-        }
-        await CloseModal();
-    }
-
-    private async Task CloseModal()
-    {
-        await Task.Delay(100);
-        _modalService.Close();
-        StateHasChanged();
     }
 
     public void Dispose()
