@@ -63,10 +63,7 @@
     <div class="song-playback-area @(isFullscreen ? "playback-fullscreen" : "")" @ref="songContentRef">
         @if (isLoading)
         {
-            <div class="ssm-loading-inline">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p>Loading song...</p>
-            </div>
+            <FRELODYUI.Shared.Pages.PlaceHolders.SongPlaceholder />
         }
         else if (song != null)
         {

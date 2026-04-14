@@ -1,0 +1,45 @@
+<!-- Header skeleton -->
+<div class="placeholder-glow" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:.5rem;padding:0.625rem;background:var(--card-bg);border:1px solid var(--border-light);border-radius:12px;">
+    <span class="placeholder" style="width:1.85rem;height:1.85rem;border-radius:8px;opacity:0.2"></span>
+    <div style="flex:1;min-width:0;">
+        <span class="placeholder d-block" style="width:55%;height:1.2rem;border-radius:4px;margin-bottom:0.4rem"></span>
+        <span class="placeholder d-block" style="width:30%;height:0.75rem;border-radius:4px"></span>
+    </div>
+    <span class="placeholder rounded-pill" style="width:4.5rem;height:1.85rem"></span>
+</div>
+
+<!-- Controls bar skeleton -->
+<div class="placeholder-glow" style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;padding:0.5rem 0.75rem;background:var(--card-bg);">
+    <span class="placeholder" style="width:6rem;height:1.75rem;border-radius:6px"></span>
+    <span class="placeholder" style="width:6rem;height:1.75rem;border-radius:6px"></span>
+    <span class="placeholder d-none d-sm-inline" style="width:6rem;height:1.75rem;border-radius:6px"></span>
+    <span class="placeholder ms-auto" style="width:1.85rem;height:1.85rem;border-radius:8px;opacity:0.2"></span>
+    <span class="placeholder" style="width:1.85rem;height:1.85rem;border-radius:8px;opacity:0.2"></span>
+</div>
+
+<!-- Chord charts skeleton -->
+<div class="placeholder-glow" style="margin-bottom:1rem;padding:1rem;background:var(--card-bg);border:1px solid var(--border-light);border-radius:12px;">
+    <span class="placeholder d-block" style="width:8rem;height:0.9rem;border-radius:4px;margin-bottom:0.75rem"></span>
+    <div class="d-flex gap-3 overflow-hidden">
+        @for (var i = 0; i < 5; i++)
+        {
+            <div class="d-flex flex-column align-items-center flex-shrink-0" style="width:5.5rem;">
+                <span class="placeholder" style="width:2.5rem;height:0.75rem;border-radius:4px;margin-bottom:0.35rem"></span>
+                <span class="placeholder" style="width:5rem;height:6rem;border-radius:8px;opacity:0.15"></span>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Lyrics skeleton -->
+<div class="placeholder-glow" style="background:var(--card-bg);border:1px solid var(--border-light);border-radius:12px;padding:1.25rem 1rem;margin-bottom:1rem;">
+    @for (var v = 0; v < 3; v++)
+    {
+        <div style="margin-bottom:@(v < 2 ? "1.75rem" : "0");">
+            @for (var l = 0; l < 3; l++)
+            {
+                <span class="placeholder d-block" style="width:@(50 + (l * 17 + v * 11) % 45)%;height:1rem;border-radius:4px;margin-bottom:0.65rem"></span>
+            }
+        </div>
+    }
+</div>
