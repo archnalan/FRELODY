@@ -22,7 +22,7 @@
             <nav class="center-nav d-none d-lg-flex">
                 <a href="/" class="@NavActive("/")">Songs</a>
                 <a href="/studio/landing" class="@NavActive("/studio/landing")">Studio</a>
-                <a href="/pricing" class="@NavActive("/pricing")">Pricing</a>
+                @* <a href="/pricing" class="@NavActive("/pricing")">Pricing</a> *@
                 <a href="/playlists/landing" class="@NavActive("/playlists/landing")">Playlists</a>
             </nav>
 
@@ -110,9 +110,9 @@
             <a href="/studio/landing" class="@NavActive("/studio/landing")" @onclick="CloseDrawer">
                 <i class="bi bi-easel me-2"></i>Studio
             </a>
-            <a href="/pricing" class="@NavActive("/pricing")" @onclick="CloseDrawer">
+            @* <a href="/pricing" class="@NavActive("/pricing")" @onclick="CloseDrawer">
                 <i class="bi bi-tag me-2"></i>Pricing
-            </a>
+            </a> *@
             <a href="/playlists/landing" class="@NavActive("/playlists/landing")" @onclick="CloseDrawer">
                 <i class="bi bi-music-note-list me-2"></i>Playlists
             </a>
