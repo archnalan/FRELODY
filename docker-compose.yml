@@ -66,6 +66,12 @@ services:
       AllowedOrigins__1: "http://localhost:8080"
       AllowedOrigins__2: "http://localhost:4200"
       AllowedOrigins__3: "http://localhost:3000"
+      AllowedOrigins__4: "http://frelody.com"
+      AllowedOrigins__5: "https://frelody.com"
+      AllowedOrigins__6: "http://www.frelody.com"
+      AllowedOrigins__7: "https://www.frelody.com"
+      AllowedOrigins__8: "http://164.68.118.82"
+      AllowedOrigins__9: "http://164.68.118.82:8080"
 
       # Disable HTTPS redirect – container serves plain HTTP behind a proxy
       ASPNETCORE_HTTPS_PORT: ""
