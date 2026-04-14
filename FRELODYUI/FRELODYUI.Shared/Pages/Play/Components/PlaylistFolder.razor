@@ -263,7 +263,9 @@
     private record BoundingRect(double Top, double Left, double Bottom, double Right, double Width, double Height);
     private record ViewportSize(double Width, double Height);
 
-    private bool IsLandingContext => _navManager.Uri.Contains("/landing/", StringComparison.OrdinalIgnoreCase) ||
+    private bool IsLandingContext => 
+        _navManager.ToBaseRelativePath(_navManager.Uri) == string.Empty || 
+        _navManager.Uri.Contains("/landing/", StringComparison.OrdinalIgnoreCase) ||
         _navManager.Uri.EndsWith("/landing", StringComparison.OrdinalIgnoreCase);
 
     private void NavigateToDetail()

@@ -547,6 +547,29 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         }
         #endregion
 
+        #region Update Global Transpose
+        public async Task<ServiceResult<bool>> UpdatePlaylistGlobalTransposeAsync(string playlistId, int globalTranspose)
+        {
+            try
+            {
+                var playlist = await _context.Playlists
+                    .FirstOrDefaultAsync(p => p.Id == playlistId);
+
+                if (playlist == null)
+                    return ServiceResult<bool>.Failure(new KeyNotFoundException("Playlist not found."));
+
+                playlist.GlobalTranspose = globalTranspose;
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error updating global transpose for playlist {PlaylistId}: {Error}", playlistId, ex);
+                return ServiceResult<bool>.Failure(ex);
+            }
+        }
+        #endregion
+
         #region Make playlist private
         public async Task<ServiceResult<PlaylistDto>> MakePlaylistPrivateAsync(string id)
         {

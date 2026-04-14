@@ -47,7 +47,10 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Put("/api/playlists/update-playlist-song-transpose")]
         Task<IApiResponse<bool>> UpdatePlaylistSongTranspose([Query] string playlistId, [Query] string songId, [Query] int transpose);
-        
+
+        [Put("/api/playlists/update-playlist-global-transpose")]
+        Task<IApiResponse<bool>> UpdatePlaylistGlobalTranspose([Query] string playlistId, [Query] int globalTranspose);
+
         [Delete("/api/playlists/remove-song-from-playlist")]
         Task<IApiResponse<bool>> RemoveSongFromPlaylist([Query] string playlistId, [Query] string songId);
 

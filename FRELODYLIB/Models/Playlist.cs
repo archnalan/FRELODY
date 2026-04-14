@@ -33,6 +33,8 @@ namespace FRELODYLIB.Models
 
         public int? SortOrder { get; set; }
 
+        public int GlobalTranspose { get; set; }
+
         [StringLength(255)]
         public string? Theme { get; set; } // Optional: e.g. Gospel, Advent, Youth, etc.
 

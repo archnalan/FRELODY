@@ -395,6 +395,7 @@
                 {
                     playlistCollection = sharedResponse.Content;
                     filteredSongs = playlistCollection.Songs.ToList();
+                    globalTransposeOffset = playlistCollection.Playlist.GlobalTranspose;
                     return;
                 }
             }
@@ -406,6 +407,7 @@
             {
                 playlistCollection = response.Content;
                 filteredSongs = playlistCollection.Songs.ToList();
+                globalTransposeOffset = playlistCollection.Playlist.GlobalTranspose;
             }
             else if (!string.IsNullOrEmpty(currentUserId))
             {
@@ -417,6 +419,7 @@
                     if (playlistCollection != null)
                     {
                         filteredSongs = playlistCollection.Songs.ToList();
+                        globalTransposeOffset = playlistCollection.Playlist.GlobalTranspose;
                     }
                 }
             }
@@ -599,6 +602,9 @@
                 .Where(s => !string.IsNullOrEmpty(s.Key))
                 .Select(s => _playlistsApi.UpdatePlaylistSongTranspose(PlaylistId, s.Id, globalTransposeOffset));
             await Task.WhenAll(tasks);
+
+            // Persist global transpose on the playlist itself
+            await _playlistsApi.UpdatePlaylistGlobalTranspose(PlaylistId, globalTransposeOffset);
         }
         catch (Exception ex)
         {
@@ -790,7 +796,7 @@
             {
                 await ShowSuccessMessage("Playlist deleted successfully.");
                 await Task.Delay(1000);
-                GoBack();
+                await GoBack();
             }
             else
             {
@@ -963,12 +969,10 @@
         ApplySearch();
     }
 
-    private void GoBack()
+    private async Task GoBack()
     {
-        if (IsLandingContext)
-            _navManager.NavigateTo("/playlists/landing");
-        else
-            _navManager.NavigateTo("/playlists");
+        await _storageService.SetItemAsync("ExpandedPlaylistId", PlaylistId);
+        await JsRt.InvokeVoidAsync("goBack");
     }
 
     private void ShowAuthenticationRequired()

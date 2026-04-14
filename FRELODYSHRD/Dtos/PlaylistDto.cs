@@ -30,6 +30,8 @@ namespace FRELODYAPP.Dtos
 
         public int? SortOrder { get; set; }
 
+        public int GlobalTranspose { get; set; }
+
         [StringLength(255)]
         public string? Theme { get; set; }
         public virtual ICollection<SongBookDto>? SongBooks { get; set; }

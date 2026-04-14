@@ -38,5 +38,6 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<PlaylistDto>> AddSongToPlaylistAsync(string playlistId, string songId);
         Task<ServiceResult<bool>> ReorderPlaylistSongsAsync(string playlistId, List<string> songIds);
         Task<ServiceResult<bool>> UpdatePlaylistSongTransposeAsync(string playlistId, string songId, int transpose);
+        Task<ServiceResult<bool>> UpdatePlaylistGlobalTransposeAsync(string playlistId, int globalTranspose);
     }
 }

@@ -62,7 +62,7 @@
                         {
                             <PlaylistFolder Collection="colSong"
                                             ShowActionButtons="ShowActions"
-                                            IsExpanded="expandedCollections.Contains(colSong.Playlist.Id)"
+                                            IsExpanded="expandedCollectionId == colSong.Playlist.Id"
                                             OnToggle="() => ToggleCollection(colSong.Playlist.Id)"
                                             OnEdit="() => EditPlaylist(colSong)"
                                             OnRefresh="LoadPlaylists"
@@ -118,7 +118,7 @@
                         {
                             <PlaylistFolder Collection="colSong"
                                             ShowActionButtons="false"
-                                            IsExpanded="expandedCollections.Contains(colSong.Playlist.Id)"
+                                            IsExpanded="expandedCollectionId == colSong.Playlist.Id"
                                             OnToggle="() => ToggleCollection(colSong.Playlist.Id)"
                                             IsReadOnly="true"
                                             OnClone="() => ClonePlaylist(colSong.Playlist.Id)"
@@ -175,7 +175,7 @@
     private List<PlaylistSongs> explorePlaylists = new();
     private bool isLoading = true;
     private string searchQuery = string.Empty;
-    private HashSet<string> expandedCollections = new();
+    private string? expandedCollectionId;
     private string? currentUserId;
 
     // Editing state
@@ -213,7 +213,16 @@
         // Auto-expand if navigated to specific collection
         if (!string.IsNullOrEmpty(CollectionId))
         {
-            expandedCollections.Add(CollectionId);
+            expandedCollectionId = CollectionId;
+        }
+        else
+        {
+            var storedId = await _storageService.GetItemAsync<string>("ExpandedPlaylistId");
+            if (!string.IsNullOrEmpty(storedId))
+            {
+                expandedCollectionId = storedId;
+                await _storageService.SetItemAsync<string>("ExpandedPlaylistId", null!);
+            }
         }
         await ApplyViewState(ActiveView);
     }
@@ -276,41 +285,24 @@
         }
     }
 
-    public async Task ApplyViewState(ActiveView? view = ActiveView.Collapsed)
+    public Task ApplyViewState(ActiveView? view = ActiveView.Collapsed)
     {
         if (view == ActiveView.Expanded)
         {
-            foreach (var collection in myPlaylists)
-            {
-                if (!string.IsNullOrEmpty(collection.Playlist.Id))
-                {
-                    expandedCollections.Add(collection.Playlist.Id);
-                }
-            }
+            // Expand first playlist (only one can be open)
+            expandedCollectionId = myPlaylists.FirstOrDefault()?.Playlist.Id;
         }
-        else if (view == ActiveView.Collapsed)
+        else if (view == ActiveView.Collapsed && string.IsNullOrEmpty(expandedCollectionId))
         {
-            var specificId = CollectionId;
-            expandedCollections.Clear();
-            if (!string.IsNullOrEmpty(specificId))
-            {
-                expandedCollections.Add(specificId);
-            }
+            expandedCollectionId = null;
         }
         StateHasChanged();
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     private void ToggleCollection(string collectionId)
     {
-        if (expandedCollections.Contains(collectionId))
-        {
-            expandedCollections.Remove(collectionId);
-        }
-        else
-        {
-            expandedCollections.Add(collectionId);
-        }
+        expandedCollectionId = expandedCollectionId == collectionId ? null : collectionId;
         StateHasChanged();
     }
 
@@ -348,6 +340,28 @@
         editingCollection = new();
     }
 
+    private async Task RefreshPlaylistFolder(string playlistId)
+    {
+        try
+        {
+            var response = await _playlistsApi.GetPlaylistById(playlistId);
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                var index = myPlaylists.FindIndex(p => p.Playlist.Id == playlistId);
+                if (index >= 0)
+                {
+                    myPlaylists[index] = response.Content;
+                }
+
+                expandedCollectionId = playlistId;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing playlist {PlaylistId}", playlistId);
+        }
+    }
 
     private void InitiateSongMove(string sourceCollectionId, string songId)
     {
@@ -453,14 +467,8 @@
 
             if (response.IsSuccessStatusCode)
             {
-                await LoadPlaylists();
+                await RefreshPlaylistFolder(activeCollectionId);
                 await ShowSuccessMessage("Song added to playlist successfully.");
-
-                // Ensure the collection stays expanded
-                if (!expandedCollections.Contains(activeCollectionId))
-                {
-                    expandedCollections.Add(activeCollectionId);
-                }
             }
             else
             {
