@@ -37,6 +37,23 @@
     }
 </button>
 
+@if (_canToggleAccess)
+{
+    <div class="dropdown-divider"></div>
+    <button class="dropdown-item d-flex align-items-center @(_isTogglingAccess ? "disabled" : "")"
+            type="button"
+            @onclick="ToggleVisibility"
+            disabled="@_isTogglingAccess"
+            title="@(_currentAccess == Access.Private ? "This song is only visible to you" : "This song is visible to others")">
+        <i class="bi @(_currentAccess == Access.Private ? "bi-lock-fill" : "bi-globe2") me-2"></i>
+        <span>@(_currentAccess == Access.Private ? "Private" : "Visible")</span>
+        @if (_isTogglingAccess)
+        {
+            <span class="spinner-border spinner-border-sm ms-auto" role="status"></span>
+        }
+    </button>
+}
+
 @if (showSuccessMessage)
 {
     <div class="position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index: 2000;">
@@ -62,14 +79,71 @@
     private bool showSuccessMessage = false;
     private string successMessage = string.Empty;
 
+    private bool _isOwner;
+    private bool _isPremium;
+    private bool _isSuperAdmin;
+    private bool _isTogglingAccess;
+    private Access _currentAccess;
+
+    private bool _canToggleAccess => _isSuperAdmin || (_isOwner && _isPremium);
+
     protected override async Task OnInitializedAsync()
     {
         var userResult = await _globalAuth.GetAuthenticatedUserAsync();
         if (userResult.IsSuccess && userResult.Data != null)
         {
             currentUserId = userResult.Data.Id;
+            _isOwner = Song?.CreatedBy == currentUserId;
+            _isSuperAdmin = userResult.Data.UserType == UserType.SuperAdmin;
         }
+
+        var premiumResult = await _globalAuth.IsPremiumUser();
+        _isPremium = premiumResult.IsSuccess && premiumResult.Data;
+
+        _currentAccess = Song?.Access ?? Access.Public;
+
         await base.OnInitializedAsync();
+    }
+
+    private async Task ToggleVisibility()
+    {
+        if (Song == null || _isTogglingAccess) return;
+
+        _isTogglingAccess = true;
+        StateHasChanged();
+
+        var newAccess = _currentAccess == Access.Private ? Access.Public : Access.Private;
+
+        try
+        {
+            var response = await _songsApi.MarkSongAccessStatus(Song.Id!, newAccess);
+            if (response.IsSuccessStatusCode)
+            {
+                _currentAccess = newAccess;
+                Song.Access = newAccess;
+                var label = newAccess == Access.Private ? "private" : "visible";
+                await ShowSuccessMessage($"Song is now {label}.");
+            }
+            else
+            {
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Error",
+                    Message = "Could not update song visibility. Please try again.",
+                    ButtonText = "Close",
+                    OptionType = OptionType.Error
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error toggling visibility for song {SongId}", Song.Id);
+        }
+        finally
+        {
+            _isTogglingAccess = false;
+            StateHasChanged();
+        }
     }
 
     private async Task HandleShareLink()
