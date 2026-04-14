@@ -6,6 +6,7 @@
         private bool IsFromLanding;
 
         public event Func<string, Task>? OnSearchChanged;
+        public event Func<Task>? OnUserSongsChanged;
 
         public string SearchQuery
         {
@@ -34,6 +35,12 @@
         public void SetRenderOrigin(bool isFromLanding)
         {
             IsFromLanding = isFromLanding;
+        }
+
+        public async Task NotifyUserSongsChanged()
+        {
+            if (OnUserSongsChanged != null)
+                await OnUserSongsChanged();
         }
     }
 }

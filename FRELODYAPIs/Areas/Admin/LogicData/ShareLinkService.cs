@@ -236,10 +236,23 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         Title = uc.Song.Title,
                         SongNumber = uc.Song.SongNumber,
                         WrittenBy = uc.Song.WrittenBy,
+                        Key = uc.Song.Key,
+                        Transpose = uc.Transpose,
                         SortOrder = uc.SortOrder,
                         DateScheduled = uc.DateScheduled
                     }).ToList()
                 };
+
+                // Resolve curator ID to display name
+                if (!string.IsNullOrEmpty(playlist.Curator))
+                {
+                    var curatorUser = await _context.Users
+                        .Where(u => u.Id == playlist.Curator)
+                        .Select(u => new { u.FirstName, u.LastName })
+                        .FirstOrDefaultAsync();
+                    if (curatorUser != null)
+                        playlistSongs.Playlist.Curator = $"{curatorUser.FirstName} {curatorUser.LastName}".Trim();
+                }
 
                 _logger.LogInformation("Shared playlist {PlaylistId} accessed via token {ShareToken}",
                     playlist.Id, shareToken);

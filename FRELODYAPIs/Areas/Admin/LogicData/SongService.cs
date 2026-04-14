@@ -95,8 +95,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 var page = await _context.Songs
                         .Where(s => s.CreatedBy == _userId)
-                        .OrderBy(s => s.SongNumber)
-                        .ThenByDescending(s => s.Rating ?? 0)
+                        .OrderByDescending(s => s.DateModified ?? s.DateCreated)
+                        .ThenBy(s => s.SongNumber)
                         .ToPaginatedResultAsync(offset, limit);
 
                 var result = new PaginationDetails<ComboBoxDto>
@@ -112,6 +112,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             ValueText = s.Title,
                             IdString = s.Id,
                             ValueSubText = favoriteSet.Contains(s.Id) ? "pinned" : s.WrittenBy,
+                            DateCreated = s.DateCreated,
+                            DateModified = s.DateModified,
                         })
                         .ToList()
                 };
@@ -247,11 +249,12 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                      {
                          Title = songDto.Title,
                          SongNumber = songDto.SongNumber,
+                         Key = songDto.Key,
                          SongBookId = songBookExists ? songDto.BookCategory?.SongBookId : null,
                          CategoryId = categoryExists ? songDto.BookCategory?.CategoryId : null,
                          AlbumId = albumExists ? songDto.ArtistAlbum?.AlbumId : null,
                          ArtistId = artistExists ? songDto.ArtistAlbum?.ArtistId : null,
-                         Slug = songDto.Title.ToLower().Replace(" ", "-"),
+                         Slug = songDto.Title.ToLower().Replace("-", "-"),
                          Rating = 0m
                      };
                     await _context.Songs.AddAsync(song);
@@ -726,6 +729,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     // Update basic song properties
                     song.Title = songDto.Title;
                     song.SongNumber = songDto.SongNumber;
+                    song.Key = songDto.Key;
                     song.Slug = songDto.Title.ToLower().Replace(" ", "-");
 
                     bool songBookExists = false, categoryExists = false, artistExists = false, albumExists = false;

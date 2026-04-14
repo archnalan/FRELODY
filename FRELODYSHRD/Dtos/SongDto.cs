@@ -47,6 +47,9 @@ namespace FRELODYAPP.Dtos
         [Column(TypeName = "decimal(3,2)")]
         public decimal? Rating { get; set; }
 
+        [StringLength(10)]
+        public string? Key { get; set; }
+
         public virtual ICollection<SongPartDto>? SongParts { get; set; }
         public virtual ICollection<UserFeedbackDto>? Feedback { get; set; }        
     }

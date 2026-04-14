@@ -39,6 +39,9 @@ namespace FRELODYAPP.Models
         public string? AlbumId { get; set; }
         public string? ArtistId { get; set; }
 
+        [StringLength(10)]
+        public string? Key { get; set; }
+
         [Range(0, 5)]
         [Column(TypeName = "decimal(3,2)")]
         public decimal? Rating { get; set; }

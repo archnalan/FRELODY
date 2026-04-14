@@ -57,15 +57,26 @@
             </div>
 
             <!-- Input 2 -->
-            <div class="col-8 col-md-4">
+            <div class="col-8 col-md-3">
                 <input type="text"
                        @bind="SongTitle"
                        class="form-control"
                        placeholder="Song Title" />
             </div>
 
-            <!--Input 3 book/Artist-->
-            <div class="col-9 col-md-4">
+            <!-- Input 3 Key -->
+            <div class="col-3 col-md-1">
+                <select @bind="SongKey" class="form-control" title="Song Key">
+                    <option value="">Key</option>
+                    @foreach (var key in MusicalKeys)
+                    {
+                        <option value="@key">@key</option>
+                    }
+                </select>
+            </div>
+
+            <!--Input 4 book/Artist-->
+            <div class="col-6 col-md-4">
                 <BookArtistAdd @ref="bookArtistAddRef"
                                OnBookCategoryChanged="HandleBookCategoryChanged"
                                OnArtistAlbumChanged="HandleArtistAlbumChanged"
@@ -124,7 +135,14 @@
 
     const int MAX_SECTIONS = 25;
     private string SongTitle = "My New Song";
-    private int SongNumber = 1;   
+    private int SongNumber = 1;
+    private string? SongKey;
+    private static readonly string[] MusicalKeys = {
+        "C", "C#", "Db", "D", "D#", "Eb", "E", "F",
+        "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
+        "Cm", "C#m", "Dm", "D#m", "Ebm", "Em", "Fm",
+        "F#m", "Gm", "G#m", "Abm", "Am", "A#m", "Bbm", "Bm"
+    };
     private Dictionary<int, List<SegmentCreateDto>> AllPartsSegments =
     new() { [1] = new List<SegmentCreateDto>() };
     private List<TabItem> initialPartsItems = new();
@@ -210,6 +228,7 @@
                     var song = response.Content!;
                     SongTitle = song.Title;
                     SongNumber = song.SongNumber ?? 0;
+                    SongKey = song.Key;
                     initialPartsItems = new List<TabItem>();
                     AllPartsSegments = new Dictionary<int, List<SegmentCreateDto>>();
                     if (!string.IsNullOrEmpty(song.AlbumId)) GetAlbum(song.AlbumId);
@@ -504,6 +523,7 @@
 
         songData.Title = SongTitle;
         songData.SongNumber = SongNumber;
+        songData.Key = SongKey;
         songData.SongLyrics = allSegments;
 
         // Map single BookCategory pair if exists

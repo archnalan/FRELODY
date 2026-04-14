@@ -13,6 +13,7 @@ namespace FRELODYSHRD.Dtos.CreateDtos
     {
         public string Title { get; set; }
         public int? SongNumber { get; set; }
+        public string? Key { get; set; }
         public bool? IsRecoveryCopy { get; set; }
         public SongRecoveryDto? RecoveryDto { get; set; }
         public BookCategoryPairViewModel? BookCategory { get; set; }

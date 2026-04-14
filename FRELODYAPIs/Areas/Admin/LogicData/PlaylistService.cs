@@ -103,6 +103,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                             Title = uc.Song.Title,
                             SongNumber = uc.Song.SongNumber,
                             WrittenBy = uc.Song.WrittenBy,
+                            Key = uc.Song.Key,
+                            Transpose = uc.Transpose,
                             SortOrder = uc.SortOrder,
                             DateScheduled = uc.DateScheduled,
                             Access = uc.Song.Access
@@ -168,6 +170,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                 Title = uc.Song.Title,
                                 SongNumber = uc.Song.SongNumber,
                                 WrittenBy = uc.Song.WrittenBy,
+                                Key = uc.Song.Key,
+                                Transpose = uc.Transpose,
                                 SortOrder = uc.SortOrder,
                                 DateScheduled = uc.DateScheduled,
                                 Access = uc.Song.Access
@@ -289,6 +293,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         Title = uc.Song.Title,
                         SongNumber = uc.Song.SongNumber,
                         WrittenBy = uc.Song.WrittenBy,
+                        Key = uc.Song.Key,
+                        Transpose = uc.Transpose,
                         SortOrder = uc.SortOrder,
                         DateScheduled = uc.DateScheduled,
                         Access = uc.Song.Access
@@ -515,6 +521,27 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             catch (Exception ex)
             {
                 _logger.LogError("Error reordering songs in playlist {PlaylistId}: {Error}", playlistId, ex);
+                return ServiceResult<bool>.Failure(ex);
+            }
+        }
+
+        public async Task<ServiceResult<bool>> UpdatePlaylistSongTransposeAsync(string playlistId, string songId, int transpose)
+        {
+            try
+            {
+                var entry = await _context.SongUserPlaylists
+                    .FirstOrDefaultAsync(sp => sp.PlaylistId == playlistId && sp.SongId == songId);
+
+                if (entry == null)
+                    return ServiceResult<bool>.Failure(new KeyNotFoundException("Song not found in playlist."));
+
+                entry.Transpose = transpose;
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error updating transpose for song {SongId} in playlist {PlaylistId}: {Error}", songId, playlistId, ex);
                 return ServiceResult<bool>.Failure(ex);
             }
         }

@@ -323,9 +323,10 @@
 
     private async Task SelectResult(SearchResult result)
     {
-        await OnResultSelected.InvokeAsync(result);
-        AddToRecentSearches(SearchQuery);
+        var query = SearchQuery;
         Close();
+        AddToRecentSearches(query);
+        await OnResultSelected.InvokeAsync(result);
     }
 
     private async Task SelectRecentSearch(string searchTerm)

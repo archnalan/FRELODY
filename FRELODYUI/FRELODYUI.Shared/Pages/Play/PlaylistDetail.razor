@@ -70,101 +70,86 @@
                 }
             </div>
 
-            <!-- Playlist Information Card -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    @if (isEditingInfo && IsOwner)
-                    {
-                        <!-- Inline Edit Mode -->
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">Title</label>
-                                <input type="text" class="form-control" @bind="editTitle" placeholder="Playlist title" />
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">Description</label>
-                                <textarea class="form-control" rows="2" @bind="editDescription" placeholder="Optional description..."></textarea>
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="form-label fw-semibold">Theme</label>
-                                <input type="text" class="form-control" @bind="editTheme" placeholder="e.g., Gospel, Country" />
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="form-label fw-semibold">Scheduled Date</label>
-                                <input type="date" class="form-control" @bind="editPlaylistDate" />
-                            </div>
-                            <div class="col-12 d-flex gap-2 justify-content-end">
+            <!-- Playlist Information -->
+            <div class="pd-info-strip mb-3">
+                @if (isEditingInfo && IsOwner)
+                {
+                    <div class="pd-edit-form">
+                        <div class="pd-edit-row">
+                            <input type="text" class="form-control form-control-sm" @bind="editTitle" placeholder="Title" />
+                            <input type="text" class="form-control form-control-sm" @bind="editTheme" placeholder="Theme" />
+                        </div>
+                        <textarea class="form-control form-control-sm" rows="1" @bind="editDescription" placeholder="Description (optional)"></textarea>
+                        <div class="pd-edit-row">
+                            <input type="date" class="form-control form-control-sm" @bind="editPlaylistDate" />
+                            <div class="d-flex gap-2 justify-content-end">
                                 <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEditInfo">Cancel</button>
                                 <button class="btn btn-sm btn-primary" @onclick="SavePlaylistInfo">
                                     <i class="bi bi-check-lg me-1"></i>Save
                                 </button>
                             </div>
                         </div>
-                    }
-                    else
-                    {
-                        <!-- Read Mode -->
-                        <div class="row">
-                            <div class="col-md-8">
-                                @if (!string.IsNullOrEmpty(playlistCollection.Playlist.Description))
-                                {
-                                    <p class="text-muted mb-3">
-                                        <i class="bi bi-file-text me-2"></i>@playlistCollection.Playlist.Description
-                                    </p>
-                                }
+                    </div>
+                }
+                else
+                {
+                    <div class="pd-info-row">
+                        <div class="pd-info-meta">
+                            @if (!string.IsNullOrEmpty(playlistCollection.Playlist.Description))
+                            {
+                                <span class="pd-info-desc">@playlistCollection.Playlist.Description</span>
+                            }
+                            <div class="pd-info-tags">
                                 @if (!string.IsNullOrEmpty(playlistCollection.Playlist.Theme))
                                 {
-                                    <p class="mb-2">
-                                        <i class="bi bi-tag me-2"></i>
-                                        <span class="badge bg-primary">@playlistCollection.Playlist.Theme</span>
-                                    </p>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary">@playlistCollection.Playlist.Theme</span>
                                 }
+                                <span class="badge @(playlistCollection.Playlist.IsPublic == true ? "bg-success bg-opacity-10 text-success" : "bg-secondary bg-opacity-10 text-secondary")">
+                                    <i class="bi @(playlistCollection.Playlist.IsPublic == true ? "bi-globe" : "bi-lock") me-1"></i>@(playlistCollection.Playlist.IsPublic == true ? "Public" : "Private")
+                                </span>
+                                <span class="pd-info-count">@playlistCollection.Songs.Count song@(playlistCollection.Songs.Count != 1 ? "s" : "")</span>
+                            </div>
+                            <div class="pd-info-sub">
                                 @if (!string.IsNullOrEmpty(playlistCollection.Playlist.Curator))
                                 {
-                                    <p class="text-muted mb-2">
-                                        <i class="bi bi-person me-2"></i>Curated by @playlistCollection.Playlist.Curator
-                                    </p>
+                                    <span><i class="bi bi-person me-1"></i>@playlistCollection.Playlist.Curator</span>
                                 }
                                 @if (playlistCollection.Playlist.PlaylistDate.HasValue)
                                 {
-                                    <p class="text-muted mb-0">
-                                        <i class="bi bi-calendar-event me-2"></i>@playlistCollection.Playlist.PlaylistDate.Value.ToString("MMMM dd, yyyy")
-                                    </p>
+                                    <span><i class="bi bi-calendar-event me-1"></i>@playlistCollection.Playlist.PlaylistDate.Value.ToString("MMM dd, yyyy")</span>
                                 }
-                            </div>
-                            <div class="col-md-4 text-md-end">
-                                <div class="display-6 text-primary fw-bold">@playlistCollection.Songs.Count</div>
-                                <p class="text-muted">Song@(playlistCollection.Songs.Count != 1 ? "s" : "")</p>
-                                <span class="badge @(playlistCollection.Playlist.IsPublic == true ? "bg-success" : "bg-secondary")">
-                                    <i class="bi @(playlistCollection.Playlist.IsPublic == true ? "bi-globe" : "bi-lock") me-1"></i>
-                                    @(playlistCollection.Playlist.IsPublic == true ? "Public" : "Private")
-                                </span>
                             </div>
                         </div>
                         @if (IsOwner)
                         {
-                            <div class="mt-2 text-end">
-                                <button class="btn btn-sm btn-outline-primary" @onclick="StartEditInfo">
-                                    <i class="bi bi-pencil me-1"></i>Edit Info
-                                </button>
-                            </div>
+                            <button class="btn btn-sm btn-link text-muted p-0" @onclick="StartEditInfo" title="Edit info">
+                                <i class="bi bi-pencil"></i>
+                            </button>
                         }
-                    }
-                </div>
+                    </div>
+                }
             </div>
 
             <!-- Search Bar -->
             @if (playlistCollection.Songs.Any())
             {
-                <div class="rounded-3 border shadow p-3 mb-3" style="max-width:30rem; margin:0 auto">
-                    <div class="position-relative">
-                        <input type="text"
-                               class="form-control ps-5 rounded-3"
-                               placeholder="Search songs in this playlist..."
-                               @bind-value="searchQuery"
-                               @bind-value:event="oninput"
-                               @bind-value:after="OnSearchInput" />
-                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                <div class="pd-search mb-3">
+                    <div class="pd-search-row">
+                        <div class="position-relative flex-grow-1">
+                            <input type="text"
+                                   class="form-control form-control-sm ps-5 rounded-3"
+                                   placeholder="Search songs..."
+                                   @bind-value="searchQuery"
+                                   @bind-value:event="oninput"
+                                   @bind-value:after="OnSearchInput" />
+                            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="font-size:0.8rem"></i>
+                        </div>
+                        @if (ShowActions && IsOwner)
+                        {
+                            <button class="btn btn-sm btn-primary rounded-3" @onclick="AddSongToPlaylist" title="Add song">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        }
                     </div>
                 </div>
             }
@@ -172,26 +157,52 @@
             <!-- Songs List -->
             @if (filteredSongs.Any())
             {
+                @if (ShowActions && IsOwner && filteredSongs.Any(s => !string.IsNullOrEmpty(s.Key)))
+                {
+                    <!-- Global Transpose Strip -->
+                    <div class="pd-global-transpose mb-2">
+                        <span class="pd-gt-label"><i class="bi bi-music-note-list me-1"></i>All Keys</span>
+                        <div class="pd-gt-controls">
+                            <button class="pd-gt-btn" @onclick="GlobalTransposeDown" title="Transpose all down">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <span class="pd-gt-value @(globalTransposeOffset != 0 ? "pd-gt-active" : "")">
+                                @(globalTransposeOffset >= 0 ? "+" : "")@globalTransposeOffset
+                            </span>
+                            <button class="pd-gt-btn" @onclick="GlobalTransposeUp" title="Transpose all up">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                            @if (globalTransposeOffset != 0)
+                            {
+                                <button class="pd-gt-reset" @onclick="ResetGlobalTranspose" title="Reset all">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
                 @if (ShowActions && IsOwner && string.IsNullOrEmpty(searchQuery))
                 {
                     <SortableList Items="filteredSongs"
                                   Handle=".psi-drag-handle"
-                                  Class="songs-container"
+                                  Class="pd-songs-list"
                                   Group="@($"detail-{PlaylistId}")"
                                   OnUpdate="HandleSongReorder">
                         <SortableItemTemplate>
                             <PlaylistSongItem Song="context"
                                               ShowActionBtns="true"
+                                              ShowTransposeControls="true"
                                               IsDraggable="true"
                                               ActiveView="ActiveView"
                                               OnRemove="() => RemoveSongFromPlaylist(context.Id)"
-                                              OnShare="() => ShareSong(context.Id)"/>
+                                              OnShare="() => ShareSong(context.Id)"
+                                              OnTransposeChanged="HandleTransposeChanged"/>
                         </SortableItemTemplate>
                     </SortableList>
                 }
                 else
                 {
-                    <div class="songs-container">
+                    <div class="pd-songs-list">
                         @foreach (var song in filteredSongs)
                         {
                             <PlaylistSongItem Song="song"
@@ -311,6 +322,9 @@
     private bool showSuccessMessage = false;
     private string successMessage = string.Empty;
 
+    // Global transpose
+    private int globalTransposeOffset = 0;
+
     private bool IsOwner => !string.IsNullOrEmpty(currentUserId) && playlistCollection != null &&
         (playlistCollection.Playlist.CreatedBy == currentUserId || playlistCollection.Playlist.Curator == currentUserId);
 
@@ -349,13 +363,6 @@
         {
             currentUserId = user.Data.Id;
         }
-        else if (IsLandingContext)
-        {
-            // Non-authenticated users visiting a shared playlist link get redirected to login
-            var returnUrl = Uri.EscapeDataString(_navManager.Uri);
-            _navManager.NavigateTo($"/login?returnUrl={returnUrl}");
-            return;
-        }
 
         await LoadPlaylist();
     }
@@ -380,7 +387,19 @@
                 return;
             }
 
-            // Try to load directly by playlist ID first (works for both landing and authenticated views)
+            // If in landing context, the PlaylistId may be a share token — resolve via share API first
+            if (IsLandingContext)
+            {
+                var sharedResponse = await _shareApi.GetSharedPlaylist(PlaylistId);
+                if (sharedResponse.IsSuccessStatusCode && sharedResponse.Content != null)
+                {
+                    playlistCollection = sharedResponse.Content;
+                    filteredSongs = playlistCollection.Songs.ToList();
+                    return;
+                }
+            }
+
+            // Try to load directly by playlist ID (works for authenticated views or if token matched a playlist ID)
             var response = await _playlistsApi.GetPlaylistById(PlaylistId);
 
             if (response.IsSuccessStatusCode && response.Content != null)
@@ -524,6 +543,69 @@
         }
     }
 
+    private async Task HandleTransposeChanged((string songId, int transpose) args)
+    {
+        try
+        {
+            await _playlistsApi.UpdatePlaylistSongTranspose(PlaylistId, args.songId, args.transpose);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating transpose for song {SongId}", args.songId);
+        }
+    }
+
+    private async Task GlobalTransposeDown()
+    {
+        if (globalTransposeOffset <= -11) return;
+        globalTransposeOffset--;
+        await ApplyGlobalTranspose();
+    }
+
+    private async Task GlobalTransposeUp()
+    {
+        if (globalTransposeOffset >= 11) return;
+        globalTransposeOffset++;
+        await ApplyGlobalTranspose();
+    }
+
+    private async Task ResetGlobalTranspose()
+    {
+        globalTransposeOffset = 0;
+        await ApplyGlobalTranspose();
+    }
+
+    private async Task ApplyGlobalTranspose()
+    {
+        foreach (var song in filteredSongs.Where(s => !string.IsNullOrEmpty(s.Key)))
+        {
+            song.Transpose = globalTransposeOffset;
+        }
+
+        if (playlistCollection != null)
+        {
+            foreach (var song in playlistCollection.Songs.Where(s => !string.IsNullOrEmpty(s.Key)))
+            {
+                song.Transpose = globalTransposeOffset;
+            }
+        }
+
+        StateHasChanged();
+
+        // Persist all in background
+        try
+        {
+            var tasks = filteredSongs
+                .Where(s => !string.IsNullOrEmpty(s.Key))
+                .Select(s => _playlistsApi.UpdatePlaylistSongTranspose(PlaylistId, s.Id, globalTransposeOffset));
+            await Task.WhenAll(tasks);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error applying global transpose");
+        }
+    }
+
     private async Task SharePlaylist()
     {
         if (playlistCollection == null) return;
@@ -594,17 +676,38 @@
         if (string.IsNullOrEmpty(PlaylistId) || selectedSong == null)
             return;
 
+        // Optimistically add to local list immediately
+        var newSong = new PlaylistSongDto
+        {
+            Id = selectedSong.Id,
+            Title = selectedSong.Title,
+            SongNumber = selectedSong.SongNumber,
+            WrittenBy = selectedSong.Artist,
+            SortOrder = (playlistCollection?.Songs.Count ?? 0) + 1,
+            DateScheduled = DateTimeOffset.UtcNow
+        };
+
+        playlistCollection?.Songs.Add(newSong);
+        filteredSongs = playlistCollection?.Songs.ToList() ?? filteredSongs;
+        StateHasChanged();
+
         try
         {
             var response = await _playlistsApi.AddSongToPlaylist(PlaylistId, selectedSong.Id);
 
             if (response.IsSuccessStatusCode)
             {
-                await ShowSuccessMessage("Song added to playlist successfully.");
-                await LoadPlaylist();
+                await ShowSuccessMessage("Song added to playlist.");
+                // Background refresh to pick up Key and accurate data
+                _ = RefreshSongList();
             }
             else
             {
+                // Rollback optimistic add
+                playlistCollection?.Songs.Remove(newSong);
+                filteredSongs = playlistCollection?.Songs.ToList() ?? filteredSongs;
+                StateHasChanged();
+
                 var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
                 _modalService.Show(new ModalOptionDto
                 {
@@ -617,6 +720,11 @@
         }
         catch (Exception ex)
         {
+            // Rollback optimistic add
+            playlistCollection?.Songs.Remove(newSong);
+            filteredSongs = playlistCollection?.Songs.ToList() ?? filteredSongs;
+            StateHasChanged();
+
             _logger.LogError(ex, "Error adding song to playlist");
             _modalService.Show(new ModalOptionDto
             {
@@ -625,6 +733,34 @@
                 ButtonText = "Close",
                 OptionType = OptionType.Error
             });
+        }
+    }
+
+    private async Task RefreshSongList()
+    {
+        try
+        {
+            Refit.IApiResponse<PlaylistSongs>? response = null;
+
+            if (IsLandingContext)
+            {
+                var sharedResponse = await _shareApi.GetSharedPlaylist(PlaylistId);
+                if (sharedResponse.IsSuccessStatusCode && sharedResponse.Content != null)
+                    response = sharedResponse;
+            }
+
+            response ??= await _playlistsApi.GetPlaylistById(PlaylistId);
+
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                playlistCollection = response.Content;
+                filteredSongs = playlistCollection.Songs.ToList();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Background song list refresh failed");
         }
     }
 

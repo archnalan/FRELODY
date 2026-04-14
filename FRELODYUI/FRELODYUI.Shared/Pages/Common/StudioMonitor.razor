@@ -345,7 +345,10 @@
         {
             var result = await _songsApi.CreateSong(Song);
             if (result.IsSuccessStatusCode && result.Content != null)
+            {
+                await _heroDataService.NotifyUserSongsChanged();
                 return result.Content.Id;
+            }
 
             var errorMessage = _apiResponseHandler.GetApiErrorMessage(result);
             _modalService.Show(new ModalOptionDto

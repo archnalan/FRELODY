@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         @if (IsSidebarCollapsed)
         {
@@ -86,40 +88,53 @@
                         <div class="your-songs-list" data-songs-scroll>
                             @if (userSongs.Any())
                             {
-                                @foreach (var song in SortedSongs)
+                                @foreach (var group in GroupedSongs)
                                 {
-                                    <div class="your-songs-item-wrapper @(activeSongMenuId == song.IdString ? "menu-open" : "") @(IsCurrentSong(song.IdString) ? "active" : "")">
-                                        @if (renamingSongId == song.IdString)
+                                    <div class="your-songs-date-group">
+                                        <button class="your-songs-date-toggle" @onclick="() => ToggleDateGroup(group.Key)" type="button">
+                                            <span class="your-songs-date-label">@group.Key</span>
+                                            <span class="your-songs-date-count">@group.Value.Count</span>
+                                            <i class="bi bi-chevron-@(IsDateGroupExpanded(group.Key) ? "up" : "down") your-songs-date-chevron"></i>
+                                        </button>
+                                        @if (IsDateGroupExpanded(group.Key))
                                         {
-                                            <div class="your-songs-rename-row">
-                                                <input class="your-songs-rename-input" @bind="renameValue"
-                                                       @bind:event="onchange"
-                                                       @onkeydown="HandleRenameKeyDown"
-                                                       @onblur="HandleRenameBlur" />
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            @if (song.ValueSubText == "pinned")
+                                            @foreach (var song in group.Value)
                                             {
-                                                <i class="bi bi-pin-fill your-songs-pin-icon"></i>
+                                                <div class="your-songs-item-wrapper @(activeSongMenuId == song.IdString ? "menu-open" : "") @(IsActiveSong(song.IdString) ? "active" : "")">
+                                                    @if (renamingSongId == song.IdString)
+                                                    {
+                                                        <div class="your-songs-rename-row">
+                                                            <input class="your-songs-rename-input" @bind="renameValue"
+                                                                   @bind:event="onchange"
+                                                                   @onkeydown="HandleRenameKeyDown"
+                                                                   @onblur="HandleRenameBlur" />
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        @if (song.ValueSubText == "pinned")
+                                                        {
+                                                            <i class="bi bi-pin-fill your-songs-pin-icon"></i>
+                                                        }
+                                                        <a class="your-songs-item" href="/songs/@song.IdString" @onclick="() => SelectSong(song.IdString)">
+                                                            <span class="your-songs-title">@song.ValueText</span>
+                                                        </a>
+                                                        <button class="your-songs-more-btn" @onclick="() => ToggleSongMenu(song.IdString)" @onclick:stopPropagation type="button">
+                                                            <i class="bi bi-three-dots"></i>
+                                                        </button>
+                                                    }
+                                                    @if (activeSongMenuId == song.IdString)
+                                                    {
+                                                        <div class="your-songs-context-menu" @onclick:stopPropagation>
+                                                            <button type="button" @onclick="() => ShareSong(song)"><i class="bi bi-share"></i> Share</button>
+                                                            <button type="button" @onclick="() => PinSong(song)"><i class="bi @(song.ValueSubText == "pinned" ? "bi-pin-fill" : "bi-pin")"></i> @(song.ValueSubText == "pinned" ? "Unpin" : "Pin")</button>
+                                                            <button type="button" @onclick="() => StartRenameSong(song)"><i class="bi bi-pencil"></i> Rename</button>
+                                                            <button type="button" @onclick="() => ArchiveSongItem(song)"><i class="bi bi-archive"></i> Archive</button>
+                                                            <button type="button" class="ctx-danger" @onclick="() => ConfirmDeleteSong(song)"><i class="bi bi-trash3"></i> Delete</button>
+                                                        </div>
+                                                    }
+                                                </div>
                                             }
-                                            <a class="your-songs-item" href="/songs/@song.IdString" @onclick="() => CloseContextMenu()">
-                                                <span class="your-songs-title">@song.ValueText</span>
-                                            </a>
-                                            <button class="your-songs-more-btn" @onclick="() => ToggleSongMenu(song.IdString)" @onclick:stopPropagation type="button">
-                                                <i class="bi bi-three-dots"></i>
-                                            </button>
-                                        }
-                                        @if (activeSongMenuId == song.IdString)
-                                        {
-                                            <div class="your-songs-context-menu" @onclick:stopPropagation>
-                                                <button type="button" @onclick="() => ShareSong(song)"><i class="bi bi-share"></i> Share</button>
-                                                <button type="button" @onclick="() => PinSong(song)"><i class="bi @(song.ValueSubText == "pinned" ? "bi-pin-fill" : "bi-pin")"></i> @(song.ValueSubText == "pinned" ? "Unpin" : "Pin")</button>
-                                                <button type="button" @onclick="() => StartRenameSong(song)"><i class="bi bi-pencil"></i> Rename</button>
-                                                <button type="button" @onclick="() => ArchiveSongItem(song)"><i class="bi bi-archive"></i> Archive</button>
-                                                <button type="button" class="ctx-danger" @onclick="() => ConfirmDeleteSong(song)"><i class="bi bi-trash3"></i> Delete</button>
-                                            </div>
                                         }
                                     </div>
                                 }
@@ -274,11 +289,82 @@
     [Parameter] public EventCallback OnToggleSidebar { get; set; }
     [Parameter] public EventCallback OnCloseMobileDrawer { get; set; }
 
+    // Date group expansion state & selected song for active highlight
+    private HashSet<string> expandedDateGroups = new();
+    private string? selectedSongId;
+
     private IEnumerable<ComboBoxDto> SortedSongs =>
         userSongs.OrderByDescending(s => s.ValueSubText == "pinned").ThenBy(s => userSongs.IndexOf(s));
 
-    private bool IsCurrentSong(string? songId) =>
-        !string.IsNullOrEmpty(songId) && _navManager.Uri.Contains($"/songs/{songId}", StringComparison.OrdinalIgnoreCase);
+    private Dictionary<string, List<ComboBoxDto>> GroupedSongs
+    {
+        get
+        {
+            var now = DateTimeOffset.UtcNow;
+            var today = now.Date;
+            var yesterday = today.AddDays(-1);
+            var lastWeekStart = today.AddDays(-7);
+
+            var groups = new Dictionary<string, List<ComboBoxDto>>();
+
+            foreach (var song in SortedSongs)
+            {
+                var date = (song.DateModified ?? song.DateCreated)?.Date;
+                var category = date switch
+                {
+                    not null when date == today => "Today",
+                    not null when date == yesterday => "Yesterday",
+                    not null when date >= lastWeekStart => "Last week",
+                    _ => "Recent"
+                };
+
+                if (!groups.ContainsKey(category))
+                    groups[category] = new();
+
+                groups[category].Add(song);
+            }
+
+            // Ensure consistent ordering of categories
+            var ordered = new Dictionary<string, List<ComboBoxDto>>();
+            foreach (var key in new[] { "Today", "Yesterday", "Last week", "Recent" })
+            {
+                if (groups.TryGetValue(key, out var list))
+                    ordered[key] = list;
+            }
+            return ordered;
+        }
+    }
+
+    private bool IsDateGroupExpanded(string groupKey) => expandedDateGroups.Contains(groupKey);
+
+    private void ToggleDateGroup(string groupKey)
+    {
+        if (!expandedDateGroups.Remove(groupKey))
+            expandedDateGroups.Add(groupKey);
+    }
+
+    private bool IsActiveSong(string? songId) =>
+        !string.IsNullOrEmpty(songId) &&
+        (songId == selectedSongId || _navManager.Uri.Contains($"/songs/{songId}", StringComparison.OrdinalIgnoreCase));
+
+    private void SelectSong(string? songId)
+    {
+        selectedSongId = songId;
+        CloseContextMenu();
+    }
+
+    private void SyncSelectedSongFromUrl()
+    {
+        var uri = _navManager.Uri;
+        var match = userSongs.FirstOrDefault(s => !string.IsNullOrEmpty(s.IdString) && uri.Contains($"/songs/{s.IdString}", StringComparison.OrdinalIgnoreCase));
+        selectedSongId = match?.IdString;
+    }
+
+    private void OnNavLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        SyncSelectedSongFromUrl();
+        InvokeAsync(StateHasChanged);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -291,6 +377,11 @@
             isDarkTheme = savedTheme == "dark";
             await ApplyTheme(savedTheme);
         }
+
+        // Sync selected song from current URL
+        SyncSelectedSongFromUrl();
+        _navManager.LocationChanged += OnNavLocationChanged;
+        _heroDataService.OnUserSongsChanged += OnUserSongsChanged;
 
         // Pre-check if the user has any songs to decide whether to show "Your Songs"
         try
@@ -356,6 +447,10 @@
         if (isYourSongsExpanded && !userSongs.Any() && !isLoadingSongs)
         {
             await LoadSongs(reset: true);
+            // Auto-expand the first group that has songs
+            var firstGroup = GroupedSongs.Keys.FirstOrDefault();
+            if (firstGroup != null)
+                expandedDateGroups.Add(firstGroup);
         }
         if (!isYourSongsExpanded)
         {
@@ -589,6 +684,26 @@
     {
         await JsRt.InvokeVoidAsync("eval",
             $"document.documentElement.setAttribute('data-bs-theme', '{theme}')");
+    }
+
+    private async Task OnUserSongsChanged()
+    {
+        hasUserSongs = true;
+        await LoadSongs(reset: true);
+        // Auto-expand first date group so the new song is visible
+        var firstGroup = GroupedSongs.Keys.FirstOrDefault();
+        if (firstGroup != null)
+            expandedDateGroups.Add(firstGroup);
+        if (!isYourSongsExpanded)
+            isYourSongsExpanded = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _navManager.LocationChanged -= OnNavLocationChanged;
+        _heroDataService.OnUserSongsChanged -= OnUserSongsChanged;
+        _selfRef?.Dispose();
     }
 }
 

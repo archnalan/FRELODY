@@ -17,6 +17,7 @@ namespace FRELODYLIB.Models
 
         public string? AddedByUserId { get; set; }
         public int? SortOrder { get; set; }
+        public int? Transpose { get; set; }
         public DateTimeOffset DateScheduled { get; set; } = DateTimeOffset.UtcNow;
 
         [ForeignKey(nameof(SongId))]

@@ -1,3 +1,4 @@
+@using FRELODYUI.Shared.Services
 @inject ILogger<PlaylistSongItem> _logger    
 
 <div class="psi-item" @onclick="@(() => OnSongDisplay(Song.Id))">
@@ -19,9 +20,28 @@
         }
     </div>
 
+    @if (!string.IsNullOrEmpty(Song.Key))
+    {
+        <div class="psi-key-section" @onclick:stopPropagation>
+            @if (ShowTransposeControls)
+            {
+                <button class="psi-key-btn" @onclick="DecrementTranspose" title="Transpose down">
+                    <i class="bi bi-dash"></i>
+                </button>
+            }
+            <span class="psi-key-badge" title="@GetKeyTooltip()">@GetDisplayKey()</span>
+            @if (ShowTransposeControls)
+            {
+                <button class="psi-key-btn" @onclick="IncrementTranspose" title="Transpose up">
+                    <i class="bi bi-plus"></i>
+                </button>
+            }
+        </div>
+    }
+
     @if (ShowActionBtns)
     {
-        <button class="psi-menu-btn" @ref="menuBtnRef" type="button"
+        <button class="psi-menu-btn @(menuOpen ? "psi-menu-active" : "")" @ref="menuBtnRef" type="button"
                 @onclick="ToggleMenu" @onclick:stopPropagation
                 title="Song actions">
             <i class="bi bi-three-dots"></i>
@@ -57,7 +77,9 @@
     [Parameter] public PlaylistSongDto Song { get; set; } = new();
     [Parameter] public EventCallback OnRemove { get; set; }
     [Parameter] public EventCallback OnShare { get; set; }
+    [Parameter] public EventCallback<(string songId, int transpose)> OnTransposeChanged { get; set; }
     [Parameter] public bool ShowActionBtns { get; set; } = true;
+    [Parameter] public bool ShowTransposeControls { get; set; } = false;
     [Parameter] public bool IsDraggable { get; set; } = false;
 
     private bool menuOpen;
@@ -107,6 +129,39 @@
         {
             _navManager.NavigateTo($"/songs/{songId}");
         }
+    }
+
+    private string GetDisplayKey()
+    {
+        if (string.IsNullOrEmpty(Song.Key)) return "";
+        var transpose = Song.Transpose ?? 0;
+        if (transpose == 0) return Song.Key;
+        return ChordTransposer.TransposeChord(Song.Key, transpose);
+    }
+
+    private string GetKeyTooltip()
+    {
+        var transpose = Song.Transpose ?? 0;
+        if (transpose == 0 || string.IsNullOrEmpty(Song.Key))
+            return $"Key: {Song.Key}";
+        var sign = transpose > 0 ? "+" : "";
+        return $"Original: {Song.Key} ({sign}{transpose})";
+    }
+
+    private async Task IncrementTranspose()
+    {
+        var current = Song.Transpose ?? 0;
+        if (current >= 11) return;
+        Song.Transpose = current + 1;
+        await OnTransposeChanged.InvokeAsync((Song.Id, Song.Transpose.Value));
+    }
+
+    private async Task DecrementTranspose()
+    {
+        var current = Song.Transpose ?? 0;
+        if (current <= -11) return;
+        Song.Transpose = current - 1;
+        await OnTransposeChanged.InvokeAsync((Song.Id, Song.Transpose.Value));
     }
 
 }

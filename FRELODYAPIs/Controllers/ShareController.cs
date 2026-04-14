@@ -23,7 +23,7 @@ namespace FRELODYAPIs.Controllers
             {
                 return StatusCode(result.StatusCode, result.Error.Message);
             }
-            return Ok(result);
+            return Ok(result.Data);
         }
 
         [HttpGet]
