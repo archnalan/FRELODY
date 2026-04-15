@@ -1146,8 +1146,10 @@
         StateHasChanged();
     }
 
-    private void OnUserRated(decimal rating)
+    private async Task OnUserRated(decimal rating)
     {
+        // Let the thank-you message display briefly before hiding the section
+        await Task.Delay(3000);
         hasUserRated = true;
         StateHasChanged();
     }
