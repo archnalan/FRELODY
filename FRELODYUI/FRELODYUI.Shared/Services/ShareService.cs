@@ -2,6 +2,7 @@
 using FRELODYSHRD.Dtos;
 using FRELODYUI.Shared.RefitApis;
 using FRELODYUI.Shared.Services;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
 namespace FRELODYUI.Services
@@ -16,17 +17,17 @@ namespace FRELODYUI.Services
         public ShareService(
             IShareApi shareApi,
             IClipboardService clipboardService,
-            ILogger<ShareService> logger)
+            ILogger<ShareService> logger,
+            NavigationManager navigationManager)
         {
             _shareApi = shareApi;
             _clipboardService = clipboardService;
             _logger = logger;
 
-            // This should be configurable based on platform
 #if ANDROID || IOS
-            _baseUrl = "https://frelody.app"; // Production URL for mobile
+            _baseUrl = "https://frelody.app";
 #else
-            _baseUrl = "https://localhost:7018"; // Development URL for web
+            _baseUrl = navigationManager.BaseUri.TrimEnd('/');
 #endif
         }
 

@@ -181,6 +181,16 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(SongDto), 200)]
+        public async Task<IActionResult> GetSongDetailsById([FromQuery] string Id)
+        {
+            var result = await _songService.GetSongDetailsById(Id);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            return Ok(result.Data);
+        }
+
+        [HttpGet]
         [ProducesResponseType(typeof(PaginationDetails<SongRecoveryDto>), 200)]
         public async Task<IActionResult> GetRecoverySongs([FromQuery] string? userId = null, [FromQuery] int? offset = 0, [FromQuery] int? limit = 10)
         {

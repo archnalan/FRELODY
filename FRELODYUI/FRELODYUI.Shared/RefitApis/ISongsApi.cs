@@ -27,8 +27,8 @@ namespace FRELODYUI.Shared.RefitApis
         [Get("/api/songs/get-song-with-chords-by-id")]
         Task<IApiResponse<SongDto>> GetSongWithChordsById([Query] string Id);
 
-        [Get("/api/songs/get-song-details-by-id/{id}")]
-        Task<IApiResponse<SongDto>> GetSongDetailsById([Query]string id);
+        [Get("/api/songs/get-song-details-by-id")]
+        Task<IApiResponse<SongDto>> GetSongDetailsById([Query]string Id);
 
         [Post("/api/songs/create-song")]
         Task<IApiResponse<SongDto>> CreateSong([Body] SimpleSongCreateDto song);

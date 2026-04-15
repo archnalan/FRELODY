@@ -1,0 +1,354 @@
+/* ============================================
+   SONG DETAILS — MINIMALIST MOBILE-FIRST
+   ============================================ */
+
+.details-container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0.75rem;
+    min-height: 100vh;
+}
+
+/* ── Top Bar ── */
+.details-topbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding: 0.5rem 0;
+}
+
+.topbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    background: var(--input-bg);
+    border: 1.5px solid var(--border-medium);
+    border-radius: 10px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+    .topbar-btn:hover {
+        background: var(--bg-hover);
+        border-color: var(--gradient-primary-start);
+        color: var(--gradient-primary-start);
+        transform: translateY(-1px);
+    }
+
+.topbar-title {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+.topbar-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* ── Hero Section ── */
+.details-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 16px;
+    backdrop-filter: var(--card-backdrop-filter);
+}
+
+.hero-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
+    border-radius: 14px;
+    color: #fff;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.hero-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.hero-number {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gradient-primary-start);
+    background: var(--bg-hover);
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    margin-bottom: 0.35rem;
+    letter-spacing: 0.03em;
+}
+
+.hero-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    overflow-wrap: break-word;
+}
+
+.hero-author {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem;
+}
+
+/* ── Metadata Card ── */
+.details-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    padding: 0.25rem 0;
+    margin-bottom: 1rem;
+    backdrop-filter: var(--card-backdrop-filter);
+    overflow: hidden;
+}
+
+.detail-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    transition: background 0.15s ease;
+}
+
+    .detail-row:hover {
+        background: var(--bg-hover);
+    }
+
+    .detail-row + .detail-row {
+        border-top: 1px solid var(--border-light);
+    }
+
+.detail-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    background: var(--bg-hover);
+    border-radius: 8px;
+    color: var(--gradient-primary-start);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.detail-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    min-width: 5.5rem;
+}
+
+.detail-value {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: right;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.level-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
+    color: #fff;
+}
+
+/* ── History Card ── */
+.history-card {
+    padding: 1.25rem;
+}
+
+.history-header,
+.parts-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+}
+
+    .history-header i,
+    .parts-header i {
+        font-size: 1rem;
+        color: var(--gradient-primary-start);
+    }
+
+.history-title,
+.parts-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.history-text {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    margin: 0;
+    white-space: pre-line;
+}
+
+/* ── Song Parts / Structure ── */
+.parts-card {
+    padding: 1.25rem;
+}
+
+.parts-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.part-chip {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    transition: all 0.15s ease;
+}
+
+    .part-chip:hover {
+        border-color: var(--gradient-primary-start);
+        color: var(--gradient-primary-start);
+    }
+
+/* ── Action Buttons ── */
+.details-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem 0;
+}
+
+.action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+    .action-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+.action-primary {
+    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+}
+
+    .action-primary:hover:not(:disabled) {
+        background: linear-gradient(135deg, var(--gradient-primary-hover-start), var(--gradient-primary-hover-end));
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45);
+    }
+
+.action-secondary {
+    background: var(--btn-bg);
+    color: var(--btn-color);
+    border: 1.5px solid var(--border-medium);
+}
+
+    .action-secondary:hover:not(:disabled) {
+        background: var(--btn-hover-bg);
+        transform: translateY(-1px);
+    }
+
+/* ── Empty / Not Found ── */
+.details-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 60vh;
+    gap: 0.5rem;
+    color: var(--text-muted);
+}
+
+    .details-empty i {
+        font-size: 3rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .details-empty h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .details-empty p {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin: 0 0 1rem;
+    }
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+    .details-hero {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 1.25rem;
+    }
+
+    .hero-icon {
+        width: 3.5rem;
+        height: 3.5rem;
+        font-size: 1.25rem;
+    }
+
+    .hero-title {
+        font-size: 1.2rem;
+    }
+
+    .detail-label {
+        min-width: 4.5rem;
+    }
+
+    .details-actions {
+        flex-direction: column;
+    }
+}

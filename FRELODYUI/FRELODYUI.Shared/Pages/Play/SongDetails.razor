@@ -1,0 +1,360 @@
+@page "/player/details/{SongId}"
+@inject ILogger<SongDetails> _logger
+
+<div class="details-container">
+    @if (isLoading)
+    {
+        <FRELODYUI.Shared.Pages.PlaceHolders.SongDetailsPlaceholder />
+    }
+    else if (song != null)
+    {
+        <!-- Top Bar -->
+        <div class="details-topbar">
+            <button class="topbar-btn" @onclick="GoBack" title="Go back">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <span class="topbar-title">Song Details</span>
+            <div class="topbar-actions">
+                <button class="topbar-btn" @onclick="NavigateToSong" title="Play song">
+                    <i class="bi bi-play-fill"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Hero Section -->
+        <div class="details-hero">
+            <div class="hero-icon">
+                <i class="bi bi-music-note-beamed"></i>
+            </div>
+            <div class="hero-info">
+                @if (song.SongNumber.HasValue && song.SongNumber > 0)
+                {
+                    <span class="hero-number">#@song.SongNumber.Value.ToString("D3")</span>
+                }
+                <h1 class="hero-title">@song.Title</h1>
+                @if (!string.IsNullOrEmpty(song.WrittenBy))
+                {
+                    <p class="hero-author">by @song.WrittenBy</p>
+                }
+                <SongRating SongId="@SongId" ShowSummary="true" ShowPanel="false" />
+            </div>
+        </div>
+
+        <!-- Metadata Card -->
+        <div class="details-card">
+            @if (!string.IsNullOrEmpty(song.Key))
+            {
+                <div class="detail-row">
+                    <span class="detail-icon"><i class="bi bi-key-fill"></i></span>
+                    <span class="detail-label">Key</span>
+                    <span class="detail-value">@song.Key</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(categoryName))
+            {
+                <div class="detail-row">
+                    <span class="detail-icon"><i class="bi bi-tag-fill"></i></span>
+                    <span class="detail-label">Category</span>
+                    <span class="detail-value">@categoryName</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(artistName))
+            {
+                <div class="detail-row">
+                    <span class="detail-icon"><i class="bi bi-person-fill"></i></span>
+                    <span class="detail-label">Artist</span>
+                    <span class="detail-value">@artistName</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(albumTitle))
+            {
+                <div class="detail-row">
+                    <span class="detail-icon"><i class="bi bi-disc-fill"></i></span>
+                    <span class="detail-label">Album</span>
+                    <span class="detail-value">@albumTitle</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(songBookTitle))
+            {
+                <div class="detail-row">
+                    <span class="detail-icon"><i class="bi bi-book-fill"></i></span>
+                    <span class="detail-label">Songbook</span>
+                    <span class="detail-value">@songBookTitle</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(song.WrittenDateRange))
+            {
+                <div class="detail-row">
+                    <span class="detail-icon"><i class="bi bi-calendar-event-fill"></i></span>
+                    <span class="detail-label">Written</span>
+                    <span class="detail-value">@song.WrittenDateRange</span>
+                </div>
+            }
+
+            @if (song.SongPlayLevel.HasValue)
+            {
+                <div class="detail-row">
+                    <span class="detail-icon"><i class="bi bi-speedometer2"></i></span>
+                    <span class="detail-label">Level</span>
+                    <span class="detail-value">
+                        <span class="level-badge">@song.SongPlayLevel.Value</span>
+                    </span>
+                </div>
+            }
+
+            @if (song.DateCreated.HasValue)
+            {
+                <div class="detail-row">
+                    <span class="detail-icon"><i class="bi bi-clock-fill"></i></span>
+                    <span class="detail-label">Added</span>
+                    <span class="detail-value">@song.DateCreated.Value.ToString("MMM dd, yyyy")</span>
+                </div>
+            }
+        </div>
+
+        <!-- History Section -->
+        @if (!string.IsNullOrEmpty(song.History))
+        {
+            <div class="details-card history-card">
+                <div class="history-header">
+                    <i class="bi bi-clock-history"></i>
+                    <h2 class="history-title">History</h2>
+                </div>
+                <p class="history-text">@song.History</p>
+            </div>
+        }
+
+        <!-- Song Parts Summary -->
+        @if (song.SongParts?.Any() == true)
+        {
+            <div class="details-card parts-card">
+                <div class="parts-header">
+                    <i class="bi bi-list-ol"></i>
+                    <h2 class="parts-title">Structure</h2>
+                </div>
+                <div class="parts-list">
+                    @foreach (var part in song.SongParts.OrderBy(p => p.PartNumber))
+                    {
+                        <span class="part-chip">
+                            @(part.PartName.HasValue ? part.PartName.Value.ToString() : !string.IsNullOrEmpty(part.PartTitle) ? part.PartTitle : $"Part {part.PartNumber}")
+                        </span>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Actions Footer -->
+        <div class="details-actions">
+            <button class="action-btn action-primary" @onclick="NavigateToSong">
+                <i class="bi bi-play-circle-fill me-2"></i>Play Song
+            </button>
+            @if (isFavorited.HasValue)
+            {
+                <button class="action-btn action-secondary" @onclick="ToggleFavorite" disabled="@isTogglingFavorite">
+                    <i class="bi @(isFavorited.Value ? "bi-heart-fill text-danger" : "bi-heart") me-2"></i>
+                    @(isFavorited.Value ? "Favorited" : "Favorite")
+                </button>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Not Found -->
+        <div class="details-empty">
+            <i class="bi bi-music-note-list"></i>
+            <h3>Song Not Found</h3>
+            <p>The song you're looking for doesn't exist or has been removed.</p>
+            <button class="action-btn action-primary" @onclick="GoBack">
+                <i class="bi bi-chevron-left me-2"></i>Go Back
+            </button>
+        </div>
+    }
+</div>
+
+<MessageToast ShowToast="@showToast" ToastMessage="@toastMessage" Type="ToastType.Success" />
+
+@code {
+    [Parameter] public string SongId { get; set; } = string.Empty;
+
+    private SongDto? song;
+    private bool isLoading = true;
+    private string? currentUserId;
+
+    // Resolved names
+    private string? categoryName;
+    private string? artistName;
+    private string? albumTitle;
+    private string? songBookTitle;
+
+    // Favorite
+    private bool? isFavorited;
+    private bool isTogglingFavorite;
+
+    // Toast
+    private bool showToast;
+    private string toastMessage = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(SongId)) return;
+
+        var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+        if (userResult.IsSuccess && userResult.Data != null)
+        {
+            currentUserId = userResult.Data.Id;
+        }
+
+        await LoadSongDetails();
+    }
+
+    private async Task LoadSongDetails()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await _songsApi.GetSongDetailsById(SongId);
+            if (response.IsSuccessStatusCode && response.Content != null)
+            {
+                song = response.Content;
+                await Task.WhenAll(
+                    ResolveCategoryName(),
+                    ResolveArtistName(),
+                    ResolveAlbumTitle(),
+                    ResolveSongBookTitle(),
+                    CheckFavoriteStatus()
+                );
+            }
+            else
+            {
+                _logger.LogError("Failed to load song details: {Error}",
+                    _apiResponseHandler.GetApiErrorMessage(response));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading song details for {SongId}", SongId);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResolveCategoryName()
+    {
+        if (string.IsNullOrEmpty(song?.CategoryId)) return;
+        try
+        {
+            var res = await _categoriesApi.GetCategoryById(song.CategoryId);
+            if (res.IsSuccessStatusCode && res.Content != null)
+                categoryName = res.Content.Name;
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to resolve category"); }
+    }
+
+    private async Task ResolveArtistName()
+    {
+        if (string.IsNullOrEmpty(song?.ArtistId)) return;
+        try
+        {
+            var res = await _artistsApi.GetArtistById(song.ArtistId);
+            if (res.IsSuccessStatusCode && res.Content != null)
+                artistName = res.Content.Name;
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to resolve artist"); }
+    }
+
+    private async Task ResolveAlbumTitle()
+    {
+        if (string.IsNullOrEmpty(song?.AlbumId)) return;
+        try
+        {
+            var res = await _albumsApi.GetAlbumById(song.AlbumId);
+            if (res.IsSuccessStatusCode && res.Content != null)
+                albumTitle = res.Content.Title;
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to resolve album"); }
+    }
+
+    private async Task ResolveSongBookTitle()
+    {
+        if (string.IsNullOrEmpty(song?.SongBookId)) return;
+        try
+        {
+            var res = await _songsBooksApi.GetSongBookById(song.SongBookId);
+            if (res.IsSuccessStatusCode && res.Content != null)
+                songBookTitle = res.Content.Title;
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to resolve songbook"); }
+    }
+
+    private async Task CheckFavoriteStatus()
+    {
+        if (string.IsNullOrEmpty(currentUserId)) return;
+        try
+        {
+            var res = await _songsApi.IsSongFavorited(SongId, currentUserId);
+            if (res.IsSuccessStatusCode)
+                isFavorited = res.Content;
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to check favorite status"); }
+    }
+
+    private async Task ToggleFavorite()
+    {
+        if (!isFavorited.HasValue || string.IsNullOrEmpty(currentUserId)) return;
+
+        isTogglingFavorite = true;
+        StateHasChanged();
+
+        try
+        {
+            var newStatus = !isFavorited.Value;
+            var res = await _songsApi.MarkSongFavoriteStatus(SongId, newStatus);
+            if (res.IsSuccessStatusCode)
+            {
+                isFavorited = newStatus;
+                await ShowToast(newStatus ? "Added to favorites" : "Removed from favorites");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error toggling favorite");
+        }
+        finally
+        {
+            isTogglingFavorite = false;
+            StateHasChanged();
+        }
+    }
+
+    private void NavigateToSong()
+    {
+        var isLanding = _navManager.Uri.Contains("/landing/", StringComparison.OrdinalIgnoreCase);
+        var path = isLanding ? $"/songs/landing/{SongId}" : $"/songs/{SongId}";
+        _navManager.NavigateTo(path);
+    }
+
+    private async Task GoBack()
+    {
+        await JsRt.InvokeVoidAsync("goBack");
+    }
+
+    private async Task ShowToast(string message)
+    {
+        toastMessage = message;
+        showToast = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        showToast = false;
+        StateHasChanged();
+    }
+}
