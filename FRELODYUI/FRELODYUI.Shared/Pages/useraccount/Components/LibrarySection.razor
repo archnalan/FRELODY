@@ -1,220 +1,171 @@
 @inject ILogger<LibrarySection> _logger
 
-<div class="row">
-    <!-- Search Bar -->
-    <div class="col-12 mb-4">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <div class="position-relative">
-                    <input type="text" class="form-control ps-5" placeholder="Search your library..." 
-                           @bind-value="searchQuery" @bind-value:event="oninput" @bind-value:after="SearchChanged" />
-                    <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3"></i>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- Search -->
+<div class="lib-search">
+    <i class="bi bi-search lib-search-icon"></i>
+    <input type="text" class="lib-search-input" placeholder="Search your library..."
+           @bind-value="searchQuery" @bind-value:event="oninput" @bind-value:after="SearchChanged" />
+</div>
 
-    @if (IsLoading)
-    {
-        <div class="col-12">
-            <div class="d-flex justify-content-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
+@if (IsLoading)
+{
+    <FRELODYUI.Shared.Pages.PlaceHolders.LibrarySectionPlaceholder Count="3" />
+}
+else if (selectedCollection != null)
+{
+    <!-- Playlist Detail View -->
+    <div class="lib-card">
+        <div class="lib-card-header" style="border-bottom:1px solid var(--border-light);">
+            <button class="lib-back-btn" @onclick="GoBackToCollections">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <span style="font-weight:600;color:var(--text-primary);">@selectedCollection.Playlist.Title</span>
         </div>
-    }
-    else if (selectedCollection != null)
-    {
-        <!-- Playlist Detail View -->
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <button class="btn btn-sm btn-link text-white text-decoration-none p-0" @onclick="GoBackToCollections">
-                            <i class="bi bi-chevron-left fs-5 me-2"></i>
-                            <span>Back to Playlists</span>
-                        </button>
-                        <h5 class="mb-0">@selectedCollection.Playlist.Title</h5>
-                        <div style="width: 100px;"></div> <!-- Spacer for centering -->
-                    </div>
-                </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(selectedCollection.Playlist.Description))
-                    {
-                        <p class="text-muted mb-3">@selectedCollection.Playlist.Description</p>
-                    }
-                    
-                    @if (selectedCollection.Songs?.Any() == true)
-                    {
-                        <div class="list-group list-group-flush">
-                            @foreach (var song in selectedCollection.Songs.OrderBy(s => s.SortOrder ?? int.MaxValue))
+
+        @if (!string.IsNullOrEmpty(selectedCollection.Playlist.Description))
+        {
+            <p class="lib-desc">@selectedCollection.Playlist.Description</p>
+        }
+
+        @if (selectedCollection.Songs?.Any() == true)
+        {
+            <div class="lib-list">
+                @foreach (var song in selectedCollection.Songs.OrderBy(s => s.SortOrder ?? int.MaxValue))
+                {
+                    <div class="lib-item" @onclick="() => ViewSong(song.Id)">
+                        <div class="lib-item-info">
+                            @if (song.SongNumber.HasValue)
                             {
-                                <div class="list-group-item border-0">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="flex-grow-1" style="cursor: pointer;" @onclick="() => ViewSong(song.Id)">
-                                            <div class="d-flex align-items-center gap-2">
-                                                @if (song.SongNumber.HasValue)
-                                                {
-                                                    <span class="badge bg-secondary">@song.SongNumber.Value</span>
-                                                }
-                                                <div>
-                                                    <div class="fw-medium">@song.Title</div>
-                                                    @if (!string.IsNullOrEmpty(song.WrittenBy))
-                                                    {
-                                                        <small class="text-muted">By @song.WrittenBy</small>
-                                                    }
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewSong(song.Id)">
-                                            <i class="bi bi-play"></i>
-                                        </button>
-                                    </div>
-                                </div>
+                                <span class="lib-badge">@song.SongNumber.Value</span>
                             }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-4">
-                            <i class="bi bi-music-note fs-1 text-muted"></i>
-                            <p class="text-muted mb-0 mt-2">No songs in this playlist</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    }
-    else
-    {
-        <!-- Favorite Songs -->
-        <div class="col-lg-4 mb-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-heart-fill me-2"></i>Favorite Songs
-                    </h5>
-                </div>
-                <div class="card-body">
-                    @if (FavoriteSongs?.Any() == true)
-                    {
-                        <div class="list-group list-group-flush">
-                            @foreach (var song in FavoriteSongs.Take(MAX_HIST_ITEMS))
-                            {
-                                <div class="list-group-item border-0 px-0">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span>@song.ValueText</span>
-                                        <button class="btn btn-sm btn-outline-primary" @onclick="@(()=>ViewSong(song.IdString ?? ""))">
-                                            <i class="bi bi-play"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                        
-                        @if (FavoriteSongs.Count > 5)
-                        {
-                            <div class="text-center mt-3">
-                                <button class="btn btn-link">View All (@FavoriteSongs.Count)</button>
+                            <div>
+                                <div class="lib-item-title">@song.Title</div>
+                                @if (!string.IsNullOrEmpty(song.WrittenBy))
+                                {
+                                    <div class="lib-item-sub">By @song.WrittenBy</div>
+                                }
                             </div>
-                        }
-                    }
-                    else
+                        </div>
+                        <i class="bi bi-play-fill lib-play-icon"></i>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="lib-empty-small">
+                <i class="bi bi-music-note"></i>
+                <span>No songs in this playlist</span>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="lib-grid">
+        <!-- Favorites -->
+        <div class="lib-card">
+            <div class="lib-card-header">
+                <i class="bi bi-heart-fill" style="color:#ef4444"></i>
+                <span>Favorites</span>
+                @if (FavoriteSongs?.Count > MAX_HIST_ITEMS)
+                {
+                    <span class="lib-count">@FavoriteSongs.Count</span>
+                }
+            </div>
+
+            @if (FavoriteSongs?.Any() == true)
+            {
+                <div class="lib-list">
+                    @foreach (var song in FavoriteSongs.Take(MAX_HIST_ITEMS))
                     {
-                        <p class="text-muted mb-0">No favorite songs yet</p>
+                        <div class="lib-item" @onclick="@(() => ViewSong(song.IdString ?? ""))">
+                            <span class="lib-item-title">@song.ValueText</span>
+                            <i class="bi bi-play-fill lib-play-icon"></i>
+                        </div>
                     }
                 </div>
-            </div>
+            }
+            else
+            {
+                <div class="lib-empty-small">
+                    <i class="bi bi-heart"></i>
+                    <span>No favorites yet</span>
+                </div>
+            }
         </div>
 
         <!-- Recent Plays -->
-        <div class="col-lg-4 mb-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-clock-history me-2"></i>Recently Played
-                    </h5>
-                </div>
-                <div class="card-body">
-                    @if (RecentPlays?.Any() == true)
-                    {
-                        <div class="list-group list-group-flush">
-                            @foreach (var play in RecentPlays.Take(MAX_HIST_ITEMS))
-                            {
-                                <div class="list-group-item border-0 px-0">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div class="flex-grow-1">
-                                            <div class="fw-medium">@play.SongTitle</div>
-                                            <small class="text-muted">@(play.PlayedAt.ToLocalTime().ToString("MMM dd:hh tt"))</small>
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-success">
-                                            <i class="bi bi-play"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                        
-                        @if (RecentPlays.Count > 5)
-                        {
-                            <div class="text-center mt-3">
-                                <button class="btn btn-link">View All History</button>
-                            </div>
-                        }
-                    }
-                    else
-                    {
-                        <p class="text-muted mb-0">No recent plays</p>
-                    }
-                </div>
+        <div class="lib-card">
+            <div class="lib-card-header">
+                <i class="bi bi-clock-history" style="color:var(--gradient-primary-start)"></i>
+                <span>Recent</span>
             </div>
+
+            @if (RecentPlays?.Any() == true)
+            {
+                <div class="lib-list">
+                    @foreach (var play in RecentPlays.Take(MAX_HIST_ITEMS))
+                    {
+                        <div class="lib-item" @onclick="@(() => ViewSong(play.SongId))">
+                            <div class="lib-item-info">
+                                <div>
+                                    <div class="lib-item-title">@play.SongTitle</div>
+                                    <div class="lib-item-sub">@play.PlayedAt.ToLocalTime().ToString("MMM dd, hh:mm tt")</div>
+                                </div>
+                            </div>
+                            <i class="bi bi-play-fill lib-play-icon"></i>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="lib-empty-small">
+                    <i class="bi bi-clock"></i>
+                    <span>No recent plays</span>
+                </div>
+            }
         </div>
 
-        <!-- Collections -->
-        <div class="col-lg-4 mb-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-collection me-2"></i>My Playlists
-                    </h5>
-                </div>
-                <div class="card-body">
-                    @if (Collections?.Any() == true)
-                    {
-                        <div class="list-group list-group-flush">
-                            @foreach (var collection in Collections.Take(5))
-                            {
-                                <div class="list-group-item border-0 px-0">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <div class="fw-medium">@collection.Playlist.Title</div>
-                                            <small class="text-muted">@(collection.Songs.Count) @(collection.Songs.Count == 1 ? "song" : "songs")</small>
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-info" @onclick="() => ViewPlaylistDetails(collection)">
-                                            <i class="bi bi-arrow-right"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                        
-                        @if (Collections.Count > 5)
-                        {
-                            <div class="text-center mt-3">
-                                <button class="btn btn-link">View All (@Collections.Count)</button>
-                            </div>
-                        }
-                    }
-                    else
-                    {
-                        <p class="text-muted mb-0">No collections yet</p>
-                    }
-                </div>
+        <!-- Playlists -->
+        <div class="lib-card">
+            <div class="lib-card-header">
+                <i class="bi bi-collection-fill" style="color:var(--gradient-primary-end)"></i>
+                <span>Playlists</span>
+                @if (Collections?.Count > 5)
+                {
+                    <span class="lib-count">@Collections.Count</span>
+                }
             </div>
+
+            @if (Collections?.Any() == true)
+            {
+                <div class="lib-list">
+                    @foreach (var collection in Collections.Take(5))
+                    {
+                        <div class="lib-item" @onclick="() => ViewPlaylistDetails(collection)">
+                            <div class="lib-item-info">
+                                <div>
+                                    <div class="lib-item-title">@collection.Playlist.Title</div>
+                                    <div class="lib-item-sub">@collection.Songs.Count @(collection.Songs.Count == 1 ? "song" : "songs")</div>
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-right lib-play-icon"></i>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="lib-empty-small">
+                    <i class="bi bi-collection"></i>
+                    <span>No playlists yet</span>
+                </div>
+            }
         </div>
-    }
-</div>
+    </div>
+}
 
 @code {
     [Parameter] public List<ComboBoxDto>? FavoriteSongs { get; set; }

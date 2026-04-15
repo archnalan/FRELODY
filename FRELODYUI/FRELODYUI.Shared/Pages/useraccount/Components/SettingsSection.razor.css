@@ -1,0 +1,380 @@
+/* ============================================
+   SETTINGS SECTION - PAGE VARIANT
+   Mirrors SongSettings compact style, adapted
+   for full-width page embedding.
+   ============================================ */
+
+.ss-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* ============================================
+   CONTAINER & GROUPS
+   ============================================ */
+
+.ss-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+}
+
+.ss-group {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.ss-group-title {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.5rem 0.875rem;
+    background: var(--input-bg);
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+}
+
+/* ============================================
+   ROWS
+   ============================================ */
+
+.ss-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.875rem;
+    min-height: 2.25rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+    .ss-row:last-child {
+        border-bottom: none;
+    }
+
+.ss-label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    min-width: 4rem;
+    flex-shrink: 0;
+}
+
+    .ss-label i {
+        font-size: 0.8125rem;
+    }
+
+/* ============================================
+   SLIDER INLINE CONTROL
+   ============================================ */
+
+.ss-inline-control {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.slider-value {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    background: var(--input-bg);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    min-width: 2.5rem;
+    text-align: center;
+    flex-shrink: 0;
+    border: 1px solid var(--border-light);
+}
+
+/* ============================================
+   RANGE SLIDER
+   ============================================ */
+
+.ss-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border-medium);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    flex: 1;
+    min-width: 0;
+}
+
+    .ss-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        background: var(--bg-active);
+        border: 2px solid white;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        transition: transform 0.15s ease;
+    }
+
+    .ss-range::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+    }
+
+    .ss-range::-webkit-slider-thumb:active {
+        transform: scale(1.05);
+    }
+
+    .ss-range::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        background: var(--bg-active);
+        border: 2px solid white;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .ss-range::-moz-range-track {
+        height: 4px;
+        background: var(--border-medium);
+        border-radius: 2px;
+    }
+
+    .ss-range:focus {
+        outline: none;
+    }
+
+    .ss-range:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+/* ============================================
+   SEGMENTED CONTROL
+   ============================================ */
+
+.segmented-control {
+    display: flex;
+    background: var(--input-bg);
+    border: 1px solid var(--border-medium);
+    border-radius: 6px;
+    padding: 2px;
+    gap: 1px;
+    flex: 1;
+}
+
+.segmented-control.segmented-sm {
+    max-width: 160px;
+}
+
+.segment-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.5rem;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+    .segment-btn:hover:not(.active) {
+        color: var(--text-primary);
+        background: var(--bg-hover);
+    }
+
+    .segment-btn.active {
+        background: var(--bg-active);
+        color: white;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    }
+
+    .segment-btn i {
+        font-size: 0.875rem;
+    }
+
+/* ============================================
+   SELECT
+   ============================================ */
+
+.ss-select {
+    flex: 1;
+    padding: 0.3rem 0.625rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border-medium);
+    border-radius: 6px;
+    color: var(--input-color);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    min-width: 0;
+    transition: border-color 0.15s ease;
+}
+
+    .ss-select:focus {
+        outline: none;
+        border-color: var(--input-border-focus);
+    }
+
+/* ============================================
+   TOGGLE SWITCH
+   ============================================ */
+
+.form-check-input {
+    width: 2.25rem;
+    height: 1.15rem;
+    cursor: pointer;
+}
+
+    .form-check-input:checked {
+        background-color: var(--bg-active);
+        border-color: var(--bg-active);
+    }
+
+/* ============================================
+   COLOR PICKER
+   ============================================ */
+
+.color-picker-control {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.color-swatch-wrapper {
+    position: relative;
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+}
+
+.color-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+}
+
+.color-swatch {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    border: 2px solid var(--border-medium);
+    pointer-events: none;
+}
+
+.color-hex-label {
+    font-size: 0.75rem;
+    font-family: 'Courier New', monospace;
+    color: var(--text-secondary);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.color-reset-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: none;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+    .color-reset-btn:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+/* ============================================
+   FOOTER / SAVE
+   ============================================ */
+
+.ss-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.5rem 0;
+}
+
+.ss-save-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.45rem 1.25rem;
+    background: var(--bg-active);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+    .ss-save-btn:hover:not(:disabled) {
+        filter: brightness(1.1);
+    }
+
+    .ss-save-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+/* ============================================
+   DARK MODE TWEAKS
+   ============================================ */
+
+[data-bs-theme="dark"] .slider-value {
+    background: rgba(55, 65, 81, 0.5);
+}
+
+[data-bs-theme="dark"] .ss-range {
+    background: rgba(55, 65, 81, 0.6);
+}
+
+    [data-bs-theme="dark"] .ss-range::-webkit-slider-thumb {
+        border-color: #1f2937;
+    }
+
+[data-bs-theme="dark"] .segmented-control {
+    background: rgba(31, 41, 55, 0.5);
+    border-color: rgba(75, 85, 99, 0.4);
+}

@@ -1,22 +1,240 @@
-.profile-header {
-    margin-bottom: 2rem;
+/* ============================================
+   USER PROFILE — MOBILE-FIRST MINIMALIST
+   ============================================ */
+
+.profile-page {
+    min-height: 100vh;
+    padding-bottom: 2rem;
 }
 
-.nav-tabs .nav-link {
+.profile-inner {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 0.75rem;
+}
+
+/* ── Profile Header Section ── */
+.profile-header-section {
+    margin-bottom: 1.5rem;
+}
+
+/* ── Tab Navigation ── */
+.profile-tabs {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    margin-bottom: 1.25rem;
+    backdrop-filter: var(--card-backdrop-filter);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+    .profile-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+.profile-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
     border: none;
-    border-bottom: 3px solid transparent;
-    color: #6c757d;
-    padding: 1rem 1.5rem;
+    background: transparent;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    min-width: 0;
 }
 
-    .nav-tabs .nav-link.active {
-        background-color: transparent;
-        border-bottom-color: #0d6efd;
-        color: #0d6efd;
-        font-weight: 600;
+    .profile-tab i {
+        font-size: 0.95rem;
     }
 
-    .nav-tabs .nav-link:hover {
-        border-color: transparent;
-        color: #0d6efd;
+    .profile-tab:hover {
+        color: var(--text-primary);
+        background: var(--bg-hover);
     }
+
+    .profile-tab.active {
+        background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
+        color: #fff;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+
+/* ── Tab Content ── */
+.profile-tab-content {
+    min-height: 300px;
+}
+
+/* Make child cards consistent with the profile aesthetic
+   (Settings / Account sections use Bootstrap .card) */
+.profile-tab-content :deep(.card) {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    backdrop-filter: var(--card-backdrop-filter);
+    box-shadow: none;
+}
+
+.profile-tab-content :deep(.card .card-header) {
+    background: transparent;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-primary);
+    padding: 1rem 1.25rem;
+}
+
+    .profile-tab-content :deep(.card .card-header h5) {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .profile-tab-content :deep(.card .card-header h5 i) {
+        color: var(--gradient-primary-start);
+    }
+
+.profile-tab-content :deep(.card .card-body) {
+    padding: 1.25rem;
+    color: var(--text-primary);
+}
+
+.profile-tab-content :deep(.card .card-body h6) {
+    color: var(--text-primary);
+}
+
+.profile-tab-content :deep(.card .card-body small.text-muted),
+.profile-tab-content :deep(.card .card-body .text-muted) {
+    color: var(--text-muted) !important;
+}
+
+.profile-tab-content :deep(.card hr) {
+    border-color: var(--border-light);
+    opacity: 0.5;
+}
+
+/* Recovery section — consistent card look (shadow removed at source) */
+.profile-tab-content :deep(.recovery-section) {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    backdrop-filter: var(--card-backdrop-filter);
+}
+
+/* Form inputs inside all tabs */
+.profile-tab-content :deep(.form-control),
+.profile-tab-content :deep(.form-select) {
+    background-color: var(--input-bg);
+    color: var(--input-color);
+    border-color: var(--input-border);
+    border-radius: 10px;
+    font-size: 0.875rem;
+}
+
+    .profile-tab-content :deep(.form-control:focus),
+    .profile-tab-content :deep(.form-select:focus) {
+        border-color: var(--input-border-focus);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .profile-tab-content :deep(.form-control::placeholder) {
+        color: var(--input-placeholder);
+    }
+
+.profile-tab-content :deep(.form-label) {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.profile-tab-content :deep(.form-check-label) {
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.profile-tab-content :deep(.form-check-input) {
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
+}
+
+    .profile-tab-content :deep(.form-check-input:checked) {
+        background-color: var(--bg-active);
+        border-color: var(--bg-active);
+    }
+
+/* ── Shared card style used by sub-components ── */
+.profile-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    backdrop-filter: var(--card-backdrop-filter);
+    overflow: hidden;
+}
+
+    .profile-card + .profile-card {
+        margin-top: 1rem;
+    }
+
+.profile-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+    .profile-card-header i {
+        font-size: 1rem;
+        color: var(--gradient-primary-start);
+    }
+
+.profile-card-body {
+    padding: 1rem 1.25rem;
+}
+
+/* ── Responsive ── */
+@media (min-width: 992px) {
+    /* On large screens the tab content fills the full inner width */
+    .profile-tab-content :deep(.row > [class*="col-lg-8"]),
+    .profile-tab-content :deep(.row > [class*="col-lg-6"]) {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    /* mx-auto centering helper used in SettingsSection / AccountSection */
+    .profile-tab-content :deep(.col-lg-8.mx-auto) {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-tab span {
+        display: none;
+    }
+
+    .profile-tab {
+        padding: 0.6rem 1rem;
+    }
+
+        .profile-tab i {
+            font-size: 1.1rem;
+        }
+}

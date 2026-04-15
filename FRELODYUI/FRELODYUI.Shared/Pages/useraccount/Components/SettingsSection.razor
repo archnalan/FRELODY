@@ -1,165 +1,216 @@
 @inject ILogger<SettingsSection> _logger
 
-<div class="row">
-    <div class="col-lg-8 mx-auto">
-        @if (IsLoading)
-        {
-            <div class="d-flex justify-content-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading settings...</span>
-                </div>
-            </div>
-        }
-        else
-        {
-            <!-- Appearance Settings -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-palette me-2"></i>Appearance
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" @bind="showNotification" role="switch" id="switchCheck">
-                        <label class="form-check-label" for="switchCheck">Notify me about new songs and updates</label>
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Theme</label>
-                            <select class="form-select" @bind="userSettings.Theme">
-                                @foreach (var theme in Enum.GetValues<Theme>())
-                                {
-                                    <option value="@theme">@theme</option>
-                                }
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Song Display Mode</label>
-                            <select class="form-select" @bind="userSettings.SongDisplay">
-                                @foreach (var display in Enum.GetValues<SongDisplay>())
-                                {
-                                    <option value="@display">@GetDisplayName(display)</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div class="ss-container">
+    @if (IsLoading)
+    {
+        <div class="ss-loading">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span>Loading settings...</span>
+        </div>
+    }
+    else
+    {
+        <!-- Appearance -->
+        <div class="ss-group">
+            <div class="ss-group-title"><i class="bi bi-palette me-1"></i>Appearance</div>
 
-            <!-- Chord Settings -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-music-note me-2"></i>Chord Preferences
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Chord Display</label>
-                            <select class="form-select" @bind="userSettings.ChordDisplay">
-                                @foreach (var display in Enum.GetValues<ChordDisplay>())
-                                {
-                                    <option value="@display">@GetChordDisplayName(display)</option>
-                                }
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Preferred Difficulty</label>
-                            <select class="form-select" @bind="userSettings.ChordDifficulty">
-                                @foreach (var difficulty in Enum.GetValues<ChordDifficulty>())
-                                {
-                                    <option value="@difficulty">@GetDifficultyName(difficulty)</option>
-                                }
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Play Level</label>
-                            <select class="form-select" @bind="userSettings.PlayLevel">
-                                @foreach (var level in Enum.GetValues<PlayLevel>())
-                                {
-                                    <option value="@level">@GetPlayLevelName(level)</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Font Settings -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-fonts me-2"></i>Typography
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Chord Font</label>
-                            <select class="form-select" @bind="userSettings.ChordFont">
-                                <option value="Arial">Arial</option>
-                                <option value="Helvetica">Helvetica</option>
-                                <option value="Times New Roman">Times New Roman</option>
-                                <option value="Georgia">Georgia</option>
-                                <option value="Courier New">Courier New</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Chord Font Size</label>
-                            <select class="form-select" @bind="userSettings.ChordFontSize">
-                                <option value="12">12px</option>
-                                <option value="14">14px</option>
-                                <option value="16">16px</option>
-                                <option value="18">18px</option>
-                                <option value="20">20px</option>
-                                <option value="24">24px</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Lyric Font</label>
-                            <select class="form-select" @bind="userSettings.LyricFont">
-                                <option value="Arial">Arial</option>
-                                <option value="Helvetica">Helvetica</option>
-                                <option value="Times New Roman">Times New Roman</option>
-                                <option value="Georgia">Georgia</option>
-                                <option value="Courier New">Courier New</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Lyric Font Size</label>
-                            <select class="form-select" @bind="userSettings.LyricFontSize">
-                                <option value="14">14px</option>
-                                <option value="16">16px</option>
-                                <option value="18">18px</option>
-                                <option value="20">20px</option>
-                                <option value="22">22px</option>
-                                <option value="24">24px</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Save Button -->
-            <div class="d-flex justify-content-end">
-                <button class="btn btn-primary" @onclick="SaveUserSettings" disabled="@IsSaving">
-                    @if (IsSaving)
+            <div class="ss-row">
+                <label class="ss-label"><i class="bi bi-moon-stars"></i> Theme</label>
+                <select class="ss-select" @bind="userSettings.Theme">
+                    @foreach (var theme in Enum.GetValues<Theme>())
                     {
-                        <i class="spinner-border spinner-border-sm me-2"></i>
+                        <option value="@theme">@theme</option>
                     }
-                    Save Settings
-                </button>
+                </select>
             </div>
-        }
-    </div>
+
+            <div class="ss-row">
+                <label class="ss-label" for="notifyToggle"><i class="bi bi-bell"></i> Notify</label>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="notifyToggle"
+                           checked="@showNotification"
+                           @onchange="e => showNotification = (bool)(e.Value ?? false)" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Display -->
+        <div class="ss-group">
+            <div class="ss-group-title"><i class="bi bi-eye me-1"></i>Display</div>
+
+            <div class="ss-row">
+                <label class="ss-label"><i class="bi bi-eye"></i> Mode</label>
+                <div class="segmented-control">
+                    <button class="segment-btn @(userSettings.SongDisplay == SongDisplay.LyricsAndChordsAndCharts ? "active" : "")"
+                            @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChordsAndCharts)" title="Full">
+                        <i class="bi bi-music-note-list"></i>
+                    </button>
+                    <button class="segment-btn @(userSettings.SongDisplay == SongDisplay.LyricsAndChords ? "active" : "")"
+                            @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChords)" title="Chords + Lyrics">
+                        <i class="bi bi-music-note-beamed"></i>
+                    </button>
+                    <button class="segment-btn @(userSettings.SongDisplay == SongDisplay.LyricsOnly ? "active" : "")"
+                            @onclick="() => SetDisplayMode(SongDisplay.LyricsOnly)" title="Lyrics only">
+                        <i class="bi bi-text-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            @if (userSettings.SongDisplay != SongDisplay.LyricsOnly)
+            {
+                <div class="ss-row">
+                    <label class="ss-label"><i class="bi bi-music-note"></i> Pos</label>
+                    <div class="segmented-control segmented-sm">
+                        <button class="segment-btn @(userSettings.ChordDisplay == ChordDisplay.Above ? "active" : "")"
+                                @onclick="() => userSettings.ChordDisplay = ChordDisplay.Above">
+                            Above
+                        </button>
+                        <button class="segment-btn @(userSettings.ChordDisplay == ChordDisplay.Inline ? "active" : "")"
+                                @onclick="() => userSettings.ChordDisplay = ChordDisplay.Inline">
+                            Inline
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <div class="ss-row">
+                <label class="ss-label" for="verseTitlesToggle"><i class="bi bi-card-heading"></i> Titles</label>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="verseTitlesToggle"
+                           checked="@(userSettings.ShowVerseTitles ?? false)"
+                           @onchange="e => userSettings.ShowVerseTitles = (bool)(e.Value ?? false)" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Typography -->
+        <div class="ss-group">
+            <div class="ss-group-title"><i class="bi bi-fonts me-1"></i>Typography</div>
+
+            <div class="ss-row">
+                <label class="ss-label"><i class="bi bi-fonts"></i> Font</label>
+                <select class="ss-select" @bind="userSettings.ChordFont" @bind:after="SyncLyricFont">
+                    <option value="system-ui, -apple-system, 'Segoe UI'">System</option>
+                    <option value="'Georgia', serif">Georgia</option>
+                    <option value="'Arial', sans-serif">Arial</option>
+                    <option value="'Courier New', monospace">Courier</option>
+                    <option value="'Times New Roman', serif">Times</option>
+                    <option value="'Kanit','Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'">Kanit</option>
+                    <option value="'Montserrat', sans-serif">Montserrat</option>
+                </select>
+            </div>
+
+            <div class="ss-row">
+                <label class="ss-label"><i class="bi bi-type"></i> Chord</label>
+                <div class="ss-inline-control">
+                    <input type="range" class="ss-range" min="10" max="32" step="1"
+                           value="@chordFontSize"
+                           @oninput="OnChordFontSizeInput"
+                           disabled="@(userSettings.SongDisplay == SongDisplay.LyricsOnly)" />
+                    <span class="slider-value">@(chordFontSize)px</span>
+                </div>
+            </div>
+
+            <div class="ss-row">
+                <label class="ss-label"><i class="bi bi-text-paragraph"></i> Lyric</label>
+                <div class="ss-inline-control">
+                    <input type="range" class="ss-range" min="12" max="40" step="1"
+                           value="@lyricFontSize"
+                           @oninput="OnLyricFontSizeInput" />
+                    <span class="slider-value">@(lyricFontSize)px</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colors -->
+        <div class="ss-group">
+            <div class="ss-group-title"><i class="bi bi-palette2 me-1"></i>Colors</div>
+
+            @if (userSettings.SongDisplay != SongDisplay.LyricsOnly)
+            {
+                <div class="ss-row">
+                    <label class="ss-label"><i class="bi bi-palette"></i> Chord</label>
+                    <div class="color-picker-control">
+                        <div class="color-swatch-wrapper">
+                            <input type="color" class="color-input"
+                                   value="@GetChordColorValue()"
+                                   @oninput="e => userSettings.ChordColor = e.Value?.ToString()"
+                                   @onchange="e => userSettings.ChordColor = e.Value?.ToString()" />
+                            <span class="color-swatch" style="background: @GetChordColorValue();"></span>
+                        </div>
+                        <span class="color-hex-label">@(string.IsNullOrEmpty(userSettings.ChordColor) ? "Theme" : userSettings.ChordColor)</span>
+                        @if (!string.IsNullOrEmpty(userSettings.ChordColor))
+                        {
+                            <button class="color-reset-btn" @onclick="() => userSettings.ChordColor = null" title="Reset to theme default">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="ss-row">
+                <label class="ss-label"><i class="bi bi-palette2"></i> Lyric</label>
+                <div class="color-picker-control">
+                    <div class="color-swatch-wrapper">
+                        <input type="color" class="color-input"
+                               value="@GetLyricColorValue()"
+                               @oninput="e => userSettings.LyricColor = e.Value?.ToString()"
+                               @onchange="e => userSettings.LyricColor = e.Value?.ToString()" />
+                        <span class="color-swatch" style="background: @GetLyricColorValue();"></span>
+                    </div>
+                    <span class="color-hex-label">@(string.IsNullOrEmpty(userSettings.LyricColor) ? "Theme" : userSettings.LyricColor)</span>
+                    @if (!string.IsNullOrEmpty(userSettings.LyricColor))
+                    {
+                        <button class="color-reset-btn" @onclick="() => userSettings.LyricColor = null" title="Reset to theme default">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Play Preferences -->
+        <div class="ss-group">
+            <div class="ss-group-title"><i class="bi bi-controller me-1"></i>Play Preferences</div>
+
+            <div class="ss-row">
+                <label class="ss-label"><i class="bi bi-bar-chart"></i> Level</label>
+                <select class="ss-select" @bind="userSettings.PlayLevel">
+                    @foreach (var level in Enum.GetValues<PlayLevel>())
+                    {
+                        <option value="@level">@GetPlayLevelName(level)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="ss-row">
+                <label class="ss-label"><i class="bi bi-music-note"></i> Diff</label>
+                <select class="ss-select" @bind="userSettings.ChordDifficulty">
+                    @foreach (var difficulty in Enum.GetValues<ChordDifficulty>())
+                    {
+                        <option value="@difficulty">@GetDifficultyName(difficulty)</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="ss-footer">
+            <button class="ss-save-btn" @onclick="SaveUserSettings" disabled="@IsSaving">
+                @if (IsSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                else
+                {
+                    <i class="bi bi-check-circle me-1"></i>
+                }
+                Save Settings
+            </button>
+        </div>
+    }
 </div>
 
 @code {
@@ -169,7 +220,14 @@
     private bool IsSaving { get; set; }
     private bool IsLoading { get; set; }
     private bool showNotification = false;
-    private bool isLoadingSettings = false;
+
+    // Local numeric state for sliders (SettingDto stores as strings)
+    private int chordFontSize = 14;
+    private int lyricFontSize = 18;
+
+    private const string DefaultChordColor = "#3b82f6";
+    private const string DefaultLyricColorLight = "#374151";
+    private const string DefaultLyricColorDark = "#f3f4f6";
 
     protected override async Task OnInitializedAsync()
     {
@@ -180,7 +238,7 @@
     {
         try
         {
-            isLoadingSettings = true;
+            IsLoading = true;
             var response = await _settingsApi.GetUserSettings(UserId);
 
             if (response.IsSuccessStatusCode && response.Content != null)
@@ -190,13 +248,12 @@
             }
             else
             {
-                // Create default settings if none exist
                 userSettings = new SettingDto
                 {
-                    ChordFont = "Arial",
-                    LyricFont = "Arial",
+                    ChordFont = "system-ui, -apple-system, 'Segoe UI'",
+                    LyricFont = "system-ui, -apple-system, 'Segoe UI'",
                     ChordFontSize = "14",
-                    LyricFontSize = "16",
+                    LyricFontSize = "18",
                     SongDisplay = SongDisplay.LyricsAndChords,
                     Theme = Theme.Light,
                     ChordDisplay = ChordDisplay.Above,
@@ -204,6 +261,9 @@
                     PlayLevel = PlayLevel.Medium
                 };
             }
+
+            chordFontSize = int.TryParse(userSettings.ChordFontSize, out var cfs) ? cfs : 14;
+            lyricFontSize = int.TryParse(userSettings.LyricFontSize, out var lfs) ? lfs : 18;
         }
         catch (Exception ex)
         {
@@ -211,9 +271,43 @@
         }
         finally
         {
-            isLoadingSettings = false;
+            IsLoading = false;
         }
     }
+
+    private void SetDisplayMode(SongDisplay mode)
+    {
+        userSettings.SongDisplay = mode;
+    }
+
+    private void OnChordFontSizeInput(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var val))
+        {
+            chordFontSize = Math.Clamp(val, 10, 32);
+            userSettings.ChordFontSize = chordFontSize.ToString();
+        }
+    }
+
+    private void OnLyricFontSizeInput(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var val))
+        {
+            lyricFontSize = Math.Clamp(val, 12, 40);
+            userSettings.LyricFontSize = lyricFontSize.ToString();
+        }
+    }
+
+    private void SyncLyricFont()
+    {
+        userSettings.LyricFont = userSettings.ChordFont;
+    }
+
+    private string GetChordColorValue() =>
+        string.IsNullOrEmpty(userSettings.ChordColor) ? DefaultChordColor : userSettings.ChordColor;
+
+    private string GetLyricColorValue() =>
+        string.IsNullOrEmpty(userSettings.LyricColor) ? DefaultLyricColorLight : userSettings.LyricColor;
 
     private async Task SaveUserSettings()
     {
@@ -226,15 +320,7 @@
 
             if (response.IsSuccessStatusCode)
             {
-                _modalService.Show(new ModalOptionDto
-                {
-                    Title = "Success",
-                    SubTitle = "Settings saved successfully!",
-                    Message = "Changes apply on restart",
-                    ButtonText = "OK",
-                    OptionType = OptionType.Success,
-                    Context = new ModalContext { ActionType = "Success" }
-                });
+                _toastService.Show("Settings saved!", ToastType.Success);
             }
             else
             {
@@ -252,21 +338,6 @@
             IsSaving = false;
         }
     }
-
-    private string GetDisplayName(SongDisplay display) => display switch
-    {
-        SongDisplay.LyricsOnly => "Lyrics Only",
-        SongDisplay.LyricsAndChords => "Lyrics and Chords",
-        SongDisplay.LyricsAndChordsAndCharts => "Lyrics, Chords and Charts",
-        _ => display.ToString()
-    };
-
-    private string GetChordDisplayName(ChordDisplay display) => display switch
-    {
-        ChordDisplay.Inline => "Inline with Lyrics",
-        ChordDisplay.Above => "Above Lyrics",
-        _ => display.ToString()
-    };
 
     private string GetDifficultyName(ChordDifficulty difficulty) => difficulty switch
     {

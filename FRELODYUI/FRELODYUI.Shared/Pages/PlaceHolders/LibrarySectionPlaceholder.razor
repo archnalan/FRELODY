@@ -1,0 +1,16 @@
+<div class="placeholder-glow">
+    @for (int i = 0; i < Count; i++)
+    {
+        <div class="lib-skel-card">
+            <span class="placeholder d-block" style="width:40%;height:0.9rem;border-radius:6px;margin-bottom:0.75rem"></span>
+            @for (int j = 0; j < 2; j++)
+            {
+                <span class="placeholder d-block" style="width:@(65 + j * 15)%;height:0.75rem;border-radius:4px;margin-bottom:0.5rem"></span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Count { get; set; } = 3;
+}

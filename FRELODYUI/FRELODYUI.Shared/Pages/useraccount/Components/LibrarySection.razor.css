@@ -1,0 +1,218 @@
+/* ============================================
+   LIBRARY SECTION — MOBILE-FIRST MINIMALIST
+   ============================================ */
+
+/* ── Search Bar ── */
+.lib-search {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.lib-search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+.lib-search-input {
+    width: 100%;
+    padding: 0.65rem 0.85rem 0.65rem 2.5rem;
+    font-size: 0.875rem;
+    color: var(--input-color);
+    background: var(--input-bg);
+    border: 1.5px solid var(--input-border);
+    border-radius: 12px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .lib-search-input:focus {
+        outline: none;
+        border-color: var(--input-border-focus);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .lib-search-input::placeholder {
+        color: var(--input-placeholder);
+    }
+
+/* ── Card Layout ── */
+.lib-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.lib-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    backdrop-filter: var(--card-backdrop-filter);
+    overflow: hidden;
+}
+
+.lib-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-light);
+}
+
+    .lib-card-header i {
+        font-size: 1rem;
+    }
+
+.lib-count {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    background: var(--bg-hover);
+    color: var(--text-muted);
+}
+
+/* ── List Items ── */
+.lib-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.lib-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.7rem 1.1rem;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+    .lib-item:hover {
+        background: var(--bg-hover);
+    }
+
+    .lib-item + .lib-item {
+        border-top: 1px solid var(--border-light);
+    }
+
+.lib-item-info {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.lib-item-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lib-item-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.lib-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.6rem;
+    height: 1.6rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: var(--bg-hover);
+    color: var(--gradient-primary-start);
+    flex-shrink: 0;
+}
+
+.lib-play-icon {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    transition: color 0.15s ease;
+}
+
+.lib-item:hover .lib-play-icon {
+    color: var(--gradient-primary-start);
+}
+
+/* ── Description ── */
+.lib-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    padding: 0.5rem 1.1rem;
+    margin: 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+/* ── Back Button ── */
+.lib-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    background: var(--input-bg);
+    border: 1.5px solid var(--border-medium);
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+    .lib-back-btn:hover {
+        background: var(--bg-hover);
+        border-color: var(--gradient-primary-start);
+        color: var(--gradient-primary-start);
+    }
+
+/* ── Empty States ── */
+.lib-empty-small {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 1.5rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+    .lib-empty-small i {
+        font-size: 1.5rem;
+        opacity: 0.4;
+    }
+
+/* ── Loading ── */
+.lib-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+    .lib-item {
+        padding: 0.6rem 0.85rem;
+    }
+
+    .lib-card-header {
+        padding: 0.75rem 0.85rem;
+    }
+}

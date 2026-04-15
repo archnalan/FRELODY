@@ -10,115 +10,87 @@
 @inject ILogger<UserProfile> _logger
 @implements IDisposable
 
-<div class="container-fluid vh-100 overflow-y-scroll position-relative">
-    <div class="@GetInnerContainerClass()" style="min-height: 100vh;">
-        
+<div class="profile-page">
+    <div class="profile-inner">
+
         @if (isLoading)
         {
-            <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
+            <FRELODYUI.Shared.Pages.PlaceHolders.UserProfilePlaceholder />
         }
         else
         {
-            <!-- Profile Header Section -->
-            <div class="profile-header mb-4">
+            <!-- Profile Header -->
+            <div class="profile-header-section">
                 @if (isEditingProfile)
                 {
-                    <EditProfileHeader 
-                        UserProfile="@userProfile" 
-                        OnSave="HandleProfileSave" 
+                    <EditProfileHeader
+                        UserProfile="@userProfile"
+                        OnSave="HandleProfileSave"
                         OnCancel="CancelProfileEdit"
                         IsSubmitting="@isSubmittingProfile" />
                 }
                 else
                 {
-                    <ViewProfileHeader 
-                        UserProfile="@userProfile" 
+                    <ViewProfileHeader
+                        UserProfile="@userProfile"
                         OnEdit="StartProfileEdit" />
                 }
             </div>
 
-            <!-- Navigation Tabs -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <ul class="nav nav-tabs" id="profileTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link @(activeTab == "library" ? "active" : "")" 
-                                    @onclick="@(() => SetActiveTab("library"))" 
-                                    type="button">
-                                <i class="bi bi-collection-play me-2"></i>Library
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link @(activeTab == "recovery" ? "active" : "")"
-                                    @onclick="@(() => SetActiveTab("recovery"))"
-                                    type="button">
-                                <i class="bi bi-life-preserver me-2"></i>Recovery
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link @(activeTab == "settings" ? "active" : "")" 
-                                    @onclick="@(() => SetActiveTab("settings"))" 
-                                    type="button">
-                                <i class="bi bi-gear me-2"></i>Settings
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link @(activeTab == "account" ? "active" : "")" 
-                                    @onclick="@(() => SetActiveTab("account"))" 
-                                    type="button">
-                                <i class="bi bi-person-gear me-2"></i>Account
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+            <!-- Tab Navigation -->
+            <nav class="profile-tabs" role="tablist">
+                <button class="profile-tab @(activeTab == "library" ? "active" : "")"
+                        @onclick="@(() => SetActiveTab("library"))"
+                        role="tab">
+                    <i class="bi bi-collection-play"></i>
+                    <span>Library</span>
+                </button>
+                <button class="profile-tab @(activeTab == "recovery" ? "active" : "")"
+                        @onclick="@(() => SetActiveTab("recovery"))"
+                        role="tab">
+                    <i class="bi bi-life-preserver"></i>
+                    <span>Recovery</span>
+                </button>
+                <button class="profile-tab @(activeTab == "settings" ? "active" : "")"
+                        @onclick="@(() => SetActiveTab("settings"))"
+                        role="tab">
+                    <i class="bi bi-gear"></i>
+                    <span>Settings</span>
+                </button>
+                <button class="profile-tab @(activeTab == "account" ? "active" : "")"
+                        @onclick="@(() => SetActiveTab("account"))"
+                        role="tab">
+                    <i class="bi bi-person-gear"></i>
+                    <span>Account</span>
+                </button>
+            </nav>
 
             <!-- Tab Content -->
-            <div class="tab-content">
-                <!-- Library Tab -->
+            <div class="profile-tab-content">
                 @if (activeTab == "library")
                 {
-                    <div class="tab-pane fade show active">
-                        <LibrarySection 
-                            FavoriteSongs="@favoriteSongs"
-                            RecentPlays="@recentPlays"
-                            Collections="@collections"
-                            OnSearchChanged="HandleLibrarySearch"
-                            IsLoading="@isLoadingLibrary" />
-                    </div>
+                    <LibrarySection
+                        FavoriteSongs="@favoriteSongs"
+                        RecentPlays="@recentPlays"
+                        Collections="@collections"
+                        OnSearchChanged="HandleLibrarySearch"
+                        IsLoading="@isLoadingLibrary" />
                 }
-
-                <!-- Recovery Tab -->
                 @if (activeTab == "recovery")
                 {
-                    <div class="tab-pane fade show active">
-                        <RecoverySection 
-                            UserId="@userProfile.Id" />
-                    </div>
+                    <RecoverySection UserId="@userProfile.Id" />
                 }
-
-                <!-- Settings Tab -->
                 @if (activeTab == "settings")
                 {
-                    <div class="tab-pane fade show active">
-                        <SettingsSection UserId="@userId" />                           
-                    </div>
+                    <SettingsSection UserId="@userId" />
                 }
-
-                <!-- Account Tab -->
                 @if (activeTab == "account")
                 {
-                    <div class="tab-pane fade show active">
-                        <AccountSection 
-                            UserProfile="@userProfile"
-                            OnPasswordChange="HandlePasswordChange"
-                            OnExportData="HandleDataExport"
-                            OnDeleteAccount="HandleAccountDeletion" />
-                    </div>
+                    <AccountSection
+                        UserProfile="@userProfile"
+                        OnPasswordChange="HandlePasswordChange"
+                        OnExportData="HandleDataExport"
+                        OnDeleteAccount="HandleAccountDeletion" />
                 }
             </div>
         }
@@ -155,12 +127,6 @@
     {
         await LoadUserProfile();
         await LoadInitialData();
-    }
-
-    private string GetInnerContainerClass()
-    {
-        var baseClass = "container py-4";
-        return theme == "dark" ? baseClass + " text-light bg-dark" : baseClass + " text-dark";
     }
 
     private async Task LoadUserProfile()

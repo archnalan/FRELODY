@@ -1,0 +1,27 @@
+<!-- Cover photo skeleton -->
+<div class="placeholder-glow">
+    <div class="up-skeleton-cover"></div>
+    <div class="up-skeleton-avatar"></div>
+
+    <!-- Name / username -->
+    <div style="text-align:center;margin-top:3.5rem;">
+        <span class="placeholder d-block mx-auto" style="width:40%;height:1.25rem;border-radius:6px;margin-bottom:0.5rem"></span>
+        <span class="placeholder d-block mx-auto" style="width:25%;height:0.85rem;border-radius:6px;margin-bottom:1.5rem"></span>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="d-flex gap-2 justify-content-center mb-4">
+        @for (int i = 0; i < 4; i++)
+        {
+            <span class="placeholder" style="width:5rem;height:2.25rem;border-radius:10px"></span>
+        }
+    </div>
+
+    <!-- Content card -->
+    <div class="up-skeleton-card">
+        @for (int i = 0; i < 3; i++)
+        {
+            <span class="placeholder d-block" style="width:@(70 + i * 10)%;height:0.85rem;border-radius:4px;margin-bottom:0.75rem"></span>
+        }
+    </div>
+</div>

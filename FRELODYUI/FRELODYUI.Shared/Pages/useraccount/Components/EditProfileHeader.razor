@@ -1,100 +1,81 @@
 
-<div class="card shadow-sm">
-    <EditForm Model="@editModel" OnValidSubmit="@HandleSubmit" FormName="profileForm">
-        <DataAnnotationsValidator />
-        
-        <!-- Cover Photo Section -->
-        <div class="position-relative" style="height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-            @if (!string.IsNullOrEmpty(coverPreview))
+<EditForm Model="@editModel" OnValidSubmit="@HandleSubmit" FormName="profileForm">
+    <DataAnnotationsValidator />
+
+    <!-- Cover -->
+    <div class="eph-cover">
+        @if (!string.IsNullOrEmpty(coverPreview))
+        {
+            <img src="@coverPreview" alt="Cover" class="eph-cover-img" />
+        }
+        <label class="eph-cover-btn" for="coverUpload" title="Change cover">
+            <i class="bi bi-camera"></i>
+        </label>
+        <InputFile id="coverUpload" OnChange="@HandleCoverUpload" accept="image/*" style="display:none;" />
+    </div>
+
+    <!-- Avatar + Form -->
+    <div class="eph-body">
+        <div class="eph-avatar-wrap">
+            @if (!string.IsNullOrEmpty(profilePreview))
             {
-                <img src="@coverPreview" alt="Cover Photo" class="w-100 h-100 object-fit-cover" />
+                <img src="@profilePreview" alt="Profile" class="eph-avatar" />
             }
-            
-            <!-- Cover Photo Upload -->
-            <div class="position-absolute bottom-0 end-0 m-3">
-                <label class="btn btn-outline-light btn-sm" for="coverUpload">
-                    <i class="bi bi-camera me-1"></i>Change Cover
-                </label>
-                <InputFile id="coverUpload" OnChange="@HandleCoverUpload" accept="image/*" style="display: none;" />
-            </div>
+            else
+            {
+                <div class="eph-avatar eph-avatar-initials">
+                    @(editModel.FirstName?.FirstOrDefault())@(editModel.LastName?.FirstOrDefault())
+                </div>
+            }
+            <label class="eph-avatar-btn" for="profileUpload">
+                <i class="bi bi-camera"></i>
+            </label>
+            <InputFile id="profileUpload" OnChange="@HandleProfileUpload" accept="image/*" style="display:none;" />
         </div>
 
-        <!-- Profile Info Section -->
-        <div class="card-body">
-            <div class="row align-items-start">
-                <div class="col-auto">
-                    <!-- Profile Picture -->
-                    <div class="position-relative">
-                        @if (!string.IsNullOrEmpty(profilePreview))
-                        {
-                            <img src="@profilePreview" alt="Profile" 
-                                 class="rounded-circle border border-4 border-white shadow" 
-                                 style="width: 100px; height: 100px; object-fit: cover; margin-top: -50px;" />
-                        }
-                        else
-                        {
-                            <div class="rounded-circle border border-4 border-white shadow bg-primary d-flex align-items-center justify-content-center text-white fw-bold" 
-                                 style="width: 100px; height: 100px; margin-top: -50px; font-size: 2rem;">
-                                @(editModel.FirstName?.FirstOrDefault())@(editModel.LastName?.FirstOrDefault())
-                            </div>
-                        }
-                        
-                        <!-- Profile Picture Upload -->
-                        <label class="btn btn-primary btn-sm rounded-circle position-absolute bottom-0 end-0" 
-                               for="profileUpload" style="width: 30px; height: 30px;">
-                            <i class="bi bi-camera" style="font-size: 0.7rem;"></i>
-                        </label>
-                        <InputFile id="profileUpload" OnChange="@HandleProfileUpload" accept="image/*" style="display: none;" />
-                    </div>
+        <div class="eph-fields">
+            <div class="eph-row">
+                <div class="eph-field">
+                    <label class="eph-label">First Name</label>
+                    <InputText @bind-Value="editModel.FirstName" class="eph-input" />
+                    <ValidationMessage For="@(() => editModel.FirstName)" />
                 </div>
-                
-                <div class="col">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">First Name</label>
-                            <InputText @bind-Value="editModel.FirstName" class="form-control" />
-                            <ValidationMessage For="@(() => editModel.FirstName)" />
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Last Name</label>
-                            <InputText @bind-Value="editModel.LastName" class="form-control" />
-                            <ValidationMessage For="@(() => editModel.LastName)" />
-                        </div>
-                        
-                        <div class="col-12">
-                            <label class="form-label">About Me</label>
-                            <InputTextArea @bind-Value="editModel.AboutMe" class="form-control" rows="3" 
-                                          placeholder="Tell us about yourself..." />
-                            <ValidationMessage For="@(() => editModel.AboutMe)" />
-                        </div>
-                        
-                        <div class="col-12">
-                            <label class="form-label">Address</label>
-                            <InputText @bind-Value="editModel.Address" class="form-control" 
-                                      placeholder="Your location" />
-                            <ValidationMessage For="@(() => editModel.Address)" />
-                        </div>
-                    </div>
-                    
-                    <!-- Action Buttons -->
-                    <div class="d-flex justify-content-end gap-2 mt-3">
-                        <button type="button" class="btn btn-outline-secondary" @onclick="OnCancel" disabled="@IsSubmitting">
-                            Cancel
-                        </button>
-                        <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
-                            @if (IsSubmitting)
-                            {
-                                <i class="spinner-border spinner-border-sm me-2"></i>
-                            }
-                            Save Changes
-                        </button>
-                    </div>
+                <div class="eph-field">
+                    <label class="eph-label">Last Name</label>
+                    <InputText @bind-Value="editModel.LastName" class="eph-input" />
+                    <ValidationMessage For="@(() => editModel.LastName)" />
                 </div>
             </div>
+
+            <div class="eph-field">
+                <label class="eph-label">About Me</label>
+                <InputTextArea @bind-Value="editModel.AboutMe" class="eph-input" rows="3"
+                              placeholder="Tell us about yourself..." />
+                <ValidationMessage For="@(() => editModel.AboutMe)" />
+            </div>
+
+            <div class="eph-field">
+                <label class="eph-label">Address</label>
+                <InputText @bind-Value="editModel.Address" class="eph-input"
+                          placeholder="Your location" />
+                <ValidationMessage For="@(() => editModel.Address)" />
+            </div>
+
+            <div class="eph-actions">
+                <button type="button" class="eph-btn eph-btn-secondary" @onclick="OnCancel" disabled="@IsSubmitting">
+                    Cancel
+                </button>
+                <button type="submit" class="eph-btn eph-btn-primary" disabled="@IsSubmitting">
+                    @if (IsSubmitting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Save Changes
+                </button>
+            </div>
         </div>
-    </EditForm>
-</div>
+    </div>
+</EditForm>
 
 @code {
     [Parameter] public UpdateUserProfileOutDto? UserProfile { get; set; }

@@ -1,10 +1,11 @@
 /* Recovery Section Container */
 .recovery-section {
-    background: var(--modal-content-bg);
-    border-radius: 12px;
+    background: var(--card-bg);
+    border-radius: 14px;
     padding: 1.5rem;
-    box-shadow: var(--modal-shadow);
-    border: 1px solid var(--modal-border-color);
+    box-shadow: none;
+    border: 1px solid var(--border-light);
+    backdrop-filter: var(--card-backdrop-filter);
 }
 
 /* Header */
