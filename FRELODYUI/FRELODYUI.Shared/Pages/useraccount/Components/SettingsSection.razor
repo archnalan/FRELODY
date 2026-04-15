@@ -10,6 +10,9 @@
     }
     else
     {
+        <div class="ss-layout">
+        <div class="ss-settings-col">
+
         <!-- Appearance -->
         <div class="ss-group">
             <div class="ss-group-title"><i class="bi bi-palette me-1"></i>Appearance</div>
@@ -45,14 +48,17 @@
                     <button class="segment-btn @(userSettings.SongDisplay == SongDisplay.LyricsAndChordsAndCharts ? "active" : "")"
                             @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChordsAndCharts)" title="Full">
                         <i class="bi bi-music-note-list"></i>
+                        <span class="seg-label">Full</span>
                     </button>
                     <button class="segment-btn @(userSettings.SongDisplay == SongDisplay.LyricsAndChords ? "active" : "")"
                             @onclick="() => SetDisplayMode(SongDisplay.LyricsAndChords)" title="Chords + Lyrics">
                         <i class="bi bi-music-note-beamed"></i>
+                        <span class="seg-label">Chords</span>
                     </button>
                     <button class="segment-btn @(userSettings.SongDisplay == SongDisplay.LyricsOnly ? "active" : "")"
                             @onclick="() => SetDisplayMode(SongDisplay.LyricsOnly)" title="Lyrics only">
                         <i class="bi bi-text-left"></i>
+                        <span class="seg-label">Lyrics</span>
                     </button>
                 </div>
             </div>
@@ -197,6 +203,77 @@
             </div>
         </div>
 
+        </div><!-- /ss-settings-col -->
+
+        <!-- Live Preview -->
+        <div class="ss-preview">
+            <div class="ss-preview-header"><i class="bi bi-eye me-1"></i>Preview</div>
+            <div class="ss-preview-body" style="font-family: @userSettings.ChordFont">
+                @{
+                    // Sample segments mirroring Song.razor's lyric-segment structure
+                    var pvLines = new[]
+                    {
+                        new[] {
+                            (chord: "G",  lyric: "Amazing "),
+                            (chord: "C",  lyric: "grace, "),
+                            (chord: "G",  lyric: "how sweet "),
+                            (chord: (string?)null, lyric: "the sound"),
+                        },
+                        new[] {
+                            (chord: "Em", lyric: "That "),
+                            (chord: (string?)null, lyric: "saved a "),
+                            (chord: "D",  lyric: "wretch "),
+                            (chord: (string?)null, lyric: "like me"),
+                        }
+                    };
+                    var showChords = userSettings.SongDisplay != SongDisplay.LyricsOnly;
+                    var segClass   = userSettings.ChordDisplay == ChordDisplay.Inline ? "chord-inline" : "chord-above";
+                    // Match Song.razor: only apply color when the user has explicitly set one
+                    var chordStyle = string.IsNullOrEmpty(userSettings.ChordColor)
+                        ? $"font-size:{chordFontSize}px;"
+                        : $"font-size:{chordFontSize}px;color:{userSettings.ChordColor}";
+                    var lyricStyle = string.IsNullOrEmpty(userSettings.LyricColor)
+                        ? $"font-size:{lyricFontSize}px;"
+                        : $"font-size:{lyricFontSize}px;color:{userSettings.LyricColor}";
+                }
+
+                @if (userSettings.ShowVerseTitles == true)
+                {
+                    <div class="ss-pv-verse-title">Verse 1</div>
+                }
+
+                @foreach (var line in pvLines)
+                {
+                    <div class="lyric-line">
+                        @foreach (var seg in line)
+                        {
+                            <div class="lyric-segment @(showChords && seg.chord != null ? segClass : "chord-above")">
+                                @if (showChords && seg.chord != null)
+                                {
+                                    @if (userSettings.ChordDisplay == ChordDisplay.Inline)
+                                    {
+                                        <span class="chord" style="@chordStyle">[@seg.chord]</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="chord" style="@chordStyle">@seg.chord</span>
+                                    }
+                                }
+                                <span class="lyric" style="@lyricStyle">@seg.lyric</span>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (userSettings.SongDisplay == SongDisplay.LyricsAndChordsAndCharts)
+                {
+                    <div class="ss-pv-chart-badge"><i class="bi bi-grid-3x3 me-1"></i>Chord charts included</div>
+                }
+            </div>
+        </div><!-- /ss-preview -->
+
+        </div><!-- /ss-layout -->
+
         <div class="ss-footer">
             <button class="ss-save-btn" @onclick="SaveUserSettings" disabled="@IsSaving">
                 @if (IsSaving)
@@ -225,9 +302,9 @@
     private int chordFontSize = 14;
     private int lyricFontSize = 18;
 
-    private const string DefaultChordColor = "#3b82f6";
-    private const string DefaultLyricColorLight = "#374151";
-    private const string DefaultLyricColorDark = "#f3f4f6";
+    // Fallback shown in the color swatch when no custom color is saved
+    private const string SwatchFallbackChord = "#3b82f6";
+    private const string SwatchFallbackLyric = "#6b7280";
 
     protected override async Task OnInitializedAsync()
     {
@@ -260,6 +337,15 @@
                     ChordDifficulty = ChordDifficulty.Medium,
                     PlayLevel = PlayLevel.Medium
                 };
+            }
+
+            // Sync theme from localStorage — NavMenu toggles save to localStorage but not DB
+            var storedTheme = await _storageService.GetItemAsync<string>("Theme");
+            if (!string.IsNullOrEmpty(storedTheme))
+            {
+                userSettings.Theme = storedTheme.Equals("dark", StringComparison.OrdinalIgnoreCase)
+                    ? Theme.Dark
+                    : Theme.Light;
             }
 
             chordFontSize = int.TryParse(userSettings.ChordFontSize, out var cfs) ? cfs : 14;
@@ -303,11 +389,12 @@
         userSettings.LyricFont = userSettings.ChordFont;
     }
 
+    // Used only by color picker swatches — gives a visual hint when no colour is saved
     private string GetChordColorValue() =>
-        string.IsNullOrEmpty(userSettings.ChordColor) ? DefaultChordColor : userSettings.ChordColor;
+        string.IsNullOrEmpty(userSettings.ChordColor) ? SwatchFallbackChord : userSettings.ChordColor;
 
     private string GetLyricColorValue() =>
-        string.IsNullOrEmpty(userSettings.LyricColor) ? DefaultLyricColorLight : userSettings.LyricColor;
+        string.IsNullOrEmpty(userSettings.LyricColor) ? SwatchFallbackLyric : userSettings.LyricColor;
 
     private async Task SaveUserSettings()
     {
@@ -320,6 +407,11 @@
 
             if (response.IsSuccessStatusCode)
             {
+                // Keep localStorage in sync so NavMenu theme toggle reflects the saved choice
+                var themeStr = userSettings.Theme == Theme.Dark ? "dark" : "light";
+                await _storageService.SetItemAsync("Theme", themeStr);
+                await JsRt.InvokeVoidAsync("eval",
+                    $"document.documentElement.setAttribute('data-bs-theme', '{themeStr}')");
                 _toastService.Show("Settings saved!", ToastType.Success);
             }
             else

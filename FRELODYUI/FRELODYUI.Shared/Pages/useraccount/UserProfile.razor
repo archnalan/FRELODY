@@ -82,7 +82,7 @@
                 }
                 @if (activeTab == "settings")
                 {
-                    <SettingsSection UserId="@userId" />
+                    <SettingsSection @key="_settingsKey" UserId="@userId" />
                 }
                 @if (activeTab == "account")
                 {
@@ -252,8 +252,12 @@
         }
     }
 
+    private int _settingsKey = 0;
+
     private void SetActiveTab(string tab)
     {
+        if (tab == "settings")
+            _settingsKey++;
         activeTab = tab;
         StateHasChanged();
     }

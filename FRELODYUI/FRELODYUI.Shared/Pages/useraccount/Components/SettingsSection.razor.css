@@ -4,6 +4,189 @@
    for full-width page embedding.
    ============================================ */
 
+/* ============================================
+   TWO-COLUMN LAYOUT
+   ============================================ */
+
+.ss-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.ss-settings-col {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    align-content: start;
+}
+
+/* 2-card columns once we have enough room */
+@media (min-width: 640px) {
+    .ss-settings-col {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Play Preferences spans both columns so it sits full-width at the bottom */
+    .ss-settings-col .ss-group:last-child {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Preview side panel on large screens */
+@media (min-width: 992px) {
+    .ss-layout {
+        grid-template-columns: 1fr 300px;
+        align-items: start;
+    }
+
+    .ss-preview {
+        position: sticky;
+        top: 1rem;
+    }
+}
+
+/* ============================================
+   LIVE PREVIEW PANEL
+   ============================================ */
+
+.ss-preview {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.ss-preview-header {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.5rem 0.875rem;
+    background: var(--input-bg);
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+}
+
+.ss-preview-body {
+    padding: 1rem 0.875rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 120px;
+    overflow: hidden;
+}
+
+.ss-pv-verse-title {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.125rem;
+}
+
+/* -----------------------------------------------
+   Lyric line — same flex model as Song.razor
+   lyric-line wraps lyric-segments horizontally
+----------------------------------------------- */
+
+/* Match Song.razor.css default colors when no inline color is set */
+.ss-preview-body .chord {
+    color: var(--bg-active);
+}
+
+.ss-preview-body .lyric {
+    color: var(--text-primary);
+}
+
+.ss-preview-body .lyric-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0;
+}
+
+/* chord-above: stack chord above its lyric word */
+.ss-preview-body .lyric-segment.chord-above {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-right: 0.125rem;
+}
+
+.ss-preview-body .lyric-segment.chord-above .chord {
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+    min-width: 0;
+    padding-right: 0.5rem; /* gutter between chords */
+}
+
+.ss-preview-body .lyric-segment.chord-above .lyric {
+    line-height: 1.5;
+    white-space: pre;
+}
+
+/* chord-inline: bracket chord flows with the lyric */
+.ss-preview-body .lyric-segment.chord-inline {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0;
+}
+
+.ss-preview-body .lyric-segment.chord-inline .chord {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ss-preview-body .lyric-segment.chord-inline .lyric {
+    line-height: 1.5;
+    white-space: pre;
+}
+
+/* Segment with no chord — lyric only, align to bottom */
+.ss-preview-body .lyric-segment:not(.chord-above):not(.chord-inline) .lyric,
+.ss-preview-body .lyric-segment.chord-above:not(:has(.chord)) .lyric {
+    line-height: 1.5;
+    white-space: pre;
+    /* pad-top to align baseline with chord-above siblings */
+    padding-top: 1.1em;
+}
+
+.ss-pv-chart-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--input-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 20px;
+    padding: 0.2rem 0.625rem;
+    width: fit-content;
+}
+
+/* ============================================
+   SEGMENT LABEL (visible on large screens)
+   ============================================ */
+
+.seg-label {
+    display: none;
+    font-size: 0.6875rem;
+    margin-left: 0.25rem;
+}
+
+@media (min-width: 992px) {
+    .seg-label {
+        display: inline;
+    }
+}
+
 .ss-loading {
     display: flex;
     align-items: center;

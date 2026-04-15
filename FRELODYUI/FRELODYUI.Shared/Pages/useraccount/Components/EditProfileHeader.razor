@@ -36,28 +36,36 @@
         <div class="eph-fields">
             <div class="eph-row">
                 <div class="eph-field">
-                    <label class="eph-label">First Name</label>
-                    <InputText @bind-Value="editModel.FirstName" class="eph-input" />
+                    <label class="eph-label" for="firstNameInput">First Name</label>
+                    <input id="firstNameInput" type="text" class="eph-input"
+                           value="@editModel.FirstName"
+                           @oninput="e => editModel.FirstName = e.Value?.ToString()" />
                     <ValidationMessage For="@(() => editModel.FirstName)" />
                 </div>
                 <div class="eph-field">
-                    <label class="eph-label">Last Name</label>
-                    <InputText @bind-Value="editModel.LastName" class="eph-input" />
+                    <label class="eph-label" for="lastNameInput">Last Name</label>
+                    <input id="lastNameInput" type="text" class="eph-input"
+                           value="@editModel.LastName"
+                           @oninput="e => editModel.LastName = e.Value?.ToString()" />
                     <ValidationMessage For="@(() => editModel.LastName)" />
                 </div>
             </div>
 
             <div class="eph-field">
-                <label class="eph-label">About Me</label>
-                <InputTextArea @bind-Value="editModel.AboutMe" class="eph-input" rows="3"
-                              placeholder="Tell us about yourself..." />
+                <label class="eph-label" for="aboutMeInput">About Me</label>
+                <textarea id="aboutMeInput" class="eph-input" rows="3"
+                          placeholder="Tell us about yourself..."
+                          value="@editModel.AboutMe"
+                          @oninput="e => editModel.AboutMe = e.Value?.ToString()"></textarea>
                 <ValidationMessage For="@(() => editModel.AboutMe)" />
             </div>
 
             <div class="eph-field">
-                <label class="eph-label">Address</label>
-                <InputText @bind-Value="editModel.Address" class="eph-input"
-                          placeholder="Your location" />
+                <label class="eph-label" for="addressInput">Address</label>
+                <input id="addressInput" type="text" class="eph-input"
+                       placeholder="Your location"
+                       value="@editModel.Address"
+                       @oninput="e => editModel.Address = e.Value?.ToString()" />
                 <ValidationMessage For="@(() => editModel.Address)" />
             </div>
 
