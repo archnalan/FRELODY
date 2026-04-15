@@ -32,9 +32,10 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
     <PackageReference Include="OpenXmlDocument.WordProcessing" Version="1.4.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
+    <PackageReference Include="NuGet.Protocol" Version="6.12.5" />
     <PackageReference Include="Refit.HttpClientFactory" Version="10.0.1" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.13.8" />
-    <PackageReference Include="SkiaSharp" Version="3.*" />
+    <PackageReference Include="SkiaSharp" Version="3.116.0" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
     <!-- OpenTelemetry observability -->
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.1" />
