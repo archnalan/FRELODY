@@ -11,6 +11,9 @@ namespace FRELODYUI.Shared.RefitApis
         [Post("/api/tenants/create-tenant")]
         Task<IApiResponse<TenantDto>> CreateTenant([Body] TenantCreateDto dto);
 
+        [Post("/api/tenants/complete-tenant-registration")]
+        Task<IApiResponse<TenantDto>> CompleteTenantRegistration([Body] CompleteTenantRegistrationDto dto);
+
         [Get("/api/tenants/get-all-tenants")]
         Task<IApiResponse<PaginationDetails<TenantDto>>> GetAllTenants(
             [Query] int offset = 0,

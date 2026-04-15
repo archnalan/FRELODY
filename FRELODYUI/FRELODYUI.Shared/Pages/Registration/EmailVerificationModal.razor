@@ -1,4 +1,3 @@
-@inject ISmtpSenderApi _smtpSender
 @inject ILogger<EmailVerificationModal> _logger
 
 <div class="reg-modal-overlay" @onclick="HandleOverlayClick">
@@ -17,6 +16,17 @@
         <p class="reg-modal-desc">
             We sent a 6-digit code to <strong>@Email</strong>. Enter it below to continue.
         </p>
+
+        <!-- Progress bar during sending/verifying -->
+        @if (isSending || isVerifying)
+        {
+            <div class="reg-otp-progress-container">
+                <div class="reg-otp-progress-bar">
+                    <div class="reg-otp-progress-fill @(isVerifying ? "reg-otp-progress-verify" : "")"></div>
+                </div>
+                <span class="reg-otp-progress-text">@(isSending ? "Sending code..." : "Verifying...")</span>
+            </div>
+        }
 
         @if (!string.IsNullOrEmpty(errorMessage))
         {
@@ -38,7 +48,7 @@
                        pattern="[0-9]*"
                        class="reg-otp-input @(hasError ? "reg-otp-error" : "")"
                        value="@otpDigits[idx]"
-                       disabled="@isVerifying"
+                       disabled="@(isVerifying || isSending)"
                        @oninput="(e) => HandleOtpInput(idx, e)"
                        @onkeydown="(e) => HandleOtpKeyDown(idx, e)"
                        @ref="otpInputs[idx]"
@@ -51,7 +61,7 @@
             <button type="button"
                     class="reg-btn-verify"
                     @onclick="VerifyCode"
-                    disabled="@(isVerifying || string.Join("", otpDigits).Length < 6)">
+                    disabled="@(isVerifying || isSending || string.Join("", otpDigits).Length < 6)">
                 @if (isVerifying)
                 {
                     <span class="reg-spinner" aria-hidden="true"></span>
@@ -83,14 +93,66 @@
     </div>
 </div>
 
+<style>
+    .reg-otp-progress-container {
+        margin: 0 0 16px;
+        text-align: center;
+    }
+
+    .reg-otp-progress-bar {
+        width: 100%;
+        height: 4px;
+        background: #e8e8f0;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+
+    .reg-otp-progress-fill {
+        height: 100%;
+        width: 30%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 2px;
+        animation: reg-otp-progress-anim 1.5s ease-in-out infinite;
+    }
+
+    .reg-otp-progress-verify {
+        animation: reg-otp-progress-verify-anim 0.8s ease-in-out infinite;
+    }
+
+    .reg-otp-progress-text {
+        font-size: 13px;
+        color: #667eea;
+        font-weight: 500;
+    }
+
+    @@keyframes reg-otp-progress-anim {
+        0% { width: 10%; margin-left: 0; }
+        50% { width: 60%; margin-left: 20%; }
+        100% { width: 10%; margin-left: 90%; }
+    }
+
+    @@keyframes reg-otp-progress-verify-anim {
+        0% { width: 20%; margin-left: 0; }
+        50% { width: 80%; margin-left: 10%; }
+        100% { width: 20%; margin-left: 80%; }
+    }
+</style>
+
 @code {
     [Parameter, EditorRequired] public string Email { get; set; } = "";
-    [Parameter] public EventCallback OnVerified { get; set; }
+    [Parameter] public string? FullName { get; set; }
+    [Parameter] public string? TenantName { get; set; }
+    [Parameter] public EventCallback<VerifyOtpResponseDto> OnVerified { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// When true, SendOtp was already called from the parent and we only need to verify.
+    /// </summary>
+    [Parameter] public bool OtpAlreadySent { get; set; }
 
     private string[] otpDigits = new string[6];
     private ElementReference[] otpInputs = new ElementReference[6];
-    private string generatedCode = "";
 
     private bool isVerifying;
     private bool isSending;
@@ -102,7 +164,15 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await SendCode();
+        if (OtpAlreadySent)
+        {
+            successMessage = "Code sent! Check your inbox.";
+            StartResendTimer();
+        }
+        else
+        {
+            await SendCode();
+        }
     }
 
     private async Task SendCode()
@@ -113,29 +183,27 @@
             errorMessage = "";
             StateHasChanged();
 
-            generatedCode = Random.Shared.Next(100000, 999999).ToString();
-
-            var emailDto = new EmailDto(true)
+            var request = new SendOtpRequestDto
             {
-                ToEmail = Email,
-                Subject = "Your FRELODY verification code",
-                Body = BuildVerificationEmailHtml(generatedCode)
+                Email = Email,
+                FullName = FullName,
+                TenantName = TenantName
             };
 
-            var result = await _smtpSender.SendMail(emailDto);
-            if (result.IsSuccessStatusCode)
+            var result = await _otpApi.SendOtp(request);
+            if (result.IsSuccessStatusCode && result.Content != null)
             {
-                successMessage = "Code sent! Check your inbox.";
+                successMessage = result.Content.Message;
                 StartResendTimer();
             }
             else
             {
-                errorMessage = "Failed to send code. Please try again.";
+                errorMessage = GetErrorMessage(result);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error sending verification email to {Email}", Email);
+            _logger.LogError(ex, "Error sending verification code to {Email}", Email);
             errorMessage = "Something went wrong. Please try again.";
         }
         finally
@@ -159,17 +227,32 @@
         errorMessage = "";
         StateHasChanged();
 
-        // Small delay to feel intentional
-        await Task.Delay(400);
+        try
+        {
+            var request = new VerifyOtpRequestDto
+            {
+                Email = Email,
+                OtpCode = entered
+            };
 
-        if (entered == generatedCode)
-        {
-            await OnVerified.InvokeAsync();
+            var result = await _otpApi.VerifyOtp(request);
+            if (result.IsSuccessStatusCode && result.Content != null && result.Content.Verified)
+            {
+                await OnVerified.InvokeAsync(result.Content);
+            }
+            else
+            {
+                hasError = true;
+                errorMessage = GetErrorMessage(result);
+                isVerifying = false;
+                StateHasChanged();
+            }
         }
-        else
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error verifying code for {Email}", Email);
             hasError = true;
-            errorMessage = "Invalid code. Please check and try again.";
+            errorMessage = "Verification failed. Please try again.";
             isVerifying = false;
             StateHasChanged();
         }
@@ -180,7 +263,6 @@
         var value = e.Value?.ToString() ?? "";
         var digits = new string(value.Where(char.IsDigit).ToArray());
 
-        // Handle paste or multi-char input — distribute across boxes
         if (digits.Length > 1)
         {
             for (int i = 0; i < 6; i++)
@@ -197,7 +279,6 @@
             return;
         }
 
-        // Single digit typed
         if (digits.Length == 1)
         {
             otpDigits[index] = digits;
@@ -240,7 +321,33 @@
         otpDigits = new string[6];
         hasError = false;
         successMessage = "";
-        await SendCode();
+        errorMessage = "";
+        isSending = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await _otpApi.ResendOtp(Email);
+            if (result.IsSuccessStatusCode && result.Content != null)
+            {
+                successMessage = result.Content.Message;
+                StartResendTimer();
+            }
+            else
+            {
+                errorMessage = GetErrorMessage(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resending code to {Email}", Email);
+            errorMessage = "Failed to resend code. Please try again.";
+        }
+        finally
+        {
+            isSending = false;
+            StateHasChanged();
+        }
     }
 
     private void StartResendTimer()
@@ -266,7 +373,7 @@
 
     private void HandleOverlayClick()
     {
-        if (!isVerifying)
+        if (!isVerifying && !isSending)
             Close();
     }
 
@@ -275,59 +382,15 @@
         resendTimer?.Dispose();
     }
 
-    private string BuildVerificationEmailHtml(string code)
+    private string GetErrorMessage<T>(Refit.IApiResponse<T> response)
     {
-        return $@"
-<!DOCTYPE html>
-<html lang=""en"">
-<head><meta charset=""UTF-8""><meta name=""viewport"" content=""width=device-width,initial-scale=1""></head>
-<body style=""margin:0;padding:0;background-color:#f4f4f7;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"">
-<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#f4f4f7;"">
-<tr><td align=""center"" style=""padding:40px 20px;"">
-<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);"">
-
-  <!-- Header -->
-  <tr>
-    <td style=""background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:32px 32px 24px;text-align:center;"">
-      <h1 style=""margin:0;font-size:24px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;"">FRELODY</h1>
-      <p style=""margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.85);"">Email Verification</p>
-    </td>
-  </tr>
-
-  <!-- Body -->
-  <tr>
-    <td style=""padding:32px;"">
-      <p style=""margin:0 0 8px;font-size:18px;font-weight:600;color:#1a1a2e;"">Hi there,</p>
-      <p style=""margin:0 0 24px;font-size:15px;color:#4a4a68;line-height:1.6;"">
-        Use the code below to verify your email address. It expires in <strong>5 minutes</strong>.
-      </p>
-
-      <!-- Code box -->
-      <div style=""text-align:center;margin:0 0 24px;"">
-        <div style=""display:inline-block;background:#f0f0ff;border:2px dashed #667eea;border-radius:10px;padding:16px 32px;"">
-          <span style=""font-size:32px;font-weight:700;letter-spacing:8px;color:#667eea;font-family:'Courier New',monospace;"">{code}</span>
-        </div>
-      </div>
-
-      <p style=""margin:0;font-size:13px;color:#8888a0;line-height:1.5;"">
-        If you didn't request this, you can safely ignore this email.
-      </p>
-    </td>
-  </tr>
-
-  <!-- Footer -->
-  <tr>
-    <td style=""padding:20px 32px;background:#fafafe;border-top:1px solid #eeeeee;text-align:center;"">
-      <p style=""margin:0;font-size:12px;color:#aaaacc;"">
-        &copy; {DateTime.UtcNow.Year} Frelody &middot; Your music, beautifully organized
-      </p>
-    </td>
-  </tr>
-
-</table>
-</td></tr>
-</table>
-</body>
-</html>";
+        try
+        {
+            return _apiResponseHandler.GetApiErrorMessage(response);
+        }
+        catch
+        {
+            return "An error occurred. Please try again.";
+        }
     }
 }

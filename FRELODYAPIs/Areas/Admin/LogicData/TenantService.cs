@@ -127,6 +127,47 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
+        public async Task<ServiceResult<TenantDto>> CompleteTenantRegistration(CompleteTenantRegistrationDto dto)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(dto.UserId);
+                if (user == null)
+                    return ServiceResult<TenantDto>.Failure(new NotFoundException("User not found."));
+
+                if (!user.EmailConfirmed)
+                    return ServiceResult<TenantDto>.Failure(new BadRequestException("Email has not been verified yet."));
+
+                // Set password
+                var addPasswordResult = await _userManager.AddPasswordAsync(user, dto.Password);
+                if (!addPasswordResult.Succeeded)
+                {
+                    var errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));
+                    return ServiceResult<TenantDto>.Failure(new BadRequestException(errors));
+                }
+
+                // Update tenant details if provided
+                var tenant = await _context.Tenants.FindAsync(dto.TenantId);
+                if (tenant != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(dto.Address)) tenant.Address = dto.Address;
+                    if (!string.IsNullOrWhiteSpace(dto.City)) tenant.City = dto.City;
+                    if (!string.IsNullOrWhiteSpace(dto.Country)) tenant.Country = dto.Country;
+                    if (!string.IsNullOrWhiteSpace(dto.TenantName)) tenant.TenantName = dto.TenantName;
+                    tenant.DateModified = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+
+                var tenantDto = tenant?.Adapt<TenantDto>() ?? new TenantDto { Id = dto.TenantId };
+                return ServiceResult<TenantDto>.Success(tenantDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error completing tenant registration for user {UserId}", dto.UserId);
+                return ServiceResult<TenantDto>.Failure(ex);
+            }
+        }
+
         public async Task<ServiceResult<PaginationDetails<TenantDto>>> GetAllTenants(int offset, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken)
         {
             try

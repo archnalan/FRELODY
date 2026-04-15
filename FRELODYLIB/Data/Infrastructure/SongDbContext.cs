@@ -58,6 +58,7 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<SongRecovery> SongRecoveries { get; set; }
         public DbSet<UserLoginHistory> UserLoginHistories { get; set; }
         public DbSet<ContentChangeLog> ContentChangeLogs { get; set; }
+        public DbSet<EmailOtpVerification> EmailOtpVerifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

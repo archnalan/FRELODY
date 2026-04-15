@@ -33,6 +33,19 @@ namespace FRELODYAPIs.Controllers
             return Ok(result.Data);
         }
 
+        [HttpPost]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(TenantDto), 200)]
+        public async Task<IActionResult> CompleteTenantRegistration([FromBody] CompleteTenantRegistrationDto dto)
+        {
+            var result = await _tenantService.CompleteTenantRegistration(dto);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            }
+            return Ok(result.Data);
+        }
+
         [HttpGet]
         [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Owner}")]
         [ProducesResponseType(typeof(PaginationDetails<TenantDto>), 200)]

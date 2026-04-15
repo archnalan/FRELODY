@@ -17,4 +17,22 @@ namespace FRELODYSHRD.Dtos.CreateDtos
         [MinLength(4)]
         public string Password { get; set; } = string.Empty;
     }
+
+    public class CompleteTenantRegistrationDto
+    {
+        [Required]
+        public string TenantId { get; set; } = string.Empty;
+
+        [Required]
+        public string UserId { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(4)]
+        public string Password { get; set; } = string.Empty;
+
+        public string? Address { get; set; }
+        public string? City { get; set; }
+        public string? Country { get; set; }
+        public string? TenantName { get; set; }
+    }
 }

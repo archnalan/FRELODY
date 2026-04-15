@@ -163,13 +163,21 @@
                         </div>
                     }
 
-                    <button type="button" class="reg-btn-primary" @onclick="GoToStep2" disabled="@(!IsStep1Valid)">
-                        <span>Continue</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                             fill="none" stroke="currentColor" stroke-width="2"
-                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
-                        </svg>
+                    <button type="button" class="reg-btn-primary" @onclick="GoToStep2" disabled="@(!IsStep1Valid || isLoading)">
+                        @if (isLoading)
+                        {
+                            <span class="reg-spinner" aria-hidden="true"></span>
+                            <span>Verifying...</span>
+                        }
+                        else
+                        {
+                            <span>Continue</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+                            </svg>
+                        }
                     </button>
                 </div>
             }
@@ -369,6 +377,9 @@
 {
     <FRELODYUI.Shared.Pages.Registration.EmailVerificationModal
         Email="@currentEmail"
+        FullName="@(isPersonalMode ? registerModel.UserFullName : null)"
+        TenantName="@(!isPersonalMode ? registerModel.TenantName : null)"
+        OtpAlreadySent="@otpAlreadySent"
         OnVerified="OnEmailVerified"
         OnClose="() => showEmailVerification = false" />
 }
@@ -384,6 +395,10 @@
     private string password = "";
     private string confirmPassword = "";
 
+    // Server-side registration state
+    private string verifiedTenantId = "";
+    private string verifiedUserId = "";
+
     private int currentStep = 1;
     private int totalSteps => isPersonalMode ? 2 : 3;
     private string[] stepLabels => isPersonalMode
@@ -395,6 +410,7 @@
     private bool showPassword = false;
     private bool showConfirmPassword = false;
     private bool showEmailVerification = false;
+    private bool otpAlreadySent = false;
     private bool emailVerified = false;
     private string verifiedEmail = "";
     private string errorMessage = "";
@@ -425,11 +441,13 @@
         isPersonalMode = personal;
         registerModel = new TenantCreateDto();
         emailVerified = false;
+        verifiedTenantId = "";
+        verifiedUserId = "";
         currentStep = 1;
         ClearMessages();
     }
 
-    private void GoToStep2()
+    private async Task GoToStep2()
     {
         ClearMessages();
         if (!IsStep1Valid) return;
@@ -439,18 +457,57 @@
         {
             emailVerified = false;
             verifiedEmail = "";
-            showEmailVerification = true;
+            verifiedTenantId = "";
+            verifiedUserId = "";
+
+            // Send OTP from here (creates account on server), then show the modal
+            isLoading = true;
+            StateHasChanged();
+
+            try
+            {
+                var request = new SendOtpRequestDto
+                {
+                    Email = currentEmail,
+                    FullName = isPersonalMode ? registerModel.UserFullName : null,
+                    TenantName = !isPersonalMode ? registerModel.TenantName : null
+                };
+
+                var result = await _otpApi.SendOtp(request);
+                if (result.IsSuccessStatusCode && result.Content != null)
+                {
+                    otpAlreadySent = true;
+                    showEmailVerification = true;
+                }
+                else
+                {
+                    errorMessage = GetErrorMessage(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error initiating email verification");
+                errorMessage = "Failed to send verification code. Please try again.";
+            }
+            finally
+            {
+                isLoading = false;
+                StateHasChanged();
+            }
             return;
         }
 
         currentStep = 2;
     }
 
-    private void OnEmailVerified()
+    private void OnEmailVerified(VerifyOtpResponseDto verifyResult)
     {
         emailVerified = true;
         verifiedEmail = currentEmail;
+        verifiedTenantId = verifyResult.TenantId;
+        verifiedUserId = verifyResult.UserId;
         showEmailVerification = false;
+        otpAlreadySent = false;
         currentStep = 2;
         StateHasChanged();
     }
@@ -485,18 +542,22 @@
             isLoading = true;
             StateHasChanged();
 
-            if (isPersonalMode)
+            var completeDto = new CompleteTenantRegistrationDto
             {
-                registerModel.TenantName = registerModel.UserFullName ?? "";
-            }
+                TenantId = verifiedTenantId,
+                UserId = verifiedUserId,
+                Password = password,
+                Address = registerModel.Address,
+                City = registerModel.City,
+                Country = registerModel.Country,
+                TenantName = !isPersonalMode ? registerModel.TenantName : null
+            };
 
-            registerModel.Password = password;
-
-            var response = await _tenantsApi.CreateTenant(registerModel);
+            var response = await _tenantsApi.CompleteTenantRegistration(completeDto);
 
             if (response.IsSuccessStatusCode && response.Content != null)
             {
-                _logger.LogInformation("Tenant registered successfully");
+                _logger.LogInformation("Tenant registration completed successfully");
                 successMessage = "Account created! Redirecting to sign in...";
                 StateHasChanged();
 
@@ -515,7 +576,7 @@
             else
             {
                 errorMessage = GetErrorMessage(response);
-                _logger.LogWarning("Registration failed: {Error}", errorMessage);
+                _logger.LogWarning("Registration completion failed: {Error}", errorMessage);
             }
         }
         catch (Exception ex)

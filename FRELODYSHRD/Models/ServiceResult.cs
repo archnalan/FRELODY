@@ -16,6 +16,7 @@
 			if (Error is ConflictException) return 409;
             if (Error is UnAuthorizedException) return 401;
             if (Error is ForbiddenException) return 403;
+            if (Error is TooManyRequestsException) return 429;
             return 500;
 		}
 

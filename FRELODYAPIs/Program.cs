@@ -73,13 +73,17 @@ builder.Services.AddScoped<IChordService, ChordService>();
 builder.Services.AddScoped<ILyricSegment, LyricSegmentService>();
 builder.Services.AddScoped<ILyricLineService, LyricLineService>();
 builder.Services.AddScoped<ISongPartService, SongPartService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddScoped<IEmailService, DevEmailService>();
+else
+    builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<ISongPlayHistoryService, SongPlayHistoryService>();
 builder.Services.AddScoped<IAuthService, AuthorizationService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<ISmtpSenderService,SmtpSenderService>();
 builder.Services.AddScoped<IShareLinkService, ShareLinkService>();
