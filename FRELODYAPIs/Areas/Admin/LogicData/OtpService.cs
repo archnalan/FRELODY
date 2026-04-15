@@ -66,8 +66,14 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     return ServiceResult<SendOtpResponseDto>.Failure(
                         new TooManyRequestsException("Daily verification limit reached. Please try again tomorrow."));
 
-                // Check if user already exists with confirmed email
-                var existingUser = await _userManager.FindByEmailAsync(request.Email);
+                // Check if user already exists — bypass query filters since
+                // anonymous callers have no tenant context and unconfirmed users are inactive
+                var normalizedEmail = request.Email.ToUpperInvariant();
+                var existingUser = await _context.Users
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail
+                                              && (u.IsDeleted == false || u.IsDeleted == null));
+
                 if (existingUser != null && existingUser.EmailConfirmed)
                     return ServiceResult<SendOtpResponseDto>.Failure(
                         new BadRequestException("An account with this email already exists. Please sign in."));
@@ -234,8 +240,10 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 otp.IsUsed = true;
                 await _context.SaveChangesAsync();
 
-                // Mark user email as confirmed and activate
-                var user = await _userManager.FindByIdAsync(otp.UserId!);
+                // Find user bypassing query filters (user is still inactive at this point)
+                var user = await _context.Users
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(u => u.Id == otp.UserId);
                 if (user != null)
                 {
                     user.EmailConfirmed = true;
