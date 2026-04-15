@@ -2,6 +2,7 @@ using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPP.Dtos;
 using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Constants;
+using FRELODYSHRD.Dtos.AuthDtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.SubDtos;
 using Microsoft.AspNetCore.Authorization;
@@ -60,6 +61,32 @@ namespace FRELODYAPIs.Controllers
             if (!result.IsSuccess)
             {
                 return StatusCode(500, result.Error.Message);
+            }
+            return Ok(result.Data);
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(UsernameSuggestionsResponseDto), 200)]
+        public async Task<IActionResult> GetUsernameSuggestions([FromBody] UsernameSuggestionsRequestDto request)
+        {
+            var result = await _tenantService.GetUsernameSuggestions(request);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            }
+            return Ok(result.Data);
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(UsernameAvailabilityResponseDto), 200)]
+        public async Task<IActionResult> CheckUsernameAvailability([FromBody] UsernameAvailabilityRequestDto request)
+        {
+            var result = await _tenantService.CheckUsernameAvailability(request);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
             }
             return Ok(result.Data);
         }

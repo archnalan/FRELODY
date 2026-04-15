@@ -1,5 +1,6 @@
 using Refit;
 using FRELODYAPP.Dtos;
+using FRELODYSHRD.Dtos.AuthDtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYLIB.ServiceHandler;
@@ -21,5 +22,11 @@ namespace FRELODYUI.Shared.RefitApis
             [Query] string sortByColumn = "TenantName",
             [Query] bool sortAscending = true,
             CancellationToken cancellationToken = default);
+
+        [Post("/api/tenants/get-username-suggestions")]
+        Task<IApiResponse<UsernameSuggestionsResponseDto>> GetUsernameSuggestions([Body] UsernameSuggestionsRequestDto request);
+
+        [Post("/api/tenants/check-username-availability")]
+        Task<IApiResponse<UsernameAvailabilityResponseDto>> CheckUsernameAvailability([Body] UsernameAvailabilityRequestDto request);
     }
 }

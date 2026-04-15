@@ -408,6 +408,176 @@
     to { transform: rotate(360deg); }
 }
 
+/* ── Username feedback ────────────────────────────────────────── */
+
+.reg-username-checking {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.125rem;
+}
+
+.reg-username-available {
+    font-size: 0.75rem;
+    color: #16a34a;
+    margin-top: 0.125rem;
+}
+
+.reg-username-taken {
+    font-size: 0.75rem;
+    color: #dc2626;
+    margin-top: 0.125rem;
+}
+
+/* ── Username suggestions ─────────────────────────────────────── */
+
+.reg-username-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.reg-suggestion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+.reg-chip {
+    padding: 0.25rem 0.75rem;
+    background: var(--input-bg);
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border: 1px solid var(--input-border);
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.reg-chip:hover {
+    border-color: var(--gradient-primary-start);
+    color: var(--gradient-primary-start);
+    background: var(--bg-hover);
+}
+
+.reg-chip-active {
+    background: linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-end) 100%);
+    color: #ffffff;
+    border-color: transparent;
+}
+
+.reg-chip-active:hover {
+    background: linear-gradient(135deg, var(--gradient-primary-hover-start) 0%, var(--gradient-primary-hover-end) 100%);
+    color: #ffffff;
+    border-color: transparent;
+}
+
+/* ── Password strength meter ──────────────────────────────────── */
+
+.reg-strength {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.reg-strength-bar {
+    display: flex;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.reg-strength-segment {
+    height: 0.25rem;
+    flex: 1;
+    border-radius: 999px;
+    background: var(--input-border);
+    transition: background 0.3s ease;
+}
+
+.reg-strength-segment.reg-strength-weak {
+    background: #ef4444;
+}
+
+.reg-strength-segment.reg-strength-medium {
+    background: #f59e0b;
+}
+
+.reg-strength-segment.reg-strength-strong {
+    background: #22c55e;
+}
+
+.reg-strength-segment.reg-strength-very-strong {
+    background: #06b6d4;
+}
+
+.reg-strength-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.reg-strength-text-weak {
+    color: #ef4444;
+}
+
+.reg-strength-text-medium {
+    color: #f59e0b;
+}
+
+.reg-strength-text-strong {
+    color: #22c55e;
+}
+
+.reg-strength-text-very-strong {
+    color: #06b6d4;
+}
+
+/* ── Password requirements checklist ──────────────────────────── */
+
+.reg-requirements {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.25rem 1rem;
+    font-size: 0.75rem;
+}
+
+.reg-req-met,
+.reg-req-unmet {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    transition: color 0.2s ease;
+}
+
+.reg-req-met::before,
+.reg-req-unmet::before {
+    font-size: 0.625rem;
+    flex-shrink: 0;
+}
+
+.reg-req-met {
+    color: #22c55e;
+}
+
+.reg-req-met::before {
+    content: "✓";
+    font-weight: 700;
+}
+
+.reg-req-unmet {
+    color: var(--text-muted);
+}
+
+.reg-req-unmet::before {
+    content: "○";
+}
+
 /* ── Sign-in row ──────────────────────────────────────────────── */
 
 .reg-signin-row {
@@ -462,12 +632,109 @@
     color: #86efac;
 }
 
+:global([data-bs-theme="dark"]) .reg-username-available {
+    color: #86efac;
+}
+
+:global([data-bs-theme="dark"]) .reg-username-taken {
+    color: #fca5a5;
+}
+
 :global([data-bs-theme="dark"]) .reg-input:focus {
     border-color: #60a5fa;
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.4);
 }
 
+:global([data-bs-theme="dark"]) .reg-req-unmet {
+    color: var(--text-muted);
+}
+
 /* ── Responsive ───────────────────────────────────────────────── */
+
+@media (max-width: 374px) {
+    .reg-container {
+        max-width: 100%;
+    }
+
+    .reg-card {
+        padding: 1.25rem;
+        border-radius: 1rem;
+    }
+
+    .reg-branding {
+        margin-bottom: 1.25rem;
+    }
+
+    .reg-app-name {
+        font-size: 1.5rem;
+    }
+
+    .reg-heading {
+        font-size: 1.1rem;
+    }
+
+    .reg-field-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .reg-toggle-group {
+        flex-direction: column;
+    }
+
+    .reg-suggestion-chips {
+        gap: 0.25rem;
+    }
+
+    .reg-chip {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.625rem;
+    }
+
+    .reg-requirements {
+        grid-template-columns: 1fr;
+    }
+
+    .reg-steps {
+        gap: 0;
+    }
+
+    .reg-step-line {
+        width: 1.5rem;
+    }
+
+    .reg-step-label {
+        font-size: 0.6rem;
+    }
+
+    .reg-step-dot {
+        width: 1.625rem;
+        height: 1.625rem;
+        font-size: 0.675rem;
+    }
+
+    .reg-btn-row {
+        flex-direction: column;
+    }
+
+    .reg-btn-secondary {
+        width: 100%;
+    }
+}
+
+@media (min-width: 375px) and (max-width: 639px) {
+    .reg-card {
+        padding: 1.5rem;
+    }
+
+    .reg-field-row {
+        gap: 0.5rem;
+    }
+
+    .reg-suggestion-chips {
+        gap: 0.3rem;
+    }
+}
 
 @media (min-width: 640px) {
     .reg-page {

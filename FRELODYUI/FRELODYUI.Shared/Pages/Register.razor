@@ -182,13 +182,83 @@
                 </div>
             }
 
-            <!-- Step 2: Create password -->
+            <!-- Step 2: Choose username -->
             @if (currentStep == 2)
             {
                 <div class="reg-step-content">
-                    <h2 class="reg-heading">Set your password</h2>
-                    <p class="reg-subtext">At least 4 characters. Make it something you'll remember.</p>
+                    <h2 class="reg-heading">Choose your username</h2>
+                    <p class="reg-subtext">This is how you'll sign in. Pick something memorable.</p>
 
+                    <!-- Username -->
+                    <div class="reg-field">
+                        <label class="reg-label">Username</label>
+                        <div class="reg-input-wrapper">
+                            <span class="reg-input-icon" aria-hidden="true" tabindex="-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="4" />
+                                    <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8" />
+                                </svg>
+                            </span>
+                            <input type="text" class="reg-input" placeholder="e.g. john.doe"
+                                   @bind="chosenUsername" @bind:event="oninput"
+                                   @bind:after="OnUsernameChanged" />
+                        </div>
+                        @if (isCheckingUsername)
+                        {
+                            <span class="reg-username-checking">
+                                <span class="reg-spinner-sm" aria-hidden="true"></span>
+                                Checking availability...
+                            </span>
+                        }
+                        else if (usernameAvailability != null)
+                        {
+                            <span class="@(usernameAvailability.IsAvailable ? "reg-username-available" : "reg-username-taken")">
+                                @usernameAvailability.Message
+                            </span>
+                        }
+                    </div>
+
+                    @if (usernameSuggestions?.Any() == true)
+                    {
+                        <div class="reg-username-suggestions">
+                            <span class="reg-label">Suggestions:</span>
+                            <div class="reg-suggestion-chips">
+                                @foreach (var suggestion in usernameSuggestions)
+                                {
+                                    <button type="button" class="reg-chip @(chosenUsername == suggestion ? "reg-chip-active" : "")"
+                                            @onclick="() => SelectUsernameSuggestion(suggestion)">
+                                        @suggestion
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="reg-btn-row">
+                        <button type="button" class="reg-btn-secondary" @onclick="() => GoBack()">Back</button>
+                        <button type="button" class="reg-btn-primary" @onclick="GoToStep3"
+                                disabled="@(!IsUsernameValid)">
+                            <span>Continue</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <!-- Step 3: Set password -->
+            @if (currentStep == 3)
+            {
+                <div class="reg-step-content">
+                    <h2 class="reg-heading">Set your password</h2>
+                    <p class="reg-subtext">Create a strong password to keep your account secure.</p>
+
+                    <!-- Password -->
                     <div class="reg-field">
                         <label class="reg-label">Password</label>
                         <div class="reg-input-wrapper">
@@ -230,6 +300,29 @@
                         </div>
                     </div>
 
+                    @if (!string.IsNullOrEmpty(password))
+                    {
+                        <div class="reg-strength">
+                            <div class="reg-strength-bar">
+                                @for (int i = 0; i < 4; i++)
+                                {
+                                    var idx = i;
+                                    <div class="reg-strength-segment @(idx < PasswordStrengthScore ? $"reg-strength-{PasswordStrengthLevel}" : "")"></div>
+                                }
+                            </div>
+                            <span class="reg-strength-label reg-strength-text-@PasswordStrengthLevel">@PasswordStrengthLabel</span>
+                        </div>
+
+                        <ul class="reg-requirements">
+                            <li class="@(password.Length >= 8 ? "reg-req-met" : "reg-req-unmet")">At least 8 characters</li>
+                            <li class="@(System.Text.RegularExpressions.Regex.IsMatch(password, @"[A-Z]") ? "reg-req-met" : "reg-req-unmet")">One uppercase letter</li>
+                            <li class="@(System.Text.RegularExpressions.Regex.IsMatch(password, @"[a-z]") ? "reg-req-met" : "reg-req-unmet")">One lowercase letter</li>
+                            <li class="@(System.Text.RegularExpressions.Regex.IsMatch(password, @"\d") ? "reg-req-met" : "reg-req-unmet")">One number</li>
+                            <li class="@(System.Text.RegularExpressions.Regex.IsMatch(password, @"[^a-zA-Z0-9]") ? "reg-req-met" : "reg-req-unmet")">One special character</li>
+                        </ul>
+                    }
+
+                    <!-- Confirm Password -->
                     <div class="reg-field">
                         <label class="reg-label">Confirm password</label>
                         <div class="reg-input-wrapper">
@@ -277,7 +370,7 @@
 
                     <div class="reg-btn-row">
                         <button type="button" class="reg-btn-secondary" @onclick="() => GoBack()">Back</button>
-                        <button type="button" class="reg-btn-primary" @onclick="GoToStep3" disabled="@(!IsStep2Valid)">
+                        <button type="button" class="reg-btn-primary" @onclick="GoToStep4" disabled="@(!IsPasswordValid)">
                             @if (isPersonalMode)
                             {
                                 @if (isLoading)
@@ -304,8 +397,8 @@
                 </div>
             }
 
-            <!-- Step 3: Company details (company mode only) -->
-            @if (currentStep == 3 && !isPersonalMode)
+            <!-- Step 4: Company details (company mode only) -->
+            @if (currentStep == 4 && !isPersonalMode)
             {
                 <div class="reg-step-content">
                     <h2 class="reg-heading">Organization details</h2>
@@ -395,15 +488,22 @@
     private string password = "";
     private string confirmPassword = "";
 
+    // Username state
+    private string chosenUsername = "";
+    private List<string>? usernameSuggestions;
+    private UsernameAvailabilityResponseDto? usernameAvailability;
+    private bool isCheckingUsername = false;
+    private CancellationTokenSource? _usernameDebounceCts;
+
     // Server-side registration state
     private string verifiedTenantId = "";
     private string verifiedUserId = "";
 
     private int currentStep = 1;
-    private int totalSteps => isPersonalMode ? 2 : 3;
+    private int totalSteps => isPersonalMode ? 3 : 4;
     private string[] stepLabels => isPersonalMode
-        ? new[] { "Info", "Password" }
-        : new[] { "Info", "Password", "Details" };
+        ? new[] { "Info", "Username", "Password" }
+        : new[] { "Info", "Username", "Password", "Details" };
 
     private bool isPersonalMode = true;
     private bool isLoading = false;
@@ -433,8 +533,48 @@
         }
     }
 
-    private bool IsStep2Valid =>
-        !string.IsNullOrEmpty(password) && password.Length >= 4 && password == confirmPassword;
+    private bool IsUsernameValid =>
+        !string.IsNullOrWhiteSpace(chosenUsername) && chosenUsername.Trim().Length >= 3
+        && (usernameAvailability?.IsAvailable == true);
+
+    private bool IsPasswordValid =>
+        !string.IsNullOrEmpty(password) && password.Length >= 8
+        && password == confirmPassword && PasswordStrengthScore >= 2;
+
+    private int PasswordStrengthScore
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(password)) return 0;
+            int score = 0;
+            if (password.Length >= 8) score++;
+            if (System.Text.RegularExpressions.Regex.IsMatch(password, @"[A-Z]")
+                && System.Text.RegularExpressions.Regex.IsMatch(password, @"[a-z]")) score++;
+            if (System.Text.RegularExpressions.Regex.IsMatch(password, @"\d")) score++;
+            if (System.Text.RegularExpressions.Regex.IsMatch(password, @"[^a-zA-Z0-9]")) score++;
+            return score;
+        }
+    }
+
+    private string PasswordStrengthLevel => PasswordStrengthScore switch
+    {
+        0 => "weak",
+        1 => "weak",
+        2 => "medium",
+        3 => "strong",
+        4 => "very-strong",
+        _ => "weak"
+    };
+
+    private string PasswordStrengthLabel => PasswordStrengthScore switch
+    {
+        0 => "Too weak",
+        1 => "Weak",
+        2 => "Fair",
+        3 => "Strong",
+        4 => "Very strong",
+        _ => ""
+    };
 
     private void SetMode(bool personal)
     {
@@ -443,6 +583,9 @@
         emailVerified = false;
         verifiedTenantId = "";
         verifiedUserId = "";
+        chosenUsername = "";
+        usernameSuggestions = null;
+        usernameAvailability = null;
         currentStep = 1;
         ClearMessages();
     }
@@ -476,8 +619,21 @@
                 var result = await _otpApi.SendOtp(request);
                 if (result.IsSuccessStatusCode && result.Content != null)
                 {
-                    otpAlreadySent = true;
-                    showEmailVerification = true;
+                    if (result.Content.EmailAlreadyVerified)
+                    {
+                        // Email was already verified in a previous attempt — skip OTP modal
+                        emailVerified = true;
+                        verifiedEmail = currentEmail;
+                        verifiedTenantId = result.Content.TenantId;
+                        verifiedUserId = result.Content.UserId;
+                        currentStep = 2;
+                        _ = LoadUsernameSuggestions();
+                    }
+                    else
+                    {
+                        otpAlreadySent = true;
+                        showEmailVerification = true;
+                    }
                 }
                 else
                 {
@@ -498,9 +654,10 @@
         }
 
         currentStep = 2;
+        _ = LoadUsernameSuggestions();
     }
 
-    private void OnEmailVerified(VerifyOtpResponseDto verifyResult)
+    private async void OnEmailVerified(VerifyOtpResponseDto verifyResult)
     {
         emailVerified = true;
         verifiedEmail = currentEmail;
@@ -510,12 +667,20 @@
         otpAlreadySent = false;
         currentStep = 2;
         StateHasChanged();
+        await LoadUsernameSuggestions();
     }
 
-    private async Task GoToStep3()
+    private void GoToStep3()
     {
         ClearMessages();
-        if (!IsStep2Valid) return;
+        if (!IsUsernameValid) return;
+        currentStep = 3;
+    }
+
+    private async Task GoToStep4()
+    {
+        ClearMessages();
+        if (!IsPasswordValid) return;
 
         if (isPersonalMode)
         {
@@ -523,7 +688,7 @@
         }
         else
         {
-            currentStep = 3;
+            currentStep = 4;
         }
     }
 
@@ -547,6 +712,7 @@
                 TenantId = verifiedTenantId,
                 UserId = verifiedUserId,
                 Password = password,
+                UserName = chosenUsername.Trim(),
                 Address = registerModel.Address,
                 City = registerModel.City,
                 Country = registerModel.Country,
@@ -632,5 +798,110 @@
         {
             return "An error occurred. Please try again.";
         }
+    }
+
+    private async Task LoadUsernameSuggestions()
+    {
+        try
+        {
+            var request = new UsernameSuggestionsRequestDto
+            {
+                Email = currentEmail,
+                FullName = isPersonalMode ? registerModel.UserFullName : null,
+                TenantId = verifiedTenantId,
+                ExcludeUserId = verifiedUserId
+            };
+
+            var result = await _tenantsApi.GetUsernameSuggestions(request);
+            if (result.IsSuccessStatusCode && result.Content != null)
+            {
+                usernameSuggestions = result.Content.Suggestions;
+                // Auto-select the first suggestion if user hasn't typed anything
+                if (string.IsNullOrWhiteSpace(chosenUsername) && usernameSuggestions.Any())
+                {
+                    chosenUsername = usernameSuggestions.First();
+                    usernameAvailability = new UsernameAvailabilityResponseDto
+                    {
+                        IsAvailable = true,
+                        Username = chosenUsername,
+                        Message = "Username is available!"
+                    };
+                }
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading username suggestions");
+        }
+    }
+
+    private async Task OnUsernameChanged()
+    {
+        _usernameDebounceCts?.Cancel();
+        _usernameDebounceCts = new CancellationTokenSource();
+        var token = _usernameDebounceCts.Token;
+
+        // Clear stale availability while typing
+        usernameAvailability = null;
+        StateHasChanged();
+
+        try
+        {
+            await Task.Delay(300, token);
+            if (!token.IsCancellationRequested)
+                await CheckUsernameAvailability();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task CheckUsernameAvailability()
+    {
+        if (string.IsNullOrWhiteSpace(chosenUsername) || chosenUsername.Trim().Length < 3)
+        {
+            usernameAvailability = null;
+            return;
+        }
+
+        isCheckingUsername = true;
+        StateHasChanged();
+
+        try
+        {
+            var request = new UsernameAvailabilityRequestDto
+            {
+                Username = chosenUsername.Trim(),
+                TenantId = verifiedTenantId,
+                ExcludeUserId = verifiedUserId
+            };
+
+            var result = await _tenantsApi.CheckUsernameAvailability(request);
+            if (result.IsSuccessStatusCode && result.Content != null)
+            {
+                usernameAvailability = result.Content;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking username availability");
+            usernameAvailability = null;
+        }
+        finally
+        {
+            isCheckingUsername = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectUsernameSuggestion(string suggestion)
+    {
+        chosenUsername = suggestion;
+        usernameAvailability = new UsernameAvailabilityResponseDto
+        {
+            IsAvailable = true,
+            Username = suggestion,
+            Message = "Username is available!"
+        };
+        StateHasChanged();
     }
 }

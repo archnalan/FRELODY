@@ -75,8 +75,23 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                                               && (u.IsDeleted == false || u.IsDeleted == null));
 
                 if (existingUser != null && existingUser.EmailConfirmed)
+                {
+                    // Email verified but no password = incomplete registration, let them resume
+                    if (string.IsNullOrEmpty(existingUser.PasswordHash))
+                    {
+                        return ServiceResult<SendOtpResponseDto>.Success(new SendOtpResponseDto
+                        {
+                            TenantId = existingUser.TenantId ?? "",
+                            UserId = existingUser.Id,
+                            Email = request.Email,
+                            Message = "Email already verified. Please set your password.",
+                            EmailAlreadyVerified = true
+                        });
+                    }
+
                     return ServiceResult<SendOtpResponseDto>.Failure(
                         new BadRequestException("An account with this email already exists. Please sign in."));
+                }
 
                 using var transaction = await _context.Database.BeginTransactionAsync();
 

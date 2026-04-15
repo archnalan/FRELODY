@@ -13,6 +13,11 @@ namespace FRELODYSHRD.Dtos.AuthDtos
         public string UserId { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
+        /// <summary>
+        /// True if the email was already verified in a previous attempt.
+        /// The UI should skip the OTP modal and go straight to the password step.
+        /// </summary>
+        public bool EmailAlreadyVerified { get; set; }
     }
 
     public class VerifyOtpRequestDto
