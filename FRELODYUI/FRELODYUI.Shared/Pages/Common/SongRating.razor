@@ -25,7 +25,7 @@
                 }
             }
             <span class="ms-2 text-muted small">
-                @ratingInfo.AggregateRating.Value.ToString("0.0") (@ratingInfo.TotalRatings)
+                @ratingInfo.AggregateRating.Value.ToString("0.0")
             </span>
         </div>
     }
@@ -33,59 +33,23 @@
     @* Panel *@
     @if (ShowPanel)
     {
-        @if (hasUserRated)
+        @if (justRatedNow)
         {
-            @* Read-only state: User has already rated *@
-            <div class="text-center">
-                @if (justRatedNow)
-                {
-                    <div class="my-2 text-success">
-                        <i class="bi bi-check-circle-fill me-1"></i>
-                        Thank you for rating this song!
-                    </div>
-                }
-                <div class="row col-12 p-3 text-center">
-                    <div class="col-4 align-content-center">
-                        <span class="text-muted small">Your rating:</span>
-                    </div>
-                    <div class="col-4 d-flex justify-content-center my-2">
-                        @for (int i = 1; i <= 5; i++)
-                        {
-                            var rating = i;
-                            <span class="position-relative d-inline-block" style="width:2rem;">
-                                @if (selectedRating >= rating)
-                                {
-                                    <i class="bi bi-star-fill text-warning fs-4"></i>
-                                }
-                                else if (selectedRating >= rating - 0.5m)
-                                {
-                                    <i class="bi bi-star-half text-warning fs-4"></i>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-star text-warning fs-4"></i>
-                                }
-                            </span>
-                        }
-                    </div>
-                    <div class="col-4 align-content-center">
-                        <div class="text-muted small">
-                            @selectedRating.ToString("0.0") stars
-                        </div>
-                    </div>                  
-                </div>
+            <div class="rating-thank-you p-3 text-center">
+                <i class="bi bi-check-circle-fill me-1"></i>
+                Thank you for rating this song!
             </div>
         }
-        else if (canRate)
+        else if (canRate && !hasUserRated)
         {
             @* Interactive rating state *@
-            <div class="row col-12 p-3 text-center">
-                <div class="col-4 align-content-center">                    
-                    <span class="text-muted small">
+            <div class="rating-panel row col-12 p-3 text-center">
+                <div class="col-4 align-content-center">
+                    <span class="rating-hint">
                         @(selectedRating > 0 ? $"Rating: {selectedRating:0.0}" : "Click a star to rate")
                     </span>
                 </div>
-              
+
                 <div class="col-4 d-flex justify-content-center my-2">
                     @for (int i = 1; i <= 5; i++)
                     {
@@ -118,18 +82,7 @@
                     {
                         <div class="text-danger mt-2 small">@error</div>
                     }
-                    @if (!string.IsNullOrEmpty(info))
-                    {
-                        <div class="text-success mt-2 small">@info</div>
-                    }
                 </div>
-            </div>
-        }
-        else if (!string.IsNullOrEmpty(ratingInfo?.Reason))
-        {
-            @* Cannot rate - show reason *@
-            <div class="bg-white p-3 text-center text-muted small">
-                @ratingInfo.Reason
             </div>
         }
     }
@@ -161,7 +114,6 @@ else
     private decimal selectedRating = 0;
 
     private string? error;
-    private string? info;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -178,8 +130,7 @@ else
     {
         isLoading = true;
         error = null;
-        info = null;
-        justRatedNow = false; // Reset on load
+        justRatedNow = false;
 
         try
         {
@@ -240,7 +191,6 @@ else
         try
         {
             error = null;
-            info = null;
             isSubmitting = true;
 
             var resp = await _songsApi.RateSong(SongId, selectedRating);
@@ -249,7 +199,7 @@ else
                 // Mark that user has now rated
                 hasUserRated = true;
                 canRate = false;
-                justRatedNow = true; // Set flag to show thank you message
+                justRatedNow = true;
 
                 // Refresh rating info to get updated aggregate data
                 var cr = await _songsApi.CanUserRateSong(SongId);
@@ -257,9 +207,6 @@ else
                 {
                     ratingInfo = cr.Content;
                 }
-
-                // Clear any info messages since we're now in read-only mode
-                info = null;
 
                 if (OnRated.HasDelegate)
                     await OnRated.InvokeAsync(selectedRating);

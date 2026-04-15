@@ -814,13 +814,17 @@ window.initializeTooltips = function (root) {
 window.hideAllTooltips = function () {
     if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) return;
     document.querySelectorAll('[data-bs-tooltip-init]').forEach(function (el) {
-        var instance = bootstrap.Tooltip.getInstance(el);
-        if (instance) {
-            instance.hide();
-            // Force-remove any leftover tooltip DOM element
-            var tip = instance.tip;
-            if (tip && tip.parentNode) tip.parentNode.removeChild(tip);
+        try {
+            var instance = bootstrap.Tooltip.getInstance(el);
+            if (instance) {
+                // Use dispose() instead of hide() to avoid async transition
+                // callbacks that crash when internal state is already null
+                instance.dispose();
+            }
+        } catch (e) {
+            // Tooltip may already be disposed during navigation
         }
+        el.removeAttribute('data-bs-tooltip-init');
     });
 };
 
@@ -834,8 +838,12 @@ window.disposeTooltips = function (root) {
 
     var elements = root.querySelectorAll('[data-bs-tooltip-init]');
     elements.forEach(function (el) {
-        var instance = bootstrap.Tooltip.getInstance(el);
-        if (instance) instance.dispose();
+        try {
+            var instance = bootstrap.Tooltip.getInstance(el);
+            if (instance) instance.dispose();
+        } catch (e) {
+            // Tooltip may already be disposed
+        }
         el.removeAttribute('data-bs-tooltip-init');
     });
 };
@@ -900,18 +908,24 @@ window.unlockScreenOrientation = function () {
         mutations.forEach(function (m) {
             m.removedNodes.forEach(function (node) {
                 if (node.nodeType !== 1) return;
-                var targets = node.querySelectorAll
-                    ? node.querySelectorAll('[data-bs-tooltip-init]')
-                    : [];
-                // Also check the node itself
-                if (node.matches && node.matches('[data-bs-tooltip-init]')) {
-                    var inst = bootstrap.Tooltip.getInstance(node);
-                    if (inst) inst.dispose();
+                try {
+                    var targets = node.querySelectorAll
+                        ? node.querySelectorAll('[data-bs-tooltip-init]')
+                        : [];
+                    // Also check the node itself
+                    if (node.matches && node.matches('[data-bs-tooltip-init]')) {
+                        var inst = bootstrap.Tooltip.getInstance(node);
+                        if (inst) inst.dispose();
+                    }
+                    targets.forEach(function (el) {
+                        try {
+                            var inst = bootstrap.Tooltip.getInstance(el);
+                            if (inst) inst.dispose();
+                        } catch (e) { /* already disposed */ }
+                    });
+                } catch (e) {
+                    // Tooltip may already be disposed or element detached
                 }
-                targets.forEach(function (el) {
-                    var inst = bootstrap.Tooltip.getInstance(el);
-                    if (inst) inst.dispose();
-                });
             });
         });
 

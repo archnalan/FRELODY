@@ -197,7 +197,9 @@
     private bool IsAddingSong = false;
     private bool IsRemovingSong = false;
 
-    private bool IsLandingContext => _navManager.Uri.Contains("/landing/", StringComparison.OrdinalIgnoreCase) ||
+    private bool IsLandingContext => 
+        _navManager.Uri == string.Empty ||
+        _navManager.Uri.Contains("/landing/", StringComparison.OrdinalIgnoreCase) ||
         _navManager.Uri.EndsWith("/landing", StringComparison.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()

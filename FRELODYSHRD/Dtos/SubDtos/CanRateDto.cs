@@ -13,7 +13,5 @@ namespace FRELODYSHRD.Dtos.SubDtos
         public decimal? YourRating { get; set; }
         public decimal? AggregateRating { get; set; }
         public int TotalRatings { get; set; }
-        public int MaxEdits { get; set; } = 3;
-        public int EditsRemaining { get; set; }
     }
 }

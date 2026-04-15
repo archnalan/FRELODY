@@ -1,4 +1,4 @@
-﻿using DocumentFormat.OpenXml.Bibliography;
+using DocumentFormat.OpenXml.Bibliography;
 using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Data.Infrastructure;
@@ -26,8 +26,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 {
     public class SongService : ISongService
     {
-        private const int MaxEditsPerRevision = 2;
-
         private readonly SongDbContext _context;
         private readonly ITenantProvider _tenantProvider;
         private readonly string _userId;
@@ -1037,8 +1035,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     return ServiceResult<CanRateDto>.Failure(new NotFoundException("Song not found."));
 
                 var userId = _userId;
-                var existing = await _context.SongUserRatings
-                    .FirstOrDefaultAsync(r => r.SongId == songId && r.UserId == userId);
 
                 var aggQ = _context.SongUserRatings.Where(r => r.SongId == songId);
                 var total = await aggQ.CountAsync();
@@ -1047,42 +1043,30 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 var dto = new CanRateDto
                 {
                     AggregateRating = total > 0 ? Math.Round(avg, 2, MidpointRounding.AwayFromZero) : null,
-                    TotalRatings = total,
-                    MaxEdits = MaxEditsPerRevision
+                    TotalRatings = total
                 };
+
+                // Anonymous users cannot rate
+                if (string.IsNullOrEmpty(userId))
+                {
+                    dto.CanRate = false;
+                    dto.Reason = "You must be logged in to rate this song.";
+                    return ServiceResult<CanRateDto>.Success(dto);
+                }
+
+                var existing = await _context.SongUserRatings
+                    .FirstOrDefaultAsync(r => r.SongId == songId && r.UserId == userId);
 
                 if (existing is null)
                 {
                     dto.CanRate = true;
-                    dto.EditsRemaining = MaxEditsPerRevision;
                     return ServiceResult<CanRateDto>.Success(dto);
                 }
 
-                // If song was revised after their last rating: reset allowance for the new revision
-                if (existing.RevisionAtRating < song.Revision)
-                {
-                    dto.CanRate = true;
-                    dto.YourRating = existing.Rating;
-                    dto.EditsRemaining = MaxEditsPerRevision;
-                    dto.Reason = "Song has changed. You can rate this version.";
-                    return ServiceResult<CanRateDto>.Success(dto);
-                }
-
-                // Same revision: compute remaining edits
-                var remaining = Math.Max(0, MaxEditsPerRevision - existing.ModificationCount);
+                // User has already rated
+                dto.CanRate = false;
                 dto.YourRating = existing.Rating;
-                dto.EditsRemaining = remaining;
-
-                if (remaining > 0)
-                {
-                    dto.CanRate = true;
-                    dto.Reason = $"You can adjust your rating. {remaining} edit(s) left.";
-                }
-                else
-                {
-                    dto.CanRate = false;
-                    dto.Reason = "You’ve reached the maximum number of rating edits for this version.";
-                }
+                dto.Reason = "You have already rated this song.";
 
                 return ServiceResult<CanRateDto>.Success(dto);
             }
@@ -1106,42 +1090,27 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 if (song is null)
                     return ServiceResult<bool>.Failure(new NotFoundException("Song not found."));
 
-                var userId = string.IsNullOrEmpty(_userId) ? null : _userId;
+                var userId = _userId;
+                if (string.IsNullOrEmpty(userId))
+                    return ServiceResult<bool>.Failure(new BadRequestException("You must be logged in to rate a song."));
+
                 var existing = await _context.SongUserRatings
                     .FirstOrDefaultAsync(r => r.SongId == songId && r.UserId == userId);
 
+                if (existing is not null)
+                    return ServiceResult<bool>.Failure(new BadRequestException("You have already rated this song."));
+
                 var rounded = Math.Round(rating, 2, MidpointRounding.AwayFromZero);
 
-                if (existing is null)
+                _context.SongUserRatings.Add(new SongUserRating
                 {
-                    _context.SongUserRatings.Add(new SongUserRating
-                    {
-                        SongId = songId,
-                        UserId = userId,
-                        Rating = rounded,
-                        RevisionAtRating = song.Revision,
-                        ModificationCount = 0,
-                        RatedAt = DateTimeOffset.UtcNow
-                    });
-                }
-                else if (existing.RevisionAtRating < song.Revision)
-                {
-                    // New revision: reset edit counter
-                    existing.Rating = rounded;
-                    existing.RevisionAtRating = song.Revision;
-                    existing.ModificationCount = 0;
-                    existing.RatedAt = DateTimeOffset.UtcNow;
-                }
-                else
-                {
-                    // Same revision: enforce edit cap
-                    if (existing.ModificationCount >= MaxEditsPerRevision)
-                        return ServiceResult<bool>.Failure(new BadRequestException("You've reached the maximum number of rating edits for this version."));
-
-                    existing.Rating = rounded;
-                    existing.ModificationCount += 1;
-                    existing.RatedAt = DateTimeOffset.UtcNow;
-                }
+                    SongId = songId,
+                    UserId = userId,
+                    Rating = rounded,
+                    RevisionAtRating = song.Revision,
+                    ModificationCount = 0,
+                    RatedAt = DateTimeOffset.UtcNow
+                });
 
                 await _context.SaveChangesAsync();
 
@@ -1151,7 +1120,6 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 var avg = count > 0 ? await q.AverageAsync(r => r.Rating) : 0m;
 
                 song.Rating = Math.Round(avg, 2, MidpointRounding.AwayFromZero);
-                song.ModifiedBy = userId;
                 await _context.SaveChangesAsync();
 
                 return ServiceResult<bool>.Success(true);

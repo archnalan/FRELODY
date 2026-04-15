@@ -389,10 +389,10 @@
         }
     </div> @* Close song-playback-area *@
 
-    @if (!isLoading && song != null && !isFullscreen)
+    @if (!isLoading && song != null && !isFullscreen && !string.IsNullOrEmpty(currentUserId) && !hasUserRated)
     {
         <div class="song-rating">
-            <SongRating SongId="@SongId" ShowSummary="false" ShowPanel="true" />
+            <SongRating SongId="@SongId" ShowSummary="false" ShowPanel="true" OnRated="OnUserRated" />
         </div>
     }
 </div>
@@ -466,6 +466,7 @@
 
     private bool showCharts => songDisplayMode == SongDisplay.LyricsAndChordsAndCharts;
     private bool showShareDropdown = false;
+    private bool hasUserRated = false;
     private ElementReference shareDropdownRef;
     private string shareDropdownStyle = string.Empty;
 
@@ -515,6 +516,23 @@
         if (userResult.IsSuccess && userResult.Data != null)
         {
             currentUserId = userResult.Data.Id;
+        }
+
+        // Check if the user has already rated this song
+        if (!string.IsNullOrEmpty(currentUserId) && !string.IsNullOrEmpty(SongId))
+        {
+            try
+            {
+                var ratingResp = await _songsApi.CanUserRateSong(SongId);
+                if (ratingResp.IsSuccessStatusCode && ratingResp.Content != null)
+                {
+                    hasUserRated = ratingResp.Content.YourRating.HasValue;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking rating status");
+            }
         }
 
         await LoadUserDisplaySettings();
@@ -1125,6 +1143,12 @@
     private void CloseShareDropdown()
     {
         showShareDropdown = false;
+        StateHasChanged();
+    }
+
+    private void OnUserRated(decimal rating)
+    {
+        hasUserRated = true;
         StateHasChanged();
     }
 

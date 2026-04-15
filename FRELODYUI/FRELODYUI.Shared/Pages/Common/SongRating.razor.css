@@ -1,0 +1,30 @@
+/* Summary section */
+.rate-info {
+    color: var(--text-secondary);
+}
+
+.rate-info .text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Rating panel */
+.rating-panel {
+    color: var(--text-primary);
+    border-radius: 8px;
+}
+
+.rating-hint {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+/* Thank you message */
+.rating-thank-you {
+    color: var(--text-primary);
+    background-color: var(--bg-footer);
+    border-radius: 8px;
+}
+
+.rating-thank-you i {
+    color: #22c55e;
+}
