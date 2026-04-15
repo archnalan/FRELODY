@@ -208,6 +208,12 @@ else
                     ratingInfo = cr.Content;
                 }
 
+                // Render the thank-you message immediately
+                StateHasChanged();
+
+                // Let the user see the thank-you before notifying parent to hide
+                await Task.Delay(3000);
+
                 if (OnRated.HasDelegate)
                     await OnRated.InvokeAsync(selectedRating);
             }

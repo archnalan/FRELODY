@@ -21,7 +21,6 @@
 /* Thank you message */
 .rating-thank-you {
     color: var(--text-primary);
-    background-color: var(--bg-footer);
     border-radius: 8px;
 }
 

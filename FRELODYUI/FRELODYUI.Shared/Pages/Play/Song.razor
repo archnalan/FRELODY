@@ -21,7 +21,7 @@
                     }
                     <h1 class="song-title">@song.Title</h1>
                 </div>
-                <SongRating SongId="@SongId" ShowSummary="true" ShowPanel="false" />
+                <SongRating @key="ratingVersion" SongId="@SongId" ShowSummary="true" ShowPanel="false" />
             </div>
 
             <div class="header-actions">
@@ -467,6 +467,7 @@
     private bool showCharts => songDisplayMode == SongDisplay.LyricsAndChordsAndCharts;
     private bool showShareDropdown = false;
     private bool hasUserRated = false;
+    private int ratingVersion = 0;
     private ElementReference shareDropdownRef;
     private string shareDropdownStyle = string.Empty;
 
@@ -1148,9 +1149,8 @@
 
     private async Task OnUserRated(decimal rating)
     {
-        // Let the thank-you message display briefly before hiding the section
-        await Task.Delay(3000);
         hasUserRated = true;
+        ratingVersion++;
         StateHasChanged();
     }
 
