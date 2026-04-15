@@ -29,12 +29,18 @@
                     <i class="bi bi-dash"></i>
                 </button>
             }
-            <span class="psi-key-badge" title="@GetKeyTooltip()">@GetDisplayKey()</span>
+            <span class="psi-key-badge @((Song.Transpose ?? 0) != 0 ? "psi-key-transposed" : "")" title="@GetKeyTooltip()">@GetDisplayKey()</span>
             @if (ShowTransposeControls)
             {
                 <button class="psi-key-btn" @onclick="IncrementTranspose" title="Transpose up">
                     <i class="bi bi-plus"></i>
                 </button>
+                @if ((Song.Transpose ?? 0) != 0)
+                {
+                    <button class="psi-key-reset" @onclick="ResetTranspose" title="Reset to original key (@Song.Key)">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                }
             }
         </div>
     }
@@ -162,6 +168,12 @@
         if (current <= -11) return;
         Song.Transpose = current - 1;
         await OnTransposeChanged.InvokeAsync((Song.Id, Song.Transpose.Value));
+    }
+
+    private async Task ResetTranspose()
+    {
+        Song.Transpose = 0;
+        await OnTransposeChanged.InvokeAsync((Song.Id, 0));
     }
 
 }
