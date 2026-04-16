@@ -11,7 +11,7 @@
                     <h6 class="acct-row-title">Password</h6>
                     <small class="acct-row-sub">Change your account password</small>
                 </div>
-                <button class="acct-btn primary" @onclick="OnPasswordChange">
+                <button class="acct-btn primary" @onclick="() => showChangePassword = true">
                     <i class="bi bi-key"></i>
                     <span>Change</span>
                 </button>
@@ -120,13 +120,18 @@
     }
 </div>
 
+<ChangePasswordModal IsVisible="showChangePassword"
+                     Email="@UserProfile?.Email"
+                     OnClose="() => showChangePassword = false"
+                     OnSuccess="HandlePasswordChanged" />
+
 @code {
     [Parameter] public UpdateUserProfileOutDto? UserProfile { get; set; }
-    [Parameter] public EventCallback OnPasswordChange { get; set; }
     [Parameter] public EventCallback OnExportData { get; set; }
     [Parameter] public EventCallback OnDeleteAccount { get; set; }
 
     private bool isSuperAdmin;
+    private bool showChangePassword;
 
     protected override async Task OnInitializedAsync()
     {
@@ -135,5 +140,17 @@
         {
             isSuperAdmin = user.Data.UserType == UserType.SuperAdmin;
         }
+    }
+
+    private void HandlePasswordChanged()
+    {
+        showChangePassword = false;
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Success",
+            Message = "Your password has been changed successfully.",
+            ButtonText = "OK",
+            OptionType = OptionType.Success
+        });
     }
 }

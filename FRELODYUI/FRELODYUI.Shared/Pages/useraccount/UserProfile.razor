@@ -88,7 +88,6 @@
                 {
                     <AccountSection
                         UserProfile="@userProfile"
-                        OnPasswordChange="HandlePasswordChange"
                         OnExportData="HandleDataExport"
                         OnDeleteAccount="HandleAccountDeletion" />
                 }
@@ -368,12 +367,6 @@
         {
             // Expected when cancelled
         }
-    }
-
-    private async Task HandlePasswordChange()
-    {
-        // Implement password change logic
-        ShowInfoModal("Password change functionality will be implemented");
     }
 
     private async Task HandleDataExport()
