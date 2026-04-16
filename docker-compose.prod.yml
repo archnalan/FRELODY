@@ -58,6 +58,8 @@ services:
       CurrencyConverter__AppId: "${OPENEXCHANGE_APP_ID}"
       OpenTelemetry__Endpoint: "${OTEL_ENDPOINT:-http://otel-collector:4318}"
       OpenTelemetry__EnableConsole: "false"
+      # Frontend URL for password reset emails
+      AppSettings__FrontendUrl: "https://${SERVER_HOST}"
     # Port 8080 no longer needs to be exposed publicly if Nginx handles it
     ports:
       - "8080:8080" 

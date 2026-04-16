@@ -96,18 +96,88 @@ namespace FRELODYLIB.ServiceHandler
             var code = await _userManager.GeneratePasswordResetTokenAsync(appuser);
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
-            // Use config for base URL; fallback to provided
-            var baseUrl = _configuration["AppSettings:BaseUrl"] ?? requestorUri;
-            var callbackUrl = $"{baseUrl}/resetpassword/{code}"; // Removed placeholder "isLocal"
+            // requestorUri is the Origin header from the frontend (always the correct client URL).
+            // Only fall back to config if Origin was not provided.
+            var baseUrl = !string.IsNullOrWhiteSpace(requestorUri)
+                ? requestorUri.TrimEnd('/')
+                : _configuration["AppSettings:FrontendUrl"]
+                    ?? _configuration["AppSettings:BaseUrl"]
+                    ?? throw new InvalidOperationException("No frontend URL available for password reset link.");
+            var encodedEmail = Uri.EscapeDataString(appuser.Email!);
+            var callbackUrl = $"{baseUrl}/resetpassword/{code}?email={encodedEmail}";
 
             var emailDto = new EmailDto(true)
             {
-                Subject = "Reset Your Password",
+                Subject = "Reset Your Password – FRELODY",
                 ToEmail = appuser.Email,
-                Body = $"You have requested to reset your password with Billtrick POS. <br/><br/>If you want to reset your password, please click this link.<br/><br/><a href='{callbackUrl}'>{callbackUrl}</a><br/><br/> Thank you for being part of Billtrick POS."
+                Body = BuildPasswordResetEmailHtml(callbackUrl)
             };
-
+            Console.WriteLine($"callbackUrl: + {callbackUrl}");
             return await SendMailAsync(emailDto);
+        }
+
+        private static string BuildPasswordResetEmailHtml(string callbackUrl)
+        {
+            return $@"
+<!DOCTYPE html>
+<html lang=""en"">
+<head><meta charset=""UTF-8""><meta name=""viewport"" content=""width=device-width,initial-scale=1""></head>
+<body style=""margin:0;padding:0;background-color:#f4f4f7;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"">
+<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#f4f4f7;"">
+<tr><td align=""center"" style=""padding:40px 20px;"">
+<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);"">
+
+  <!-- Header -->
+  <tr>
+    <td style=""background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:32px 32px 24px;text-align:center;"">
+      <h1 style=""margin:0;font-size:24px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;"">FRELODY</h1>
+      <p style=""margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.85);"">Password Reset</p>
+    </td>
+  </tr>
+
+  <!-- Body -->
+  <tr>
+    <td style=""padding:32px;"">
+      <p style=""margin:0 0 8px;font-size:18px;font-weight:600;color:#1a1a2e;"">Hi there,</p>
+      <p style=""margin:0 0 24px;font-size:15px;color:#4a4a68;line-height:1.6;"">
+        We received a request to reset your password. Click the button below to choose a new one.
+      </p>
+
+      <!-- CTA button -->
+      <div style=""text-align:center;margin:0 0 24px;"">
+        <a href=""{callbackUrl}""
+           style=""display:inline-block;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:8px;"">
+          Reset Password
+        </a>
+      </div>
+
+      <p style=""margin:0 0 16px;font-size:13px;color:#8888a0;line-height:1.5;"">
+        If the button doesn't work, copy and paste this link into your browser:
+      </p>
+      <p style=""margin:0 0 24px;font-size:13px;word-break:break-all;"">
+        <a href=""{callbackUrl}"" style=""color:#667eea;text-decoration:none;"">{callbackUrl}</a>
+      </p>
+
+      <p style=""margin:0;font-size:13px;color:#8888a0;line-height:1.5;"">
+        If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+      </p>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style=""padding:20px 32px;background:#fafafe;border-top:1px solid #eeeeee;text-align:center;"">
+      <p style=""margin:0;font-size:12px;color:#aaaacc;"">
+        &copy; {DateTime.UtcNow.Year} Frelody &middot; Your music, beautifully organized
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>";
         }
 
         private void ValidateEmailDto(EmailDto emailDto)

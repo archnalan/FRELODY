@@ -73,6 +73,9 @@ services:
       AllowedOrigins__8: "http://164.68.118.82"
       AllowedOrigins__9: "http://164.68.118.82:8080"
 
+      # Frontend URL for password reset emails
+      AppSettings__FrontendUrl: "http://localhost:5080"
+
       # Disable HTTPS redirect – container serves plain HTTP behind a proxy
       ASPNETCORE_HTTPS_PORT: ""
 
