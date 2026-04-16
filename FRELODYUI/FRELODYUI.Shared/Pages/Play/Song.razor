@@ -703,7 +703,7 @@
                     return;
                 }
 
-                double scrollAmount = scrollSpeed * 5;
+                double scrollAmount = scrollSpeed * 2.5;
                 await JsRt.InvokeVoidAsync("smoothScrollBy", (int)Math.Round(scrollAmount));
             });
         }, null, 0, 100);
