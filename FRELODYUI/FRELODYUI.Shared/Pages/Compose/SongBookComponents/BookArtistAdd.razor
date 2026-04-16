@@ -103,6 +103,7 @@
     private const int MAX_TITLE_LEN = 15;
     private SongBookDropdown? songBookDropdownRef;
     private ArtistDropdown? artistDropdownRef;
+    private string? _pendingFocusTab;
 
     // Single pair storage - only one type can exist at a time
     private BookCategoryPairViewModel? currentBookCategory = null;
@@ -112,6 +113,23 @@
     [Parameter] public EventCallback<ArtistAlbumPairViewModel?> OnArtistAlbumChanged { get; set; }
     [Parameter] public int SongNumber { get; set; } = 1;
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingFocusTab != null)
+        {
+            var tab = _pendingFocusTab;
+            _pendingFocusTab = null;
+            try
+            {
+                if (tab == "songbook" && songBookDropdownRef != null)
+                    await songBookDropdownRef.FocusInput();
+                else if (tab == "artist" && artistDropdownRef != null)
+                    await artistDropdownRef.FocusInput();
+            }
+            catch { /* Element may not be focusable yet */ }
+        }
+    }
+
     public async Task SetActiveSelectionTab(string tab)
     {
         if (activeSelectionTab == tab) return;
@@ -119,14 +137,24 @@
         activeSelectionTab = tab;
 
         // Clear selections and notify parent when switching tabs
+        // Focus is deferred to OnAfterRenderAsync so the new dropdown is in the DOM
         if (tab == "songbook")
         {
-            await ClearBookCategory();
+            currentBookCategory = null;
+            selectedSongBook = null;
+            selectedCategory = null;
+            await OnBookCategoryChanged.InvokeAsync(null);
         }
         else if (tab == "artist")
         {
-            await ClearArtistAlbum();
+            currentArtistAlbum = null;
+            selectedArtist = null;
+            selectedAlbum = null;
+            await OnArtistAlbumChanged.InvokeAsync(null);
         }
+
+        _pendingFocusTab = tab;
+        StateHasChanged();
     }
 
     public async Task SetSongBookCategoryPair(BookCategoryPairViewModel? pair)
@@ -312,7 +340,7 @@
     private string GetTruncatedTitle(string title)
     {
         return title.Length > MAX_TITLE_LEN
-            ? title.Substring(0, MAX_TITLE_LEN) + "…"
+            ? title.Substring(0, MAX_TITLE_LEN) + "ï¿½"
             : title;
     }
 }
