@@ -14,15 +14,8 @@
     padding-bottom: 1rem;
 }
 
-.recovery-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-}
-
 .recovery-subtitle {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: var(--text-secondary);
 }
 
@@ -30,16 +23,16 @@
 .recovery-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 /* Recovery Item */
 .recovery-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    border-radius: 8px;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 10px;
     border: 1px solid var(--border-light);
     background: var(--bg-hover);
     transition: all 0.2s ease;
@@ -48,93 +41,93 @@
     .recovery-item:hover {
         background: var(--modal-header-bg);
         border-color: var(--border-medium);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     }
 
 .recovery-item-content {
     flex: 1;
     min-width: 0;
+    overflow: hidden;
 }
 
 .recovery-item-header {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.125rem;
 }
 
 .recovery-item-title {
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     font-weight: 500;
     color: var(--text-primary);
     margin: 0;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .recovery-item-date {
-    font-size: 0.8125rem;
-    color: var(--text-secondary);
+    font-size: 0.75rem;
+    color: var(--text-muted);
     display: flex;
     align-items: center;
 }
 
-/* Recovery Item Actions */
+/* Recovery Action Buttons — compact icon-only */
 .recovery-item-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.25rem;
     flex-shrink: 0;
 }
 
-    .recovery-item-actions .btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-        padding: 0;
-        border-radius: 6px;
-        transition: all 0.2s ease;
+.recovery-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+    .recovery-action-btn:hover {
+        background: var(--btn-bg);
+        color: var(--text-primary);
     }
 
-    .recovery-item-actions .btn-outline-primary {
+    .recovery-action-btn:disabled {
+        opacity: 0.35;
+        pointer-events: none;
+    }
+
+    .recovery-action-btn.preview:hover,
+    .recovery-action-btn.restore:hover {
         color: var(--bg-active);
-        border-color: var(--bg-active);
+        background: rgba(59, 130, 246, 0.1);
     }
 
-        .recovery-item-actions .btn-outline-primary:hover {
-            background: var(--bg-active);
-            color: white;
-        }
-
-    .recovery-item-actions .btn-outline-danger {
-        color: #dc3545;
-        border-color: #dc3545;
+    .recovery-action-btn.delete:hover {
+        color: #ef4444;
+        background: rgba(239, 68, 68, 0.1);
     }
-
-        .recovery-item-actions .btn-outline-danger:hover {
-            background: #dc3545;
-            color: white;
-        }
 
 /* Pagination */
 .recovery-pagination {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
+    gap: 1rem;
     padding-top: 1rem;
     border-top: 1px solid var(--border-light);
 }
 
-    .recovery-pagination .btn {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-
 .pagination-info {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    color: var(--text-muted);
 }
 
 /* Empty State */
@@ -163,27 +156,7 @@
         padding: 1rem;
     }
 
-    .recovery-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.75rem;
-    }
-
-    .recovery-item-actions {
-        width: 100%;
-        justify-content: flex-end;
-    }
-
-    .recovery-pagination {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-        .recovery-pagination .btn {
-            width: 100%;
-        }
-
-    .pagination-info {
-        order: -1;
+    .recovery-item-title {
+        max-width: 45vw;
     }
 }
