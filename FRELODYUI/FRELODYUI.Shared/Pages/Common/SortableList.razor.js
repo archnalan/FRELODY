@@ -37,9 +37,17 @@
         onUpdate: (event) => {
             // Only process if the dragged element is not filtered
             if (!event.item.matches(filter)) {
+                // Restore DOM to pre-move state so Blazor can diff correctly.
+                // Must remove first so children indices reflect the original layout
+                // minus the moved element, making children[oldIndex] the correct
+                // insertion reference.
                 if (event.from) {
-                    const restoreBefore = event.from.children[event.oldDraggableIndex] || null;
-                    event.from.insertBefore(event.item, restoreBefore);
+                    event.item.remove();
+                    if (event.from.children[event.oldIndex]) {
+                        event.from.insertBefore(event.item, event.from.children[event.oldIndex]);
+                    } else {
+                        event.from.appendChild(event.item);
+                    }
                 }
                 component.invokeMethodAsync('OnUpdateJS', event.oldDraggableIndex, event.newDraggableIndex);
             }
