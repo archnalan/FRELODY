@@ -278,8 +278,9 @@
 
         if (Song == null) return;
         PrepareSegments();
-        var songId = await PerformSaveSong();
-        if (songId != null)
+        if (string.IsNullOrEmpty(savedSongId))
+            savedSongId = await PerformSaveSong();
+        if (!string.IsNullOrEmpty(savedSongId))
         {
             _modalService.Show(new ModalOptionDto
             {
@@ -303,7 +304,7 @@
 
         if (Song == null) return;
         PrepareSegments();
-        var songId = await PerformSaveSong();
+        var songId = !string.IsNullOrEmpty(savedSongId) ? savedSongId : await PerformSaveSong();
         if (songId != null)
             _navManager.NavigateTo($"/compose?songId={songId}");
     }
