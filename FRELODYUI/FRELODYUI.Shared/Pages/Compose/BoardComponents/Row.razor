@@ -177,7 +177,7 @@
         await OnEditingSegmentChanged.InvokeAsync(segment);
     }
 
-    private void HandleSave(SegmentCreateDto segment)
+    private async Task HandleSave(SegmentCreateDto segment)
     {
         if (segment != null)
         {
@@ -185,19 +185,18 @@
             {
                 Segments.RemoveAll(s => s.Id == segment.Id);
                 SetAddFormOpen(segment.AddNextSegment);
-                return;
             }
             else
             {
                 var index = Segments.FindIndex(s => s.Id == segment.Id);
                 if (index >= 0)
                     Segments[index] = segment;
+                await OnSegmentsUpdate.InvokeAsync(Segments);
+                SetAddFormOpen(segment.AddNextSegment);
             }
-            OnSegmentsUpdate.InvokeAsync(Segments);
-            SetAddFormOpen(segment.AddNextSegment);
         }
         editSegment = null;
-        OnEditingSegmentChanged.InvokeAsync(null);
+        await OnEditingSegmentChanged.InvokeAsync(null);
     }
 
     private void HandleCancel()

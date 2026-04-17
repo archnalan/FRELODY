@@ -24,7 +24,7 @@
     @foreach (var line in lines)
     {
         <div class="position-relative mb-3" id="@($"line-{line}")" @onmousedown="async () => await SetFocusedRow(line)">
-            <Row @ref="lineRefs[line]"
+            <Row @key="line" @ref="lineRefs[line]"
                  Line="@line"
                  Focused="@(focusedRow == line)"
                  Segments="@Segments"
