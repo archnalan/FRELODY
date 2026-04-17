@@ -9,6 +9,13 @@
     if (pull === false) pullOpt = false;
     if (pull === 'clone') pullOpt = 'clone';
 
+    // Build the interactive filter: combines the structural filter (.no-drag)
+    // with form elements so drag never starts from inputs/textareas/selects/buttons
+    const interactiveSelectors = 'input, textarea, select, button, .form-control';
+    const fullFilter = filter
+        ? `${filter}, ${interactiveSelectors}`
+        : interactiveSelectors;
+
     new Sortable(el, {
         animation: 200,
         group: {
@@ -16,55 +23,39 @@
             pull: pullOpt,
             put: !!put
         },
-        filter: filter || undefined,
+        filter: fullFilter,
         sort: !!sort,
         forceFallback: true,
         handle: handle || undefined,
 
-        // Add these options to allow nested interactions
-        draggable: `> :not(${filter})`, // Only make non-filtered items draggable
-        preventOnFilter: true,
-
-        // Custom check to allow nested element interactions
-        onStart: function (evt) {
-            // Check if the actual dragged element is filtered
-            const isFiltered = evt.item.matches(filter);
-            if (isFiltered) {
-                evt.sortable.cancel(); // Cancel the drag if it's a filtered element
-            }
-        },
+        // Only make non-filtered items draggable (excludes ActionItemTemplate etc.)
+        draggable: filter ? `> :not(${filter})` : undefined,
+        // Allow text selection and interaction on filtered elements
+        preventOnFilter: false,
 
         onUpdate: (event) => {
-            // Only process if the dragged element is not filtered
-            if (!event.item.matches(filter)) {
-                // Restore DOM to pre-move state so Blazor can diff correctly.
-                // Must remove first so children indices reflect the original layout
-                // minus the moved element, making children[oldIndex] the correct
-                // insertion reference.
-                if (event.from) {
-                    event.item.remove();
-                    if (event.from.children[event.oldIndex]) {
-                        event.from.insertBefore(event.item, event.from.children[event.oldIndex]);
-                    } else {
-                        event.from.appendChild(event.item);
-                    }
+            // Restore DOM to pre-move state so Blazor can diff correctly.
+            // Must remove first so children indices reflect the original layout
+            // minus the moved element, making children[oldIndex] the correct
+            // insertion reference.
+            if (event.from) {
+                event.item.remove();
+                if (event.from.children[event.oldIndex]) {
+                    event.from.insertBefore(event.item, event.from.children[event.oldIndex]);
+                } else {
+                    event.from.appendChild(event.item);
                 }
-                component.invokeMethodAsync('OnUpdateJS', event.oldDraggableIndex, event.newDraggableIndex);
             }
+            component.invokeMethodAsync('OnUpdateJS', event.oldDraggableIndex, event.newDraggableIndex);
         },
         onAdd: (event) => {
-            // Only process if the dragged element is not filtered
-            if (!event.item.matches(filter)) {
                 const fromId = (event.from && event.from.id) ? event.from.id : '';
                 if (event.to) {
                     const restoreBefore = event.to.children[event.newDraggableIndex] || null;
                     event.to.insertBefore(event.item, restoreBefore);
                 }
-            }
         },
         onRemove: (event) => {
-            // Only process if the dragged element is not filtered
-            if (!event.item.matches(filter)) {
                 const toId = (event.to && event.to.id) ? event.to.id : '';
                 const isDeleteZone = toId.startsWith('remove-button-');
 
@@ -83,31 +74,8 @@
                 }
 
                 component.invokeMethodAsync('OnRemoveJS', event.oldDraggableIndex, event.newDraggableIndex);
-            }
         }
     });
-
-    // Add event listeners to allow interaction with nested elements in filtered containers
-    if (filter) {
-        const filteredElements = el.querySelectorAll(filter);
-        filteredElements.forEach(container => {
-            // Allow events to propagate from nested interactive elements
-            const interactiveElements = container.querySelectorAll('input, button, select, textarea, [tabindex]');
-            interactiveElements.forEach(element => {
-                element.addEventListener('mousedown', (e) => {
-                    e.stopPropagation(); // Prevent the event from reaching SortableJS
-                });
-
-                element.addEventListener('touchstart', (e) => {
-                    e.stopPropagation(); // Prevent the event from reaching SortableJS
-                });
-
-                element.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent the event from reaching SortableJS
-                });
-            });
-        });
-    }
 
     initializeRemoveButtons(group, component);
 }
