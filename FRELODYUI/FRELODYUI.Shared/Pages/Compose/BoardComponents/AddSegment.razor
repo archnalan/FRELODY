@@ -141,7 +141,8 @@ else
         if(string.IsNullOrWhiteSpace(_segmentText) 
         && string.IsNullOrEmpty(SelectedChord.ChordName))
         {
-            // both lyric and chord are empty, do nothing
+            // Empty submit (double Enter) ends the typing chain
+            await CloseForm(false);
             return;
         }
         _newSegment = new SegmentCreateDto

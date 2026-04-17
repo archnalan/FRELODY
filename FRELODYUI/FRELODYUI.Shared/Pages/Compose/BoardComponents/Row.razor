@@ -46,6 +46,7 @@
         </SortableItemTemplate>
         <ActionItemTemplate>
             <AddSegment @ref="addSegmentRef"
+                        @key="addSegmentKey"
                         @bind-FormOpen="addFormOpen"
                         OnSegmentAdded="HandleSegmentAdded"
                         TextBoxSize="@textBoxSize"
@@ -71,6 +72,7 @@
     private Dictionary<string, Segment> segmentRefs = new();
     private AddSegment addSegmentRef = default!;
     private bool addFormOpen = false;
+    private int addSegmentKey = 0;
     private SegmentCreateDto? editSegment;
     private SegmentCreateDto? editedSegment;
     private ChordDto? editedChord;
@@ -241,6 +243,7 @@
 
             Segments.Add(segment);
             OnSegmentsUpdate.InvokeAsync(Segments);
+            addSegmentKey++;
             SetAddFormOpen(segment.AddNextSegment);
         }
         catch (Exception ex)
