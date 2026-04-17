@@ -365,6 +365,7 @@
                     AlbumTitle = selectedAlbum.Title,
                     TrackNumber = 1
                 };
+                currentArtistAlbum = pair;
                 if (bookArtistAddRef != null)
                 {
                     // Switch tab first so it doesn't clear the data we're about to set
@@ -399,6 +400,7 @@
                         CategoryId = selectedCategory.Id,
                         CategoryName = selectedCategory.Name
                     };
+                    currentBookCategory = pair;
                     if (bookArtistAddRef != null)
                     {
                         await bookArtistAddRef.SetSongBookCategoryPair(pair);
