@@ -4,6 +4,14 @@ window.clickElement = function (id) {
     if (el) el.click();
 };
 
+// Scroll element into view within its scroll container
+window.scrollIntoViewIfNeeded = function (elementId) {
+    var el = document.getElementById(elementId);
+    if (el && el.scrollIntoView) {
+        el.scrollIntoView({ block: 'nearest' });
+    }
+};
+
 // Print functionality for web
 window.printContent = function (htmlContent) {
     // Create a new window for printing

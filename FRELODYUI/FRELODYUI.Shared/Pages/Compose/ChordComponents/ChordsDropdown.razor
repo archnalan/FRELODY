@@ -1,42 +1,65 @@
 ﻿
-<div class="dropend" style="width: 100%;">
+<div class="dropend" style="width: 100%;" @onfocusout="HandleFocusOut" @onfocusin="HandleFocusIn">
     <div class="position-relative">
         <input @ref="inputElement"
-                class="form-control form-control-sm pe-4"
+               class="form-control form-control-sm pe-4"
+               role="combobox"
                type="text"
                tabindex="@TabIndex" 
                placeholder="add chord..."
                autocomplete="off"
+               aria-expanded="@(showDropdown ? "true" : "false")"
+               aria-activedescendant="@ActiveDescendantId"
                @bind="searchTerm"
                @oninput="HandleSearch"
-               @onfocus="@(() => ToggleDropdown(true))" />
+               @onfocus="@(() => ToggleDropdown(true))"
+               @onkeydown="HandleInputKeyDown"
+               @onkeydown:preventDefault="shouldPreventDefault" />
 
         <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-2 text-muted"
+           style="cursor: pointer;"
+           tabindex="-1"
            @onclick="@(() => ToggleDropdown(!showDropdown))"></i>
     </div>   
     
     @if (showDropdown)
     {
-        <div class="dropdown-menu show"
+        <div class="chord-dropdown-menu"
+             role="listbox"
+             @onkeydown:stopPropagation="true"
              style="position: absolute; top: 0; left: 100%; width: 200px; max-height: 300px; overflow-y: auto; z-index:5">
-            <button tabindex="@(TabIndex + 1)" class="dropdown-item text-muted" type="button" @onclick="() => SelectNone()">
+            <div id="@ChordOptionId("none")"
+                 role="option"
+                 class="dropdown-item text-muted @(activeIndex == 0 ? "active" : "")"
+                 aria-selected="@(activeIndex == 0 ? "true" : "false")"
+                 @onclick="() => SelectNone()">
                 <i class="bi bi-x-circle"></i> None
-            </button>
+            </div>
             <div class="dropdown-divider"></div>
-            @foreach (var chord in filteredChords)
+            @for (int i = 0; i < filteredChords.Count; i++)
             {
-                <button tabindex="@(TabIndex + 1)" class="dropdown-item" type="button" @onclick="() => SelectChord(chord)">
+                var chord = filteredChords[i];
+                var idx = i + 1; // offset by 1 for the None option
+                <div id="@ChordOptionId(chord.Id ?? idx.ToString())"
+                     role="option"
+                     class="dropdown-item @(activeIndex == idx ? "active" : "")"
+                     aria-selected="@(activeIndex == idx ? "true" : "false")"
+                     @onclick="() => SelectChord(chord)">
                     @chord.ChordName
-                </button>
+                </div>
             }
             @if (!filteredChords.Any())
             {
                 <div class="dropdown-item text-muted">No chords found</div>
             }
             <div class="dropdown-divider"></div>
-            <button tabindex="@(TabIndex + 3)" class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
+            <div id="@ChordOptionId("customize")"
+                 role="option"
+                 class="dropdown-item text-primary @(activeIndex == MaxIndex ? "active" : "")"
+                 aria-selected="@(activeIndex == MaxIndex ? "true" : "false")"
+                 @onclick="OpenCustomizeModal">
                 <i class="bi bi-plus-circle-dotted"></i> Customize
-            </button>
+            </div>
         </div>
         <div style="z-index:0" class="modal-backdrop bg-transparent" @onclick="() => ToggleDropdown(false)"></div>
     }
@@ -62,6 +85,23 @@
     private List<ChordDto> AvailableChords { get; set; } = new();
     private List<ChordDto> filteredChords = new();
     private ElementReference inputElement;
+    private int activeIndex = -1; // -1 = no item highlighted
+    private bool shouldPreventDefault = false;
+    private CancellationTokenSource? _focusOutCts;
+    private string _instanceId = Guid.NewGuid().ToString("N")[..8];
+
+    // Total navigable items: None (0) + chords (1..N) + Customize (N+1)
+    private int MaxIndex => filteredChords.Count + 1;
+
+    private string ChordOptionId(string suffix) => $"chord-opt-{_instanceId}-{suffix}";
+
+    private string? ActiveDescendantId => activeIndex switch
+    {
+        -1 => null,
+        0 => ChordOptionId("none"),
+        int i when i == MaxIndex => ChordOptionId("customize"),
+        int i => ChordOptionId(filteredChords[i - 1].Id ?? (i).ToString())
+    };
 
     protected async override Task OnInitializedAsync()
     {
@@ -73,6 +113,11 @@
         if (showDropdown)
         {
             await inputElement.FocusAsync();
+            // Scroll the active item into view
+            if (activeIndex >= 0 && ActiveDescendantId != null)
+            {
+                await JsRt.InvokeVoidAsync("scrollIntoViewIfNeeded", ActiveDescendantId);
+            }
         }
     }
 
@@ -107,6 +152,7 @@
     {
         searchTerm = e.Value?.ToString() ?? "";
         FilterChords();
+        activeIndex = -1; // Reset selection when filter changes
     }
 
     private void FilterChords()
@@ -142,6 +188,101 @@
     private void ToggleDropdown(bool show)
     {
         showDropdown = show;
+        if (show)
+        {
+            activeIndex = -1; // Reset highlight when opening
+        }
+    }
+
+    private void HandleInputKeyDown(KeyboardEventArgs e)
+    {
+        // Only prevent default for navigation keys, never for typing or Tab
+        shouldPreventDefault = false;
+
+        if (!showDropdown && (e.Key == "ArrowDown" || e.Key == "ArrowUp"))
+        {
+            showDropdown = true;
+            activeIndex = e.Key == "ArrowDown" ? 0 : MaxIndex;
+            shouldPreventDefault = true;
+            return;
+        }
+
+        if (!showDropdown) return;
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                activeIndex = activeIndex < MaxIndex ? activeIndex + 1 : 0;
+                shouldPreventDefault = true;
+                break;
+
+            case "ArrowUp":
+                activeIndex = activeIndex > 0 ? activeIndex - 1 : MaxIndex;
+                shouldPreventDefault = true;
+                break;
+
+            case "Enter":
+                if (activeIndex >= 0)
+                {
+                    shouldPreventDefault = true;
+                    _ = SelectActiveItem();
+                }
+                // If no item highlighted, let form submit naturally
+                break;
+
+            case "Escape":
+                showDropdown = false;
+                activeIndex = -1;
+                shouldPreventDefault = true;
+                break;
+
+            case "Tab":
+                // Close dropdown and let Tab move focus to the next element
+                showDropdown = false;
+                activeIndex = -1;
+                break;
+        }
+    }
+
+    private async Task SelectActiveItem()
+    {
+        if (activeIndex == 0)
+        {
+            await SelectNone();
+        }
+        else if (activeIndex == MaxIndex)
+        {
+            OpenCustomizeModal();
+        }
+        else if (activeIndex > 0 && activeIndex <= filteredChords.Count)
+        {
+            await SelectChord(filteredChords[activeIndex - 1]);
+        }
+    }
+
+    private async Task HandleFocusOut(FocusEventArgs e)
+    {
+        // Debounced close: if focus moves to another element inside this
+        // component, HandleFocusIn will cancel the close.
+        _focusOutCts?.Cancel();
+        _focusOutCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(150, _focusOutCts.Token);
+            if (showDropdown)
+            {
+                showDropdown = false;
+                activeIndex = -1;
+                StateHasChanged();
+            }
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void HandleFocusIn(FocusEventArgs e)
+    {
+        // Focus moved within the component — cancel the pending close
+        _focusOutCts?.Cancel();
     }
 
     private void OpenCustomizeModal()
