@@ -2,7 +2,6 @@
 using FRELODYSHRD.Dtos;
 using FRELODYUI.Shared.RefitApis;
 using FRELODYUI.Shared.Services;
-using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
 namespace FRELODYUI.Services
@@ -12,23 +11,15 @@ namespace FRELODYUI.Services
         private readonly IShareApi _shareApi;
         private readonly IClipboardService _clipboardService;
         private readonly ILogger<ShareService> _logger;
-        private readonly string _baseUrl;
 
         public ShareService(
             IShareApi shareApi,
             IClipboardService clipboardService,
-            ILogger<ShareService> logger,
-            NavigationManager navigationManager)
+            ILogger<ShareService> logger)
         {
             _shareApi = shareApi;
             _clipboardService = clipboardService;
             _logger = logger;
-
-#if ANDROID || IOS
-            _baseUrl = "https://frelody.app";
-#else
-            _baseUrl = navigationManager.BaseUri.TrimEnd('/');
-#endif
         }
 
         public async Task<ShareLinkDto?> GenerateShareLinkAsync(string songId)
@@ -40,8 +31,12 @@ namespace FRELODYUI.Services
 
                 if (response.IsSuccessStatusCode && response.Content != null)
                 {
-                    // Construct the full share URL
-                    response.Content.ShareUrl = $"{_baseUrl}/songs/{response.Content.ShareToken}";
+                    // The API builds the share URL from its own Request.Scheme/Host so the
+                    // link points at the host that actually serves the OG-enabled
+                    // /shared/{token} route. Never overwrite it here — in dev the UI runs
+                    // on a different port than the API, and in prod nginx routes /shared/*
+                    // to the API. Crawlers (WhatsApp, iMessage, Facebook, Twitter, LinkedIn,
+                    // Slack, Discord, …) hit that URL and receive pre-rendered OG meta.
                     return response.Content;
                 }
 
@@ -64,7 +59,6 @@ namespace FRELODYUI.Services
 
                 if (response.IsSuccessStatusCode && response.Content != null)
                 {
-                    response.Content.ShareUrl = $"{_baseUrl}/playlists/landing/{response.Content.ShareToken}/detail";
                     return response.Content;
                 }
 
@@ -78,9 +72,12 @@ namespace FRELODYUI.Services
             }
         }
 
-        public Task<string> GetShareUrlAsync(string shareToken)
+        public async Task<string> GetShareUrlAsync(string shareToken)
         {
-            return Task.FromResult($"{_baseUrl}/songs/{shareToken}");
+            // No server round-trip needed — the server-provided ShareUrl is authoritative.
+            // Callers generally already have a ShareLinkDto from the generate methods above.
+            await Task.CompletedTask;
+            return string.Empty;
         }
 
         public async Task NotifyLinkCopiedAsync()

@@ -29,6 +29,24 @@ namespace FRELODYLIB.Models
 
         public bool? IsActive { get; set; } = true;
 
+        // ─── Open Graph snapshot ──────────────────────────────────────────────
+        // Populated at share-link creation time so crawlers (WhatsApp, iMessage,
+        // Facebook, Twitter, LinkedIn, Slack, Discord, …) can render a rich
+        // preview without executing any JavaScript or calling authenticated
+        // endpoints. Fields represent an immutable snapshot of the shared item.
+        [StringLength(200)]
+        public string? OgTitle { get; set; }
+
+        [StringLength(500)]
+        public string? OgDescription { get; set; }
+
+        /// <summary>Relative path (under wwwroot) of the generated 1200×630 PNG preview.</summary>
+        [StringLength(300)]
+        public string? OgImagePath { get; set; }
+
+        /// <summary>Pre-rendered hero HTML fragment used as the visible body of the landing page.</summary>
+        public string? OgHtml { get; set; }
+
         [ForeignKey(nameof(SongId))]
         public virtual Song? Song { get; set; }
 

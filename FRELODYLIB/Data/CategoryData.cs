@@ -81,6 +81,8 @@ namespace FRELODYAPP.Models
                     new Category {Name = "Glory and Praise", ParentCategoryId = jesusChristId, SongBookId = songBookId, TenantId = tenantId,CreatedBy=userId, Access = Access.Public },
 
                     new Category { Name = "HOLY SPIRIT", ParentCategoryId = null , SongBookId = songBookId, TenantId = tenantId,CreatedBy=userId, Access = Access.Public },
+                    
+                    new Category { Name = "HOLY SCRIPTURES", ParentCategoryId = null , SongBookId = songBookId, TenantId = tenantId,CreatedBy=userId, Access = Access.Public },
 
                     new Category {Name = "Invitation", ParentCategoryId = gospelId, SongBookId = songBookId, TenantId = tenantId,CreatedBy=userId, Access = Access.Public },
                     new Category {Name = "Repentance", ParentCategoryId = gospelId, SongBookId = songBookId, TenantId = tenantId,CreatedBy=userId, Access = Access.Public },

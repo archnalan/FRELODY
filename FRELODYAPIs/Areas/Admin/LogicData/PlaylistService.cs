@@ -638,13 +638,20 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         new KeyNotFoundException($"Song playlist with Id {id} not found."));
                 }
            
-                var slugExists = await _context.Playlists
-                    .AnyAsync(c => c.Slug == updatedPlaylist.Slug && c.Id != id);
-                if (slugExists)
+                // Only enforce slug uniqueness when the slug is actually being changed.
+                // Previously any edit (e.g. title/description) would fail if another playlist shared
+                // the same (often default/seeded) slug, because the incoming DTO echoed the current slug back.
+                if (!string.IsNullOrWhiteSpace(updatedPlaylist.Slug) &&
+                    !string.Equals(updatedPlaylist.Slug, playlist.Slug, StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.LogWarning("Slug {Slug} already exists for another playlist.", updatedPlaylist.Slug);
-                    return ServiceResult<PlaylistDto>.Failure(
-                        new InvalidOperationException($"Slug '{updatedPlaylist.Slug}' already exists."));
+                    var slugExists = await _context.Playlists
+                        .AnyAsync(c => c.Slug == updatedPlaylist.Slug && c.Id != id);
+                    if (slugExists)
+                    {
+                        _logger.LogWarning("Slug {Slug} already exists for another playlist.", updatedPlaylist.Slug);
+                        return ServiceResult<PlaylistDto>.Failure(
+                            new InvalidOperationException($"Slug '{updatedPlaylist.Slug}' already exists."));
+                    }
                 }
                 // Map updated properties
                 playlist.Title = updatedPlaylist.Title;

@@ -1,0 +1,52 @@
+@* Placeholder mimicking the PlaylistDetail page structure *@
+
+<div class="container-fluid position-relative pdp-root">
+    <div class="container py-4" style="max-width: 55rem;">
+
+        <!-- Header with Back Button -->
+        <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom placeholder-glow">
+            <div class="d-flex align-items-center gap-3">
+                <span class="pdp-back placeholder"></span>
+                <span class="pdp-title placeholder col-6"></span>
+            </div>
+            <span class="pdp-dots placeholder"></span>
+        </div>
+
+        <!-- Info Strip -->
+        <div class="pdp-info-strip mb-3 placeholder-glow">
+            <div class="pdp-info-meta">
+                <span class="placeholder col-10 pdp-line"></span>
+                <div class="pdp-tags">
+                    <span class="placeholder pdp-badge col-2"></span>
+                    <span class="placeholder pdp-badge col-2"></span>
+                    <span class="placeholder pdp-badge col-1"></span>
+                </div>
+                <div class="pdp-sub">
+                    <span class="placeholder col-3"></span>
+                    <span class="placeholder col-3"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="pdp-search mb-3 placeholder-glow">
+            <span class="placeholder pdp-search-input col-12"></span>
+        </div>
+
+        <!-- Songs List -->
+        <div class="pdp-songs-list placeholder-glow">
+            @for (int i = 0; i < 6; i++)
+            {
+                <div class="pdp-song-row">
+                    <span class="pdp-song-num placeholder"></span>
+                    <div class="pdp-song-main">
+                        <span class="placeholder col-7 pdp-song-title"></span>
+                        <span class="placeholder col-4 pdp-song-sub"></span>
+                    </div>
+                    <span class="placeholder pdp-song-key"></span>
+                    <span class="placeholder pdp-song-actions"></span>
+                </div>
+            }
+        </div>
+    </div>
+</div>

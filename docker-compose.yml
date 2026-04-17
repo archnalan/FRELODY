@@ -76,6 +76,14 @@ services:
       # Frontend URL for password reset emails
       AppSettings__FrontendUrl: "http://localhost:5080"
 
+      # ── Share-link landing (OG previews) ───────────────────────────────────
+      # User-facing origin for copied share URLs. Nginx (port 80) proxies
+      # /shared/* and /share-og/* to this API container, so the public origin
+      # is the gateway host, not the API container.
+      ShareLanding__PublicBaseUrl: "http://localhost"
+      ShareLanding__AppBaseUrl: "http://localhost"
+      ShareLanding__SiteName: "Frelody"
+
       # Disable HTTPS redirect – container serves plain HTTP behind a proxy
       ASPNETCORE_HTTPS_PORT: ""
 

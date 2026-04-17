@@ -87,6 +87,9 @@ builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<ISmtpSenderService,SmtpSenderService>();
 builder.Services.AddScoped<IShareLinkService, ShareLinkService>();
+builder.Services.AddScoped<FRELODYAPIs.Services.OgCard.IOgCardService, FRELODYAPIs.Services.OgCard.OgCardService>();
+builder.Services.Configure<FRELODYAPIs.Controllers.ShareLandingOptions>(
+    builder.Configuration.GetSection(FRELODYAPIs.Controllers.ShareLandingOptions.SectionName));
 builder.Services.AddScoped<FileValidationService>();
 builder.Services.AddScoped<SecurityUtilityService>();
 builder.Services.AddScoped<TokenService>();
@@ -391,6 +394,10 @@ if (!string.IsNullOrEmpty(app.Configuration["ASPNETCORE_HTTPS_PORT"]))
 }
 
 app.MapStaticAssets();
+
+// Serve runtime-generated assets (e.g. Open Graph preview PNGs written to
+// wwwroot/share-og/{token}.png) which aren't part of the build-time manifest.
+app.UseStaticFiles();
 
 app.UseRouting();
 

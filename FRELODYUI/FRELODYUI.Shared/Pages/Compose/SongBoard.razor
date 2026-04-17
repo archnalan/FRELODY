@@ -255,8 +255,11 @@
                     SongKey = song.Key;
                     initialPartsItems = new List<TabItem>();
                     AllPartsSegments = new Dictionary<int, List<SegmentCreateDto>>();
-                    if (!string.IsNullOrEmpty(song.AlbumId)) GetAlbum(song.AlbumId);
-                    else if (!string.IsNullOrEmpty(song.CategoryId)) GetBookCategory(song.CategoryId);
+                    if (!string.IsNullOrEmpty(song.SongBookId))        GetSongBookWithCategory(song.SongBookId, song.CategoryId);
+                    else if (!string.IsNullOrEmpty(song.ArtistId))      GetArtistWithAlbum(song.ArtistId, song.AlbumId);
+                    // Reverse-engineering fallbacks for legacy data where only the child ID is stored
+                    else if (!string.IsNullOrEmpty(song.CategoryId))    GetBookCategory(song.CategoryId);
+                    else if (!string.IsNullOrEmpty(song.AlbumId))       GetAlbum(song.AlbumId);
 
                     // Process parts
                     foreach (var part in song.SongParts!.OrderBy(v => v.PartNumber))
@@ -376,6 +379,80 @@
                 {
                     _pendingArtistAlbum = pair;
                 }
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async void GetArtistWithAlbum(string artistId, string? albumId = null)
+    {
+        var artistResponse = await _artistsApi.GetArtistById(artistId);
+        if (artistResponse.IsSuccessStatusCode)
+        {
+            selectedArtist = artistResponse.Content!;
+            AlbumDto? fetchedAlbum = null;
+            if (!string.IsNullOrEmpty(albumId))
+            {
+                var albumResponse = await _albumsApi.GetAlbumById(albumId);
+                if (albumResponse.IsSuccessStatusCode)
+                {
+                    fetchedAlbum = albumResponse.Content!;
+                    selectedAlbum = fetchedAlbum;
+                }
+            }
+            var pair = new ArtistAlbumPairViewModel
+            {
+                ArtistId = selectedArtist.Id,
+                ArtistName = selectedArtist.Name,
+                AlbumId = fetchedAlbum?.Id,
+                AlbumTitle = fetchedAlbum?.Title,
+                TrackNumber = 1
+            };
+            currentArtistAlbum = pair;
+            if (bookArtistAddRef != null)
+            {
+                await bookArtistAddRef.SetActiveSelectionTab("artist");
+                await bookArtistAddRef.SetArtistAlbumPair(pair);
+            }
+            else
+            {
+                _pendingArtistAlbum = pair;
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async void GetSongBookWithCategory(string songBookId, string? categoryId = null)
+    {
+        var bookResponse = await _songsBooksApi.GetSongBookById(songBookId);
+        if (bookResponse.IsSuccessStatusCode)
+        {
+            selectedSongBook = bookResponse.Content!;
+            CategoryDto? fetchedCategory = null;
+            if (!string.IsNullOrEmpty(categoryId))
+            {
+                var catResponse = await _categoriesApi.GetCategoryById(categoryId);
+                if (catResponse.IsSuccessStatusCode)
+                {
+                    fetchedCategory = catResponse.Content!;
+                    selectedCategory = fetchedCategory;
+                }
+            }
+            var pair = new BookCategoryPairViewModel
+            {
+                SongBookId = selectedSongBook.Id,
+                BookTitle = selectedSongBook.Title,
+                CategoryId = fetchedCategory?.Id,
+                CategoryName = fetchedCategory?.Name
+            };
+            currentBookCategory = pair;
+            if (bookArtistAddRef != null)
+            {
+                await bookArtistAddRef.SetSongBookCategoryPair(pair);
+            }
+            else
+            {
+                _pendingBookCategory = pair;
             }
         }
         StateHasChanged();
