@@ -170,6 +170,30 @@
     private IDisposable? _locationChangingRegistration;
     private string songBoardKey = Guid.NewGuid().ToString();
 
+    // Pending pre-fill data applied in OnAfterRenderAsync when bookArtistAddRef becomes available
+    private BookCategoryPairViewModel? _pendingBookCategory = null;
+    private ArtistAlbumPairViewModel? _pendingArtistAlbum = null;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (bookArtistAddRef != null)
+        {
+            if (_pendingArtistAlbum != null)
+            {
+                var pair = _pendingArtistAlbum;
+                _pendingArtistAlbum = null;
+                await bookArtistAddRef.SetActiveSelectionTab("artist");
+                await bookArtistAddRef.SetArtistAlbumPair(pair);
+            }
+            else if (_pendingBookCategory != null)
+            {
+                var pair = _pendingBookCategory;
+                _pendingBookCategory = null;
+                await bookArtistAddRef.SetSongBookCategoryPair(pair);
+            }
+        }
+    }
+
     private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
                   Segments="@AllPartsSegments.GetValueOrDefault(id, new List<SegmentCreateDto>())"
                   ActiveTab="activeTabItem" 
@@ -333,23 +357,27 @@
             if (artistResponse.IsSuccessStatusCode)
             {
                 selectedArtist = artistResponse.Content!;
+                var pair = new ArtistAlbumPairViewModel
+                {
+                    ArtistId = selectedArtist.Id,
+                    ArtistName = selectedArtist.Name,
+                    AlbumId = selectedAlbum.Id,
+                    AlbumTitle = selectedAlbum.Title,
+                    TrackNumber = 1
+                };
                 if (bookArtistAddRef != null)
-                    await bookArtistAddRef.SetArtistAlbumPair(new ArtistAlbumPairViewModel
-                    {
-                        ArtistId = selectedArtist.Id,
-                        ArtistName = selectedArtist.Name,
-                        AlbumId = selectedAlbum.Id,
-                        AlbumTitle = selectedAlbum.Title,
-                        TrackNumber = 1
-                    });
+                {
+                    // Switch tab first so it doesn't clear the data we're about to set
+                    await bookArtistAddRef.SetActiveSelectionTab("artist");
+                    await bookArtistAddRef.SetArtistAlbumPair(pair);
+                }
+                else
+                {
+                    _pendingArtistAlbum = pair;
+                }
             }
         }
-        if (selectedAlbum !=null || selectedArtist != null)
-        {
-            if( bookArtistAddRef != null)
-                await bookArtistAddRef. SetActiveSelectionTab("artist");           
-        }
-        StateHasChanged();  
+        StateHasChanged();
     }
 
     private async void GetBookCategory(string categoryId)
@@ -364,21 +392,23 @@
                 if (bookResponse.IsSuccessStatusCode)
                 {
                     selectedSongBook = bookResponse.Content!;
+                    var pair = new BookCategoryPairViewModel
+                    {
+                        SongBookId = selectedSongBook.Id,
+                        BookTitle = selectedSongBook.Title,
+                        CategoryId = selectedCategory.Id,
+                        CategoryName = selectedCategory.Name
+                    };
                     if (bookArtistAddRef != null)
-                        await bookArtistAddRef.SetSongBookCategoryPair(new BookCategoryPairViewModel
-                        {
-                            SongBookId = selectedSongBook.Id,
-                            BookTitle = selectedSongBook.Title,
-                            CategoryId = selectedCategory.Id,
-                            CategoryName = selectedCategory.Name
-                        });
+                    {
+                        await bookArtistAddRef.SetSongBookCategoryPair(pair);
+                    }
+                    else
+                    {
+                        _pendingBookCategory = pair;
+                    }
                 }
             }
-        }
-        if (selectedCategory != null || selectedSongBook != null)
-        {
-            if (bookArtistAddRef != null)
-                await bookArtistAddRef.SetActiveSelectionTab("songbook");            
         }
         StateHasChanged();
     }
@@ -427,6 +457,12 @@
                     await bookArtistAddRef.SetActiveSelectionTab("songbook");
                     await bookArtistAddRef.SetSongBookCategoryPair(currentBookCategory);
                 }
+                else
+                {
+                    // bookArtistAddRef not available yet (called during OnInitializedAsync);
+                    // OnAfterRenderAsync will apply this once the ref is populated.
+                    _pendingBookCategory = currentBookCategory;
+                }
             }
             // Set artist album if present
             else if (recoveryData.ArtistAlbum != null)
@@ -436,6 +472,10 @@
                 {
                     await bookArtistAddRef.SetActiveSelectionTab("artist");
                     await bookArtistAddRef.SetArtistAlbumPair(currentArtistAlbum);
+                }
+                else
+                {
+                    _pendingArtistAlbum = currentArtistAlbum;
                 }
             }
 
