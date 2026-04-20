@@ -58,8 +58,7 @@ jobs:
 
           # Determine bump type from commit message prefix
           # Matches: fix:, fix(, fix{, fix[, bugfix:, feat:, feature(, breaking:, etc.
-          # Unmatched commits default to minor bump.
-          BUMP="minor"
+          BUMP="none"
           if echo "$COMMIT_MSG" | grep -qiE '^(breaking)[[:space:]]*[\(:\{\[]'; then
             BUMP="breaking"
           elif echo "$COMMIT_MSG" | grep -qiE '^(feat|feature)[[:space:]]*[\(:\{\[]'; then
@@ -68,6 +67,12 @@ jobs:
             BUMP="minor"
           fi
           echo "Bump type: $BUMP"
+
+          if [ "$BUMP" = "none" ]; then
+            echo "Commit message does not match a version bump pattern. Skipping deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           # Apply version bump with overflow logic
           if [ "$BUMP" = "minor" ]; then
