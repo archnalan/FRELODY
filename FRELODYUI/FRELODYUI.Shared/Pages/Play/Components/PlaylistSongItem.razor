@@ -29,15 +29,15 @@
                     <i class="bi bi-dash"></i>
                 </button>
             }
-            <span class="psi-key-badge @((Song.Transpose ?? 0) != 0 ? "psi-key-transposed" : "")" title="@GetKeyTooltip()">@GetDisplayKey()</span>
+            <span class="psi-key-badge @(EffectiveTranspose != DefaultTranspose ? "psi-key-transposed" : "")" title="@GetKeyTooltip()">@GetDisplayKey()</span>
             @if (ShowTransposeControls)
             {
                 <button class="psi-key-btn" @onclick="IncrementTranspose" title="Transpose up">
                     <i class="bi bi-plus"></i>
                 </button>
-                @if ((Song.Transpose ?? 0) != 0)
+                @if (!IsAtDefaultTranspose)
                 {
-                    <button class="psi-key-reset" @onclick="ResetTranspose" title="Reset to original key (@Song.Key)">
+                    <button class="psi-key-reset" @onclick="ResetTranspose" title="Reset to @(Song.OriginalKey ?? Song.Key)">
                         <i class="bi bi-arrow-counterclockwise"></i>
                     </button>
                 }
@@ -137,26 +137,31 @@
         }
     }
 
+    private int DefaultTranspose => ChordTransposer.Delta(Song.Key, Song.OriginalKey);
+    private int EffectiveTranspose => Song.Transpose ?? DefaultTranspose;
+    private bool IsAtDefaultTranspose => Song.Transpose == null || Song.Transpose == DefaultTranspose;
+
     private string GetDisplayKey()
     {
         if (string.IsNullOrEmpty(Song.Key)) return "";
-        var transpose = Song.Transpose ?? 0;
-        if (transpose == 0) return Song.Key;
-        return ChordTransposer.TransposeChord(Song.Key, transpose);
+        var t = EffectiveTranspose;
+        if (t == 0) return Song.Key;
+        return ChordTransposer.TransposeKey(Song.Key, t) ?? Song.Key;
     }
 
     private string GetKeyTooltip()
     {
-        var transpose = Song.Transpose ?? 0;
-        if (transpose == 0 || string.IsNullOrEmpty(Song.Key))
-            return $"Key: {Song.Key}";
-        var sign = transpose > 0 ? "+" : "";
-        return $"Original: {Song.Key} ({sign}{transpose})";
+        var t = EffectiveTranspose;
+        var playingKey = string.IsNullOrEmpty(Song.Key) ? "" : (ChordTransposer.TransposeKey(Song.Key, t) ?? Song.Key);
+        if (!string.IsNullOrEmpty(Song.OriginalKey) && Song.OriginalKey != Song.Key)
+            return $"Orig: {Song.OriginalKey} | Stored: {Song.Key} | Playing: {playingKey}";
+        if (t == 0) return $"Key: {Song.Key}";
+        return $"Stored: {Song.Key} | Playing: {playingKey} ({(t > 0 ? "+" : "")}{t})";
     }
 
     private async Task IncrementTranspose()
     {
-        var current = Song.Transpose ?? 0;
+        var current = EffectiveTranspose;
         if (current >= 11) return;
         Song.Transpose = current + 1;
         await OnTransposeChanged.InvokeAsync((Song.Id, Song.Transpose.Value));
@@ -164,7 +169,7 @@
 
     private async Task DecrementTranspose()
     {
-        var current = Song.Transpose ?? 0;
+        var current = EffectiveTranspose;
         if (current <= -11) return;
         Song.Transpose = current - 1;
         await OnTransposeChanged.InvokeAsync((Song.Id, Song.Transpose.Value));
@@ -172,8 +177,8 @@
 
     private async Task ResetTranspose()
     {
-        Song.Transpose = 0;
-        await OnTransposeChanged.InvokeAsync((Song.Id, 0));
+        Song.Transpose = DefaultTranspose;
+        await OnTransposeChanged.InvokeAsync((Song.Id, DefaultTranspose));
     }
 
 }

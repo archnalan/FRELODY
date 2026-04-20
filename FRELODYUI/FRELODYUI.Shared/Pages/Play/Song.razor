@@ -22,6 +22,23 @@
                     <h1 class="song-title">@song.Title</h1>
                 </div>
                 <SongRating @key="ratingVersion" SongId="@SongId" ShowSummary="true" ShowPanel="false" />
+                @if (!string.IsNullOrEmpty(song.Key))
+                {
+                    <div class="song-key-meta">
+                        @if (!string.IsNullOrEmpty(song.OriginalKey) && song.OriginalKey != song.Key)
+                        {
+                            <span class="song-key-badge" title="Originally @song.OriginalKey, transcribed in @song.Key">
+                                <i class="bi bi-music-note-beamed me-1"></i>orig. @song.OriginalKey
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="song-key-badge" title="Key: @song.Key">
+                                <i class="bi bi-music-note-beamed me-1"></i>@song.Key
+                            </span>
+                        }
+                    </div>
+                }
             </div>
 
             <div class="header-actions">
@@ -119,7 +136,9 @@
                                     <button class="control-btn" @onclick="DecreaseTranspose" disabled="@(transpose <= -12)">
                                         <i class="bi bi-dash"></i>
                                     </button>
-                                    <span class="control-value">@transpose</span>
+                                    <span class="control-value" title='@($"Semitone offset: {(transpose > 0 ? "+" : "")}{transpose}")'>
+                                        @(ChordTransposer.TransposeKey(song?.Key, transpose - capo) ?? $"{(transpose > 0 ? "+" : "")}{transpose}")
+                                    </span>
                                     <button class="control-btn" @onclick="IncreaseTranspose" disabled="@(transpose >= 12)">
                                         <i class="bi bi-plus"></i>
                                     </button>
@@ -902,6 +921,8 @@
                 }
 
                 song = response.Content;
+                transpose = ChordTransposer.Delta(song?.Key, song?.OriginalKey);
+                capo = 0;
                 InitializeChordScale();
                 ExtractUniqueChords();
             }
@@ -979,6 +1000,8 @@
             };
 
             loadedSongId = "preview";
+            transpose = 0;
+            capo = 0;
             InitializeChordScale();
             ExtractUniqueChords();
         }
@@ -1045,7 +1068,7 @@
     private void DecreaseTranspose() { if (transpose > -12) { transpose--; _ = RefetchTransposedChords(); } }
     private void IncreaseCapo() { if (capo < 12) { capo++; _ = RefetchTransposedChords(); } }
     private void DecreaseCapo() { if (capo > 0) { capo--; _ = RefetchTransposedChords(); } }
-    private void ResetTranspose() { transpose = 0; _ = RefetchTransposedChords(); }
+    private void ResetTranspose() { transpose = ChordTransposer.Delta(song?.Key, song?.OriginalKey); _ = RefetchTransposedChords(); }
     private void ResetCapo() { capo = 0; _ = RefetchTransposedChords(); }
 
     private async Task RefetchTransposedChords()

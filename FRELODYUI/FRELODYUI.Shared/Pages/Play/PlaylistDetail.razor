@@ -455,8 +455,15 @@
         finally
         {
             isLoading = false;
+            InitializeSongTransposes(filteredSongs);
             StateHasChanged();
         }
+    }
+
+    private static void InitializeSongTransposes(List<PlaylistSongDto> songs)
+    {
+        foreach (var s in songs.Where(s => s.Transpose == null && !string.IsNullOrEmpty(s.Key)))
+            s.Transpose = ChordTransposer.Delta(s.Key, s.OriginalKey);
     }
 
     private void EditPlaylist()
@@ -594,14 +601,14 @@
     {
         foreach (var song in filteredSongs.Where(s => !string.IsNullOrEmpty(s.Key)))
         {
-            song.Transpose = globalTransposeOffset;
+            song.Transpose = ChordTransposer.Delta(song.Key, song.OriginalKey) + globalTransposeOffset;
         }
 
         if (playlistCollection != null)
         {
             foreach (var song in playlistCollection.Songs.Where(s => !string.IsNullOrEmpty(s.Key)))
             {
-                song.Transpose = globalTransposeOffset;
+                song.Transpose = ChordTransposer.Delta(song.Key, song.OriginalKey) + globalTransposeOffset;
             }
         }
 
@@ -612,7 +619,7 @@
         {
             var tasks = filteredSongs
                 .Where(s => !string.IsNullOrEmpty(s.Key))
-                .Select(s => _playlistsApi.UpdatePlaylistSongTranspose(PlaylistId, s.Id, globalTransposeOffset));
+                .Select(s => _playlistsApi.UpdatePlaylistSongTranspose(PlaylistId, s.Id, s.Transpose ?? 0));
             await Task.WhenAll(tasks);
 
             // Persist global transpose on the playlist itself

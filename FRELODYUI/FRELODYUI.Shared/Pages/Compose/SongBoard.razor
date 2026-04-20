@@ -85,7 +85,8 @@
                             @DeltaLabel
                         </button>
 
-                        <KeyDropdown SelectedKey="SongKey"
+                        <KeyDropdown @ref="_songKeyRef"
+                                     SelectedKey="SongKey"
                                      SelectedKeyChanged="HandleWorkingKeyChanged"
                                      Label="Key"
                                      Placeholder="Key" />
@@ -191,6 +192,7 @@
 
     private IDisposable? _locationChangingRegistration;
     private string songBoardKey = Guid.NewGuid().ToString();
+    private KeyDropdown? _songKeyRef;
 
     // Pending pre-fill data applied in OnAfterRenderAsync when bookArtistAddRef becomes available
     private BookCategoryPairViewModel? _pendingBookCategory = null;
@@ -1409,8 +1411,9 @@
     private async Task HandleOriginalKeyChanged(string? newOriginal)
     {
         OriginalKey = newOriginal;
-        // Original always drives Song Key.
+        // Original always drives Song Key — push directly into the child too.
         SongKey = newOriginal;
+        _songKeyRef?.SetKey(newOriginal);
         RecomputeKeyDelta();
         await InvokeAsync(StateHasChanged);
     }

@@ -139,6 +139,16 @@
         try { await inputElement.FocusAsync(); } catch { }
     }
 
+    /// <summary>Directly sets the displayed value from the parent without waiting for a parameter cycle.</summary>
+    public void SetKey(string? key)
+    {
+        SelectedKey = key;
+        _lastBoundKey = key;
+        searchTerm = key ?? "";
+        FilterKeys();
+        StateHasChanged();
+    }
+
     private async Task HandleSearch(ChangeEventArgs e)
     {
         searchTerm = e.Value?.ToString() ?? "";

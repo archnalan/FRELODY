@@ -254,6 +254,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         SongNumber = uc.Song.SongNumber,
                         WrittenBy = uc.Song.WrittenBy,
                         Key = uc.Song.Key,
+                        OriginalKey = uc.Song.OriginalKey,
                         Transpose = uc.Transpose,
                         SortOrder = uc.SortOrder,
                         DateScheduled = uc.DateScheduled

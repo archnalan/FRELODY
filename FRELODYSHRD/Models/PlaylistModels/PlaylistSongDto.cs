@@ -14,6 +14,7 @@ namespace FRELODYUI.Shared.Models.PlaylistModels
         public int? SongNumber { get; set; }
         public string? WrittenBy { get; set; }
         public string? Key { get; set; }
+        public string? OriginalKey { get; set; }
         public int? Transpose { get; set; }
         public int? SortOrder { get; set; }
         public DateTimeOffset DateScheduled { get; set; }
