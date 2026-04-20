@@ -290,12 +290,10 @@
         selectedCategory = null;
 
         await OnBookCategoryChanged.InvokeAsync(null);
+        // Defer focus: dropdown will be remounted on next render.
+        // OnAfterRenderAsync picks this up once the @ref is bound to the new instance.
+        _pendingFocusTab = "songbook";
         StateHasChanged();
-
-        if (songBookDropdownRef != null)
-        {
-            await songBookDropdownRef.FocusInput();
-        }
     }
 
     private async Task ClearArtistAlbum()
@@ -305,36 +303,24 @@
         selectedAlbum = null;
 
         await OnArtistAlbumChanged.InvokeAsync(null);
+        _pendingFocusTab = "artist";
         StateHasChanged();
-
-        if (artistDropdownRef != null)
-        {
-            await artistDropdownRef.FocusInput();
-        }
     }
 
-    private async Task ChangeBookSelection()
+    private void ChangeBookSelection()
     {
         selectedSongBook = null;
         selectedCategory = null;
+        _pendingFocusTab = "songbook";
         StateHasChanged();
-
-        if (songBookDropdownRef != null)
-        {
-            await songBookDropdownRef.FocusInput();
-        }
     }
 
-    private async Task ChangeArtistSelection()
+    private void ChangeArtistSelection()
     {
         selectedArtist = null;
         selectedAlbum = null;
+        _pendingFocusTab = "artist";
         StateHasChanged();
-
-        if (artistDropdownRef != null)
-        {
-            await artistDropdownRef.FocusInput();
-        }
     }
 
     private string GetTruncatedTitle(string title)

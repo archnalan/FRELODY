@@ -1,31 +1,51 @@
 ﻿@inject ILogger<CategoriesDropdown> _logger
 
-<div class="dropdown" style="width: 100%;">
+<div class="dropdown" style="width: 100%;" @onfocusout="HandleFocusOut" @onfocusin="HandleFocusIn">
     <div class="position-relative">
-        <input class="form-control pe-4"
+        <input @ref="inputElement"
+               class="form-control pe-4"
+               role="combobox"
                type="text"
-               tabindex="@TabIndex" 
+               tabindex="@TabIndex"
                placeholder="add category..."
                autocomplete="off"
+               aria-expanded="@(showDropdown ? "true" : "false")"
+               aria-activedescendant="@ActiveDescendantId"
                @bind="searchTerm"
                @oninput="HandleSearch"
-               @onfocus="@(() => ToggleDropdown(true))" />
+               @onfocus="@(() => ToggleDropdown(true))"
+               @onkeydown="HandleInputKeyDown"
+               @onkeydown:preventDefault="shouldPreventDefault" />
 
         <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-2 text-muted"
+           style="cursor: pointer;"
+           tabindex="-1"
            @onclick="@(() => ToggleDropdown(!showDropdown))"></i>
-    </div>   
-    
+    </div>
+
     @if (showDropdown)
     {
         <div class="dropdown-menu show w-100"
+             role="listbox"
+             @onkeydown:stopPropagation="true"
              style="position: absolute; max-height: 300px; overflow-y: auto; z-index:5">
-            <button tabindex="@(TabIndex + 1)" class="dropdown-item text-muted" type="button" @onclick="() => SelectNone()">
+            <div id="@OptionId("none")"
+                 role="option"
+                 class="dropdown-item text-muted @(activeIndex == 0 ? "active" : "")"
+                 aria-selected="@(activeIndex == 0 ? "true" : "false")"
+                 @onclick="() => SelectNone()">
                 <i class="bi bi-x-circle"></i> None
-            </button>
+            </div>
             <div class="dropdown-divider"></div>
-            @foreach (var category in filteredCategories)
+            @for (int i = 0; i < filteredCategories.Count; i++)
             {
-                <button tabindex="@(TabIndex + 1)" class="dropdown-item" type="button" @onclick="() => SelectCategory(category)">
+                var category = filteredCategories[i];
+                var idx = i + 1;
+                <div id="@OptionId(category.Id ?? idx.ToString())"
+                     role="option"
+                     class="dropdown-item @(activeIndex == idx ? "active" : "")"
+                     aria-selected="@(activeIndex == idx ? "true" : "false")"
+                     @onclick="() => SelectCategory(category)">
                     <div class="d-flex flex-column">
                         <span class="fw-semibold">@category.Name</span>
                         @if (category.Sorting.HasValue)
@@ -33,18 +53,21 @@
                             <small class="text-muted">Order: @category.Sorting.Value</small>
                         }
                     </div>
-                </button>
+                </div>
             }
             @if (!filteredCategories.Any())
             {
                 <div class="dropdown-item text-muted">No categories found</div>
             }
             <div class="dropdown-divider"></div>
-            <button tabindex="@(TabIndex + 3)" class="dropdown-item text-primary" type="button" @onclick="OpenCustomizeModal">
+            <div id="@OptionId("customize")"
+                 role="option"
+                 class="dropdown-item text-primary @(activeIndex == MaxIndex ? "active" : "")"
+                 aria-selected="@(activeIndex == MaxIndex ? "true" : "false")"
+                 @onclick="OpenCustomizeModal">
                 <i class="bi bi-plus-circle-dotted"></i> Add New Category
-            </button>
+            </div>
         </div>
-        <div style="z-index:0" class="modal-backdrop bg-transparent" @onclick="() => ToggleDropdown(false)"></div>
     }
 </div>
 
@@ -63,11 +86,28 @@
     [Parameter] public string? SongBookId { get; set; }
     [Parameter] public int TabIndex { get; set; } = 0;
 
-    private string searchTerm = "";
+    public string searchTerm = "";
     private bool showDropdown = false;
     private bool showCustomizeModal = false;
     private List<CategoryDto> AvailableCategories { get; set; } = new();
     private List<CategoryDto> filteredCategories = new();
+    private ElementReference inputElement;
+    private int activeIndex = -1;
+    private bool shouldPreventDefault = false;
+    private CancellationTokenSource? _focusOutCts;
+    private string _instanceId = Guid.NewGuid().ToString("N")[..8];
+
+    private int MaxIndex => filteredCategories.Count + 1;
+
+    private string OptionId(string suffix) => $"category-opt-{_instanceId}-{suffix}";
+
+    private string? ActiveDescendantId => activeIndex switch
+    {
+        -1 => null,
+        0 => OptionId("none"),
+        int i when i == MaxIndex => OptionId("customize"),
+        int i => OptionId(filteredCategories[i - 1].Id ?? i.ToString())
+    };
 
     protected async override Task OnInitializedAsync()
     {
@@ -75,6 +115,26 @@
         if (!string.IsNullOrEmpty(SongBookId))
         {
             await LoadCategories();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (showDropdown && activeIndex >= 0 && ActiveDescendantId != null)
+        {
+            await JsRt.InvokeVoidAsync("scrollIntoViewIfNeeded", ActiveDescendantId);
+        }
+    }
+
+    public async Task FocusInput()
+    {
+        try
+        {
+            await inputElement.FocusAsync();
+        }
+        catch
+        {
+            // input may not yet be in the DOM (component just remounted)
         }
     }
 
@@ -139,6 +199,7 @@
     {
         searchTerm = e.Value?.ToString() ?? "";
         FilterCategories();
+        activeIndex = -1;
     }
 
     private void FilterCategories()
@@ -174,6 +235,95 @@
     private void ToggleDropdown(bool show)
     {
         showDropdown = show;
+        if (show)
+        {
+            activeIndex = -1;
+        }
+    }
+
+    private void HandleInputKeyDown(KeyboardEventArgs e)
+    {
+        shouldPreventDefault = false;
+
+        if (!showDropdown && (e.Key == "ArrowDown" || e.Key == "ArrowUp"))
+        {
+            showDropdown = true;
+            activeIndex = e.Key == "ArrowDown" ? 0 : MaxIndex;
+            shouldPreventDefault = true;
+            return;
+        }
+
+        if (!showDropdown) return;
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                activeIndex = activeIndex < MaxIndex ? activeIndex + 1 : 0;
+                shouldPreventDefault = true;
+                break;
+
+            case "ArrowUp":
+                activeIndex = activeIndex > 0 ? activeIndex - 1 : MaxIndex;
+                shouldPreventDefault = true;
+                break;
+
+            case "Enter":
+                if (activeIndex >= 0)
+                {
+                    shouldPreventDefault = true;
+                    _ = SelectActiveItem();
+                }
+                break;
+
+            case "Escape":
+                showDropdown = false;
+                activeIndex = -1;
+                shouldPreventDefault = true;
+                break;
+
+            case "Tab":
+                showDropdown = false;
+                activeIndex = -1;
+                break;
+        }
+    }
+
+    private async Task SelectActiveItem()
+    {
+        if (activeIndex == 0)
+        {
+            await SelectNone();
+        }
+        else if (activeIndex == MaxIndex)
+        {
+            OpenCustomizeModal();
+        }
+        else if (activeIndex > 0 && activeIndex <= filteredCategories.Count)
+        {
+            await SelectCategory(filteredCategories[activeIndex - 1]);
+        }
+    }
+
+    private async Task HandleFocusOut(FocusEventArgs e)
+    {
+        _focusOutCts?.Cancel();
+        _focusOutCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(150, _focusOutCts.Token);
+            if (showDropdown)
+            {
+                showDropdown = false;
+                activeIndex = -1;
+                StateHasChanged();
+            }
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void HandleFocusIn(FocusEventArgs e)
+    {
+        _focusOutCts?.Cancel();
     }
 
     private void OpenCustomizeModal()
