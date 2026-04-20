@@ -46,51 +46,71 @@
             </div>
         }
 
-        <div class="row row-cols-lg-12 g-2 align-items-center song-board-input-row">
-            <!-- Input 1 -->
-            <div class="col-4 col-md-2">
-                <input type="number"
-                       @bind="FormattedSongNumber"
-                       class="form-control"
-                       placeholder="Song #"
-                       min="1" />
+        <div class="song-board-input-grid">
+            <div class="row g-2 align-items-end song-board-input-row">
+                <!-- Song # (smallest weight, paired with title) -->
+                <div class="col-4 col-sm-3 col-md-2">
+                    <input type="number"
+                           @bind="FormattedSongNumber"
+                           class="form-control"
+                           placeholder="Song #"
+                           aria-label="Song number"
+                           min="1" />
+                </div>
+
+                <!-- Title (highest weight) -->
+                <div class="col-8 col-sm-9 col-md-7">
+                    <input type="text"
+                           @bind="SongTitle"
+                           class="form-control"
+                           placeholder="Song Title"
+                           aria-label="Song title" />
+                </div>
+
+                <!-- Key pair: full row on xs/sm, inline on md+ -->
+                <div class="col-12 col-md-3">
+                    <div class="key-pair" role="group" aria-label="Song key">
+                        <KeyDropdown SelectedKey="OriginalKey"
+                                     SelectedKeyChanged="HandleOriginalKeyChanged"
+                                     Label="Original"
+                                     Placeholder="Orig" />
+
+                        <button type="button"
+                                class="key-pair__delta @(_keyDelta != 0 ? "is-delta" : "")"
+                                tabindex="-1"
+                                disabled="@(_keyDelta == 0)"
+                                title="@DeltaTooltip"
+                                aria-label="@DeltaTooltip"
+                                @onclick="ResyncWorkingKey">
+                            @DeltaLabel
+                        </button>
+
+                        <KeyDropdown SelectedKey="SongKey"
+                                     SelectedKeyChanged="HandleWorkingKeyChanged"
+                                     Label="Key"
+                                     Placeholder="Key" />
+                    </div>
+                </div>
             </div>
 
-            <!-- Input 2 -->
-            <div class="col-8 col-md-3">
-                <input type="text"
-                       @bind="SongTitle"
-                       class="form-control"
-                       placeholder="Song Title" />
-            </div>
+            <div class="row g-2 align-items-end song-board-input-row">
+                <!-- Book / Artist (high weight, contains 2 sub-inputs) -->
+                <div class="col-12 col-sm-8 col-md-9">
+                    <BookArtistAdd @ref="bookArtistAddRef"
+                                   OnBookCategoryChanged="HandleBookCategoryChanged"
+                                   OnArtistAlbumChanged="HandleArtistAlbumChanged"
+                                   SongNumber="@SongNumber" />
+                </div>
 
-            <!-- Input 3 Key -->
-            <div class="col-3 col-md-1">
-                <select @bind="SongKey" class="form-control" title="Song Key">
-                    <option value="">Key</option>
-                    @foreach (var key in MusicalKeys)
-                    {
-                        <option value="@key">@key</option>
-                    }
-                </select>
-            </div>
-
-            <!--Input 4 book/Artist-->
-            <div class="col-6 col-md-4">
-                <BookArtistAdd @ref="bookArtistAddRef"
-                               OnBookCategoryChanged="HandleBookCategoryChanged"
-                               OnArtistAlbumChanged="HandleArtistAlbumChanged"
-                               SongNumber="@SongNumber" />
-            </div>
-
-            <!-- Save Button -->
-            <div class="col-3 col-md-2 d-grid">
-                <button type="button"
-                        class="btn song-board-btn-primary"
-                        @onclick="()=>HandleSongSave()">
-                    <span class="d-none d-md-inline">Save Song</span>
-                    <i class="bi bi-clipboard-check"></i>
-                </button>
+                <!-- Save (action) -->
+                <div class="col-12 col-sm-4 col-md-3 d-grid">
+                    <button type="button"
+                            class="btn song-board-btn-primary"
+                            @onclick="()=>HandleSongSave()">
+                        <i class="bi bi-clipboard-check me-1"></i>
+                        <span>Save Song</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -137,12 +157,14 @@
     private string SongTitle = "My New Song";
     private int SongNumber = 1;
     private string? SongKey;
-    private static readonly string[] MusicalKeys = {
-        "C", "C#", "Db", "D", "D#", "Eb", "E", "F",
-        "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
-        "Cm", "C#m", "Dm", "D#m", "Ebm", "Em", "Fm",
-        "F#m", "Gm", "G#m", "Abm", "Am", "A#m", "Bbm", "Bm"
-    };
+    private string? OriginalKey;
+    // Cached delta (semitones) between SongKey and OriginalKey. 0 when equal/null.
+    private int _keyDelta = 0;
+    private string DeltaLabel => _keyDelta == 0 ? "=" : (_keyDelta > 0 ? $"+{_keyDelta}" : _keyDelta.ToString());
+    private string DeltaTooltip => _keyDelta == 0
+        ? "Working key matches original"
+        : $"Working key is {(_keyDelta > 0 ? "+" : "")}{_keyDelta} semitone{(Math.Abs(_keyDelta) == 1 ? "" : "s")} from original — click to re-sync";
+    private static readonly string[] MusicalKeys = MusicTheory.CommonKeys.ToArray();
     private Dictionary<int, List<SegmentCreateDto>> AllPartsSegments =
     new() { [1] = new List<SegmentCreateDto>() };
     private List<TabItem> initialPartsItems = new();
@@ -253,6 +275,8 @@
                     SongTitle = song.Title;
                     SongNumber = song.SongNumber ?? 0;
                     SongKey = song.Key;
+                    OriginalKey = song.OriginalKey ?? song.Key;
+                    RecomputeKeyDelta();
                     initialPartsItems = new List<TabItem>();
                     AllPartsSegments = new Dictionary<int, List<SegmentCreateDto>>();
                     if (!string.IsNullOrEmpty(song.SongBookId))        GetSongBookWithCategory(song.SongBookId, song.CategoryId);
@@ -526,6 +550,9 @@
 
             SongTitle = recoveryData.Title ?? "My New Song";
             SongNumber = recoveryData.SongNumber ?? 1;
+            SongKey = recoveryData.Key;
+            OriginalKey = recoveryData.OriginalKey ?? recoveryData.Key;
+            RecomputeKeyDelta();
 
             // Set book category if present
             if (recoveryData.BookCategory != null)
@@ -643,6 +670,7 @@
         songData.Title = SongTitle;
         songData.SongNumber = SongNumber;
         songData.Key = SongKey;
+        songData.OriginalKey = OriginalKey;
         songData.SongLyrics = allSegments;
 
         // Map single BookCategory pair if exists
@@ -1366,5 +1394,49 @@
     {
         _tabsManager.OnRelocateLine -= HandleRelocateLineRequest;
         _locationChangingRegistration?.Dispose();
+    }
+
+    // ---------- Key pair handling ----------
+    private void RecomputeKeyDelta()
+    {
+        // Delta is meaningful only when BOTH keys are present and parseable.
+        // If either side is empty, the badge resets to 0 (= sign, disabled).
+        _keyDelta = (string.IsNullOrWhiteSpace(OriginalKey) || string.IsNullOrWhiteSpace(SongKey))
+            ? 0
+            : MusicTheory.Delta(OriginalKey, SongKey);
+    }
+
+    private async Task HandleOriginalKeyChanged(string? newOriginal)
+    {
+        OriginalKey = newOriginal;
+
+        // Auto-capture: if working key has not been set yet, mirror Original -> Key.
+        if (string.IsNullOrWhiteSpace(SongKey))
+        {
+            SongKey = newOriginal;
+        }
+        RecomputeKeyDelta();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleWorkingKeyChanged(string? newWorking)
+    {
+        SongKey = newWorking;
+
+        // Auto-capture: if original key has not been set yet, mirror Key -> Original.
+        // This is the common case for new songs where the user only knows one key.
+        if (string.IsNullOrWhiteSpace(OriginalKey))
+        {
+            OriginalKey = newWorking;
+        }
+        RecomputeKeyDelta();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ResyncWorkingKey()
+    {
+        SongKey = OriginalKey;
+        RecomputeKeyDelta();
+        await InvokeAsync(StateHasChanged);
     }
 }

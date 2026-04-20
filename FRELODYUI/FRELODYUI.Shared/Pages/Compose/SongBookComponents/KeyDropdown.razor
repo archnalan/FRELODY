@@ -1,0 +1,305 @@
+@inject IJSRuntime JsRt
+
+<div class="key-dropdown @(Compact ? "key-dropdown--compact" : "")"
+     style="@(string.IsNullOrEmpty(Width) ? null : $"width: {Width};")"
+     @onfocusout="HandleFocusOut"
+     @onfocusin="HandleFocusIn">
+    <div class="position-relative">
+        @if (!string.IsNullOrEmpty(Label))
+        {
+            <label class="key-dropdown__label" for="@_inputId">@Label</label>
+        }
+        <input @ref="inputElement"
+               id="@_inputId"
+               class="form-control form-control-sm key-dropdown__input pe-4"
+               role="combobox"
+               type="text"
+               tabindex="@TabIndex"
+               placeholder="@Placeholder"
+               autocomplete="off"
+               aria-expanded="@(showDropdown ? "true" : "false")"
+               aria-activedescendant="@ActiveDescendantId"
+               aria-label="@(Label ?? Placeholder)"
+               value="@searchTerm"
+               @oninput="HandleSearch"
+               @onfocus="@(() => ToggleDropdown(true))"
+               @onclick="@(() => ToggleDropdown(true))"
+               @onkeydown="HandleInputKeyDown"
+               @onkeydown:preventDefault="shouldPreventDefault" />
+
+        <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-2 text-muted key-dropdown__chev"
+           tabindex="-1"
+           @onclick="@(() => ToggleDropdown(!showDropdown))"></i>
+    </div>
+
+    @if (showDropdown)
+    {
+        <div class="dropdown-menu show key-dropdown__menu"
+             role="listbox"
+             @onkeydown:stopPropagation="true">
+            <div id="@OptionId("none")"
+                 role="option"
+                 class="dropdown-item text-muted @(activeIndex == 0 ? "active" : "")"
+                 aria-selected="@(activeIndex == 0 ? "true" : "false")"
+                 @onclick="() => SelectNone()">
+                <i class="bi bi-x-circle"></i> None
+            </div>
+            <div class="dropdown-divider"></div>
+            @for (int i = 0; i < filteredKeys.Count; i++)
+            {
+                var key = filteredKeys[i];
+                var idx = i + 1;
+                <div id="@OptionId(key)"
+                     role="option"
+                     class="dropdown-item key-dropdown__opt @(activeIndex == idx ? "active" : "") @(IsCurrent(key) ? "is-current" : "")"
+                     aria-selected="@(activeIndex == idx ? "true" : "false")"
+                     @onclick="() => SelectKey(key)">
+                    <span class="key-dropdown__opt-name">@key</span>
+                    @if (key.EndsWith("m", StringComparison.Ordinal))
+                    {
+                        <small class="text-muted ms-2">minor</small>
+                    }
+                </div>
+            }
+            @if (!filteredKeys.Any())
+            {
+                <div class="dropdown-item text-muted">No keys match</div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? SelectedKey { get; set; }
+    [Parameter] public EventCallback<string?> SelectedKeyChanged { get; set; }
+    [Parameter] public IReadOnlyList<string>? Keys { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Key";
+    [Parameter] public int TabIndex { get; set; } = 0;
+    [Parameter] public bool Compact { get; set; } = true;
+    [Parameter] public string? Width { get; set; }
+
+    private static readonly string[] DefaultKeys = MusicTheory.CommonKeys.ToArray();
+
+    private string searchTerm = "";
+    private bool showDropdown = false;
+    private List<string> AllKeys => (Keys ?? DefaultKeys).ToList();
+    private List<string> filteredKeys = new();
+    private ElementReference inputElement;
+    private int activeIndex = -1;
+    private bool shouldPreventDefault = false;
+    private CancellationTokenSource? _focusOutCts;
+    private string _instanceId = Guid.NewGuid().ToString("N")[..8];
+    private string _inputId => $"key-input-{_instanceId}";
+    private string? _lastBoundKey;
+
+    private string OptionId(string suffix) => $"key-opt-{_instanceId}-{suffix}";
+
+    private string? ActiveDescendantId => activeIndex switch
+    {
+        -1 => null,
+        0 => OptionId("none"),
+        int i when i > 0 && i <= filteredKeys.Count => OptionId(filteredKeys[i - 1]),
+        _ => null
+    };
+
+    private bool IsCurrent(string key) =>
+        !string.IsNullOrEmpty(SelectedKey) &&
+        string.Equals(SelectedKey, key, StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnParametersSet()
+    {
+        // Sync the visible text when the parent updates SelectedKey externally.
+        if (!string.Equals(_lastBoundKey, SelectedKey, StringComparison.Ordinal))
+        {
+            searchTerm = SelectedKey ?? "";
+            _lastBoundKey = SelectedKey;
+            FilterKeys();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        searchTerm = SelectedKey ?? "";
+        _lastBoundKey = SelectedKey;
+        filteredKeys = AllKeys;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (showDropdown && activeIndex >= 0 && ActiveDescendantId != null)
+        {
+            try { await JsRt.InvokeVoidAsync("scrollIntoViewIfNeeded", ActiveDescendantId); }
+            catch { }
+        }
+    }
+
+    public async Task FocusInput()
+    {
+        try { await inputElement.FocusAsync(); } catch { }
+    }
+
+    private async Task HandleSearch(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        FilterKeys();
+        activeIndex = filteredKeys.Count > 0 ? 1 : -1;
+        showDropdown = true;
+
+        // Propagate clears immediately so the parent's bound key (and any
+        // dependent UI like the delta badge) stays in sync.
+        if (string.IsNullOrWhiteSpace(searchTerm) && SelectedKey != null)
+        {
+            SelectedKey = null;
+            _lastBoundKey = null;
+            await SelectedKeyChanged.InvokeAsync(null);
+        }
+        // Auto-commit when the typed text exactly matches a known key.
+        else if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var exact = filteredKeys.FirstOrDefault(k =>
+                string.Equals(k, searchTerm.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (exact != null && !string.Equals(exact, SelectedKey, StringComparison.OrdinalIgnoreCase))
+            {
+                SelectedKey = exact;
+                _lastBoundKey = exact;
+                await SelectedKeyChanged.InvokeAsync(exact);
+            }
+        }
+    }
+
+    private void FilterKeys()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredKeys = AllKeys;
+            return;
+        }
+        var term = searchTerm.Trim();
+        // Prefer prefix match (so "A" → A, A#, Ab, Am, …) then fallback to contains.
+        var prefix = AllKeys
+            .Where(k => k.StartsWith(term, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var contains = AllKeys
+            .Where(k => k.Contains(term, StringComparison.OrdinalIgnoreCase) && !prefix.Contains(k))
+            .ToList();
+        filteredKeys = prefix.Concat(contains).ToList();
+    }
+
+    private async Task SelectKey(string key)
+    {
+        SelectedKey = key;
+        _lastBoundKey = key;
+        searchTerm = key;
+        showDropdown = false;
+        activeIndex = -1;
+        await SelectedKeyChanged.InvokeAsync(key);
+    }
+
+    private async Task SelectNone()
+    {
+        SelectedKey = null;
+        _lastBoundKey = null;
+        searchTerm = "";
+        showDropdown = false;
+        activeIndex = -1;
+        await SelectedKeyChanged.InvokeAsync(null);
+    }
+
+    private void ToggleDropdown(bool show)
+    {
+        showDropdown = show;
+        if (show)
+        {
+            // Highlight the currently selected key when reopening.
+            var current = filteredKeys.FindIndex(k => IsCurrent(k));
+            activeIndex = current >= 0 ? current + 1 : -1;
+        }
+    }
+
+    private void HandleInputKeyDown(KeyboardEventArgs e)
+    {
+        shouldPreventDefault = false;
+
+        if (!showDropdown && (e.Key == "ArrowDown" || e.Key == "ArrowUp"))
+        {
+            ToggleDropdown(true);
+            if (activeIndex < 0)
+                activeIndex = e.Key == "ArrowDown" ? 0 : filteredKeys.Count;
+            shouldPreventDefault = true;
+            return;
+        }
+
+        if (!showDropdown) return;
+
+        var max = filteredKeys.Count;
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                activeIndex = activeIndex < max ? activeIndex + 1 : 0;
+                shouldPreventDefault = true;
+                break;
+            case "ArrowUp":
+                activeIndex = activeIndex > 0 ? activeIndex - 1 : max;
+                shouldPreventDefault = true;
+                break;
+            case "Enter":
+                if (activeIndex >= 0)
+                {
+                    shouldPreventDefault = true;
+                    _ = SelectActiveItem();
+                }
+                break;
+            case "Escape":
+                showDropdown = false;
+                activeIndex = -1;
+                shouldPreventDefault = true;
+                break;
+            case "Tab":
+                // Accept the highlighted item (if any) so users can type+Tab to commit quickly.
+                if (activeIndex > 0 && activeIndex <= max)
+                {
+                    _ = SelectKey(filteredKeys[activeIndex - 1]);
+                }
+                showDropdown = false;
+                activeIndex = -1;
+                break;
+        }
+    }
+
+    private async Task SelectActiveItem()
+    {
+        if (activeIndex == 0) await SelectNone();
+        else if (activeIndex > 0 && activeIndex <= filteredKeys.Count)
+            await SelectKey(filteredKeys[activeIndex - 1]);
+    }
+
+    private async Task HandleFocusOut(FocusEventArgs e)
+    {
+        _focusOutCts?.Cancel();
+        _focusOutCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(150, _focusOutCts.Token);
+
+            // If the user typed something that didn't resolve to a real key, snap
+            // back to the bound value (or fully clear) so we never leave dangling
+            // text in the input that contradicts the parent's state.
+            if (!string.Equals(searchTerm, SelectedKey ?? string.Empty, StringComparison.Ordinal))
+            {
+                searchTerm = SelectedKey ?? string.Empty;
+            }
+
+            if (showDropdown)
+            {
+                showDropdown = false;
+                activeIndex = -1;
+            }
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void HandleFocusIn(FocusEventArgs e) => _focusOutCts?.Cancel();
+}

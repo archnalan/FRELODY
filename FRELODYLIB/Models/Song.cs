@@ -42,6 +42,9 @@ namespace FRELODYAPP.Models
         [StringLength(10)]
         public string? Key { get; set; }
 
+        [StringLength(10)]
+        public string? OriginalKey { get; set; }
+
         [Range(0, 5)]
         [Column(TypeName = "decimal(3,2)")]
         public decimal? Rating { get; set; }

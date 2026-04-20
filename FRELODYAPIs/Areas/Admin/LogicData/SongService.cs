@@ -249,6 +249,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                          Title = songDto.Title,
                          SongNumber = songDto.SongNumber,
                          Key = songDto.Key,
+                         OriginalKey = songDto.OriginalKey ?? songDto.Key,
                          SongBookId = songBookExists ? songDto.BookCategory?.SongBookId : null,
                          CategoryId = categoryExists ? songDto.BookCategory?.CategoryId : null,
                          AlbumId = albumExists ? songDto.ArtistAlbum?.AlbumId : null,
@@ -555,6 +556,8 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 {
                     Title = song.Title,
                     SongNumber = song.SongNumber,
+                    Key = song.Key,
+                    OriginalKey = song.OriginalKey ?? song.Key,
                     IsRecoveryCopy = false, // This is being loaded from recovery, not creating a new one
                     RecoveryDto = recovery.Adapt<SongRecoveryDto>()
                 };
@@ -729,6 +732,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     song.Title = songDto.Title;
                     song.SongNumber = songDto.SongNumber;
                     song.Key = songDto.Key;
+                    song.OriginalKey = songDto.OriginalKey ?? song.OriginalKey ?? songDto.Key;
                     song.Slug = songDto.Title.ToLower().Replace(" ", "-");
 
                     bool songBookExists = false, categoryExists = false, artistExists = false, albumExists = false;

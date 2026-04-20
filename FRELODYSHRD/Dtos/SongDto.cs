@@ -50,6 +50,9 @@ namespace FRELODYAPP.Dtos
         [StringLength(10)]
         public string? Key { get; set; }
 
+        [StringLength(10)]
+        public string? OriginalKey { get; set; }
+
         public virtual ICollection<SongPartDto>? SongParts { get; set; }
         public virtual ICollection<UserFeedbackDto>? Feedback { get; set; }        
     }

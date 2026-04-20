@@ -1,0 +1,97 @@
+/* ---------- KeyDropdown (compact, themed) ---------- */
+.key-dropdown {
+    position: relative;
+    display: block;
+}
+
+.key-dropdown__label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.15rem;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.key-dropdown__input {
+    background-color: var(--input-bg);
+    color: var(--input-color);
+    border-color: var(--input-border);
+    font-weight: 600;
+    text-align: center;
+    cursor: text;
+}
+
+    .key-dropdown__input::placeholder {
+        color: var(--input-placeholder);
+        font-weight: 400;
+    }
+
+    .key-dropdown__input:focus {
+        border-color: var(--input-border-focus);
+    }
+
+.key-dropdown__chev {
+    pointer-events: auto;
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+
+.key-dropdown__menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    max-height: 18rem;
+    overflow-y: auto;
+    padding: 0.25rem 0;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--modal-shadow);
+}
+
+.key-dropdown__opt {
+    display: flex;
+    align-items: center;
+    padding: 0.4rem 0.75rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+    .key-dropdown__opt:hover,
+    .key-dropdown__opt.active {
+        background-color: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+    .key-dropdown__opt.is-current {
+        font-weight: 700;
+    }
+
+        .key-dropdown__opt.is-current::before {
+            content: "\2713";
+            color: var(--bg-active);
+            margin-right: 0.4rem;
+            font-weight: 700;
+        }
+
+.key-dropdown__opt-name {
+    font-family: 'Kanit', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* Compact variant tweaks (default) */
+.key-dropdown--compact .key-dropdown__input {
+    padding: 0.25rem 1.5rem 0.25rem 0.5rem;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 575.98px) {
+    .key-dropdown__menu {
+        max-height: 14rem;
+    }
+}

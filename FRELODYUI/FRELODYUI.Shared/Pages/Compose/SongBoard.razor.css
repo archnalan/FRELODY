@@ -256,3 +256,77 @@
     .song-board-container::-webkit-scrollbar-thumb:hover {
         background: var(--text-secondary);
     }
+
+/* ---------- Key pair (Original + Working) ---------- */
+.key-pair {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.25rem;
+    width: 100%;
+}
+
+.key-pair > ::deep .key-dropdown {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.key-pair__delta {
+    flex: 0 0 auto;
+    align-self: stretch;
+    /* Push the badge down so its top aligns with the input top, not the label. */
+    margin-top: calc(0.7rem + 0.15rem);
+    min-width: 1.85rem;
+    height: calc(1.5em + 0.5rem + 2px);
+    padding: 0 0.35rem;
+    border: 1px solid var(--border-light);
+    background: var(--btn-bg);
+    color: var(--text-secondary);
+    border-radius: 0.375rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: default;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+    .key-pair__delta.is-delta {
+        background: var(--bg-active);
+        color: #ffffff;
+        border-color: var(--bg-active);
+        cursor: pointer;
+    }
+
+        .key-pair__delta.is-delta:hover {
+            filter: brightness(1.05);
+            transform: translateY(-1px);
+        }
+
+    .key-pair__delta:disabled {
+        opacity: 0.55;
+    }
+
+/* ---------- Input grid (2 rows desktop / 3 tablet / 4 mobile) ---------- */
+.song-board-input-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.song-board-input-row {
+    margin-bottom: 0;
+}
+
+/* Save button keeps a comfortable height even when full-width on mobile */
+.song-board-input-grid .song-board-btn-primary {
+    min-height: calc(1.5em + 0.5rem + 2px);
+    font-weight: 600;
+}
+
+/* On md+ screens, save button matches input height for a clean inline look */
+@media (min-width: 768px) {
+    .song-board-input-grid .song-board-btn-primary {
+        height: calc(1.5em + 0.5rem + 2px);
+    }
+}
+
