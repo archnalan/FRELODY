@@ -1,0 +1,141 @@
+# ============================================================
+# FRELODY – Auto-deploy on push to main
+# ============================================================
+# Version bumping rules (format: BREAKING.MAJOR.MINOR)
+#   fix/bugfix  → minor +1   (1.0.0 → 1.0.1)
+#   feat/feature → major +1  (1.0.1 → 1.1.0)
+#   breaking     → breaking +1 (1.2.3 → 2.0.0)
+#   Caps: minor 0-9, major 0-9
+#     1.0.9 + minor → 1.1.0  (overflow minor → bump major)
+#     1.9.9 + minor → 2.0.0  (overflow both → bump breaking)
+#     1.9.0 + major → 2.0.0  (overflow major → bump breaking)
+# ============================================================
+
+name: Deploy FRELODY
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  version-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # need tags for version history
+
+      # ── 2. Determine version bump ─────────────────────────
+      - name: Calculate next version
+        id: version
+        run: |
+          # Get latest tag matching vX.Y.Z (default to v1.0.0 if none)
+          LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v1.0.0"
+            echo "No existing version tag found. Starting from v1.0.0"
+          fi
+          echo "Latest tag: $LATEST_TAG"
+
+          # Parse current version
+          BREAKING=$(echo "$LATEST_TAG" | sed 's/v//' | cut -d. -f1)
+          MAJOR=$(echo "$LATEST_TAG" | sed 's/v//' | cut -d. -f2)
+          MINOR=$(echo "$LATEST_TAG" | sed 's/v//' | cut -d. -f3)
+          echo "Current version: $BREAKING.$MAJOR.$MINOR"
+
+          # Read the commit message of the triggering push
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          echo "Commit message: $COMMIT_MSG"
+
+          # Determine bump type from commit message prefix
+          # Matches: fix:, fix(, fix{, fix[, bugfix:, feat:, feature(, breaking:, etc.
+          # Unmatched commits default to minor bump.
+          BUMP="minor"
+          if echo "$COMMIT_MSG" | grep -qiE '^(breaking)[[:space:]]*[\(:\{\[]'; then
+            BUMP="breaking"
+          elif echo "$COMMIT_MSG" | grep -qiE '^(feat|feature)[[:space:]]*[\(:\{\[]'; then
+            BUMP="major"
+          elif echo "$COMMIT_MSG" | grep -qiE '^(fix|bugfix)[[:space:]]*[\(:\{\[]'; then
+            BUMP="minor"
+          fi
+          echo "Bump type: $BUMP"
+
+          # Apply version bump with overflow logic
+          if [ "$BUMP" = "minor" ]; then
+            MINOR=$((MINOR + 1))
+            if [ "$MINOR" -gt 9 ]; then
+              MINOR=0
+              MAJOR=$((MAJOR + 1))
+            fi
+            if [ "$MAJOR" -gt 9 ]; then
+              MAJOR=0
+              MINOR=0
+              BREAKING=$((BREAKING + 1))
+            fi
+          elif [ "$BUMP" = "major" ]; then
+            MINOR=0
+            MAJOR=$((MAJOR + 1))
+            if [ "$MAJOR" -gt 9 ]; then
+              MAJOR=0
+              BREAKING=$((BREAKING + 1))
+            fi
+          elif [ "$BUMP" = "breaking" ]; then
+            BREAKING=$((BREAKING + 1))
+            MAJOR=0
+            MINOR=0
+          fi
+
+          NEW_VERSION="v${BREAKING}.${MAJOR}.${MINOR}"
+          echo "New version: $NEW_VERSION"
+
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      # ── 3. Tag the new version ─────────────────────────────
+      - name: Create version tag
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.new_version }}"
+          git push origin "${{ steps.version.outputs.new_version }}"
+
+      # ── 4. Deploy to remote server via SSH ─────────────────
+      - name: Deploy to server
+        if: steps.version.outputs.skip != 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            set -e
+            cd ${{ secrets.PROJECT_DIR }}
+
+            echo "=== Deploying ${{ steps.version.outputs.new_version }} ==="
+
+            # Pull latest changes
+            git pull origin main
+
+            # Rebuild and restart containers
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+            # Prune dangling images to free disk space
+            docker image prune -f
+
+            echo "=== Deploy complete: ${{ steps.version.outputs.new_version }} ==="
+
+      # ── 5. Create GitHub Release ───────────────────────────
+      - name: Create GitHub Release
+        if: steps.version.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.new_version }}
+          name: Release ${{ steps.version.outputs.new_version }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
