@@ -159,6 +159,7 @@
                 <div class="col-12 col-md-6">
                     <p class="text-center small mb-0">
                         &copy; @DateTime.Now.Year FRELODY. All rights reserved.
+                        <span class="text-muted ms-1">@_appVersion</span>
                     </p>
                 </div>
             </div>
@@ -197,9 +198,14 @@
     private bool isDarkTheme = false;
     private bool isDrawerOpen = false;
     private SearchModal? searchModalRef = default!;
+    private string _appVersion = "dev";
+
+    [Inject] private IConfiguration Configuration { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
+        _appVersion = Configuration["AppSettings:Version"] ?? "dev";
+
         var theme = await _storageService.GetItemAsync<string>("Theme");
         isDarkTheme = theme == "dark";
 

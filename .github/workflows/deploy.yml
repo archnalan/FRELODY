@@ -133,6 +133,7 @@ jobs:
             git pull origin main
 
             # Rebuild and restart containers
+            export APP_VERSION=${{ steps.version.outputs.new_version }}
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
             # Prune dangling images to free disk space

@@ -40,7 +40,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: frelody-api:v1.0
+    image: frelody-api:${APP_VERSION:-latest}
     container_name: frelody-api
     ports:
       - "8080:8080"
@@ -105,7 +105,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
-    image: frelody-web:v1.0
+    image: frelody-web:${APP_VERSION:-latest}
     container_name: frelody-web
     ports:
       - "5080:5080"
@@ -119,6 +119,9 @@ services:
       # Disable HTTPS redirect – the container serves plain HTTP behind a
       # potential reverse proxy; redirecting to HTTPS here would cause a blank page.
       ASPNETCORE_HTTPS_PORT: ""
+
+      # App version (set by CI/CD, defaults to "dev" locally)
+      AppSettings__Version: "${APP_VERSION:-dev}"
 
       # Persist Data Protection keys in a named volume so that antiforgery
       # tokens and auth cookies remain valid across container restarts.
