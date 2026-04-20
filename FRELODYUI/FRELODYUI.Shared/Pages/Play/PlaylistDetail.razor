@@ -25,44 +25,53 @@
                     <h3 class="mb-0" style="color: var(--text-primary)">@playlistCollection.Playlist.Title</h3>
                 </div>
                 
-                @if (ShowActions && IsOwner)
+                @if (ShowActions)
                 {
-                    <!-- Actions Dropdown (only for authenticated owners) -->
-                    <div class="dropdown">
+                    <!-- Actions Dropdown -->
+                    <div class="dropdown" style="position:relative;">
                         <button class="btn btn-link text-muted p-1" 
                                 type="button" 
-                                data-bs-toggle="dropdown" 
-                                aria-expanded="false"
+                                @onclick="ToggleActionsMenu" @onclick:stopPropagation
                                 title="More actions">
                             <i class="bi bi-three-dots-vertical fs-5"></i>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <button class="dropdown-item" @onclick="EditPlaylist">
-                                    <i class="bi bi-pencil me-2"></i>Edit Playlist
-                                </button>
-                            </li>
-                            <li>
-                                <button class="dropdown-item" @onclick="SharePlaylist">
-                                    <i class="bi bi-share me-2"></i>Share Playlist
-                                    @if (HasRestrictedSongs)
-                                    {
-                                        <i class="bi bi-exclamation-triangle-fill text-warning ms-1"></i>
-                                    }
-                                </button>
-                            </li>
-                            <li>
-                                <button class="dropdown-item" @onclick="AddSongToPlaylist">
-                                    <i class="bi bi-plus-circle me-2"></i>Add Song
-                                </button>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <button class="dropdown-item text-danger" @onclick="DeletePlaylist">
-                                    <i class="bi bi-trash me-2"></i>Delete Playlist
-                                </button>
-                            </li>
-                        </ul>
+                        @if (actionsMenuOpen)
+                        {
+                            <div class="dropdown-backdrop" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1040;" @onclick="CloseActionsMenu"></div>
+                            <ul class="dropdown-menu dropdown-menu-end show" style="position:absolute;right:0;z-index:1050;">
+                                @if (IsOwner)
+                                {
+                                    <li>
+                                        <button class="dropdown-item" @onclick="() => { CloseActionsMenu(); EditPlaylist(); }">
+                                            <i class="bi bi-pencil me-2"></i>Edit Playlist
+                                        </button>
+                                    </li>
+                                }
+                                <li>
+                                    <button class="dropdown-item" @onclick="async () => { CloseActionsMenu(); await SharePlaylist(); }">
+                                        <i class="bi bi-share me-2"></i>Share Playlist
+                                        @if (HasRestrictedSongs)
+                                        {
+                                            <i class="bi bi-exclamation-triangle-fill text-warning ms-1"></i>
+                                        }
+                                    </button>
+                                </li>
+                                @if (IsOwner)
+                                {
+                                    <li>
+                                        <button class="dropdown-item" @onclick="async () => { CloseActionsMenu(); await AddSongToPlaylist(); }">
+                                            <i class="bi bi-plus-circle me-2"></i>Add Song
+                                        </button>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <button class="dropdown-item text-danger" @onclick="() => { CloseActionsMenu(); DeletePlaylist(); }">
+                                            <i class="bi bi-trash me-2"></i>Delete Playlist
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        }
                     </div>
                 }
             </div>
@@ -319,11 +328,17 @@
     private bool showSuccessMessage = false;
     private string successMessage = string.Empty;
 
+    // Actions menu
+    private bool actionsMenuOpen = false;
+
     // Global transpose
     private int globalTransposeOffset = 0;
 
     private bool IsOwner => !string.IsNullOrEmpty(currentUserId) && playlistCollection != null &&
         (playlistCollection.Playlist.CreatedBy == currentUserId || playlistCollection.Playlist.Curator == currentUserId);
+
+    private void ToggleActionsMenu() => actionsMenuOpen = !actionsMenuOpen;
+    private void CloseActionsMenu() => actionsMenuOpen = false;
 
     private bool HasRestrictedSongs => playlistCollection?.Songs.Any(s =>
         s.Access != null && s.Access != FRELODYSHRD.Dtos.SubDtos.Access.Public) ?? false;

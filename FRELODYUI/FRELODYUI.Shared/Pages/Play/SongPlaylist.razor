@@ -61,7 +61,7 @@
                         @foreach (var colSong in myFilter)
                         {
                             <PlaylistFolder Collection="colSong"
-                                            ShowActionButtons="ShowActions"
+                                            ShowActionButtons="true"
                                             IsExpanded="expandedCollectionId == colSong.Playlist.Id"
                                             OnToggle="() => ToggleCollection(colSong.Playlist.Id)"
                                             OnEdit="() => EditPlaylist(colSong)"
@@ -117,7 +117,7 @@
                         @foreach (var colSong in exploreFilter)
                         {
                             <PlaylistFolder Collection="colSong"
-                                            ShowActionButtons="false"
+                                            ShowActionButtons="true"
                                             IsExpanded="expandedCollectionId == colSong.Playlist.Id"
                                             OnToggle="() => ToggleCollection(colSong.Playlist.Id)"
                                             IsReadOnly="true"
