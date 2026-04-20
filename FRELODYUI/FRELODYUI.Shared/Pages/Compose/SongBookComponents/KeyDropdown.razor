@@ -79,7 +79,7 @@
     [Parameter] public bool Compact { get; set; } = true;
     [Parameter] public string? Width { get; set; }
 
-    private static readonly string[] DefaultKeys = MusicTheory.CommonKeys.ToArray();
+    private static readonly string[] DefaultKeys = ChordTransposer.CommonKeys.ToArray();
 
     private string searchTerm = "";
     private bool showDropdown = false;

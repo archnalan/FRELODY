@@ -164,7 +164,7 @@
     private string DeltaTooltip => _keyDelta == 0
         ? "Working key matches original"
         : $"Working key is {(_keyDelta > 0 ? "+" : "")}{_keyDelta} semitone{(Math.Abs(_keyDelta) == 1 ? "" : "s")} from original — click to re-sync";
-    private static readonly string[] MusicalKeys = MusicTheory.CommonKeys.ToArray();
+    private static readonly string[] MusicalKeys = ChordTransposer.CommonKeys.ToArray();
     private Dictionary<int, List<SegmentCreateDto>> AllPartsSegments =
     new() { [1] = new List<SegmentCreateDto>() };
     private List<TabItem> initialPartsItems = new();
@@ -1403,18 +1403,14 @@
         // If either side is empty, the badge resets to 0 (= sign, disabled).
         _keyDelta = (string.IsNullOrWhiteSpace(OriginalKey) || string.IsNullOrWhiteSpace(SongKey))
             ? 0
-            : MusicTheory.Delta(OriginalKey, SongKey);
+            : ChordTransposer.Delta(OriginalKey, SongKey);
     }
 
     private async Task HandleOriginalKeyChanged(string? newOriginal)
     {
         OriginalKey = newOriginal;
-
-        // Auto-capture: if working key has not been set yet, mirror Original -> Key.
-        if (string.IsNullOrWhiteSpace(SongKey))
-        {
-            SongKey = newOriginal;
-        }
+        // Original always drives Song Key.
+        SongKey = newOriginal;
         RecomputeKeyDelta();
         await InvokeAsync(StateHasChanged);
     }
@@ -1422,13 +1418,7 @@
     private async Task HandleWorkingKeyChanged(string? newWorking)
     {
         SongKey = newWorking;
-
-        // Auto-capture: if original key has not been set yet, mirror Key -> Original.
-        // This is the common case for new songs where the user only knows one key.
-        if (string.IsNullOrWhiteSpace(OriginalKey))
-        {
-            OriginalKey = newWorking;
-        }
+        // Song Key never overrides Original Key.
         RecomputeKeyDelta();
         await InvokeAsync(StateHasChanged);
     }
