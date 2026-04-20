@@ -9,6 +9,7 @@
     min-height: 100%;
     color: var(--text-primary);
     font-family: inherit;
+    padding-top: 1.1rem;
 }
 
 .ii-scroll-root {
