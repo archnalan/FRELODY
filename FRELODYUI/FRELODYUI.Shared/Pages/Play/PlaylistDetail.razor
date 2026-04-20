@@ -658,26 +658,15 @@
 
         try
         {
-            var shareLink = await _shareService.GeneratePlaylistShareLinkAsync(playlistCollection.Playlist.Id);
-            if (shareLink != null)
-            {
-                await _clipboardService.CopyToClipboardAsync(shareLink.ShareUrl);
-                await ShowSuccessMessage("Share link copied to clipboard!");
-            }
-            else
-            {
-                _modalService.Show(new ModalOptionDto
-                {
-                    Title = "Share Link Error",
-                    Message = "Failed to generate share link. Please try again later.",
-                    ButtonText = "Close",
-                    OptionType = OptionType.Error
-                });
-            }
+            var url = IsLandingContext
+                ? _navManager.ToAbsoluteUri($"/playlists/landing/{playlistCollection.Playlist.Id}/detail").ToString()
+                : _navManager.ToAbsoluteUri($"/playlists/{playlistCollection.Playlist.Id}/detail").ToString();
+            await _clipboardService.CopyToClipboardAsync(url);
+            await ShowSuccessMessage("Share link copied to clipboard!");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating share link for playlist {PlaylistId}", PlaylistId);
+            _logger.LogError(ex, "Error copying share link for playlist {PlaylistId}", PlaylistId);
             _modalService.Show(new ModalOptionDto
             {
                 Title = "Error",
@@ -890,12 +879,11 @@
     {
         try
         {
-            var shareLink = await _shareService.GenerateShareLinkAsync(songId);
-            if (shareLink != null)
-            {
-                await _clipboardService.CopyToClipboardAsync(shareLink.ShareUrl);
-                await ShowSuccessMessage("Song share link copied to clipboard!");
-            }
+            var url = IsLandingContext
+                ? _navManager.ToAbsoluteUri($"/songs/landing/{songId}").ToString()
+                : _navManager.ToAbsoluteUri($"/songs/{songId}").ToString();
+            await _clipboardService.CopyToClipboardAsync(url);
+            await ShowSuccessMessage("Song share link copied to clipboard!");
         }
         catch (Exception ex)
         {

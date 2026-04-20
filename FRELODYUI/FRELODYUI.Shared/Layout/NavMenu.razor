@@ -515,11 +515,8 @@
         activeSongMenuId = null;
         try
         {
-            var link = await _shareService.GenerateShareLinkAsync(song.IdString!);
-            if (link != null)
-            {
-                await _shareService.NotifyLinkCopiedAsync();
-            }
+            var url = _navManager.ToAbsoluteUri($"/songs/{song.IdString}").ToString();
+            await _clipboardService.CopyToClipboardAsync(url);
         }
         catch { /* ignore share errors */ }
     }
