@@ -63,9 +63,22 @@ namespace FRELODYLIB.ServiceHandler
             try
             {
                 smtp.Timeout = timeoutMs;
-                _logger.LogInformation("Connecting to SMTP {Host}:{Port}...", host, port);
 
-                await smtp.ConnectAsync(host, port, enableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None, cancellationToken);
+                // Pick the correct TLS mode:
+                //   port 465 -> implicit TLS (SslOnConnect) — required by Zoho/Gmail SSL
+                //   port 587 + EnableSsl -> STARTTLS
+                //   otherwise -> plaintext (e.g. local dev MailHog on 1025)
+                SecureSocketOptions socketOptions;
+                if (port == 465)
+                    socketOptions = SecureSocketOptions.SslOnConnect;
+                else if (enableSsl)
+                    socketOptions = SecureSocketOptions.StartTls;
+                else
+                    socketOptions = SecureSocketOptions.None;
+
+                _logger.LogInformation("Connecting to SMTP {Host}:{Port} using {Mode}...", host, port, socketOptions);
+
+                await smtp.ConnectAsync(host, port, socketOptions, cancellationToken);
 
                 if (!string.IsNullOrWhiteSpace(emailDto.emailSenderAccount) &&
                     !string.IsNullOrWhiteSpace(emailDto.emailSenderSecret) &&
