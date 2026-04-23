@@ -1,11 +1,11 @@
 @page "/admin/dashboard"
 @layout AdminLayout
-@attribute [Authorize]
 @inject IOrganizationsApi _orgApi
 @inject NavigationManager _nav
 
 <PageTitle>Org admin dashboard - FRELODY</PageTitle>
 
+<AuthGuard RequireOrganization="true">
 <OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin, UserRoles.Manager })">
     <NotAuthorizedContent>
         <div class="admin-card admin-card-pad">
@@ -38,6 +38,19 @@
         }
         else if (_metrics is not null)
         {
+            @if (IsBrandNewOrg)
+            {
+                <div class="admin-card admin-card-pad mb-3 getting-started">
+                    <h3 class="admin-card-title mb-2"><i class="bi bi-stars me-1"></i> Welcome to @(_org?.Name ?? "your organization")</h3>
+                    <p class="text-muted mb-3">Your workspace is empty. Start by inviting teammates or adding your first piece of content — the metrics here will fill in as your team grows.</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="admin-btn primary" href="/admin/members"><i class="bi bi-person-plus"></i> Invite members</a>
+                        <a class="admin-btn" href="/compose"><i class="bi bi-music-note"></i> Add a song</a>
+                        <a class="admin-btn" href="/playlists"><i class="bi bi-collection-play"></i> Create a playlist</a>
+                        <a class="admin-btn" href="/admin/projects"><i class="bi bi-folder2-open"></i> Browse projects</a>
+                    </div>
+                </div>
+            }
             <div class="admin-metrics">
                 <MetricCard Label="Members" Value="@_metrics.Members.ToString()" Icon="bi-people" />
                 <MetricCard Label="Active" Value="@_metrics.ActiveMembers.ToString()" Icon="bi-person-check" />
@@ -77,6 +90,7 @@
         }
     </ChildContent>
 </OrgRoleAuthorizeView>
+</AuthGuard>
 
 @code {
     private OrganizationDto? _org;
@@ -84,6 +98,16 @@
     private OrgActivitySummaryDto? _activity;
     private bool _loading = true;
     private string? _error;
+
+    /// <summary>True for a freshly-created workspace: a single member (the owner)
+    /// and no content. Used to swap zero-filled metrics for a getting-started panel.</summary>
+    private bool IsBrandNewOrg =>
+        _metrics is not null
+        && _metrics.Members <= 1
+        && _metrics.Songs == 0
+        && _metrics.Playlists == 0
+        && _metrics.SongBooks == 0
+        && _metrics.Albums == 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -97,12 +121,6 @@
             if (orgTask.Result.IsSuccessStatusCode) _org = orgTask.Result.Content;
             if (metricsTask.Result.IsSuccessStatusCode) _metrics = metricsTask.Result.Content;
             if (activityTask.Result.IsSuccessStatusCode) _activity = activityTask.Result.Content;
-
-            if (_org is null)
-            {
-                _nav.NavigateTo("/organizations/create");
-                return;
-            }
         }
         catch (Exception ex)
         {

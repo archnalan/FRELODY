@@ -1,10 +1,10 @@
 @page "/admin/projects"
 @layout AdminLayout
-@attribute [Authorize]
 @inject IOrganizationsApi _orgApi
 
 <PageTitle>Projects - FRELODY</PageTitle>
 
+<AuthGuard RequireOrganization="true">
 <OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin, UserRoles.Manager, UserRoles.Editor })">
     <NotAuthorizedContent>
         <div class="admin-card admin-card-pad">
@@ -47,6 +47,7 @@
         </div>
     </ChildContent>
 </OrgRoleAuthorizeView>
+</AuthGuard>
 
 @code {
     private OrganizationDto? _org;

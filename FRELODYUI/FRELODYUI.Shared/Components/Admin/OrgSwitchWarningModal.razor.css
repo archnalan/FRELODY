@@ -1,0 +1,28 @@
+/* Scoped styles for OrgSwitchWarningModal. */
+
+.warn-counts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+}
+
+.warn-count {
+    background: var(--k-bg-hover, var(--bg-hover));
+    border-radius: var(--k-radius-md, 8px);
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+}
+
+.warn-count strong {
+    display: block;
+    font-size: 1.25rem;
+    color: var(--k-danger, #ef4444);
+}
+
+.warn-count span {
+    font-size: 0.75rem;
+    color: var(--k-text-muted, var(--text-secondary));
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}

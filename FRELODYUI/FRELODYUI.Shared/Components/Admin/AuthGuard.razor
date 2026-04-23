@@ -1,0 +1,97 @@
+@* Guards a route until we know the visitor is authenticated.
+   Redirects to /login when no session exists, and (when RequirePremium=true)
+   redirects non-premium / non-SuperAdmin users to a graceful "premium required"
+   landing on the dashboard. Pages should wrap their entire body in this guard
+   instead of using [Authorize] (which fails on server prerender because the
+   Blazor app authenticates via JWT in localStorage, not via a server scheme). *@
+@inject GlobalAuthStateProvider _globalAuth
+@inject NavigationManager _nav
+@inject IOrganizationsApi _orgApi
+
+@if (_loaded && _authorized)
+{
+    @ChildContent
+}
+else if (_loaded && !_authorized)
+{
+    @if (NotAuthorizedContent is not null)
+    {
+        @NotAuthorizedContent
+    }
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? NotAuthorizedContent { get; set; }
+
+    /// <summary>When true (default), gate to SuperAdmin or active Premium billing.</summary>
+    [Parameter] public bool RequirePremium { get; set; } = true;
+
+    /// <summary>Where to send unauthenticated visitors. Defaults to /login.</summary>
+    [Parameter] public string LoginRedirect { get; set; } = "/login";
+
+    /// <summary>Where to send authenticated-but-not-allowed visitors. Defaults to /dashboard.</summary>
+    [Parameter] public string DeniedRedirect { get; set; } = "/dashboard";
+
+    /// <summary>When true, also requires the visitor to belong to an organization;
+    /// otherwise they are redirected to <see cref="NoOrganizationRedirect"/>. This
+    /// matches the criterion that sends a brand-new user to "/organizations/create".</summary>
+    [Parameter] public bool RequireOrganization { get; set; }
+
+    /// <summary>Where to send authorised visitors who have no organization yet.</summary>
+    [Parameter] public string NoOrganizationRedirect { get; set; } = "/organizations/create";
+
+    private bool _loaded;
+    private bool _authorized;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+        if (!userResult.IsSuccess || userResult.Data is null)
+        {
+            _nav.NavigateTo(LoginRedirect, replace: true);
+            return;
+        }
+
+        var claims = userResult.Data;
+        var isPlatformAdmin = (claims.PlatformRoles?.Any(r =>
+            string.Equals(r, FRELODYSHRD.Constants.UserRoles.SuperAdmin, StringComparison.OrdinalIgnoreCase)) ?? false)
+            || claims.UserType == UserType.SuperAdmin;
+
+        if (isPlatformAdmin || !RequirePremium)
+        {
+            _authorized = true;
+        }
+        else
+        {
+            var premium = await _globalAuth.IsPremiumUser();
+            _authorized = premium.IsSuccess && premium.Data;
+            if (!_authorized && NotAuthorizedContent is null)
+            {
+                _nav.NavigateTo(DeniedRedirect, replace: true);
+                return;
+            }
+        }
+
+        if (_authorized && RequireOrganization)
+        {
+            try
+            {
+                var orgResp = await _orgApi.GetCurrent();
+                var hasOrg = orgResp.IsSuccessStatusCode && orgResp.Content is not null;
+                if (!hasOrg)
+                {
+                    _nav.NavigateTo(NoOrganizationRedirect, replace: true);
+                    return;
+                }
+            }
+            catch
+            {
+                _nav.NavigateTo(NoOrganizationRedirect, replace: true);
+                return;
+            }
+        }
+
+        _loaded = true;
+    }
+}

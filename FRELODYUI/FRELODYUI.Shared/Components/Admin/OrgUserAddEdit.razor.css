@@ -1,0 +1,24 @@
+/* Scoped styles for the OrgUserAddEdit modal. */
+
+.tab-toggle {
+    display: inline-flex;
+    border: 1px solid var(--k-border, var(--border-light));
+    border-radius: var(--k-radius-md, 8px);
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.tab-toggle button {
+    background: transparent;
+    border: 0;
+    padding: 0.45rem 0.9rem;
+    color: var(--k-text-muted, var(--text-secondary));
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.tab-toggle button.active {
+    background: var(--k-accent, var(--bg-active));
+    color: #fff;
+}

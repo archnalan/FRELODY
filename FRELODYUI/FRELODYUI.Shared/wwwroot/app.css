@@ -282,7 +282,7 @@ h1:focus {
 }
 
 [data-bs-theme="dark"] {
-    --k-bg-app: #0b1020;
+    --k-bg-app: var(--modal-content-bg);
     --k-bg-surface: var(--modal-content-bg);
     --k-bg-surface-2: #111827;
     --k-bg-elevated: #1f2937;

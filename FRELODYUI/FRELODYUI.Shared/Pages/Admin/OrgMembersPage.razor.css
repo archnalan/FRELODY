@@ -1,0 +1,10 @@
+/* Scoped styles for OrgMembersPage. */
+
+.admin-chip {
+    cursor: pointer;
+    user-select: none;
+}
+
+.admin-chip input[type="checkbox"] {
+    accent-color: var(--k-accent, var(--bg-active));
+}

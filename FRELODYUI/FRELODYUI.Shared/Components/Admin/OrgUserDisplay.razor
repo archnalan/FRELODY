@@ -77,17 +77,20 @@
                                 }
                             </td>
                             <td>
-                                @if (m.IsActive)
+                                @if (m.InvitationPending)
                                 {
-                                    <span class="admin-chip" style="background:var(--k-success-soft);color:var(--k-success-soft-text);border-color:transparent;">Active</span>
+                                    <span class="admin-chip status-pending"
+                                          title="Invitation sent. Waiting for the user to accept and complete first sign-in.">
+                                        <i class="bi bi-hourglass-split"></i> Pending
+                                    </span>
+                                }
+                                else if (m.IsActive)
+                                {
+                                    <span class="admin-chip status-active">Active</span>
                                 }
                                 else
                                 {
-                                    <span class="admin-chip" style="background:var(--k-danger-soft);color:var(--k-danger-soft-text);border-color:transparent;">Disabled</span>
-                                }
-                                @if (m.MustChangePassword)
-                                {
-                                    <span class="admin-chip ms-1" title="Pending first password change">Pending</span>
+                                    <span class="admin-chip status-disabled">Disabled</span>
                                 }
                             </td>
                             <td>@(m.LastLoginDate?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—")</td>

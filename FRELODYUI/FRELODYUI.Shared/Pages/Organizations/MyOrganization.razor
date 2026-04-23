@@ -1,10 +1,10 @@
 @page "/organizations/me"
-@attribute [Authorize]
 @inject IOrganizationsApi _orgApi
 @inject NavigationManager _nav
 
 <PageTitle>My organization - FRELODY</PageTitle>
 
+<AuthGuard>
 <div class="admin-page">
     <div class="admin-body" style="max-width: 720px;">
         @if (_loading)
@@ -71,6 +71,7 @@
         }
     </div>
 </div>
+</AuthGuard>
 
 @code {
     private OrganizationDto? _org;
@@ -96,11 +97,36 @@
         {
             _toastService.Show("You've left the organization.", ToastType.Success);
             _nav.NavigateTo("/dashboard", forceLoad: true);
+            return;
         }
-        else
+
+        // Friendly handling for the sole-Owner case: send them to the
+        // members admin so they can transfer ownership before retrying.
+        var raw = resp.Error?.Content ?? string.Empty;
+        if (raw.Contains("sole Owner", StringComparison.OrdinalIgnoreCase))
         {
-            _toastService.Show(resp.Error?.Content ?? "Could not leave.", ToastType.Error);
             _showLeave = false;
+            _toastService.Show(
+                "You're the sole Owner — transfer ownership to another member first.",
+                ToastType.Error);
+            _nav.NavigateTo("/admin/members?action=transfer-ownership");
+            return;
         }
+
+        _toastService.Show(ExtractMessage(raw) ?? "Could not leave.", ToastType.Error);
+        _showLeave = false;
+    }
+
+    private static string? ExtractMessage(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(raw);
+            if (doc.RootElement.TryGetProperty("message", out var m))
+                return m.GetString();
+        }
+        catch { /* not JSON */ }
+        return raw;
     }
 }

@@ -1,0 +1,18 @@
+/* Scoped styles for the AdminLayout host. */
+
+.admin-page {
+    background: var(--k-bg-app);
+    min-height: 100%;
+}
+
+.admin-body {
+    padding: 1.25rem 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+@media (max-width: 600px) {
+    .admin-body {
+        padding: 0.75rem;
+    }
+}

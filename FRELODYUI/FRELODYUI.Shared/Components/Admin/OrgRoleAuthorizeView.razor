@@ -1,5 +1,6 @@
 @* Renders content only if the current user has at least one of the specified org roles
-   (read from the JWT-derived UserClaimsDto.OrgRoles) OR holds a platform SuperAdmin role. *@
+   (read from the JWT-derived UserClaimsDto.OrgRoles) OR holds a platform SuperAdmin role.
+   The whole Organization feature is gated to SuperAdmin OR Premium-billing users. *@
 @inject GlobalAuthStateProvider _globalAuth
 
 @if (_loaded)
@@ -21,6 +22,9 @@
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public RenderFragment? NotAuthorizedContent { get; set; }
 
+    /// <summary>When true (default), the org feature requires SuperAdmin or active Premium billing.</summary>
+    [Parameter] public bool RequirePremium { get; set; } = true;
+
     private bool _loaded;
     private bool _authorized;
 
@@ -34,13 +38,29 @@
             var isPlatformAdmin = (claims.PlatformRoles?.Any(r =>
                 string.Equals(r, FRELODYSHRD.Constants.UserRoles.SuperAdmin, StringComparison.OrdinalIgnoreCase)) ?? false)
                 || claims.UserType == UserType.SuperAdmin;
+
             if (isPlatformAdmin)
             {
                 _authorized = true;
             }
-            else if (claims.OrgRoles is { Count: > 0 } orgRoles && required.Length > 0)
+            else
             {
-                _authorized = orgRoles.Any(r => required.Contains(r, StringComparer.OrdinalIgnoreCase));
+                // Non-admins must hold an org role AND (when gated) be premium.
+                var hasOrgRole = claims.OrgRoles is { Count: > 0 } orgRoles
+                                  && (required.Length == 0
+                                      || orgRoles.Any(r => required.Contains(r, StringComparer.OrdinalIgnoreCase)));
+                if (hasOrgRole)
+                {
+                    if (RequirePremium)
+                    {
+                        var premium = await _globalAuth.IsPremiumUser();
+                        _authorized = premium.IsSuccess && premium.Data;
+                    }
+                    else
+                    {
+                        _authorized = true;
+                    }
+                }
             }
         }
         _loaded = true;

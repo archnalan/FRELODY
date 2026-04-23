@@ -1,10 +1,10 @@
 @page "/organizations/create"
-@attribute [Authorize]
 @inject IOrganizationsApi _orgApi
 @inject NavigationManager _nav
 
 <PageTitle>Create organization - FRELODY</PageTitle>
 
+<AuthGuard>
 <div class="admin-page">
     <div class="admin-body" style="max-width: 720px;">
         <div class="admin-header">
@@ -72,6 +72,7 @@
         }
     </div>
 </div>
+</AuthGuard>
 
 @code {
     private CreateOrganizationDto _dto = new();
@@ -104,8 +105,11 @@
             var resp = await _orgApi.Create(_dto);
             if (resp.IsSuccessStatusCode)
             {
-                _toastService.Show("Organization created. Welcome aboard!", ToastType.Success);
-                _nav.NavigateTo("/admin/dashboard", forceLoad: true);
+                _toastService.Show("Organization created. Let's add your first members.", ToastType.Success);
+                // Send Owners straight to the members admin so they can invite
+                // teammates — the natural first action after creating an org.
+                // (Empty dashboards full of zeros are confusing as a landing.)
+                _nav.NavigateTo("/admin/members?welcome=1", forceLoad: true);
             }
             else
             {

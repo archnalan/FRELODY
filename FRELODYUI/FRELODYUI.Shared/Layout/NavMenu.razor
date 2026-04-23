@@ -1,4 +1,5 @@
 ﻿@implements IDisposable
+@inject IOrganizationsApi _orgApi
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -75,19 +76,29 @@
                     </NavLink>
                 </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/organizations/me" Match="NavLinkMatch.Prefix">
-                        <span class="bi bi-buildings" aria-hidden="true"></span> <span class="nav-label">My Organization</span>
-                    </NavLink>
-                </div>
+                <OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin, UserRoles.Manager, UserRoles.Editor, UserRoles.Contributor, UserRoles.Viewer, UserRoles.Guest })">
+                    <ChildContent>
+                        @if (_hasOrganization)
+                        {
+                            <div class="nav-item px-3">
+                                <NavLink class="nav-link" href="/organizations/me" Match="NavLinkMatch.Prefix">
+                                    <span class="bi bi-buildings-nav-menu" aria-hidden="true"></span> <span class="nav-label">My Organization</span>
+                                </NavLink>
+                            </div>
+                        }
+                    </ChildContent>
+                </OrgRoleAuthorizeView>
 
                 <OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin, UserRoles.Manager })">
                     <ChildContent>
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/admin/dashboard" Match="NavLinkMatch.Prefix">
-                                <span class="bi bi-shield-lock" aria-hidden="true"></span> <span class="nav-label">Admin Console</span>
-                            </NavLink>
-                        </div>
+                        @if (_hasOrganization)
+                        {
+                            <div class="nav-item px-3">
+                                <NavLink class="nav-link" href="/admin/dashboard" Match="NavLinkMatch.Prefix">
+                                    <span class="bi bi-shield-lock-nav-menu" aria-hidden="true"></span> <span class="nav-label">Admin Console</span>
+                                </NavLink>
+                            </div>
+                        }
                     </ChildContent>
                 </OrgRoleAuthorizeView>
 
@@ -283,6 +294,7 @@
 @code {
     private bool isDarkTheme = false;
     private bool isPremiumUser;
+    private bool _hasOrganization;
 
     // Your Songs state
     private bool isYourSongsExpanded;
@@ -379,13 +391,33 @@
     private void OnNavLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         SyncSelectedSongFromUrl();
+        // Re-check organization membership so the nav reflects join/create/leave
+        // without requiring a full reload.
+        _ = RefreshHasOrganizationAsync();
         InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshHasOrganizationAsync()
+    {
+        try
+        {
+            var resp = await _orgApi.GetCurrent();
+            var has = resp.IsSuccessStatusCode && resp.Content is not null;
+            if (has != _hasOrganization)
+            {
+                _hasOrganization = has;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch { /* network/auth — keep current state */ }
     }
 
     protected override async Task OnInitializedAsync()
     {
         var resp = await _globalAuth.IsPremiumUser();
         isPremiumUser = resp.IsSuccess && resp.Data;
+
+        await RefreshHasOrganizationAsync();
 
         var savedTheme = await _storageService.GetItemAsync<string>("Theme");
         if (!string.IsNullOrEmpty(savedTheme))

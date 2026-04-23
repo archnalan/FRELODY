@@ -1,0 +1,33 @@
+/* Scoped styles for the admin search input. */
+
+.admin-search {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.admin-search input {
+    height: 36px;
+    padding: 0 0.75rem 0 2rem;
+    border: 1px solid var(--k-border, var(--border-light));
+    border-radius: var(--k-radius-md, 8px);
+    background: var(--k-bg-input, var(--input-bg));
+    color: var(--k-text, var(--text-primary));
+    font-size: 0.875rem;
+    min-width: 220px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.admin-search input:focus {
+    outline: none;
+    border-color: var(--k-accent, var(--input-border-focus));
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.admin-search .bi {
+    position: absolute;
+    left: 0.6rem;
+    color: var(--k-text-muted, var(--text-secondary));
+    pointer-events: none;
+    font-size: 0.95rem;
+}

@@ -1,11 +1,11 @@
 @page "/organizations/join"
 @page "/organizations/join/{TargetId}"
-@attribute [Authorize]
 @inject IOrganizationsApi _orgApi
 @inject NavigationManager _nav
 
 <PageTitle>Join organization - FRELODY</PageTitle>
 
+<AuthGuard>
 <div class="admin-page">
     <div class="admin-body" style="max-width: 640px;">
         <div class="admin-header">
@@ -42,6 +42,7 @@
                                OnConfirm="ConfirmSwitch" />
     </div>
 </div>
+</AuthGuard>
 
 @code {
     [Parameter] public string? TargetId { get; set; }

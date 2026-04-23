@@ -1,10 +1,10 @@
 @page "/admin/members"
 @layout AdminLayout
-@attribute [Authorize]
 @inject IOrganizationsApi _orgApi
 
 <PageTitle>Members - FRELODY</PageTitle>
 
+<AuthGuard RequireOrganization="true">
 <OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin, UserRoles.Manager })">
     <NotAuthorizedContent>
         <div class="admin-card admin-card-pad">
@@ -62,6 +62,7 @@
         </ConfirmDialog>
     </ChildContent>
 </OrgRoleAuthorizeView>
+</AuthGuard>
 
 @code {
     private static readonly string[] EditableRoles = new[]

@@ -234,8 +234,29 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 {
                     var ownerCount = await CountOwnersAsync(user.TenantId!);
                     if (ownerCount <= 1)
-                        return ServiceResult<bool>.Failure(
-                            new BadRequestException("You are the sole Owner. Transfer ownership before leaving."));
+                    {
+                        // Sole owner: if they're the only member, archive the
+                        // organization and let them leave silently. Otherwise
+                        // require an ownership transfer first (UI guides them).
+                        var memberCount = await _context.Users.IgnoreQueryFilters()
+                            .CountAsync(u => u.TenantId == user.TenantId && (u.IsDeleted == null || u.IsDeleted == false));
+
+                        if (memberCount > 1)
+                        {
+                            return ServiceResult<bool>.Failure(
+                                new BadRequestException("You are the sole Owner. Transfer ownership before leaving."));
+                        }
+
+                        var tenant = await _context.Tenants.IgnoreQueryFilters()
+                            .FirstOrDefaultAsync(t => t.Id == user.TenantId);
+                        if (tenant != null)
+                        {
+                            tenant.IsDeleted = true;
+                            tenant.DateModified = DateTime.UtcNow;
+                            _context.Tenants.Update(tenant);
+                            await _context.SaveChangesAsync();
+                        }
+                    }
                 }
 
                 await StripOrgRolesAsync(user);
@@ -319,6 +340,9 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         Roles = roles.Where(UserRoles.IsOrgRole).ToList(),
                         IsActive = u.IsActive ?? true,
                         MustChangePassword = u.MustChangePassword,
+                        // Invitation is pending until the invitee has signed in at least
+                        // once AND cleared the forced-password-change flag.
+                        InvitationPending = u.MustChangePassword || u.LastLoginDate is null,
                         LastLoginDate = u.LastLoginDate,
                         DateCreated = u.DateCreated
                     });

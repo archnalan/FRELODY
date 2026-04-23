@@ -1,0 +1,32 @@
+/* Scoped styles for OrgUserDisplay. */
+
+.admin-chip.status-pending {
+    background: var(--k-warning-soft, #fff7ed);
+    color: var(--k-warning-soft-text, #9a3412);
+    border-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.admin-chip.status-pending .bi {
+    font-size: 0.85em;
+}
+
+.admin-chip.status-active {
+    background: var(--k-success-soft, #ecfdf5);
+    color: var(--k-success-soft-text, #065f46);
+    border-color: transparent;
+}
+
+.admin-chip.status-disabled {
+    background: var(--k-danger-soft, #fef2f2);
+    color: var(--k-danger-soft-text, #991b1b);
+    border-color: transparent;
+}
+
+.admin-row-actions {
+    display: inline-flex;
+    gap: 0.25rem;
+    justify-content: flex-end;
+}

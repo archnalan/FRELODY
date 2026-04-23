@@ -18,6 +18,9 @@ namespace FRELODYSHRD.Dtos.Org
         public List<string> Roles { get; set; } = new();
         public bool IsActive { get; set; } = true;
         public bool MustChangePassword { get; set; }
+        /// <summary>True until the invited user accepts (e.g. signs in for the
+        /// first time / completes their forced password change).</summary>
+        public bool InvitationPending { get; set; }
         public DateTimeOffset? LastLoginDate { get; set; }
         public DateTimeOffset? DateCreated { get; set; }
     }
