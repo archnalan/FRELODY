@@ -41,6 +41,7 @@ namespace FRELODYLIB.ServiceHandler
                 if (result.IsSuccess)
                 {
                     _logger.LogInformation("Email sent successfully to {ToEmail}", emailDto.ToEmail);
+                    _logger.LogInformation("Email sent successfully with body: {Body}", emailDto.Body);
                     return ServiceResult<bool>.Success(true);
                 }
                 else

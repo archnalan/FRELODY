@@ -1,0 +1,165 @@
+@* Members table for the org admin dashboard. *@
+@using FRELODYSHRD.Dtos.Org
+
+<div class="admin-card">
+    <div class="admin-card-header flex-wrap">
+        <h3 class="admin-card-title mb-0">Members</h3>
+        <div class="d-flex gap-2 align-items-center">
+            <AdminSearchInput @bind-Value="_search" Placeholder="Search by name or email…" />
+            <button type="button" class="admin-btn primary" @onclick="OnAddClicked">
+                <i class="bi bi-person-plus"></i>
+                Add member
+            </button>
+        </div>
+    </div>
+
+    @if (Members is null)
+    {
+        <div class="admin-card-pad">
+            @for (int i = 0; i < 5; i++)
+            {
+                <div class="admin-skeleton mb-2" style="height:36px;"></div>
+            }
+        </div>
+    }
+    else if (FilteredMembers().Count == 0)
+    {
+        <div class="admin-empty">
+            <div class="admin-empty-title">No members yet</div>
+            <p class="mb-0">Invite or create your first organization member to get started.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>Email</th>
+                        <th>Roles</th>
+                        <th>Status</th>
+                        <th>Last login</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in FilteredMembers())
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    @if (!string.IsNullOrEmpty(m.ProfilePicUrl))
+                                    {
+                                        <img src="@m.ProfilePicUrl" alt="" width="32" height="32"
+                                             class="rounded-circle" style="object-fit:cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div class="admin-metric-icon" style="width:32px;height:32px;font-size:0.8rem;">
+                                            @InitialsOf(m)
+                                        </div>
+                                    }
+                                    <div>
+                                        <div style="font-weight:500;">@m.FullName</div>
+                                        @if (!string.IsNullOrEmpty(m.UserName))
+                                        {
+                                            <div class="text-muted" style="font-size:0.75rem;">@m.UserName</div>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td>@m.Email</td>
+                            <td>
+                                @foreach (var role in m.Roles.Where(r => FRELODYSHRD.Constants.UserRoles.IsOrgRole(r)))
+                                {
+                                    <span class="role-chip @role.ToLowerInvariant() me-1">@role</span>
+                                }
+                            </td>
+                            <td>
+                                @if (m.IsActive)
+                                {
+                                    <span class="admin-chip" style="background:var(--k-success-soft);color:var(--k-success-soft-text);border-color:transparent;">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="admin-chip" style="background:var(--k-danger-soft);color:var(--k-danger-soft-text);border-color:transparent;">Disabled</span>
+                                }
+                                @if (m.MustChangePassword)
+                                {
+                                    <span class="admin-chip ms-1" title="Pending first password change">Pending</span>
+                                }
+                            </td>
+                            <td>@(m.LastLoginDate?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+                            <td class="text-end">
+                                <div class="admin-row-actions">
+                                    <button type="button" class="admin-btn ghost icon-only"
+                                            title="Change roles"
+                                            @onclick="() => OnEditRoles.InvokeAsync(m)">
+                                        <i class="bi bi-shield-lock"></i>
+                                    </button>
+                                    <button type="button" class="admin-btn ghost icon-only"
+                                            title="Resend credentials"
+                                            @onclick="() => OnResend.InvokeAsync(m)">
+                                        <i class="bi bi-envelope-arrow-up"></i>
+                                    </button>
+                                    @if (m.IsActive)
+                                    {
+                                        <button type="button" class="admin-btn ghost icon-only danger"
+                                                title="Disable"
+                                                @onclick="() => OnDisable.InvokeAsync(m)">
+                                            <i class="bi bi-person-slash"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="admin-btn ghost icon-only"
+                                                title="Enable"
+                                                @onclick="() => OnEnable.InvokeAsync(m)">
+                                            <i class="bi bi-person-check"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<OrganizationMemberRowDto>? Members { get; set; }
+    [Parameter] public EventCallback OnAdd { get; set; }
+    [Parameter] public EventCallback<OrganizationMemberRowDto> OnEditRoles { get; set; }
+    [Parameter] public EventCallback<OrganizationMemberRowDto> OnResend { get; set; }
+    [Parameter] public EventCallback<OrganizationMemberRowDto> OnDisable { get; set; }
+    [Parameter] public EventCallback<OrganizationMemberRowDto> OnEnable { get; set; }
+
+    private string _search = string.Empty;
+
+    private Task OnAddClicked() => OnAdd.InvokeAsync();
+
+    private List<OrganizationMemberRowDto> FilteredMembers()
+    {
+        if (Members is null) return new();
+        if (string.IsNullOrWhiteSpace(_search)) return Members.ToList();
+        var s = _search.Trim();
+        return Members.Where(m =>
+                (m.FullName?.Contains(s, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (m.Email?.Contains(s, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (m.UserName?.Contains(s, StringComparison.OrdinalIgnoreCase) ?? false))
+            .ToList();
+    }
+
+    private static string InitialsOf(OrganizationMemberRowDto m)
+    {
+        var f = !string.IsNullOrEmpty(m.FirstName) ? m.FirstName[0].ToString() : "";
+        var l = !string.IsNullOrEmpty(m.LastName) ? m.LastName[0].ToString() : "";
+        var initials = (f + l).ToUpperInvariant();
+        if (string.IsNullOrEmpty(initials) && !string.IsNullOrEmpty(m.Email))
+            initials = m.Email[0].ToString().ToUpperInvariant();
+        return initials;
+    }
+}

@@ -1,0 +1,59 @@
+@* Renders content only if the current user has at least one of the specified org roles
+   (read from the JWT-derived UserClaimsDto.OrgRoles) OR holds a platform SuperAdmin role. *@
+@inject GlobalAuthStateProvider _globalAuth
+
+@if (_loaded)
+{
+    @if (_authorized)
+    {
+        @ChildContent
+    }
+    else if (NotAuthorizedContent is not null)
+    {
+        @NotAuthorizedContent
+    }
+}
+
+@code {
+    /// <summary>Comma-separated or array of org role names that may view the content.</summary>
+    [Parameter] public string[]? Roles { get; set; }
+    [Parameter] public string? RolesCsv { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? NotAuthorizedContent { get; set; }
+
+    private bool _loaded;
+    private bool _authorized;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var required = ResolveRequired();
+        var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+        if (userResult.IsSuccess && userResult.Data is not null)
+        {
+            var claims = userResult.Data;
+            var isPlatformAdmin = (claims.PlatformRoles?.Any(r =>
+                string.Equals(r, FRELODYSHRD.Constants.UserRoles.SuperAdmin, StringComparison.OrdinalIgnoreCase)) ?? false)
+                || claims.UserType == UserType.SuperAdmin;
+            if (isPlatformAdmin)
+            {
+                _authorized = true;
+            }
+            else if (claims.OrgRoles is { Count: > 0 } orgRoles && required.Length > 0)
+            {
+                _authorized = orgRoles.Any(r => required.Contains(r, StringComparer.OrdinalIgnoreCase));
+            }
+        }
+        _loaded = true;
+    }
+
+    private string[] ResolveRequired()
+    {
+        if (Roles is { Length: > 0 }) return Roles;
+        if (!string.IsNullOrWhiteSpace(RolesCsv))
+        {
+            return RolesCsv
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+        return Array.Empty<string>();
+    }
+}

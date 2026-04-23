@@ -16,6 +16,35 @@
         <!-- Welcome Header -->
         <div class="welcome-section mb-4">
             <div class="container-fluid">
+                @if (string.IsNullOrEmpty(_currentOrgName))
+                {
+                    <div class="admin-alert info d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                        <div>
+                            <strong><i class="bi bi-buildings me-1"></i>You're not in an organization yet.</strong>
+                            <span class="ms-1">Create one to collaborate, or join an existing one.</span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a class="admin-btn primary" href="/organizations/create">Create</a>
+                            <a class="admin-btn" href="/organizations/join">Join</a>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="admin-card admin-card-pad d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                        <div>
+                            <span class="admin-pill"><i class="bi bi-buildings"></i> @_currentOrgName</span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a class="admin-btn" href="/organizations/me">My organization</a>
+                            <OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin, UserRoles.Manager })">
+                                <ChildContent>
+                                    <a class="admin-btn primary" href="/admin/dashboard">Admin console</a>
+                                </ChildContent>
+                            </OrgRoleAuthorizeView>
+                        </div>
+                    </div>
+                }
                 <div class="activity-notification mb-3">
                     @if (activitySummary != null && showAlert)
                     {
@@ -342,6 +371,7 @@
     private bool hideNotification;
     private bool showAlert = true;
     private SettingDto? currentUserSetting;
+    private string? _currentOrgName;
 
     protected override async Task OnInitializedAsync()
     {
@@ -354,6 +384,7 @@
             if (user.IsSuccess && user.Data != null)
             {
                 currentUserId = user.Data.Id;
+                _currentOrgName = user.Data.OrganizationName;
                 await LoadDashboardData();
                 await LoadActivitySummary();
                 var response = await _settingsApi.GetUserSettings(currentUserId);

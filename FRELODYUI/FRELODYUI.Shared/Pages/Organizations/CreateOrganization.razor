@@ -1,0 +1,118 @@
+@page "/organizations/create"
+@attribute [Authorize]
+@inject IOrganizationsApi _orgApi
+@inject NavigationManager _nav
+
+<PageTitle>Create organization - FRELODY</PageTitle>
+
+<div class="admin-page">
+    <div class="admin-body" style="max-width: 720px;">
+        <div class="admin-header">
+            <div>
+                <h1 class="admin-title">Create your organization</h1>
+                <p class="admin-subtitle">A workspace for your team's music.</p>
+            </div>
+        </div>
+
+        @if (_alreadyInOrg)
+        {
+            <div class="admin-alert info">
+                You're already a member of <strong>@_currentOrg?.Name</strong>. Leave it first if you want to create a new one.
+            </div>
+            <a class="admin-btn" href="/organizations/me">View my organization</a>
+        }
+        else
+        {
+            <div class="admin-card admin-card-pad">
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="admin-alert danger">@_error</div>
+                }
+
+                <div class="admin-field">
+                    <label class="admin-field-label">Organization name *</label>
+                    <input @bind="_dto.Name" placeholder="e.g. Riverside Worship Band" />
+                </div>
+                <div class="row">
+                    <div class="col-md-6 admin-field">
+                        <label class="admin-field-label">Industry</label>
+                        <input @bind="_dto.Industry" placeholder="Music ministry, education, etc." />
+                    </div>
+                    <div class="col-md-6 admin-field">
+                        <label class="admin-field-label">Country</label>
+                        <input @bind="_dto.Country" />
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 admin-field">
+                        <label class="admin-field-label">City</label>
+                        <input @bind="_dto.City" />
+                    </div>
+                    <div class="col-md-6 admin-field">
+                        <label class="admin-field-label">Phone</label>
+                        <input @bind="_dto.PhoneNumber" />
+                    </div>
+                </div>
+                <div class="admin-field">
+                    <label class="admin-field-label">Contact email</label>
+                    <input type="email" @bind="_dto.Email" />
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <a class="admin-btn" href="/dashboard">Skip for now</a>
+                    <button type="button" class="admin-btn primary" @onclick="Submit" disabled="@_busy">
+                        @if (_busy)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        Create organization
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private CreateOrganizationDto _dto = new();
+    private OrganizationDto? _currentOrg;
+    private bool _alreadyInOrg;
+    private bool _busy;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resp = await _orgApi.GetCurrent();
+        if (resp.IsSuccessStatusCode && resp.Content is not null)
+        {
+            _currentOrg = resp.Content;
+            _alreadyInOrg = true;
+        }
+    }
+
+    private async Task Submit()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_dto.Name))
+        {
+            _error = "Name is required.";
+            return;
+        }
+        try
+        {
+            _busy = true;
+            var resp = await _orgApi.Create(_dto);
+            if (resp.IsSuccessStatusCode)
+            {
+                _toastService.Show("Organization created. Welcome aboard!", ToastType.Success);
+                _nav.NavigateTo("/admin/dashboard", forceLoad: true);
+            }
+            else
+            {
+                _error = resp.Error?.Content ?? "Could not create organization.";
+            }
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _busy = false; }
+    }
+}

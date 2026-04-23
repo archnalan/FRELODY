@@ -1,0 +1,25 @@
+@* Compact metric card for org dashboard. *@
+<div class="admin-metric @(string.IsNullOrEmpty(ExtraClass) ? "" : ExtraClass)">
+    <div class="admin-metric-icon" style="@IconStyle">
+        <i class="bi @Icon"></i>
+    </div>
+    <div class="flex-grow-1 min-w-0">
+        <p class="admin-metric-label">@Label</p>
+        <p class="admin-metric-value">@Value</p>
+        @if (!string.IsNullOrEmpty(Delta))
+        {
+            <p class="admin-metric-delta @(DeltaDirection == "up" ? "up" : DeltaDirection == "down" ? "down" : "")">@Delta</p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public string Value { get; set; } = "0";
+    [Parameter] public string Icon { get; set; } = "bi-graph-up";
+    [Parameter] public string? Delta { get; set; }
+    /// <summary>"up", "down", or null/empty.</summary>
+    [Parameter] public string? DeltaDirection { get; set; }
+    [Parameter] public string? IconStyle { get; set; }
+    [Parameter] public string? ExtraClass { get; set; }
+}

@@ -1,0 +1,71 @@
+@* Destructive confirmation shown when a user about to switch orgs would lose
+   access to content created in their current org. *@
+@using FRELODYSHRD.Dtos.Org
+
+@if (Visible && Warning is not null)
+{
+    <div class="admin-modal-backdrop" @onclick="HandleBackdrop">
+        <div class="admin-modal" @onclick:stopPropagation>
+            <div class="admin-modal-header">
+                <h3 class="admin-modal-title">
+                    <i class="bi bi-exclamation-triangle me-2" style="color:var(--k-warning);"></i>
+                    Switch organization?
+                </h3>
+            </div>
+            <div class="admin-modal-body">
+                <p>
+                    Joining <strong>@Warning.TargetOrgName</strong> means you will <strong>lose access</strong> to
+                    all content you created under <strong>@Warning.CurrentOrgName</strong>. That work stays with
+                    @Warning.CurrentOrgName and remains visible to its members.
+                </p>
+
+                @if (Warning.ContentCounts is { Total: > 0 })
+                {
+                    <div class="admin-card admin-card-pad" style="background:var(--k-warning-soft);color:var(--k-warning-soft-text);border-color:transparent;">
+                        <strong class="d-block mb-2">You'll forfeit access to:</strong>
+                        <ul class="mb-0">
+                            @if (Warning.ContentCounts.Songs > 0) { <li>@Warning.ContentCounts.Songs song@(Pluralize(Warning.ContentCounts.Songs))</li> }
+                            @if (Warning.ContentCounts.Playlists > 0) { <li>@Warning.ContentCounts.Playlists playlist@(Pluralize(Warning.ContentCounts.Playlists))</li> }
+                            @if (Warning.ContentCounts.SongBooks > 0) { <li>@Warning.ContentCounts.SongBooks song book@(Pluralize(Warning.ContentCounts.SongBooks))</li> }
+                            @if (Warning.ContentCounts.Albums > 0) { <li>@Warning.ContentCounts.Albums album@(Pluralize(Warning.ContentCounts.Albums))</li> }
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <p class="admin-alert info mt-2">
+                        You haven't created any content in @Warning.CurrentOrgName yet — nothing will be lost.
+                    </p>
+                }
+
+                <p class="admin-field-help mt-3">
+                    Public/personal content you created without an organization is unaffected.
+                </p>
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="admin-btn" @onclick="HandleCancel" disabled="@Busy">Stay where I am</button>
+                <button type="button" class="admin-btn danger" @onclick="HandleConfirm" disabled="@Busy">
+                    @if (Busy)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Switch anyway
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public JoinOrgWarningDto? Warning { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private Task HandleConfirm() => OnConfirm.InvokeAsync();
+    private Task HandleCancel() => OnCancel.InvokeAsync();
+    private Task HandleBackdrop() => Busy ? Task.CompletedTask : OnCancel.InvokeAsync();
+
+    private static string Pluralize(int n) => n == 1 ? "" : "s";
+}

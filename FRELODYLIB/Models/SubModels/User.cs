@@ -45,6 +45,13 @@ namespace FRELODYAPP.Models.SubModels
         public BillingStatus? BillingStatus { get; set; } 
 
         public DateTimeOffset? LastLoginDate { get; set; }
+
+        /// <summary>
+        /// True when the user has been issued a temporary/admin-set password and
+        /// must change it on next login. Set when an org admin creates a member,
+        /// cleared after a successful self-initiated password change.
+        /// </summary>
+        public bool MustChangePassword { get; set; }
     }
 
 }

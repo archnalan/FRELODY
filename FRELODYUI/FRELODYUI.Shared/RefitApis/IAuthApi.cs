@@ -41,6 +41,9 @@ namespace FRELODYUI.Shared.RefitApis
         [Post("/api/authorization/reset-password")]
         Task<IApiResponse<string>> ResetPassword([Body] ResetPasswordDto resetPasswordDto);
 
+        [Post("/api/authorization/change-own-password")]
+        Task<IApiResponse<bool>> ChangeOwnPassword([Body] ChangeOwnPasswordDto dto);
+
         [Put("/api/authorization/update-user")]
         Task<IApiResponse<CreateUserResponseDto>> UpdateUser([Body] UpdateUserProfile updateUserProfile);
 

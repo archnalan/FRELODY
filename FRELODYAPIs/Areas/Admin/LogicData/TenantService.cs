@@ -5,6 +5,7 @@ using FRELODYAPP.Dtos;
 using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Dtos.AuthDtos;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.Org;
 using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYSHRD.Constants;
 using Mapster;
@@ -191,6 +192,68 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError(ex, "Error completing tenant registration for user {UserId}", dto.UserId);
                 return ServiceResult<TenantDto>.Failure(ex);
+            }
+        }
+
+        public async Task<ServiceResult<bool>> CompleteUserRegistration(CompleteUserRegistrationDto dto)
+        {
+            try
+            {
+                var user = await _context.Users.IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(u => u.Id == dto.UserId);
+                if (user == null)
+                    return ServiceResult<bool>.Failure(new NotFoundException("User not found."));
+
+                if (!user.EmailConfirmed)
+                    return ServiceResult<bool>.Failure(new BadRequestException("Email has not been verified yet."));
+
+                if (!string.IsNullOrWhiteSpace(dto.UserName))
+                {
+                    var normalized = dto.UserName.Trim().ToLowerInvariant();
+                    if (!Regex.IsMatch(normalized, @"^[a-zA-Z0-9_.-]{3,30}$"))
+                        return ServiceResult<bool>.Failure(new BadRequestException(
+                            "Username must be 3-30 characters and contain only letters, numbers, underscores, dots, or hyphens."));
+
+                    var taken = await _context.Users.IgnoreQueryFilters()
+                        .AnyAsync(u => u.NormalizedUserName == normalized.ToUpperInvariant()
+                                       && u.Id != dto.UserId
+                                       && (u.IsDeleted == false || u.IsDeleted == null));
+                    if (taken)
+                        return ServiceResult<bool>.Failure(new BadRequestException("Username is already taken."));
+
+                    user.UserName = normalized;
+                    user.NormalizedUserName = normalized.ToUpperInvariant();
+                }
+
+                // If a password was previously set (rare for the new flow), reset; else add.
+                if (await _userManager.HasPasswordAsync(user))
+                {
+                    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                    var resetResult = await _userManager.ResetPasswordAsync(user, token, dto.Password);
+                    if (!resetResult.Succeeded)
+                        return ServiceResult<bool>.Failure(new BadRequestException(
+                            string.Join("; ", resetResult.Errors.Select(e => e.Description))));
+                }
+                else
+                {
+                    var addResult = await _userManager.AddPasswordAsync(user, dto.Password);
+                    if (!addResult.Succeeded)
+                        return ServiceResult<bool>.Failure(new BadRequestException(
+                            string.Join("; ", addResult.Errors.Select(e => e.Description))));
+                }
+
+                // Ensure default platform role.
+                if (!await _userManager.IsInRoleAsync(user, UserRoles.User))
+                    await _userManager.AddToRoleAsync(user, UserRoles.User);
+
+                user.MustChangePassword = false;
+                await _userManager.UpdateAsync(user);
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error completing user-only registration for {UserId}", dto.UserId);
+                return ServiceResult<bool>.Failure(new ServerErrorException("Failed to complete registration."));
             }
         }
 

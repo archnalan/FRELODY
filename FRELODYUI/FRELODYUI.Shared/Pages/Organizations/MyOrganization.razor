@@ -1,0 +1,106 @@
+@page "/organizations/me"
+@attribute [Authorize]
+@inject IOrganizationsApi _orgApi
+@inject NavigationManager _nav
+
+<PageTitle>My organization - FRELODY</PageTitle>
+
+<div class="admin-page">
+    <div class="admin-body" style="max-width: 720px;">
+        @if (_loading)
+        {
+            <div class="admin-skeleton" style="height: 120px;"></div>
+        }
+        else if (_org is null)
+        {
+            <div class="admin-card admin-card-pad text-center">
+                <h2 class="admin-title mb-2">You don't belong to an organization</h2>
+                <p class="text-muted mb-3">Create one to collaborate with others, or join an existing one.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a class="admin-btn primary" href="/organizations/create">Create organization</a>
+                    <a class="admin-btn" href="/organizations/join">Join with ID</a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="admin-header">
+                <div>
+                    <h1 class="admin-title">@_org.Name</h1>
+                    <p class="admin-subtitle">@(_org.Industry ?? "Your workspace")</p>
+                </div>
+            </div>
+
+            <div class="admin-card admin-card-pad mb-3">
+                <div class="d-flex flex-wrap gap-3">
+                    <div><strong>@_org.MemberCount</strong> <span class="text-muted">members</span></div>
+                    @if (!string.IsNullOrEmpty(_org.Country))
+                    {
+                        <div class="text-muted">@_org.Country</div>
+                    }
+                    @if (_org.DateCreated is not null)
+                    {
+                        <div class="text-muted ms-auto">Since @_org.DateCreated.Value.ToLocalTime():d</div>
+                    }
+                </div>
+            </div>
+
+            <div class="admin-card admin-card-pad">
+                <h3 class="admin-card-title mb-3">Organization actions</h3>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="admin-btn danger" @onclick="OpenLeave" disabled="@_busy">
+                        <i class="bi bi-box-arrow-left"></i> Leave organization
+                    </button>
+                </div>
+                <p class="admin-field-help mt-2">Leaving means you lose access to all content created here.</p>
+            </div>
+
+            <ConfirmDialog Visible="_showLeave"
+                           Title="@($"Leave {_org.Name}?")"
+                           Icon="bi-box-arrow-left"
+                           Destructive="true"
+                           ConfirmLabel="Leave"
+                           Busy="_busy"
+                           OnCancel="@(() => _showLeave = false)"
+                           OnConfirm="DoLeave">
+                <BodyContent>
+                    <p>You'll lose access to content created under <strong>@_org.Name</strong>.
+                       If you're the Owner, you must transfer ownership first.</p>
+                </BodyContent>
+            </ConfirmDialog>
+        }
+    </div>
+</div>
+
+@code {
+    private OrganizationDto? _org;
+    private bool _loading = true;
+    private bool _showLeave;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resp = await _orgApi.GetCurrent();
+        if (resp.IsSuccessStatusCode) _org = resp.Content;
+        _loading = false;
+    }
+
+    private void OpenLeave() => _showLeave = true;
+
+    private async Task DoLeave()
+    {
+        _busy = true;
+        var resp = await _orgApi.Leave();
+        _busy = false;
+        if (resp.IsSuccessStatusCode)
+        {
+            _toastService.Show("You've left the organization.", ToastType.Success);
+            _nav.NavigateTo("/dashboard", forceLoad: true);
+        }
+        else
+        {
+            _toastService.Show(resp.Error?.Content ?? "Could not leave.", ToastType.Error);
+            _showLeave = false;
+        }
+    }
+}

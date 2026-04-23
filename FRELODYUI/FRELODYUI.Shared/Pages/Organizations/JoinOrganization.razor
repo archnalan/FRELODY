@@ -1,0 +1,114 @@
+@page "/organizations/join"
+@page "/organizations/join/{TargetId}"
+@attribute [Authorize]
+@inject IOrganizationsApi _orgApi
+@inject NavigationManager _nav
+
+<PageTitle>Join organization - FRELODY</PageTitle>
+
+<div class="admin-page">
+    <div class="admin-body" style="max-width: 640px;">
+        <div class="admin-header">
+            <div>
+                <h1 class="admin-title">Join an organization</h1>
+                <p class="admin-subtitle">Switch your active workspace.</p>
+            </div>
+        </div>
+
+        <div class="admin-card admin-card-pad">
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="admin-alert danger">@_error</div>
+            }
+
+            <div class="admin-field">
+                <label class="admin-field-label">Organization ID</label>
+                <input @bind="_targetId" placeholder="Paste the org ID from your invite" />
+                <p class="admin-field-help">Ask the org owner for the ID, or open the invite link they sent.</p>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a class="admin-btn" href="/dashboard">Cancel</a>
+                <button type="button" class="admin-btn primary" @onclick="Preview" disabled="@_busy">
+                    Continue
+                </button>
+            </div>
+        </div>
+
+        <OrgSwitchWarningModal Visible="_showWarning"
+                               Warning="_warning"
+                               Busy="_busy"
+                               OnCancel="@(() => _showWarning = false)"
+                               OnConfirm="ConfirmSwitch" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? TargetId { get; set; }
+    private string? _targetId;
+    private bool _busy;
+    private string? _error;
+    private bool _showWarning;
+    private JoinOrgWarningDto? _warning;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(TargetId)) _targetId = TargetId;
+    }
+
+    private async Task Preview()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_targetId))
+        {
+            _error = "Organization ID is required.";
+            return;
+        }
+        try
+        {
+            _busy = true;
+            var resp = await _orgApi.PreviewJoin(_targetId);
+            if (!resp.IsSuccessStatusCode || resp.Content is null)
+            {
+                _error = resp.Error?.Content ?? "Could not look up that organization.";
+                return;
+            }
+            _warning = resp.Content;
+            if (_warning.RequiresContentForfeitConfirmation)
+            {
+                _showWarning = true;
+            }
+            else
+            {
+                await DoSwitch(false);
+            }
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task ConfirmSwitch() => await DoSwitch(true);
+
+    private async Task DoSwitch(bool confirmForfeit)
+    {
+        try
+        {
+            _busy = true;
+            var resp = await _orgApi.Switch(new SwitchOrganizationDto
+            {
+                TargetOrganizationId = _targetId!,
+                ConfirmContentForfeit = confirmForfeit
+            });
+            if (resp.IsSuccessStatusCode)
+            {
+                _toastService.Show("Switched organization.", ToastType.Success);
+                _nav.NavigateTo("/dashboard", forceLoad: true);
+            }
+            else
+            {
+                _error = resp.Error?.Content ?? "Could not switch organization.";
+                _showWarning = false;
+            }
+        }
+        finally { _busy = false; }
+    }
+}

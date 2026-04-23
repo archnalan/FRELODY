@@ -1,0 +1,189 @@
+@* Modal that lets an admin add a member to the org — either by creating a brand-new
+   account or by inviting an existing user. Returns the result via OnSubmit. *@
+@using FRELODYSHRD.Constants
+@using FRELODYSHRD.Dtos.Org
+
+@if (Visible)
+{
+    <div class="admin-modal-backdrop" @onclick="HandleBackdrop">
+        <div class="admin-modal lg" @onclick:stopPropagation>
+            <div class="admin-modal-header">
+                <h3 class="admin-modal-title">
+                    <i class="bi bi-person-plus me-2"></i> Add organization member
+                </h3>
+                <button type="button" class="admin-btn ghost icon-only" @onclick="Close" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="admin-modal-body">
+                <div class="admin-tabs">
+                    <button type="button" class="admin-tab @(_mode == "create" ? "active" : "")" @onclick="@(() => _mode = "create")">
+                        <i class="bi bi-person-add me-1"></i> Create new
+                    </button>
+                    <button type="button" class="admin-tab @(_mode == "invite" ? "active" : "")" @onclick="@(() => _mode = "invite")">
+                        <i class="bi bi-envelope-at me-1"></i> Invite existing
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="admin-alert danger">@_error</div>
+                }
+
+                @if (_mode == "create")
+                {
+                    <div class="row">
+                        <div class="col-md-6 admin-field">
+                            <label class="admin-field-label">First name</label>
+                            <input @bind="_create.FirstName" />
+                        </div>
+                        <div class="col-md-6 admin-field">
+                            <label class="admin-field-label">Last name</label>
+                            <input @bind="_create.LastName" />
+                        </div>
+                    </div>
+                    <div class="admin-field">
+                        <label class="admin-field-label">Email</label>
+                        <input type="email" @bind="_create.Email" />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 admin-field">
+                            <label class="admin-field-label">Username (optional)</label>
+                            <input @bind="_create.UserName" />
+                        </div>
+                        <div class="col-md-6 admin-field">
+                            <label class="admin-field-label">Phone (optional)</label>
+                            <input @bind="_create.PhoneNumber" />
+                        </div>
+                    </div>
+                    <div class="admin-field">
+                        <label class="admin-field-label">Temporary password (leave blank to auto-generate)</label>
+                        <input @bind="_create.TemporaryPassword" />
+                        <p class="admin-field-help">A first-login password change will be required.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="admin-field">
+                        <label class="admin-field-label">Existing user's email</label>
+                        <input type="email" @bind="_invite.Email" />
+                        <p class="admin-field-help">If they already belong to another organization, they'll lose access to that content when they accept.</p>
+                    </div>
+                    <div class="admin-field">
+                        <label class="admin-field-label d-flex align-items-center gap-2">
+                            <input type="checkbox" @bind="_invite.ConfirmContentForfeit" />
+                            I have informed the user about content forfeiture.
+                        </label>
+                    </div>
+                }
+
+                <div class="admin-field">
+                    <label class="admin-field-label">Roles inside this organization</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var role in AssignableRoles)
+                        {
+                            var r = role;
+                            <label class="admin-chip" style="cursor:pointer;">
+                                <input type="checkbox"
+                                       checked="@_selectedRoles.Contains(r)"
+                                       @onchange="e => ToggleRole(r, e)" />
+                                <span class="ms-1">@r</span>
+                            </label>
+                        }
+                    </div>
+                    <p class="admin-field-help">Defaults to <strong>Viewer</strong> when nothing is picked.</p>
+                </div>
+            </div>
+
+            <div class="admin-modal-footer">
+                <button type="button" class="admin-btn" @onclick="Close" disabled="@_busy">Cancel</button>
+                <button type="button" class="admin-btn primary" @onclick="Submit" disabled="@_busy">
+                    @if (_busy)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    @(_mode == "create" ? "Create & email credentials" : "Send invitation")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<CreateOrgMemberDto> OnSubmitCreate { get; set; }
+    [Parameter] public EventCallback<InviteExistingMemberDto> OnSubmitInvite { get; set; }
+
+    private static readonly string[] AssignableRoles = new[]
+    {
+        UserRoles.Admin,
+        UserRoles.Manager,
+        UserRoles.Editor,
+        UserRoles.Contributor,
+        UserRoles.Viewer,
+        UserRoles.Guest
+    };
+
+    private string _mode = "create";
+    private bool _busy;
+    private string? _error;
+    private CreateOrgMemberDto _create = new();
+    private InviteExistingMemberDto _invite = new();
+    private HashSet<string> _selectedRoles = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override void OnParametersSet()
+    {
+        if (Visible && !_busy && string.IsNullOrEmpty(_create.Email) && string.IsNullOrEmpty(_invite.Email))
+        {
+            _create = new();
+            _invite = new();
+            _selectedRoles.Clear();
+            _error = null;
+        }
+    }
+
+    private void ToggleRole(string role, ChangeEventArgs e)
+    {
+        if (e.Value is bool checkedVal && checkedVal) _selectedRoles.Add(role);
+        else _selectedRoles.Remove(role);
+    }
+
+    private async Task Submit()
+    {
+        _error = null;
+        var roles = _selectedRoles.Count > 0 ? _selectedRoles.ToList() : new List<string> { UserRoles.Viewer };
+        try
+        {
+            _busy = true;
+            if (_mode == "create")
+            {
+                if (string.IsNullOrWhiteSpace(_create.Email) || string.IsNullOrWhiteSpace(_create.FirstName) || string.IsNullOrWhiteSpace(_create.LastName))
+                {
+                    _error = "First name, last name, and email are required.";
+                    return;
+                }
+                _create.OrgRoles = roles;
+                await OnSubmitCreate.InvokeAsync(_create);
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(_invite.Email))
+                {
+                    _error = "Email is required.";
+                    return;
+                }
+                _invite.OrgRoles = roles;
+                await OnSubmitInvite.InvokeAsync(_invite);
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+    private Task HandleBackdrop() => _busy ? Task.CompletedTask : OnClose.InvokeAsync();
+}

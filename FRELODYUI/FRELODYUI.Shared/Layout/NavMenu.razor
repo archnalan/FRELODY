@@ -75,6 +75,22 @@
                     </NavLink>
                 </div>
 
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/organizations/me" Match="NavLinkMatch.Prefix">
+                        <span class="bi bi-buildings" aria-hidden="true"></span> <span class="nav-label">My Organization</span>
+                    </NavLink>
+                </div>
+
+                <OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin, UserRoles.Manager })">
+                    <ChildContent>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="/admin/dashboard" Match="NavLinkMatch.Prefix">
+                                <span class="bi bi-shield-lock" aria-hidden="true"></span> <span class="nav-label">Admin Console</span>
+                            </NavLink>
+                        </div>
+                    </ChildContent>
+                </OrgRoleAuthorizeView>
+
                 @* ── Your Songs (collapsible, expanded mode only) ── *@
                 @if (hasUserSongs)
                 {

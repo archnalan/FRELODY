@@ -165,6 +165,21 @@ namespace FRELODYAPIs.Controllers
             return Ok(result.Data);
         }
 
+        [HttpPost("change-own-password")]
+        [Authorize]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> ChangeOwnPassword([FromBody] ChangeOwnPasswordDto dto)
+        {
+            var userId = User.FindFirst("UserId")?.Value
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var result = await _authorizationDAL.ChangeOwnPassword(userId, dto);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
+            return Ok(result.Data);
+        }
+
         [HttpPut]
         [Authorize]
         [ProducesResponseType(typeof(CreateUserResponseDto), 200)]

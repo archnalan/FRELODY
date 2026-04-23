@@ -42,6 +42,24 @@ namespace FRELODYAPP.Data
             //var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var roles = await _userManager.GetRolesAsync(user);
+            var rolesList = roles.ToList();
+            var orgRoles = rolesList
+                .Where(FRELODYSHRD.Constants.UserRoles.IsOrgRole)
+                .ToList();
+            var platformRoles = rolesList
+                .Where(FRELODYSHRD.Constants.UserRoles.IsPlatformRole)
+                .ToList();
+
+            string? organizationName = null;
+            if (!string.IsNullOrEmpty(tenantId))
+            {
+                organizationName = await _context.Tenants
+                    .IgnoreQueryFilters()
+                    .Where(t => t.Id == tenantId)
+                    .Select(t => t.TenantName)
+                    .FirstOrDefaultAsync();
+            }
+
             var userClaimsDto = new UserClaimsDto
             {
                 Id = user.Id,
@@ -50,7 +68,11 @@ namespace FRELODYAPP.Data
                 FullName = $"{user.FirstName} {user.LastName}",
                 Email = user.Email,
                 UserName = user.UserName,
-                Roles = roles.ToList(),
+                Roles = rolesList,
+                OrgRoles = orgRoles,
+                PlatformRoles = platformRoles,
+                MustChangePassword = user.MustChangePassword,
+                OrganizationName = organizationName,
                 TenantId = tenantId,
                 UserType = user.UserType,
                 BillingStatus = user.BillingStatus
@@ -64,7 +86,10 @@ namespace FRELODYAPP.Data
                 new Claim("UserId", user.Id), // Redundant but useful
                 new Claim("user", System.Text.Json.JsonSerializer.Serialize(userClaimsDto)), 
                 new Claim("TenantId", tenantId ?? string.Empty),
-                new Claim("UserType", user.UserType.ToString())
+                new Claim("UserType", user.UserType.ToString()),
+                new Claim("org_roles", string.Join(",", orgRoles)),
+                new Claim("platform_roles", string.Join(",", platformRoles)),
+                new Claim("must_change_password", user.MustChangePassword ? "true" : "false")
             };
 
             foreach (var role in roles)

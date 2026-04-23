@@ -4,6 +4,7 @@ using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.AuthDtos;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.Org;
 using FRELODYSHRD.Dtos.SubDtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,6 +41,19 @@ namespace FRELODYAPIs.Controllers
         public async Task<IActionResult> CompleteTenantRegistration([FromBody] CompleteTenantRegistrationDto dto)
         {
             var result = await _tenantService.CompleteTenantRegistration(dto);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+            }
+            return Ok(result.Data);
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> CompleteUserRegistration([FromBody] CompleteUserRegistrationDto dto)
+        {
+            var result = await _tenantService.CompleteUserRegistration(dto);
             if (!result.IsSuccess)
             {
                 return StatusCode(result.StatusCode, new { message = result.Error.Message });

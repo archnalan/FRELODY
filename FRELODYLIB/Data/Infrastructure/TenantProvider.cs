@@ -132,7 +132,11 @@ namespace FRELODYAPP.Data.Infrastructure
                 {
                     var userClaims = identity.Claims;
                     var userTypeClaim = userClaims.FirstOrDefault(c => c.Type.Equals("UserType", StringComparison.OrdinalIgnoreCase))?.Value;
-                    if (userTypeClaim == "SuperAdmin")
+                    var hasSuperAdminRole = userClaims.Any(c =>
+                        c.Type.Equals(ClaimTypes.Role, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(c.Value, "SuperAdmin", StringComparison.OrdinalIgnoreCase));
+
+                    if (string.Equals(userTypeClaim, "SuperAdmin", StringComparison.OrdinalIgnoreCase) || hasSuperAdminRole)
                     {
                         if (!string.IsNullOrEmpty(userId))
                         {

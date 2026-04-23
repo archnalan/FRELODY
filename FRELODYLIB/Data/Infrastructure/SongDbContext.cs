@@ -506,7 +506,18 @@ namespace FRELODYAPP.Data.Infrastructure
                         if(!string.IsNullOrEmpty(_tenantId))
                             entity.Entity.TenantId = _tenantId;
                     }
-                    // else: TenantId was explicitly set — leave it alone                    
+                    // else: TenantId was explicitly set — leave it alone
+
+                    // Default Access for entities that expose it (BaseEntity-derived):
+                    //   - No tenant context  → Public  (free user / anonymous-style content)
+                    //   - Inside an org      → Private (org work is not leaked by default)
+                    if (entity.Entity is FRELODYAPP.Models.SubModels.BaseEntity baseEntity
+                        && baseEntity.Access == null)
+                    {
+                        baseEntity.Access = string.IsNullOrEmpty(baseEntity.TenantId)
+                            ? Access.Public
+                            : Access.Private;
+                    }
                 }
                 else if (entity.State == EntityState.Modified)
                 {

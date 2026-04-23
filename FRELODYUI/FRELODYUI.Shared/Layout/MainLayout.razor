@@ -98,6 +98,22 @@
         _modalService.OnShow += OnModalStateChanged;
         _modalService.OnClose += OnModalStateChanged;
         _toastService.OnToast += OnToastChanged;
+
+        // Force password change on first sign-in if the user was provisioned by an admin.
+        try
+        {
+            var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+            if (userResult.IsSuccess && userResult.Data?.MustChangePassword == true)
+            {
+                var current = new Uri(_navManager.Uri).AbsolutePath;
+                if (!current.StartsWith("/account/change-password-required", StringComparison.OrdinalIgnoreCase)
+                    && !current.StartsWith("/login", StringComparison.OrdinalIgnoreCase))
+                {
+                    _navManager.NavigateTo("/account/change-password-required");
+                }
+            }
+        }
+        catch { /* swallow — non-blocking */ }
     }
 
     private async Task ToggleSidebar()

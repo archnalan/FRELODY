@@ -1,0 +1,64 @@
+@* Generic confirm dialog (destructive or neutral). *@
+@if (Visible)
+{
+    <div class="admin-modal-backdrop" @onclick="HandleBackdrop">
+        <div class="admin-modal" @onclick:stopPropagation>
+            <div class="admin-modal-header">
+                <h3 class="admin-modal-title">
+                    @if (!string.IsNullOrEmpty(Icon))
+                    {
+                        <i class="bi @Icon me-2"></i>
+                    }
+                    @Title
+                </h3>
+                <button type="button" class="admin-btn ghost icon-only" @onclick="HandleCancel" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="admin-modal-body">
+                @if (BodyContent is not null)
+                {
+                    @BodyContent
+                }
+                else
+                {
+                    <p class="mb-0">@Message</p>
+                }
+            </div>
+            <div class="admin-modal-footer">
+                <button type="button" class="admin-btn" @onclick="HandleCancel" disabled="@Busy">
+                    @CancelLabel
+                </button>
+                <button type="button"
+                        class="admin-btn @(Destructive ? "danger" : "primary")"
+                        @onclick="HandleConfirm"
+                        disabled="@Busy">
+                    @if (Busy)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    @ConfirmLabel
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public string Title { get; set; } = "Confirm";
+    [Parameter] public string Message { get; set; } = "Are you sure?";
+    [Parameter] public RenderFragment? BodyContent { get; set; }
+    [Parameter] public string ConfirmLabel { get; set; } = "Confirm";
+    [Parameter] public string CancelLabel { get; set; } = "Cancel";
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public bool Destructive { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool CloseOnBackdrop { get; set; } = true;
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private Task HandleConfirm() => OnConfirm.InvokeAsync();
+    private Task HandleCancel() => OnCancel.InvokeAsync();
+    private Task HandleBackdrop() => CloseOnBackdrop && !Busy ? OnCancel.InvokeAsync() : Task.CompletedTask;
+}

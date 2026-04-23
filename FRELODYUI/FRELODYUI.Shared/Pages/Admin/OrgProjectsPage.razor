@@ -1,0 +1,68 @@
+@page "/admin/projects"
+@layout AdminLayout
+@attribute [Authorize]
+@inject IOrganizationsApi _orgApi
+
+<PageTitle>Projects - FRELODY</PageTitle>
+
+<OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin, UserRoles.Manager, UserRoles.Editor })">
+    <NotAuthorizedContent>
+        <div class="admin-card admin-card-pad">
+            <h2 class="admin-title">Not authorized</h2>
+            <p class="text-muted mb-3">You need an organization role to view organization content.</p>
+            <a class="admin-btn primary" href="/dashboard">Back to dashboard</a>
+        </div>
+    </NotAuthorizedContent>
+    <ChildContent>
+        <div class="admin-header">
+            <div>
+                <h1 class="admin-title">Projects</h1>
+                <p class="admin-subtitle">All content created under @(_org?.Name ?? "this organization").</p>
+            </div>
+            <a class="admin-btn" href="/admin/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        </div>
+
+        <AdminTabs Tabs="_tabs" @bind-ActiveKey="_active" />
+
+        <div class="admin-card admin-card-pad">
+            @switch (_active)
+            {
+                case "songs":
+                    <p class="mb-2">Songs created under your organization.</p>
+                    <a class="admin-btn primary" href="/songs"><i class="bi bi-music-note-beamed"></i> Open songs</a>
+                    break;
+                case "playlists":
+                    <p class="mb-2">Playlists scoped to your organization.</p>
+                    <a class="admin-btn primary" href="/playlists"><i class="bi bi-collection-play"></i> Open playlists</a>
+                    break;
+                case "songbooks":
+                    <p class="mb-2">Songbooks scoped to your organization.</p>
+                    <a class="admin-btn primary" href="/songbooks"><i class="bi bi-journal-bookmark"></i> Open songbooks</a>
+                    break;
+                case "albums":
+                    <p class="mb-2">Albums scoped to your organization.</p>
+                    <a class="admin-btn primary" href="/albums"><i class="bi bi-vinyl"></i> Open albums</a>
+                    break;
+            }
+        </div>
+    </ChildContent>
+</OrgRoleAuthorizeView>
+
+@code {
+    private OrganizationDto? _org;
+    private string _active = "songs";
+
+    private readonly List<AdminTabs.TabItem> _tabs = new()
+    {
+        new("songs", "Songs", "bi-music-note-beamed"),
+        new("playlists", "Playlists", "bi-collection-play"),
+        new("songbooks", "Songbooks", "bi-journal-bookmark"),
+        new("albums", "Albums", "bi-vinyl")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resp = await _orgApi.GetCurrent();
+        if (resp.IsSuccessStatusCode) _org = resp.Content;
+    }
+}

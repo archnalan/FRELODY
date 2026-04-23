@@ -1,0 +1,176 @@
+@page "/admin/members"
+@layout AdminLayout
+@attribute [Authorize]
+@inject IOrganizationsApi _orgApi
+
+<PageTitle>Members - FRELODY</PageTitle>
+
+<OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin, UserRoles.Manager })">
+    <NotAuthorizedContent>
+        <div class="admin-card admin-card-pad">
+            <h2 class="admin-title">Not authorized</h2>
+            <p class="text-muted mb-3">Only Owners, Admins, and Managers can manage members.</p>
+            <a class="admin-btn primary" href="/dashboard">Back to dashboard</a>
+        </div>
+    </NotAuthorizedContent>
+    <ChildContent>
+        <div class="admin-header">
+            <div>
+                <h1 class="admin-title">Members</h1>
+                <p class="admin-subtitle">Invite, manage roles, and monitor membership.</p>
+            </div>
+            <a class="admin-btn" href="/admin/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        </div>
+
+        <OrgUserDisplay Members="_members"
+                        OnAdd="OpenAddModal"
+                        OnEditRoles="OpenRolesModal"
+                        OnResend="ResendCredentials"
+                        OnDisable="DisableMember"
+                        OnEnable="EnableMember" />
+
+        <OrgUserAddEdit Visible="_showAdd"
+                        OnClose="@(() => _showAdd = false)"
+                        OnSubmitCreate="HandleCreate"
+                        OnSubmitInvite="HandleInvite" />
+
+        <ConfirmDialog Visible="_showRoles"
+                       Title="Change member roles"
+                       Icon="bi-shield-lock"
+                       ConfirmLabel="Save changes"
+                       OnCancel="@(() => _showRoles = false)"
+                       OnConfirm="SaveRoles">
+            <BodyContent>
+                @if (_editing is not null)
+                {
+                    <p class="mb-2"><strong>@_editing.FullName</strong> (<span class="text-muted">@_editing.Email</span>)</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var role in EditableRoles)
+                        {
+                            var r = role;
+                            <label class="admin-chip" style="cursor:pointer;">
+                                <input type="checkbox"
+                                       checked="@_pendingRoles.Contains(r)"
+                                       @onchange="e => ToggleRole(r, e)" />
+                                <span class="ms-1">@r</span>
+                            </label>
+                        }
+                    </div>
+                    <p class="admin-field-help mt-2">The Owner role can only be granted via the transfer-ownership flow.</p>
+                }
+            </BodyContent>
+        </ConfirmDialog>
+    </ChildContent>
+</OrgRoleAuthorizeView>
+
+@code {
+    private static readonly string[] EditableRoles = new[]
+    {
+        UserRoles.Admin,
+        UserRoles.Manager,
+        UserRoles.Editor,
+        UserRoles.Contributor,
+        UserRoles.Viewer,
+        UserRoles.Guest
+    };
+
+    private List<OrganizationMemberRowDto>? _members;
+    private bool _showAdd;
+    private bool _showRoles;
+    private OrganizationMemberRowDto? _editing;
+    private HashSet<string> _pendingRoles = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override async Task OnInitializedAsync() => await Reload();
+
+    private async Task Reload()
+    {
+        var resp = await _orgApi.GetMembers();
+        if (resp.IsSuccessStatusCode) _members = resp.Content ?? new();
+    }
+
+    private void OpenAddModal() => _showAdd = true;
+
+    private void OpenRolesModal(OrganizationMemberRowDto m)
+    {
+        _editing = m;
+        _pendingRoles = new HashSet<string>(m.Roles.Where(UserRoles.IsOrgRole), StringComparer.OrdinalIgnoreCase);
+        _showRoles = true;
+    }
+
+    private void ToggleRole(string role, ChangeEventArgs e)
+    {
+        if (e.Value is bool v && v) _pendingRoles.Add(role);
+        else _pendingRoles.Remove(role);
+    }
+
+    private async Task SaveRoles()
+    {
+        if (_editing is null) return;
+        var resp = await _orgApi.ChangeRoles(new ChangeMemberRolesDto
+        {
+            UserId = _editing.Id,
+            OrgRoles = _pendingRoles.ToList()
+        });
+        if (resp.IsSuccessStatusCode)
+        {
+            _toastService.Show("Roles updated.", ToastType.Success);
+            _showRoles = false;
+            await Reload();
+        }
+        else
+        {
+            _toastService.Show("Could not update roles.", ToastType.Error);
+        }
+    }
+
+    private async Task HandleCreate(CreateOrgMemberDto dto)
+    {
+        var resp = await _orgApi.CreateMember(dto);
+        if (resp.IsSuccessStatusCode)
+        {
+            _toastService.Show("Member created and credentials emailed.", ToastType.Success);
+            _showAdd = false;
+            await Reload();
+        }
+        else
+        {
+            _toastService.Show("Could not create member.", ToastType.Error);
+        }
+    }
+
+    private async Task HandleInvite(InviteExistingMemberDto dto)
+    {
+        var resp = await _orgApi.InviteExisting(dto);
+        if (resp.IsSuccessStatusCode)
+        {
+            _toastService.Show("Invitation sent.", ToastType.Success);
+            _showAdd = false;
+            await Reload();
+        }
+        else
+        {
+            _toastService.Show("Could not invite user. They may need to confirm content forfeiture.", ToastType.Error);
+        }
+    }
+
+    private async Task ResendCredentials(OrganizationMemberRowDto m)
+    {
+        var resp = await _orgApi.ResendCredentials(m.Id);
+        if (resp.IsSuccessStatusCode) _toastService.Show("Credentials resent.", ToastType.Success);
+        else _toastService.Show("Could not resend credentials.", ToastType.Error);
+    }
+
+    private async Task DisableMember(OrganizationMemberRowDto m)
+    {
+        var resp = await _orgApi.DisableMember(m.Id);
+        if (resp.IsSuccessStatusCode) { _toastService.Show("Member disabled.", ToastType.Success); await Reload(); }
+        else _toastService.Show("Could not disable member.", ToastType.Error);
+    }
+
+    private async Task EnableMember(OrganizationMemberRowDto m)
+    {
+        var resp = await _orgApi.EnableMember(m.Id);
+        if (resp.IsSuccessStatusCode) { _toastService.Show("Member enabled.", ToastType.Success); await Reload(); }
+        else _toastService.Show("Could not enable member.", ToastType.Error);
+    }
+}

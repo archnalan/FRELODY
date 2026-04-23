@@ -19,6 +19,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<LoginResponseDto>> LoginUserNameOrPhone(LoginUserNameOrPhoneDto userLogin, string tenantId);
         Task<ServiceResult<string>> RemoveUserFromRoleAsync(string userId, string roleName);
         Task<ServiceResult<string>> ResetPassword(ResetPasswordDto resetPasswordDto);
+        Task<ServiceResult<bool>> ChangeOwnPassword(string userId, ChangeOwnPasswordDto dto);
         Task<ServiceResult<CreateUserResponseDto>> UpdateUser(UpdateUserProfile updateUserProfile);
         Task<ServiceResult<LoginResponseDto>> RefreshToken(string accessToken, string refreshToken);
         Task<ServiceResult<bool>> RevokeToken(string refreshToken);

@@ -61,38 +61,12 @@
                 <div class="reg-alert reg-alert-success" role="status">@successMessage</div>
             }
 
-            <!-- Step 1: Account type + Name + Email -->
+            <!-- Step 1: Name + Email -->
             @if (currentStep == 1)
             {
                 <div class="reg-step-content">
-                    <h2 class="reg-heading">How will you use FRELODY?</h2>
-
-                    <div class="reg-toggle-group">
-                        <button type="button"
-                                class="reg-toggle @(!isPersonalMode ? "reg-toggle-active" : "")"
-                                @onclick="() => SetMode(false)">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                 fill="none" stroke="currentColor" stroke-width="2"
-                                 stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                <circle cx="9" cy="7" r="4" />
-                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                            </svg>
-                            <span>Organization</span>
-                        </button>
-                        <button type="button"
-                                class="reg-toggle @(isPersonalMode ? "reg-toggle-active" : "")"
-                                @onclick="() => SetMode(true)">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                 fill="none" stroke="currentColor" stroke-width="2"
-                                 stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                                <circle cx="12" cy="7" r="4" />
-                            </svg>
-                            <span>Personal</span>
-                        </button>
-                    </div>
+                    <h2 class="reg-heading">Create your FRELODY account</h2>
+                    <p class="reg-subtext mb-3">Just a few details to get you started — you can always create or join an organization later.</p>
 
                     @if (isPersonalMode)
                     {
@@ -681,15 +655,7 @@
     {
         ClearMessages();
         if (!IsPasswordValid) return;
-
-        if (isPersonalMode)
-        {
-            await HandleRegister();
-        }
-        else
-        {
-            currentStep = 4;
-        }
+        await HandleRegister();
     }
 
     private void GoBack()
@@ -707,32 +673,27 @@
             isLoading = true;
             StateHasChanged();
 
-            var completeDto = new CompleteTenantRegistrationDto
+            var completeDto = new CompleteUserRegistrationDto
             {
-                TenantId = verifiedTenantId,
                 UserId = verifiedUserId,
                 Password = password,
-                UserName = chosenUsername.Trim(),
-                Address = registerModel.Address,
-                City = registerModel.City,
-                Country = registerModel.Country,
-                TenantName = !isPersonalMode ? registerModel.TenantName : null
+                UserName = chosenUsername.Trim()
             };
 
-            var response = await _tenantsApi.CompleteTenantRegistration(completeDto);
+            var response = await _tenantsApi.CompleteUserRegistration(completeDto);
 
-            if (response.IsSuccessStatusCode && response.Content != null)
+            if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Tenant registration completed successfully");
+                _logger.LogInformation("User registration completed successfully");
                 successMessage = "Account created! Redirecting to sign in...";
                 StateHasChanged();
 
                 await Task.Delay(1500);
 
-                var userEmail = isPersonalMode ? registerModel.UserEmail : registerModel.Email;
+                var userEmail = registerModel.UserEmail;
                 if (OnRegisterSuccess.HasDelegate)
                 {
-                    await OnRegisterSuccess.InvokeAsync(response.Content);
+                    await OnRegisterSuccess.InvokeAsync(null);
                 }
                 else
                 {

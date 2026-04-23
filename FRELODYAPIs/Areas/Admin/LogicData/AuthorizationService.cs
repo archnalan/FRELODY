@@ -285,9 +285,9 @@ namespace FRELODYAPP.Data
                 }
                 else
                 {
-                    if (user.TenantId == null && user.UserType != UserType.SuperAdmin) return ServiceResult<LoginResponseDto>.Failure(
-                        new BadRequestException($"Invalid Tenant. contact {_config["ApplicationInfo:SupportEmail"]} for support"));
-
+                    // Free users (no organization yet) are allowed to log in. Their
+                    // TenantId is simply null and the global query filters fall back
+                    // to public/personal content.
                     if (!string.IsNullOrEmpty(userLogin.PhoneNumber))
                     {
                         var phoneUpdateResult = await _userService.UpdateUserPhoneNumberAsync(user.Id, userLogin.PhoneNumber);
@@ -408,23 +408,27 @@ namespace FRELODYAPP.Data
                 {
                     try
                     {
-                        // Ensure TenantId is set — fall back to the authenticated user's tenant
+                        // Tenant is now optional — users may exist as "free agents"
+                        // without belonging to any organization. Fall back to the
+                        // authenticated caller's tenant only when one is available.
                         if (string.IsNullOrEmpty(createUserDto.TenantId))
                         {
                             createUserDto.TenantId = _tenantId;
                         }
 
-                        if (string.IsNullOrEmpty(createUserDto.TenantId))
+                        if (!string.IsNullOrEmpty(createUserDto.TenantId))
                         {
-                            return ServiceResult<CreateUserResponseDto>.Failure(
-                                new BadRequestException("A valid Tenant is required to create a user."));
+                            var tenantExists = await _context.Tenants.AnyAsync(t => t.Id == createUserDto.TenantId);
+                            if (!tenantExists)
+                            {
+                                return ServiceResult<CreateUserResponseDto>.Failure(
+                                    new BadRequestException("The specified Tenant does not exist."));
+                            }
                         }
-
-                        var tenantExists = await _context.Tenants.AnyAsync(t => t.Id == createUserDto.TenantId);
-                        if (!tenantExists)
+                        else
                         {
-                            return ServiceResult<CreateUserResponseDto>.Failure(
-                                new BadRequestException("The specified Tenant does not exist."));
+                            // Explicitly mark as free user; no tenant association.
+                            createUserDto.TenantId = null;
                         }
 
                         //var usernameExists = await _context.Users
@@ -586,6 +590,34 @@ namespace FRELODYAPP.Data
                 }
             }
 
+        }
+
+        public async Task<ServiceResult<bool>> ChangeOwnPassword(string userId, ChangeOwnPasswordDto dto)
+        {
+            if (string.IsNullOrEmpty(userId))
+                return ServiceResult<bool>.Failure(new UnAuthorizedException("Not authenticated."));
+            if (dto is null || string.IsNullOrEmpty(dto.CurrentPassword) || string.IsNullOrEmpty(dto.NewPassword))
+                return ServiceResult<bool>.Failure(new BadRequestException("Current and new password are required."));
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null)
+                return ServiceResult<bool>.Failure(new NotFoundException("User not found."));
+
+            var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+            if (!result.Succeeded)
+            {
+                var msg = string.Join("\n", result.Errors.Select(e => e.Description));
+                return ServiceResult<bool>.Failure(new BadRequestException(msg));
+            }
+
+            // Forced-first-login complete: clear the must-change flag.
+            if (user.MustChangePassword)
+            {
+                user.MustChangePassword = false;
+                await _userManager.UpdateAsync(user);
+            }
+
+            return ServiceResult<bool>.Success(true);
         }
 
         public async Task<ServiceResult<CreateUserResponseDto>> UpdateUser(UpdateUserProfile updateUserProfile)

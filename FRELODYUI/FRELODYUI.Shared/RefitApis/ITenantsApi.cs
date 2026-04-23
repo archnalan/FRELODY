@@ -2,6 +2,7 @@ using Refit;
 using FRELODYAPP.Dtos;
 using FRELODYSHRD.Dtos.AuthDtos;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYSHRD.Dtos.Org;
 using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYLIB.ServiceHandler;
 
@@ -14,6 +15,9 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Post("/api/tenants/complete-tenant-registration")]
         Task<IApiResponse<TenantDto>> CompleteTenantRegistration([Body] CompleteTenantRegistrationDto dto);
+
+        [Post("/api/tenants/complete-user-registration")]
+        Task<IApiResponse<bool>> CompleteUserRegistration([Body] CompleteUserRegistrationDto dto);
 
         [Get("/api/tenants/get-all-tenants")]
         Task<IApiResponse<PaginationDetails<TenantDto>>> GetAllTenants(

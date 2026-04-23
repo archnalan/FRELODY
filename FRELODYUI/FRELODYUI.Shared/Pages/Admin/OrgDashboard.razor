@@ -1,0 +1,116 @@
+@page "/admin/dashboard"
+@layout AdminLayout
+@attribute [Authorize]
+@inject IOrganizationsApi _orgApi
+@inject NavigationManager _nav
+
+<PageTitle>Org admin dashboard - FRELODY</PageTitle>
+
+<OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin, UserRoles.Manager })">
+    <NotAuthorizedContent>
+        <div class="admin-card admin-card-pad">
+            <h2 class="admin-title">Not authorized</h2>
+            <p class="text-muted mb-3">You need the Owner, Admin, or Manager role inside an organization to view this page.</p>
+            <a class="admin-btn primary" href="/dashboard">Back to dashboard</a>
+        </div>
+    </NotAuthorizedContent>
+    <ChildContent>
+        <div class="admin-header">
+            <div>
+                <h1 class="admin-title">@(_org?.Name ?? "Organization")</h1>
+                <p class="admin-subtitle">@(_org?.Industry ?? "Workspace overview")</p>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="admin-pill"><i class="bi bi-shield-check"></i> Admin</span>
+                <a class="admin-btn" href="/admin/members"><i class="bi bi-people"></i> Members</a>
+                <a class="admin-btn" href="/admin/projects"><i class="bi bi-collection-play"></i> Projects</a>
+            </div>
+        </div>
+
+        @if (_loading)
+        {
+            <div class="admin-metrics">
+                @for (int i = 0; i < 4; i++)
+                {
+                    <div class="admin-skeleton" style="height:84px;"></div>
+                }
+            </div>
+        }
+        else if (_metrics is not null)
+        {
+            <div class="admin-metrics">
+                <MetricCard Label="Members" Value="@_metrics.Members.ToString()" Icon="bi-people" />
+                <MetricCard Label="Active" Value="@_metrics.ActiveMembers.ToString()" Icon="bi-person-check" />
+                <MetricCard Label="Admins" Value="@_metrics.Admins.ToString()" Icon="bi-shield-lock" />
+                <MetricCard Label="Songs" Value="@_metrics.Songs.ToString()" Icon="bi-music-note-beamed" />
+                <MetricCard Label="Playlists" Value="@_metrics.Playlists.ToString()" Icon="bi-collection-play" />
+                <MetricCard Label="Songbooks" Value="@_metrics.SongBooks.ToString()" Icon="bi-journal-bookmark" />
+                <MetricCard Label="Albums" Value="@_metrics.Albums.ToString()" Icon="bi-vinyl" />
+            </div>
+        }
+
+        @if (_activity is not null)
+        {
+            <div class="admin-card admin-card-pad mb-3">
+                <h3 class="admin-card-title mb-2">Last 7 days</h3>
+                <div class="d-flex flex-wrap gap-3">
+                    <div><strong>@_activity.SongsCreatedLast7Days</strong> <span class="text-muted">new songs</span></div>
+                    <div><strong>@_activity.PlaylistsCreatedLast7Days</strong> <span class="text-muted">new playlists</span></div>
+                    <div><strong>@_activity.NewMembersLast7Days</strong> <span class="text-muted">new members</span></div>
+                    @if (_activity.LastContentCreatedAt is not null)
+                    {
+                        <div class="text-muted ms-auto">
+                            Last activity: @_activity.LastContentCreatedAt.Value.ToLocalTime().ToString("g")
+                            @if (!string.IsNullOrEmpty(_activity.LastContentCreatedByName))
+                            {
+                                <span> by @_activity.LastContentCreatedByName</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="admin-alert danger">@_error</div>
+        }
+    </ChildContent>
+</OrgRoleAuthorizeView>
+
+@code {
+    private OrganizationDto? _org;
+    private OrgMetricsDto? _metrics;
+    private OrgActivitySummaryDto? _activity;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var orgTask = _orgApi.GetCurrent();
+            var metricsTask = _orgApi.GetMetrics();
+            var activityTask = _orgApi.GetActivitySummary();
+            await Task.WhenAll(orgTask, metricsTask, activityTask);
+
+            if (orgTask.Result.IsSuccessStatusCode) _org = orgTask.Result.Content;
+            if (metricsTask.Result.IsSuccessStatusCode) _metrics = metricsTask.Result.Content;
+            if (activityTask.Result.IsSuccessStatusCode) _activity = activityTask.Result.Content;
+
+            if (_org is null)
+            {
+                _nav.NavigateTo("/organizations/create");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

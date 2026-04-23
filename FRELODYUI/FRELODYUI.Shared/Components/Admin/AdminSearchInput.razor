@@ -1,0 +1,29 @@
+@* Search input styled for admin tables. *@
+<div class="admin-search">
+    <span class="admin-search-icon">
+        <i class="bi bi-search"></i>
+    </span>
+    <input type="search"
+           placeholder="@Placeholder"
+           value="@Value"
+           @oninput="OnInput"
+           @onkeyup="OnKey" />
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Search…";
+    [Parameter] public EventCallback OnEnter { get; set; }
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        Value = e.Value?.ToString() ?? string.Empty;
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await OnEnter.InvokeAsync();
+    }
+}

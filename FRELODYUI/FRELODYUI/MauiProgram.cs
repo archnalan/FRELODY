@@ -110,6 +110,10 @@ namespace FRELODYUI
                             .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                             .AddHttpMessageHandler<AuthHeaderHandler>();
 
+            builder.Services.AddRefitClient<IOrganizationsApi>()
+                            .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                            .AddHttpMessageHandler<AuthHeaderHandler>();
+
             builder.Services.AddRefitClient<IChatsApi>()
                             .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                             .AddHttpMessageHandler<AuthHeaderHandler>();

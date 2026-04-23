@@ -1,0 +1,39 @@
+@* Horizontal tab strip used on admin pages. *@
+<div class="admin-tabs" role="tablist">
+    @foreach (var tab in Tabs)
+    {
+        var t = tab;
+        <button type="button"
+                role="tab"
+                class="admin-tab @(string.Equals(t.Key, ActiveKey, StringComparison.OrdinalIgnoreCase) ? "active" : "")"
+                aria-selected="@(string.Equals(t.Key, ActiveKey, StringComparison.OrdinalIgnoreCase))"
+                @onclick="() => OnTabSelected(t.Key)">
+            @if (!string.IsNullOrEmpty(t.Icon))
+            {
+                <i class="bi @t.Icon me-1"></i>
+            }
+            @t.Label
+            @if (t.Badge.HasValue && t.Badge.Value > 0)
+            {
+                <span class="admin-chip ms-2">@t.Badge.Value</span>
+            }
+        </button>
+    }
+</div>
+
+@code {
+    public record TabItem(string Key, string Label, string? Icon = null, int? Badge = null);
+
+    [Parameter, EditorRequired] public IReadOnlyList<TabItem> Tabs { get; set; } = Array.Empty<TabItem>();
+    [Parameter, EditorRequired] public string ActiveKey { get; set; } = "";
+    [Parameter] public EventCallback<string> ActiveKeyChanged { get; set; }
+
+    private async Task OnTabSelected(string key)
+    {
+        if (!string.Equals(key, ActiveKey, StringComparison.OrdinalIgnoreCase))
+        {
+            ActiveKey = key;
+            await ActiveKeyChanged.InvokeAsync(key);
+        }
+    }
+}

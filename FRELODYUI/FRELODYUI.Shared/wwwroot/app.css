@@ -216,3 +216,606 @@ h1:focus {
     .icon-premium:hover {
         text-shadow: 0 0 4px rgba(212, 175, 55, 0.6);
     }
+
+/* =====================================================================
+   --k-* token layer (admin dashboard / org management surfaces).
+   Maps to existing FRELODY tokens so admin UI auto-themes light/dark.
+   ===================================================================== */
+:root, [data-bs-theme="light"] {
+    /* Surfaces */
+    --k-bg-app: #f7f8fb;
+    --k-bg-surface: var(--modal-content-bg);
+    --k-bg-surface-2: #f9fafb;
+    --k-bg-elevated: #ffffff;
+    --k-bg-hover: var(--bg-hover);
+    --k-bg-input: var(--input-bg);
+    --k-bg-overlay: rgba(15, 23, 42, 0.45);
+    /* Text */
+    --k-text: var(--text-primary);
+    --k-text-muted: var(--text-secondary);
+    --k-text-subtle: var(--text-muted);
+    --k-text-on-accent: #ffffff;
+    /* Borders */
+    --k-border: var(--border-light);
+    --k-border-strong: var(--border-medium);
+    /* Accent */
+    --k-accent: #4f46e5;
+    --k-accent-hover: #4338ca;
+    --k-accent-soft: #eef2ff;
+    --k-accent-soft-text: #3730a3;
+    /* Status */
+    --k-success: #16a34a;
+    --k-success-soft: #dcfce7;
+    --k-success-soft-text: #166534;
+    --k-warning: #d97706;
+    --k-warning-soft: #fef3c7;
+    --k-warning-soft-text: #92400e;
+    --k-danger: #dc2626;
+    --k-danger-soft: #fee2e2;
+    --k-danger-soft-text: #991b1b;
+    --k-info: #0284c7;
+    --k-info-soft: #e0f2fe;
+    --k-info-soft-text: #075985;
+    /* Role chip palettes */
+    --k-role-owner-bg: #fef3c7;
+    --k-role-owner-text: #92400e;
+    --k-role-admin-bg: #ede9fe;
+    --k-role-admin-text: #5b21b6;
+    --k-role-manager-bg: #dbeafe;
+    --k-role-manager-text: #1e40af;
+    --k-role-editor-bg: #cffafe;
+    --k-role-editor-text: #155e75;
+    --k-role-contributor-bg: #ecfccb;
+    --k-role-contributor-text: #3f6212;
+    --k-role-viewer-bg: #f3f4f6;
+    --k-role-viewer-text: #374151;
+    --k-role-guest-bg: #fae8ff;
+    --k-role-guest-text: #86198f;
+    /* Shape & motion */
+    --k-radius-sm: 6px;
+    --k-radius: 10px;
+    --k-radius-lg: 14px;
+    --k-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --k-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+    --k-shadow-lg: 0 18px 40px -12px rgba(15, 23, 42, 0.18);
+    --k-font-sans: inherit;
+}
+
+[data-bs-theme="dark"] {
+    --k-bg-app: #0b1020;
+    --k-bg-surface: var(--modal-content-bg);
+    --k-bg-surface-2: #111827;
+    --k-bg-elevated: #1f2937;
+    --k-bg-hover: var(--bg-hover);
+    --k-bg-input: var(--input-bg);
+    --k-bg-overlay: rgba(0, 0, 0, 0.6);
+    --k-text: var(--text-primary);
+    --k-text-muted: var(--text-secondary);
+    --k-text-subtle: var(--text-muted);
+    --k-border: var(--border-light);
+    --k-border-strong: var(--border-medium);
+    --k-accent: #818cf8;
+    --k-accent-hover: #a5b4fc;
+    --k-accent-soft: rgba(129, 140, 248, 0.15);
+    --k-accent-soft-text: #c7d2fe;
+    --k-success-soft: rgba(34, 197, 94, 0.18);
+    --k-success-soft-text: #bbf7d0;
+    --k-warning-soft: rgba(217, 119, 6, 0.2);
+    --k-warning-soft-text: #fde68a;
+    --k-danger-soft: rgba(220, 38, 38, 0.18);
+    --k-danger-soft-text: #fecaca;
+    --k-info-soft: rgba(2, 132, 199, 0.2);
+    --k-info-soft-text: #bae6fd;
+    --k-role-owner-bg: rgba(217, 119, 6, 0.18);
+    --k-role-owner-text: #fde68a;
+    --k-role-admin-bg: rgba(139, 92, 246, 0.2);
+    --k-role-admin-text: #ddd6fe;
+    --k-role-manager-bg: rgba(59, 130, 246, 0.2);
+    --k-role-manager-text: #bfdbfe;
+    --k-role-editor-bg: rgba(14, 165, 233, 0.2);
+    --k-role-editor-text: #a5f3fc;
+    --k-role-contributor-bg: rgba(132, 204, 22, 0.2);
+    --k-role-contributor-text: #d9f99d;
+    --k-role-viewer-bg: rgba(148, 163, 184, 0.18);
+    --k-role-viewer-text: #e2e8f0;
+    --k-role-guest-bg: rgba(217, 70, 239, 0.18);
+    --k-role-guest-text: #f5d0fe;
+    --k-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --k-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --k-shadow-lg: 0 18px 40px -12px rgba(0, 0, 0, 0.6);
+}
+
+/* ==================== Admin layout shell ==================== */
+.admin-page {
+    background: var(--k-bg-app);
+    color: var(--k-text);
+    min-height: 100%;
+    font-family: var(--k-font-sans);
+}
+
+.admin-body {
+    padding: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+    .admin-body { padding: 1rem; }
+}
+
+.admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.admin-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--k-text);
+}
+
+.admin-subtitle {
+    font-size: 0.875rem;
+    color: var(--k-text-muted);
+    margin-top: 0.25rem;
+}
+
+.admin-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 999px;
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+    border: 1px solid transparent;
+}
+
+/* ==================== Cards ==================== */
+.admin-card {
+    background: var(--k-bg-surface);
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius);
+    box-shadow: var(--k-shadow-sm);
+    overflow: hidden;
+}
+
+.admin-card-pad { padding: 1.25rem; }
+
+.admin-card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--k-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.admin-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--k-text);
+}
+
+/* ==================== Metric cards ==================== */
+.admin-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-metric {
+    background: var(--k-bg-surface);
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius);
+    padding: 1rem 1.1rem;
+    box-shadow: var(--k-shadow-sm);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.admin-metric:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--k-shadow);
+}
+
+.admin-metric-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.admin-metric-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--k-text-muted);
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+}
+
+.admin-metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--k-text);
+    line-height: 1.1;
+    margin: 0;
+}
+
+.admin-metric-delta {
+    font-size: 0.75rem;
+    color: var(--k-text-muted);
+    margin-top: 0.15rem;
+}
+
+.admin-metric-delta.up { color: var(--k-success); }
+.admin-metric-delta.down { color: var(--k-danger); }
+
+/* ==================== Tabs ==================== */
+.admin-tabs {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 1px solid var(--k-border);
+    margin-bottom: 1.25rem;
+    overflow-x: auto;
+}
+
+.admin-tab {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    padding: 0.65rem 0.9rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--k-text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.12s ease, border-color 0.12s ease;
+}
+
+.admin-tab:hover {
+    color: var(--k-text);
+}
+
+.admin-tab.active {
+    color: var(--k-accent);
+    border-bottom-color: var(--k-accent);
+}
+
+/* ==================== Search input ==================== */
+.admin-search {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+    max-width: 320px;
+}
+
+.admin-search input {
+    width: 100%;
+    padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+    background: var(--k-bg-input);
+    color: var(--k-text);
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-sm);
+    font-size: 0.875rem;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.admin-search input:focus {
+    outline: none;
+    border-color: var(--k-accent);
+    box-shadow: 0 0 0 3px var(--k-accent-soft);
+}
+
+.admin-search-icon {
+    position: absolute;
+    left: 0.75rem;
+    color: var(--k-text-subtle);
+    pointer-events: none;
+}
+
+/* ==================== Tables ==================== */
+.admin-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+}
+
+.admin-table thead th {
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    color: var(--k-text-muted);
+    background: var(--k-bg-surface-2);
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--k-border);
+    position: sticky;
+    top: 0;
+}
+
+.admin-table tbody td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--k-border);
+    color: var(--k-text);
+    vertical-align: middle;
+}
+
+.admin-table tbody tr:hover td {
+    background: var(--k-bg-hover);
+}
+
+.admin-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.admin-row-actions {
+    display: inline-flex;
+    gap: 0.25rem;
+}
+
+/* ==================== Buttons ==================== */
+.admin-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.2;
+    border-radius: var(--k-radius-sm);
+    border: 1px solid var(--k-border);
+    background: var(--k-bg-surface);
+    color: var(--k-text);
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    text-decoration: none;
+}
+
+.admin-btn:hover {
+    background: var(--k-bg-hover);
+    border-color: var(--k-border-strong);
+    color: var(--k-text);
+}
+
+.admin-btn:disabled,
+.admin-btn[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.admin-btn.primary {
+    background: var(--k-accent);
+    border-color: var(--k-accent);
+    color: var(--k-text-on-accent);
+}
+
+.admin-btn.primary:hover {
+    background: var(--k-accent-hover);
+    border-color: var(--k-accent-hover);
+    color: var(--k-text-on-accent);
+}
+
+.admin-btn.danger {
+    color: var(--k-danger);
+    border-color: var(--k-border);
+    background: var(--k-bg-surface);
+}
+
+.admin-btn.danger:hover {
+    background: var(--k-danger-soft);
+    color: var(--k-danger-soft-text);
+    border-color: transparent;
+}
+
+.admin-btn.ghost {
+    background: transparent;
+    border-color: transparent;
+}
+
+.admin-btn.icon-only {
+    padding: 0.4rem;
+    width: 32px;
+    height: 32px;
+}
+
+/* ==================== Chips & badges ==================== */
+.admin-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 999px;
+    background: var(--k-bg-surface-2);
+    color: var(--k-text-muted);
+    border: 1px solid var(--k-border);
+}
+
+.role-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 999px;
+    line-height: 1.3;
+    border: 1px solid transparent;
+}
+
+.role-chip.owner { background: var(--k-role-owner-bg); color: var(--k-role-owner-text); }
+.role-chip.admin { background: var(--k-role-admin-bg); color: var(--k-role-admin-text); }
+.role-chip.manager { background: var(--k-role-manager-bg); color: var(--k-role-manager-text); }
+.role-chip.editor { background: var(--k-role-editor-bg); color: var(--k-role-editor-text); }
+.role-chip.contributor { background: var(--k-role-contributor-bg); color: var(--k-role-contributor-text); }
+.role-chip.viewer { background: var(--k-role-viewer-bg); color: var(--k-role-viewer-text); }
+.role-chip.guest { background: var(--k-role-guest-bg); color: var(--k-role-guest-text); }
+
+/* ==================== Empty / loading states ==================== */
+.admin-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--k-text-muted);
+}
+
+.admin-empty-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--k-text);
+    margin-bottom: 0.4rem;
+}
+
+.admin-skeleton {
+    background: linear-gradient(90deg, var(--k-bg-surface-2) 0%, var(--k-bg-hover) 50%, var(--k-bg-surface-2) 100%);
+    background-size: 200% 100%;
+    animation: admin-skeleton-shimmer 1.4s ease-in-out infinite;
+    border-radius: var(--k-radius-sm);
+}
+
+@keyframes admin-skeleton-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+/* ==================== Modals ==================== */
+.admin-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: var(--k-bg-overlay);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    padding: 1rem;
+}
+
+.admin-modal {
+    background: var(--k-bg-elevated);
+    color: var(--k-text);
+    border-radius: var(--k-radius);
+    box-shadow: var(--k-shadow-lg);
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--k-border);
+}
+
+.admin-modal.lg { max-width: 720px; }
+
+.admin-modal-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--k-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.admin-modal-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.admin-modal-body {
+    padding: 1.25rem;
+    overflow-y: auto;
+}
+
+.admin-modal-footer {
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid var(--k-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    background: var(--k-bg-surface-2);
+}
+
+/* ==================== Forms inside admin ==================== */
+.admin-field { margin-bottom: 1rem; }
+
+.admin-field-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--k-text-muted);
+    margin-bottom: 0.35rem;
+}
+
+.admin-field input,
+.admin-field select,
+.admin-field textarea {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    background: var(--k-bg-input);
+    color: var(--k-text);
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-sm);
+    font-size: 0.875rem;
+}
+
+.admin-field input:focus,
+.admin-field select:focus,
+.admin-field textarea:focus {
+    outline: none;
+    border-color: var(--k-accent);
+    box-shadow: 0 0 0 3px var(--k-accent-soft);
+}
+
+.admin-field-help {
+    font-size: 0.75rem;
+    color: var(--k-text-subtle);
+    margin-top: 0.25rem;
+}
+
+.admin-field-error {
+    font-size: 0.75rem;
+    color: var(--k-danger);
+    margin-top: 0.25rem;
+}
+
+/* ==================== Alerts ==================== */
+.admin-alert {
+    border-radius: var(--k-radius-sm);
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+}
+
+.admin-alert.info { background: var(--k-info-soft); color: var(--k-info-soft-text); }
+.admin-alert.success { background: var(--k-success-soft); color: var(--k-success-soft-text); }
+.admin-alert.warning { background: var(--k-warning-soft); color: var(--k-warning-soft-text); }
+.admin-alert.danger { background: var(--k-danger-soft); color: var(--k-danger-soft-text); }

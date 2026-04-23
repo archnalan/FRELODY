@@ -26,6 +26,9 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using FRELODYSHRD.Services;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.Interfaces;
+using FRELODYAPIs.Authorization;
+using FRELODYAPIs.Seeding;
+using Microsoft.AspNetCore.Authorization;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -62,6 +65,7 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddSingleton<ICurrencyConverter, CurrencyConverter>();
 builder.Services.AddTransient<ITenantProvider, TenantProvider>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 builder.Services.AddScoped<IPlaylistService,PlaylistService>();
 builder.Services.AddScoped<ISongBookService,SongBookService>();
 builder.Services.AddScoped<IArtistService,ArtistService>();
@@ -199,6 +203,15 @@ builder.Services.AddAuthentication(option =>
 
 builder.Services.AddRazorComponents();
 builder.Services.AddRazorPages();
+
+// Org-tier role authorization (custom [OrgRole(...)] attribute).
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, OrgRolePolicyProvider>();
+builder.Services.AddSingleton<IAuthorizationHandler, OrgRoleAuthorizationHandler>();
+builder.Services.AddAuthorization();
+
+// Startup seeders for Identity roles + SuperAdmin.
+builder.Services.AddScoped<RoleSeeder>();
+builder.Services.AddScoped<SuperAdminSeeder>();
 // Register the global exception handler
 //builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -416,6 +429,14 @@ using (var scope = app.Services.CreateScope())
     {
         var seeder = services.GetRequiredService<DatabaseSeeder>();
         await seeder.SeedDataAsync();
+
+        // Ensure all Identity roles exist (platform + org tiers).
+        var roleSeeder = services.GetRequiredService<RoleSeeder>();
+        await roleSeeder.SeedAsync();
+
+        // Idempotently elevate SUPERADMIN_SEED_EMAIL to SuperAdmin.
+        var superAdminSeeder = services.GetRequiredService<SuperAdminSeeder>();
+        await superAdminSeeder.SeedAsync();
     }
     catch (Exception ex)
     {
