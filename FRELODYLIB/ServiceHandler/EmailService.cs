@@ -87,8 +87,10 @@ namespace FRELODYLIB.ServiceHandler
                     await smtp.AuthenticateAsync(emailDto.emailSenderAccount, emailDto.emailSenderSecret, cancellationToken);
                 }
 
-                await smtp.SendAsync(email, cancellationToken);
-                _logger.LogInformation("Email sent successfully to {ToEmail}", emailDto.ToEmail);
+                var serverResponse = await smtp.SendAsync(email, cancellationToken);
+                _logger.LogInformation(
+                    "Email accepted by SMTP {Host}:{Port}. From={From}, To={ToEmail}, ServerResponse={Response}",
+                    host, port, emailDto.emailSenderAccount, emailDto.ToEmail, serverResponse);
                 return ServiceResult<bool>.Success(true);
             }
             catch (Exception ex) when (ex is SmtpCommandException or MailKit.Security.AuthenticationException or TimeoutException)

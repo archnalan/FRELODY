@@ -77,7 +77,9 @@ builder.Services.AddScoped<IChordService, ChordService>();
 builder.Services.AddScoped<ILyricSegment, LyricSegmentService>();
 builder.Services.AddScoped<ILyricLineService, LyricLineService>();
 builder.Services.AddScoped<ISongPartService, SongPartService>();
-if (builder.Environment.IsDevelopment())
+var useDevEmail = builder.Configuration.GetValue<bool>("EmailSettings:UseDevEmail",
+    defaultValue: builder.Environment.IsDevelopment());
+if (useDevEmail)
     builder.Services.AddScoped<IEmailService, DevEmailService>();
 else
     builder.Services.AddScoped<IEmailService, EmailService>();
