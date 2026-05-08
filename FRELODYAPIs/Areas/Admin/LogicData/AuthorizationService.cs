@@ -1104,15 +1104,109 @@ namespace FRELODYAPP.Data
         }
         private async Task SendLoginNotification(User user)
         {
+            var loginTime = DateTime.UtcNow.ToLocalTime().ToString("MMM dd, yyyy 'at' hh:mm tt");
+            var appName = _config["ApplicationInfo:Name"] ?? "Frelody";
+            var supportUrl = _config["ApplicationInfo:SupportUrl"] ?? "https://frelody.com/support";
+
             var emailDto = new EmailDto(true)
             {
-                Subject = "A new Login has been detected",
+                Subject = "New sign-in to your account",
                 ToEmail = user.Email,
-                Body = $"A new login into your account was detected at {DateTime.UtcNow.ToLocalTime().ToString("MM-dd-yyyy hh:mm tt")}. " +
-                       $"If this wasn't you, please secure your account with {_config["ApplicationInfo:Name"]}  by changing your password. " +
-                       $"Contact support if needed.<br/><br/>{_config["ApplicationInfo:SupportUrl"]}"
+                Body = BuildLoginNotificationHtml(loginTime, appName, supportUrl)
             };
             await _emailSmtpService.SendMailAsync(emailDto);
+        }
+
+        private static string BuildLoginNotificationHtml(string loginTime, string appName, string supportUrl)
+        {
+            return $@"<!DOCTYPE html>
+<html lang=""en"">
+<head><meta charset=""UTF-8""><meta name=""viewport"" content=""width=device-width,initial-scale=1""></head>
+<body style=""margin:0;padding:0;background:#f4f4f7;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"">
+<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""background:#f4f4f7;"">
+<tr><td align=""center"" style=""padding:40px 20px;"">
+<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07);"">
+
+  <!-- Wordmark -->
+  <tr>
+    <td style=""padding:28px 32px 0;text-align:center;"">
+      <span style=""font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#667eea;"">FRELODY</span>
+    </td>
+  </tr>
+
+  <!-- Alert banner -->
+  <tr>
+    <td style=""padding:20px 32px 0;"">
+      <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"">
+        <tr>
+          <td style=""background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;"">
+            <table role=""presentation"" cellpadding=""0"" cellspacing=""0"">
+              <tr>
+                <td style=""padding-right:10px;vertical-align:top;font-size:18px;line-height:1;"">⚠️</td>
+                <td style=""font-size:13px;color:#92400e;line-height:1.5;"">
+                  A new sign-in was detected on your account.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Body -->
+  <tr>
+    <td style=""padding:24px 32px;"">
+      <p style=""margin:0 0 20px;font-size:14px;color:#374151;line-height:1.6;"">
+        We noticed a successful login to your <strong>{appName}</strong> account:
+      </p>
+
+      <!-- Detail row -->
+      <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0""
+             style=""background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:20px;"">
+        <tr>
+          <td style=""padding:14px 16px;"">
+            <span style=""font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#6b7280;"">Time</span><br>
+            <span style=""font-size:14px;font-weight:600;color:#111827;margin-top:2px;display:block;"">{loginTime}</span>
+          </td>
+        </tr>
+      </table>
+
+      <p style=""margin:0 0 8px;font-size:14px;color:#374151;line-height:1.6;"">
+        If this was you, no action is needed.
+      </p>
+      <p style=""margin:0 0 20px;font-size:14px;color:#374151;line-height:1.6;"">
+        If you don't recognise this sign-in, change your password immediately and contact support.
+      </p>
+
+      <!-- CTA -->
+      <table role=""presentation"" cellpadding=""0"" cellspacing=""0"">
+        <tr>
+          <td style=""border-radius:6px;background:#667eea;"">
+            <a href=""{supportUrl}""
+               style=""display:inline-block;padding:10px 22px;font-size:13px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:6px;"">
+              Contact support
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style=""padding:16px 32px;border-top:1px solid #f3f4f6;text-align:center;"">
+      <p style=""margin:0;font-size:11px;color:#9ca3af;"">
+        &copy; {DateTime.UtcNow.Year} Frelody &middot; Your music, beautifully organized
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>";
         }
 
         private async Task SetUserClaimsInContext(User user, string tenantId)

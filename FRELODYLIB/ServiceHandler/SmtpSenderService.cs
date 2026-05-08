@@ -119,56 +119,58 @@ namespace FRELODYLIB.ServiceHandler
 
         private static string BuildPasswordResetEmailHtml(string callbackUrl)
         {
-            return $@"
-<!DOCTYPE html>
+            return $@"<!DOCTYPE html>
 <html lang=""en"">
 <head><meta charset=""UTF-8""><meta name=""viewport"" content=""width=device-width,initial-scale=1""></head>
-<body style=""margin:0;padding:0;background-color:#f4f4f7;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"">
-<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#f4f4f7;"">
+<body style=""margin:0;padding:0;background:#f4f4f7;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"">
+<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""background:#f4f4f7;"">
 <tr><td align=""center"" style=""padding:40px 20px;"">
-<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);"">
+<table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07);"">
 
-  <!-- Header -->
+  <!-- Wordmark -->
   <tr>
-    <td style=""background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:32px 32px 24px;text-align:center;"">
-      <h1 style=""margin:0;font-size:24px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;"">FRELODY</h1>
-      <p style=""margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.85);"">Password Reset</p>
+    <td style=""padding:28px 32px 0;text-align:center;"">
+      <span style=""font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#667eea;"">FRELODY</span>
     </td>
   </tr>
 
   <!-- Body -->
   <tr>
-    <td style=""padding:32px;"">
-      <p style=""margin:0 0 8px;font-size:18px;font-weight:600;color:#1a1a2e;"">Hi there,</p>
-      <p style=""margin:0 0 24px;font-size:15px;color:#4a4a68;line-height:1.6;"">
+    <td style=""padding:24px 32px 28px;"">
+      <p style=""margin:0 0 6px;font-size:18px;font-weight:600;color:#111827;"">Reset your password</p>
+      <p style=""margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;"">
         We received a request to reset your password. Click the button below to choose a new one.
       </p>
 
-      <!-- CTA button -->
-      <div style=""text-align:center;margin:0 0 24px;"">
-        <a href=""{callbackUrl}""
-           style=""display:inline-block;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:8px;"">
-          Reset Password
-        </a>
-      </div>
+      <!-- CTA -->
+      <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" style=""margin-bottom:24px;"">
+        <tr>
+          <td style=""border-radius:6px;background:#667eea;"">
+            <a href=""{callbackUrl}""
+               style=""display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:6px;"">
+              Reset password
+            </a>
+          </td>
+        </tr>
+      </table>
 
-      <p style=""margin:0 0 16px;font-size:13px;color:#8888a0;line-height:1.5;"">
-        If the button doesn't work, copy and paste this link into your browser:
+      <p style=""margin:0 0 6px;font-size:12px;color:#9ca3af;line-height:1.5;"">
+        If the button doesn't work, copy this link into your browser:
       </p>
-      <p style=""margin:0 0 24px;font-size:13px;word-break:break-all;"">
+      <p style=""margin:0 0 20px;font-size:12px;word-break:break-all;"">
         <a href=""{callbackUrl}"" style=""color:#667eea;text-decoration:none;"">{callbackUrl}</a>
       </p>
 
-      <p style=""margin:0;font-size:13px;color:#8888a0;line-height:1.5;"">
-        If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+      <p style=""margin:0;font-size:12px;color:#9ca3af;line-height:1.5;"">
+        Didn't request this? Your password will remain unchanged.
       </p>
     </td>
   </tr>
 
   <!-- Footer -->
   <tr>
-    <td style=""padding:20px 32px;background:#fafafe;border-top:1px solid #eeeeee;text-align:center;"">
-      <p style=""margin:0;font-size:12px;color:#aaaacc;"">
+    <td style=""padding:16px 32px;border-top:1px solid #f3f4f6;text-align:center;"">
+      <p style=""margin:0;font-size:11px;color:#9ca3af;"">
         &copy; {DateTime.UtcNow.Year} Frelody &middot; Your music, beautifully organized
       </p>
     </td>
