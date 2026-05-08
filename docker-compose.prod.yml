@@ -73,8 +73,8 @@ services:
   frelody-web:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      # The client (browser) will call the API via https://domain/api/
-      ApiSettings__BaseUrl: "https://${SERVER_HOST}/api"
+      # The client (browser) will call the API via https://domain
+      ApiSettings__BaseUrl: "https://${SERVER_HOST}"
     # Port 5080 no longer needs to be exposed publicly if Nginx handles it
     ports:
       - "5080:5080"
