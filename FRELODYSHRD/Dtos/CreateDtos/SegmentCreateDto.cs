@@ -12,7 +12,10 @@ namespace FRELODYSHRD.Dtos.CreateDtos
     public class SegmentCreateDto
     {
         public string? Id { get; set; } // key value for UI
-        [Required]
+        // Lyric may be empty for chord-only segments (e.g. a trailing chord above whitespace
+        // in a column-aligned monospace block). Keep non-null but allow empty strings so
+        // ASP.NET's [ApiController] ModelState validation doesn't reject the payload.
+        [Required(AllowEmptyStrings = true)]
         public string Lyric { get; set; } = string.Empty;
         public int LineNumber { get; set; }
         public string? ChordId { get; set; }
