@@ -15,6 +15,10 @@ using System.Text.RegularExpressions;
 using Scalar.AspNetCore;
 using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPIs.Areas.Admin.LogicData;
+using FRELODYAPIs.Services.WebSong;
+using FRELODYAPIs.Services.OgCard;
+using FRELODYAPIs.Controllers;
+using FRELODYAPP.Interfaces;
 using System.Text.Json;
 using FRELODYAPP.Data.Extensions;
 using FRELODYAPP.Profiles;
@@ -93,15 +97,37 @@ builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<ISmtpSenderService,SmtpSenderService>();
 builder.Services.AddScoped<IShareLinkService, ShareLinkService>();
-builder.Services.AddScoped<FRELODYAPIs.Services.OgCard.IOgCardService, FRELODYAPIs.Services.OgCard.OgCardService>();
-builder.Services.Configure<FRELODYAPIs.Controllers.ShareLandingOptions>(
-    builder.Configuration.GetSection(FRELODYAPIs.Controllers.ShareLandingOptions.SectionName));
+builder.Services.AddScoped<IOgCardService, OgCardService>();
+builder.Services.Configure<ShareLandingOptions>(
+    builder.Configuration.GetSection(ShareLandingOptions.SectionName));
+
+// Web song extraction (server-side fetch + HTML parsing for chord/lyric pre-blocks).
+builder.Services.Configure<WebSongExtractionOptions>(
+    builder.Configuration.GetSection(WebSongExtractionOptions.SectionName));
+builder.Services.AddSingleton<UrlSafetyValidator>();
+builder.Services.AddSingleton<IWebSongSource, BradWardenChordsSource>();
+builder.Services.AddSingleton<IWebSongSource, MonospacePreBlockSource>();
+builder.Services.AddScoped<IWebSongExtractionService, WebSongExtractionService>();
+builder.Services.AddHttpClient(WebSongExtractionService.HttpClientName, client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(
+        builder.Configuration.GetValue<int?>("WebSongExtraction:TimeoutSeconds") ?? 10);
+})
+.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    AllowAutoRedirect = true,
+    MaxAutomaticRedirections = 3,
+    AutomaticDecompression = System.Net.DecompressionMethods.All,
+    UseCookies = false,
+    ConnectTimeout = TimeSpan.FromSeconds(5)
+});
 builder.Services.AddScoped<FileValidationService>();
 builder.Services.AddScoped<SecurityUtilityService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<ContentChangeTrackingService>();
 builder.Services.AddScoped<ISongAiService, SongAiService>();
 builder.Services.AddScoped<IOcrService, OcrService>();
+builder.Services.AddScoped<ILyricHandler, LyricExtractor>();
 builder.Services.AddHttpClient("NvidiaAI", client =>
 {
     client.BaseAddress = new Uri("https://integrate.api.nvidia.com/v1/");

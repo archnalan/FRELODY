@@ -68,12 +68,35 @@
                                           @bind="pastedText"
                                           @bind:event="oninput"
                                           rows="@(isTextareaFocused || (extractedSong == null && databaseSong == null) ? 3 : 1)"
-                                          placeholder="Search for a song, or paste lyrics with chords here…"
+                                          placeholder="Search for a song, paste lyrics with chords, or paste a URL…"
                                           disabled="@isProcessing"
                                           @onfocus="OnInputFocus"
                                           @onblur="OnTextareaBlur"
-                                          @onkeydown="HandleKeyDown">
+                                          @onkeydown="HandleKeyDown"
+                                          @onkeydown:preventDefault="@_preventNextEnter">
                                 </textarea>
+                                @if (!string.IsNullOrEmpty(_detectedMidContentUrl))
+                                {
+                                    <div class="ii-url-detected" role="status">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                             fill="none" stroke="currentColor" stroke-width="2"
+                                             stroke-linecap="round" stroke-linejoin="round" class="ii-url-detected-icon">
+                                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                        </svg>
+                                        <span class="ii-url-detected-label">
+                                            URL detected: <span class="ii-url-detected-host">@_detectedMidContentHost</span>
+                                        </span>
+                                        <button type="button" class="ii-url-detected-btn ii-url-detected-extract"
+                                                disabled="@isProcessing" @onclick="ExtractDetectedUrl">
+                                            Extract from URL
+                                        </button>
+                                        <button type="button" class="ii-url-detected-btn ii-url-detected-dismiss"
+                                                @onclick="DismissDetectedUrl" aria-label="Dismiss">
+                                            ×
+                                        </button>
+                                    </div>
+                                }
                             </div>
                         </div>
 
@@ -318,6 +341,13 @@
     private List<string> recentSearches = new();
     private int selectedSuggestionIndex = -1;
     private CancellationTokenSource? _debounceCts;
+    // Set during HandleKeyDown to suppress newline insertion when Enter triggers submit.
+    private bool _preventNextEnter;
+    // First http(s) URL found mid-content (only set when there's other content too).
+    private string? _detectedMidContentUrl;
+    private string? _detectedMidContentHost;
+    // The user explicitly dismissed the inline URL prompt for the current text — don't re-show until text changes meaningfully.
+    private string? _dismissedUrlForText;
 
     protected override async Task OnInitializedAsync()
     {
@@ -347,6 +377,28 @@
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
+        // Reset prevent-default flag from the previous keystroke.
+        _preventNextEnter = false;
+
+        // Enter (no Shift) submits — prevent the newline so the textarea stays clean.
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            // Suggestion-pick takes precedence when an item is highlighted.
+            if (showSuggestions && selectedSuggestionIndex >= 0 && suggestions.Count > selectedSuggestionIndex)
+            {
+                _preventNextEnter = true;
+                await OnSuggestionSelected(suggestions[selectedSuggestionIndex]);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(pastedText) && !isProcessing)
+            {
+                _preventNextEnter = true;
+                await ProcessPastedText();
+                return;
+            }
+        }
+
         if (!showSuggestions) return;
 
         var totalItems = string.IsNullOrEmpty(searchQuery)
@@ -364,12 +416,6 @@
             case "Escape":
                 showSuggestions = false;
                 selectedSuggestionIndex = -1;
-                break;
-            case "Enter":
-                if (selectedSuggestionIndex >= 0 && suggestions.Count > selectedSuggestionIndex)
-                {
-                    await OnSuggestionSelected(suggestions[selectedSuggestionIndex]);
-                }
                 break;
         }
     }
@@ -421,9 +467,28 @@
                 searchQuery = "";
                 suggestions.Clear();
                 showSuggestions = true;
+                _detectedMidContentUrl = null;
+                _detectedMidContentHost = null;
+                _dismissedUrlForText = null;
                 StateHasChanged();
                 return;
             }
+
+            // If the input looks like a URL, suppress the title-search dropdown.
+            // The actual fetch happens on submit (Enter / submit button), not on paste.
+            if (LooksLikeUrl(text))
+            {
+                showSuggestions = false;
+                suggestions.Clear();
+                _detectedMidContentUrl = null;
+                _detectedMidContentHost = null;
+                StateHasChanged();
+                return;
+            }
+
+            // Look for a URL embedded mid-content. If found, surface a chip asking the user
+            // whether to extract from it (so they can keep typing/pasting other content too).
+            DetectMidContentUrl(text);
 
             // If input looks like lyrics (multi-line or contains chord brackets), don't search
             if (text.Contains('\n') || text.Contains('['))
@@ -510,6 +575,17 @@
     {
         if (string.IsNullOrWhiteSpace(pastedText)) return;
 
+        // If the user submitted a URL, route through the server-side fetch instead
+        // of the local extractor. Existing paste/text/file flows are untouched.
+        var trimmed = pastedText.Trim();
+        if (LooksLikeUrl(trimmed))
+        {
+            _debounceCts?.Cancel();
+            _debounceCts = new CancellationTokenSource();
+            await ProcessUrl(trimmed, _debounceCts.Token);
+            return;
+        }
+
         isProcessing = true;
         showSuggestions = false;
         StateHasChanged();
@@ -524,6 +600,119 @@
         isProcessing = false;
         _shouldScrollToMonitor = true;
         StateHasChanged();
+    }
+
+    /// <summary>True when the supplied text is a single absolute http(s) URL.</summary>
+    private static bool LooksLikeUrl(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var t = text.Trim();
+        if (t.Contains(' ') || t.Contains('\n')) return false;
+        return Uri.TryCreate(t, UriKind.Absolute, out var u) &&
+               (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp);
+    }
+
+    // Match http(s) URLs embedded in arbitrary text. Trailing punctuation is stripped after match.
+    private static readonly System.Text.RegularExpressions.Regex _urlRegex =
+        new(@"https?://[^\s<>""']+",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// Find the first http(s) URL embedded in <paramref name="text"/> and update
+    /// <see cref="_detectedMidContentUrl"/> when it appears alongside other content.
+    /// </summary>
+    private void DetectMidContentUrl(string text)
+    {
+        _detectedMidContentUrl = null;
+        _detectedMidContentHost = null;
+
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        var match = _urlRegex.Match(text);
+        if (!match.Success) return;
+
+        var url = match.Value.TrimEnd('.', ',', ';', ':', ')', ']', '}', '"', '\'');
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var u)) return;
+        if (u.Scheme != Uri.UriSchemeHttp && u.Scheme != Uri.UriSchemeHttps) return;
+
+        // If the entire trimmed input IS the URL, the submit button already handles it — no chip needed.
+        if (string.Equals(text.Trim(), url, StringComparison.Ordinal)) return;
+
+        // Respect a prior dismissal for this exact text snapshot.
+        if (string.Equals(_dismissedUrlForText, text, StringComparison.Ordinal)) return;
+
+        _detectedMidContentUrl = url;
+        _detectedMidContentHost = u.Host;
+    }
+
+    private async Task ExtractDetectedUrl()
+    {
+        var url = _detectedMidContentUrl;
+        if (string.IsNullOrEmpty(url)) return;
+
+        _detectedMidContentUrl = null;
+        _detectedMidContentHost = null;
+        _debounceCts?.Cancel();
+        _debounceCts = new CancellationTokenSource();
+        await ProcessUrl(url, _debounceCts.Token);
+    }
+
+    private void DismissDetectedUrl()
+    {
+        _dismissedUrlForText = pastedText;
+        _detectedMidContentUrl = null;
+        _detectedMidContentHost = null;
+    }
+
+    /// <summary>
+    /// Server fetches the chord/lyric page (allowlisted hosts only); the UI runs the
+    /// column-aligned parser locally to produce the preview.
+    /// </summary>
+    private async Task ProcessUrl(string url, CancellationToken ct)
+    {
+        isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await _webSongApi.FetchFromUrl(new WebSongFetchRequest { Url = url });
+
+            if (ct.IsCancellationRequested) return;
+
+            if (!response.IsSuccessStatusCode || response.Content is null)
+            {
+                _toastService.Show("Could not fetch that page.", ToastType.Error);
+                return;
+            }
+
+            var result = response.Content;
+
+            if (!result.IsSupported)
+            {
+                if (result.RequiresWebSearchFallback)
+                    _toastService.Show("Web search for this site is coming soon.", ToastType.Info);
+                else
+                    _toastService.Show(result.Message ?? "No chords found on that page.", ToastType.Warning);
+                return;
+            }
+
+            extractedSong = _extractor.ExtractFromColumnAlignedText(
+                result.PreBlockText, result.Title, result.SongNumber);
+            databaseSong = null;
+            monitorSource = StudioMonitor.MonitorSource.Extracted;
+            _shouldScrollToMonitor = true;
+        }
+        catch (TaskCanceledException) { }
+        catch (Exception ex)
+        {
+            _toastService.Show($"URL fetch failed: {ex.Message}", ToastType.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)

@@ -457,18 +457,28 @@ public class ChordLyricExtrator
         }
     }
 
+    /// <summary>
+    /// Aligns a chord line to the lyric line directly underneath using column-exact slicing.
+    /// Each chord owns the slice of the lyric that begins at the chord's column and ends at
+    /// the next chord's column (or end of line). This preserves syllable-level alignment
+    /// (e.g. G "cal-", D "va", Em "-ry") and inter-word whitespace as it appeared visually.
+    /// </summary>
     private void AlignChordsToLyrics(
         ICollection<SegmentCreateDto> songLyrics,
         string chordLine, string lyricLine,
         int lineNumber, ref int lyricOrder)
     {
-        // Extract chords with character positions
+        // Normalize tabs so column indices match visual columns.
+        chordLine = ExpandTabs(chordLine ?? string.Empty);
+        lyricLine = ExpandTabs(lyricLine ?? string.Empty);
+
+        // Collect chord tokens with their starting column indices.
         var chordPositions = new List<(string chord, int position)>();
-        var chordMatches = ChordPattern.Matches(chordLine);
-        foreach (Match m in chordMatches)
+        foreach (Match m in Regex.Matches(chordLine, @"\S+"))
         {
-            if (m.Length <= MAX_CHORD_LENGTH)
-                chordPositions.Add((m.Value, m.Index));
+            var token = m.Value;
+            if (token.Length <= MAX_CHORD_LENGTH && IsChordWord(token))
+                chordPositions.Add((token, m.Index));
         }
 
         if (chordPositions.Count == 0)
@@ -477,53 +487,116 @@ public class ChordLyricExtrator
             return;
         }
 
-        // Tokenize lyric line into syllables (splitting on spaces and hyphens)
-        var lyricTokens = TokenizeLyricLine(lyricLine);
-
-        if (lyricTokens.Count == 0)
+        // Instrumental / chord-only line.
+        if (string.IsNullOrWhiteSpace(lyricLine))
         {
-            // No lyrics, just add chords with empty lyrics
             foreach (var (chord, _) in chordPositions)
-            {
                 songLyrics.Add(CreateSegment(chord, string.Empty, lineNumber, ref lyricOrder));
-            }
             return;
         }
 
-        // If count of chords matches tokens, do 1:1 mapping
-        if (chordPositions.Count == lyricTokens.Count)
+        // Fallback: if the lyric line is dramatically shorter than the chord layout,
+        // the source isn't truly column-aligned (e.g. proportional-font copy/paste).
+        // Use the legacy word-closest mapping instead.
+        int lastChordCol = chordPositions[^1].position;
+        if (lyricLine.Length < lastChordCol - 2)
         {
-            for (int j = 0; j < lyricTokens.Count; j++)
+            AlignChordsToLyricsByClosestWord(songLyrics, chordPositions, lyricLine, lineNumber, ref lyricOrder);
+            return;
+        }
+
+        // Leading lyric text before the first chord (rare, but happens when a phrase
+        // begins unaccompanied and the first chord lands mid-line).
+        int firstChordCol = chordPositions[0].position;
+        if (firstChordCol > 0 && firstChordCol <= lyricLine.Length)
+        {
+            var leading = lyricLine.Substring(0, firstChordCol);
+            if (!string.IsNullOrWhiteSpace(leading))
+                songLyrics.Add(CreateSegment(null, leading, lineNumber, ref lyricOrder));
+        }
+
+        // Column-slice the lyric per chord boundary.
+        for (int i = 0; i < chordPositions.Count; i++)
+        {
+            int start = chordPositions[i].position;
+            int end = (i + 1 < chordPositions.Count) ? chordPositions[i + 1].position : lyricLine.Length;
+
+            if (start >= lyricLine.Length)
             {
-                songLyrics.Add(CreateSegment(chordPositions[j].chord, lyricTokens[j], lineNumber, ref lyricOrder));
+                // Chord beyond lyric end — keep the chord with an empty lyric.
+                songLyrics.Add(CreateSegment(chordPositions[i].chord, string.Empty, lineNumber, ref lyricOrder));
+                continue;
             }
-            return;
-        }
 
-        // Otherwise, use position-based alignment:
-        // Get lyric words with their character positions from the original line
+            end = Math.Min(end, lyricLine.Length);
+            var slice = lyricLine.Substring(start, end - start);
+
+            // Preserve internal/trailing whitespace (it reproduces the visual gap),
+            // strip only stray CR/LF artifacts.
+            slice = slice.TrimEnd('\r', '\n');
+
+            songLyrics.Add(CreateSegment(chordPositions[i].chord, slice, lineNumber, ref lyricOrder));
+        }
+    }
+
+    /// <summary>
+    /// Legacy fallback used when the chord/lyric lines are not truly column-aligned.
+    /// Maps each lyric word to the chord whose column is nearest it.
+    /// </summary>
+    private void AlignChordsToLyricsByClosestWord(
+        ICollection<SegmentCreateDto> songLyrics,
+        List<(string chord, int position)> chordPositions,
+        string lyricLine, int lineNumber, ref int lyricOrder)
+    {
         var wordPositions = new List<(string word, int position)>();
-        var wordRegex = new Regex(@"\S+");
-        foreach (Match wm in wordRegex.Matches(lyricLine))
-        {
+        foreach (Match wm in Regex.Matches(lyricLine, @"\S+"))
             wordPositions.Add((wm.Value, wm.Index));
+
+        if (wordPositions.Count == 0)
+        {
+            foreach (var (chord, _) in chordPositions)
+                songLyrics.Add(CreateSegment(chord, string.Empty, lineNumber, ref lyricOrder));
+            return;
         }
 
         foreach (var (word, wpos) in wordPositions)
         {
-            // Find the closest chord by character position
-            string? matchedChord = null;
-            if (chordPositions.Count > 0)
-            {
-                var closest = chordPositions.OrderBy(c => Math.Abs(c.position - wpos)).First();
-                if (Math.Abs(closest.position - wpos) <= 5)
-                {
-                    matchedChord = closest.chord;
-                }
-            }
-
+            var closest = chordPositions.OrderBy(c => Math.Abs(c.position - wpos)).First();
+            string? matchedChord = Math.Abs(closest.position - wpos) <= 5 ? closest.chord : null;
             songLyrics.Add(CreateSegment(matchedChord, word, lineNumber, ref lyricOrder));
         }
+    }
+
+    /// <summary>
+    /// Expands tab characters to the equivalent number of spaces using the given tab width
+    /// (default 8). Column counter resets on line breaks. Required so that <see cref="AlignChordsToLyrics"/>
+    /// can rely on raw character indices matching visual columns.
+    /// </summary>
+    private static string ExpandTabs(string s, int tabWidth = 8)
+    {
+        if (string.IsNullOrEmpty(s) || !s.Contains('\t')) return s ?? string.Empty;
+        var sb = new System.Text.StringBuilder(s.Length);
+        int col = 0;
+        foreach (var ch in s)
+        {
+            if (ch == '\t')
+            {
+                int spaces = tabWidth - (col % tabWidth);
+                sb.Append(' ', spaces);
+                col += spaces;
+            }
+            else if (ch == '\n' || ch == '\r')
+            {
+                sb.Append(ch);
+                col = 0;
+            }
+            else
+            {
+                sb.Append(ch);
+                col++;
+            }
+        }
+        return sb.ToString();
     }
 
     private List<string> TokenizeLyricLine(string lyricLine)
@@ -550,6 +623,53 @@ public class ChordLyricExtrator
             }
         }
         return tokens;
+    }
+
+    // ──────────────────────────────────────────────
+    //  Pre-formatted (column-aligned) Block Entry
+    // ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Public entry point for already-extracted monospace pre-block text where chord lines sit
+    /// directly above their lyric lines (the universal "chords-over-lyrics" format used by
+    /// most hymn/chord sites and ChordPro plain-text exports). Reuses the alternating parser
+    /// which now performs column-exact slicing.
+    /// </summary>
+    /// <param name="preBlockText">The already HTML-decoded text content of one or more &lt;pre&gt;
+    /// blocks, with line breaks normalized to '\n' and &amp;nbsp; converted to spaces.</param>
+    /// <param name="title">Optional title (typically extracted from the page heading).</param>
+    /// <param name="songNumber">Optional song number (typically from the URL or heading).</param>
+    public SimpleSongCreateDto ExtractFromColumnAlignedText(string preBlockText, string? title = null, int? songNumber = null)
+    {
+        var song = new SimpleSongCreateDto
+        {
+            Title = title ?? string.Empty,
+            SongNumber = songNumber,
+            SongLyrics = new List<SegmentCreateDto>()
+        };
+
+        if (string.IsNullOrWhiteSpace(preBlockText))
+        {
+            song.Title = string.IsNullOrEmpty(song.Title) ? "Untitled Song" : song.Title;
+            return song;
+        }
+
+        // Normalize NBSP and CR so column slicing is faithful to what the user sees.
+        var normalized = preBlockText
+            .Replace("\u00A0", " ")
+            .Replace("\r\n", "\n")
+            .Replace("\r", "\n");
+
+        var lines = normalized.Split('\n');
+
+        int lineNumber = 1;
+        int lyricOrder = 1;
+        ParseAlternatingFormat(lines, 0, song.SongLyrics, ref lineNumber, ref lyricOrder);
+
+        if (string.IsNullOrEmpty(song.Title))
+            song.Title = "Untitled Song";
+
+        return song;
     }
 
     // ──────────────────────────────────────────────
