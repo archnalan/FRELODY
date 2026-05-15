@@ -19,6 +19,12 @@ namespace FRELODYSHRD.ModelTypes
         Solo,
         Refrain,
         Coda,
-        Outro
+        Outro,
+        /// <summary>
+        /// Plain (chord-less) lyrics block, typically the "Full Lyrics" section at the
+        /// bottom of scraped chord pages (e.g. bradwarden.com hymn chords). Rendered as
+        /// a collapsible section in the player so it doesn't dominate the chord view.
+        /// </summary>
+        FullLyrics
     }
 }

@@ -101,8 +101,17 @@
 
             @if (Song.SongLyrics != null && Song.SongLyrics.Count > 0)
             {
+                @* Separate the chord-aligned block from the "Full Lyrics" tail (PartName=FullLyrics).
+                   They each restart LineNumber=1 so they must be grouped independently — but both
+                   are shown in the preview since this is a one-shot extraction view. *@
+                var chordSegments = Song.SongLyrics
+                    .Where(s => s.PartName != SongSection.FullLyrics)
+                    .ToList();
+                var fullLyricSegments = Song.SongLyrics
+                    .Where(s => s.PartName == SongSection.FullLyrics)
+                    .ToList();
                 <div class="mon-lyrics-grid">
-                    @foreach (var lineGroup in Song.SongLyrics
+                    @foreach (var lineGroup in chordSegments
                             .GroupBy(s => s.LineNumber)
                             .OrderBy(g => g.Key))
                     {
@@ -119,10 +128,29 @@
                         </div>
                     }
                 </div>
+                @if (fullLyricSegments.Count > 0)
+                {
+                    <div class="mon-full-lyrics">
+                        <div class="mon-full-lyrics-header">
+                            <i class="bi bi-journal-text"></i>
+                            <span>Full Lyrics</span>
+                        </div>
+                        <div class="mon-full-lyrics-body">
+                            @foreach (var lineGroup in fullLyricSegments
+                                    .GroupBy(s => s.LineNumber)
+                                    .OrderBy(g => g.Key))
+                            {
+                                <p class="mon-full-lyrics-line">
+                                    @string.Join(" ", lineGroup.OrderBy(s => s.LyricOrder).Select(s => s.Lyric))
+                                </p>
+                            }
+                        </div>
+                    </div>
+                }
                 <div class="mon-stats">
-                    <span><i class="bi bi-list-ol"></i> @Song.SongLyrics.Select(s => s.LineNumber).Distinct().Count() lines</span>
-                    <span><i class="bi bi-puzzle"></i> @Song.SongLyrics.Count segments</span>
-                    <span><i class="bi bi-music-note"></i> @Song.SongLyrics.Count(s => !string.IsNullOrEmpty(s.ChordName)) chords</span>
+                    <span><i class="bi bi-list-ol"></i> @chordSegments.Select(s => s.LineNumber).Distinct().Count() lines</span>
+                    <span><i class="bi bi-puzzle"></i> @chordSegments.Count segments</span>
+                    <span><i class="bi bi-music-note"></i> @chordSegments.Count(s => !string.IsNullOrEmpty(s.ChordName)) chords</span>
                 </div>
             }
             else

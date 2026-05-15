@@ -1280,3 +1280,172 @@
 [data-bs-theme="dark"] .search-fab {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
+
+/* ============================================
+   FULL LYRICS COLLAPSIBLE
+   Modern, theme-responsive collapsible for the chord-less "Full Lyrics" section
+   produced by web-extracted hymn pages (e.g. bradwarden.com). Default collapsed.
+   ============================================ */
+
+.full-lyrics-collapse {
+    margin: 1.5rem 0 1rem;
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    background: var(--card-bg);
+    backdrop-filter: var(--card-backdrop-filter);
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+    .full-lyrics-collapse[open] {
+        border-color: var(--gradient-primary-start);
+        box-shadow: 0 4px 18px -8px rgba(99, 102, 241, 0.35);
+    }
+
+    .full-lyrics-collapse[open] .full-lyrics-summary {
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .full-lyrics-collapse[open] .full-lyrics-summary-hint {
+        opacity: 0;
+        transform: translateX(4px);
+    }
+
+    .full-lyrics-collapse[open] .full-lyrics-summary-chevron {
+        transform: rotate(180deg);
+    }
+
+.full-lyrics-summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+    user-select: none;
+    color: var(--text-primary);
+    font-weight: 600;
+    transition: background 0.18s ease, color 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .full-lyrics-summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .full-lyrics-summary::marker {
+        display: none;
+        content: '';
+    }
+
+    .full-lyrics-summary:hover {
+        background: var(--bg-hover);
+    }
+
+    .full-lyrics-summary:focus-visible {
+        outline: 2px solid var(--gradient-primary-start);
+        outline-offset: -2px;
+    }
+
+.full-lyrics-summary-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end, var(--gradient-primary-start)));
+    color: #fff;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px -2px rgba(99, 102, 241, 0.45);
+}
+
+.full-lyrics-summary-label {
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    flex-shrink: 0;
+}
+
+.full-lyrics-summary-hint {
+    flex: 1;
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--text-muted, var(--text-primary));
+    opacity: 0.65;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.full-lyrics-summary-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    color: var(--text-primary);
+    opacity: 0.7;
+    transition: transform 0.25s ease, opacity 0.18s ease;
+    flex-shrink: 0;
+}
+
+.full-lyrics-summary:hover .full-lyrics-summary-chevron {
+    opacity: 1;
+}
+
+.full-lyrics-body {
+    padding: 1rem 1.25rem 1.25rem;
+    animation: full-lyrics-reveal 0.28s ease-out;
+}
+
+.full-lyrics-line {
+    margin: 0 0 0.4rem;
+    line-height: 1.55;
+    color: var(--text-primary);
+    word-wrap: break-word;
+}
+
+    .full-lyrics-line:last-child {
+        margin-bottom: 0;
+    }
+
+    .full-lyrics-line:empty {
+        height: 0.6rem;
+    }
+
+@keyframes full-lyrics-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .full-lyrics-collapse,
+    .full-lyrics-summary,
+    .full-lyrics-summary-chevron,
+    .full-lyrics-summary-hint,
+    .full-lyrics-body {
+        transition: none;
+        animation: none;
+    }
+}
+
+/* Slightly tighter on small screens */
+@media (max-width: 480px) {
+    .full-lyrics-summary {
+        padding: 0.625rem 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .full-lyrics-summary-hint {
+        display: none;
+    }
+
+    .full-lyrics-body {
+        padding: 0.875rem 1rem 1rem;
+    }
+}

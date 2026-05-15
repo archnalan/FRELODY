@@ -309,8 +309,39 @@
                 <div class="song-content" style="@GetSongContentStyle()">
                     @if (song.SongParts?.Any() == true)
                     {
-                        foreach (var verse in song.SongParts.OrderBy(v => v.PartNumber))
+                        foreach (var verse in song.SongParts.OrderBy(v => v.PartName == SongSection.FullLyrics ? 1 : 0).ThenBy(v => v.PartNumber))
                         {
+                            if (verse.PartName == SongSection.FullLyrics)
+                            {
+                                <details class="full-lyrics-collapse">
+                                    <summary class="full-lyrics-summary">
+                                        <span class="full-lyrics-summary-icon">
+                                            <i class="bi bi-journal-text"></i>
+                                        </span>
+                                        <span class="full-lyrics-summary-label">Full Lyrics</span>
+                                        <span class="full-lyrics-summary-hint">tap to expand</span>
+                                        <span class="full-lyrics-summary-chevron">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </span>
+                                    </summary>
+                                    <div class="full-lyrics-body">
+                                        @if (verse.LyricLines?.Any() == true)
+                                        {
+                                            foreach (var line in verse.LyricLines.OrderBy(l => l.LyricLineOrder))
+                                            {
+                                                <p class="full-lyrics-line" style="@GetLyricStyle()">
+                                                    @if (line.LyricSegments?.Any() == true)
+                                                    {
+                                                        @string.Join(" ", line.LyricSegments.OrderBy(s => s.LyricOrder).Select(s => s.Lyric))
+                                                    }
+                                                </p>
+                                            }
+                                        }
+                                    </div>
+                                </details>
+                                continue;
+                            }
+
                             <div class="verse-section">
                                 @if (showVerseTitles)
                                 {

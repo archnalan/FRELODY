@@ -660,16 +660,54 @@ public class ChordLyricExtrator
             .Replace("\r\n", "\n")
             .Replace("\r", "\n");
 
-        var lines = normalized.Split('\n');
+        // Many scraped chord pages (bradwarden.com Hymn Chords, etc.) emit the chord-aligned
+        // block first, then a "[[Full Lyrics]]" marker, then plain lyrics. Split on that
+        // marker so the chord block parses normally and the tail is tagged as a separate
+        // collapsible FullLyrics part in the player.
+        var (chordBlock, fullLyricsBlock) = SplitFullLyricsMarker(normalized);
 
+        var chordLines = chordBlock.Split('\n');
         int lineNumber = 1;
         int lyricOrder = 1;
-        ParseAlternatingFormat(lines, 0, song.SongLyrics, ref lineNumber, ref lyricOrder);
+        ParseAlternatingFormat(chordLines, 0, song.SongLyrics, ref lineNumber, ref lyricOrder);
+
+        if (!string.IsNullOrWhiteSpace(fullLyricsBlock))
+        {
+            var fullLyricsSegments = new List<SegmentCreateDto>();
+            int flLineNumber = 1;
+            int flLyricOrder = 1;
+            ParsePlainLyrics(fullLyricsBlock.Split('\n'), 0, fullLyricsSegments, ref flLineNumber, ref flLyricOrder);
+
+            // Tag every full-lyrics segment so the player can render it in a collapsed
+            // <details> section. PartNumber=1 keeps grouping stable; PartName drives UI.
+            foreach (var seg in fullLyricsSegments)
+            {
+                seg.PartName = SongSection.FullLyrics;
+                seg.PartNumber = 1;
+                song.SongLyrics.Add(seg);
+            }
+        }
 
         if (string.IsNullOrEmpty(song.Title))
             song.Title = "Untitled Song";
 
         return song;
+    }
+
+    // Matches "[[Full Lyrics]]", "[Full Lyrics]", "Full Lyrics:" (case-insensitive) on its
+    // own line, optionally surrounded by whitespace. The marker itself is consumed.
+    private static readonly Regex FullLyricsMarkerRegex = new(
+        @"^[ \t]*(?:\[{1,2}\s*full\s*lyrics\s*\]{1,2}|full\s*lyrics\s*:)[ \t]*$",
+        RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Compiled);
+
+    private static (string chordBlock, string fullLyricsBlock) SplitFullLyricsMarker(string text)
+    {
+        var match = FullLyricsMarkerRegex.Match(text);
+        if (!match.Success) return (text, string.Empty);
+
+        var chordBlock = text.Substring(0, match.Index);
+        var tail = text.Substring(match.Index + match.Length);
+        return (chordBlock, tail);
     }
 
     // ──────────────────────────────────────────────

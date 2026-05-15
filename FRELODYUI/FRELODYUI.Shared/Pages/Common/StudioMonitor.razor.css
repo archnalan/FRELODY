@@ -240,6 +240,50 @@
 
 .mon-stats span { display: inline-flex; align-items: center; gap: 0.3rem; }
 
+/* ── Full Lyrics block (preview, no collapse) ── */
+.mon-full-lyrics {
+    margin: 0 1.125rem 1rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--border-light);
+    border-radius: 0.75rem;
+    background: var(--input-bg, var(--card-bg));
+}
+
+.mon-full-lyrics-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+}
+
+.mon-full-lyrics-header .bi {
+    font-size: 0.95rem;
+    color: var(--gradient-primary-start, #6366f1);
+}
+
+.mon-full-lyrics-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.mon-full-lyrics-line {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+}
+
+.mon-full-lyrics-line:empty::before {
+    content: "\00a0";
+}
+
 .mon-empty-lyrics {
     text-align: center;
     padding: 2rem 1rem;
