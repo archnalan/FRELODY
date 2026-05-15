@@ -105,8 +105,7 @@ builder.Services.Configure<ShareLandingOptions>(
 builder.Services.Configure<WebSongExtractionOptions>(
     builder.Configuration.GetSection(WebSongExtractionOptions.SectionName));
 builder.Services.AddSingleton<UrlSafetyValidator>();
-builder.Services.AddSingleton<IWebSongSource, BradWardenChordsSource>();
-builder.Services.AddSingleton<IWebSongSource, MonospacePreBlockSource>();
+builder.Services.AddSingleton<IWebSongSource, WebSongSource>();
 builder.Services.AddScoped<IWebSongExtractionService, WebSongExtractionService>();
 builder.Services.AddHttpClient(WebSongExtractionService.HttpClientName, client =>
 {

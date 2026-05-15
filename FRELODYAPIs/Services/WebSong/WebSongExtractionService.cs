@@ -39,7 +39,12 @@ namespace FRELODYAPIs.Services.WebSong
     public sealed class WebSongExtractionService : IWebSongExtractionService
     {
         public const string HttpClientName = "WebSongFetcher";
-        private const string UserAgent = "FrelodySongFetcher/1.0 (+https://frelody.app)";
+
+        // Real Chrome fingerprint — many lyric/chord sites (e.g. Ultimate Guitar) return 403
+        // when the User-Agent looks like a generic bot or omits the Client Hints headers.
+        private const string UserAgent =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IEnumerable<IWebSongSource> _sources;
@@ -134,7 +139,21 @@ namespace FRELODYAPIs.Services.WebSong
 
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
             request.Headers.UserAgent.ParseAdd(UserAgent);
-            request.Headers.Accept.ParseAdd("text/html,application/xhtml+xml");
+            request.Headers.Accept.ParseAdd(
+                "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+            request.Headers.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
+            // Client Hints + Sec-Fetch-* — required by Cloudflare/Akamai bot filters used by
+            // sites like tabs.ultimate-guitar.com. TryAddWithoutValidation is needed because
+            // these are restricted/non-standard request headers.
+            request.Headers.TryAddWithoutValidation(
+                "sec-ch-ua", "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"131\", \"Google Chrome\";v=\"131\"");
+            request.Headers.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
+            request.Headers.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
+            request.Headers.TryAddWithoutValidation("Sec-Fetch-Dest", "document");
+            request.Headers.TryAddWithoutValidation("Sec-Fetch-Mode", "navigate");
+            request.Headers.TryAddWithoutValidation("Sec-Fetch-Site", "none");
+            request.Headers.TryAddWithoutValidation("Sec-Fetch-User", "?1");
+            request.Headers.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
 
             // Use ResponseHeadersRead so we can validate Content-Length and bail out early on huge payloads.
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
