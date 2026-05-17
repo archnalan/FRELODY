@@ -27,12 +27,12 @@
         <div class="source-toggle" role="tablist" aria-label="Chord source">
             <button type="button"
                     role="tab"
-                    class="source-toggle-btn source-toggle-primary @(FormModel.Source == ChordSource.Drawing ? "is-active" : null)"
+                    class="btn source-toggle-btn @(FormModel.Source == ChordSource.Drawing ? "btn-primary" : "btn-outline-primary")"
                     aria-selected="@(FormModel.Source == ChordSource.Drawing)"
                     disabled="@(!string.IsNullOrEmpty(Id))"
                     @onclick="() => SetSource(ChordSource.Drawing)">
                 <i class="bi bi-vector-pen"></i>
-                <div>
+                <div class="source-toggle-text">
                     <span class="source-toggle-title">Draw it
                         <span class="source-toggle-badge">Recommended</span>
                     </span>
@@ -41,12 +41,12 @@
             </button>
             <button type="button"
                     role="tab"
-                    class="source-toggle-btn source-toggle-secondary @(FormModel.Source == ChordSource.Image ? "is-active" : null)"
+                    class="btn source-toggle-btn @(FormModel.Source == ChordSource.Image ? "btn-secondary" : "btn-outline-secondary")"
                     aria-selected="@(FormModel.Source == ChordSource.Image)"
                     disabled="@(!string.IsNullOrEmpty(Id))"
                     @onclick="() => SetSource(ChordSource.Image)">
                 <i class="bi bi-image"></i>
-                <div>
+                <div class="source-toggle-text">
                     <span class="source-toggle-title">Upload image</span>
                     <span class="source-toggle-sub">PNG / JPG / SVG</span>
                 </div>

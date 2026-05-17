@@ -17,33 +17,19 @@
     gap: 0.75rem;
     padding: 0.75rem 1rem;
     border-radius: 0.75rem;
-    border: 1px solid var(--cd-border, rgba(0, 0, 0, 0.12));
-    background: var(--cd-input-bg, #ffffff);
-    color: inherit;
     text-align: left;
-    cursor: pointer;
-    transition: border-color 120ms ease, background 120ms ease;
+    justify-content: flex-start;
 }
 
 .source-toggle-btn i {
     font-size: 1.4rem;
-    color: var(--cd-fg-muted, #6b7280);
+    flex-shrink: 0;
 }
 
-.source-toggle-btn:hover:not(:disabled) {
-    border-color: var(--cd-accent, #3a6eff);
-}
-
-.source-toggle-btn.is-active {
-    border-color: var(--cd-accent, #3a6eff);
-    background: var(--cd-accent-soft, rgba(58, 110, 255, 0.08));
-}
-
-.source-toggle-btn.is-active i { color: var(--cd-accent, #3a6eff); }
-
-.source-toggle-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.source-toggle-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
 }
 
 .source-toggle-title {
@@ -55,20 +41,7 @@
 .source-toggle-sub {
     display: block;
     font-size: 0.78rem;
-    color: var(--text-secondary, #6b7280);
-}
-
-.source-toggle-primary {
-    order: 0;
-}
-
-.source-toggle-secondary {
-    order: 1;
     opacity: 0.85;
-}
-
-.source-toggle-secondary:hover:not(:disabled) {
-    opacity: 1;
 }
 
 .source-toggle-badge {
@@ -80,13 +53,14 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
     border-radius: 999px;
-    background: var(--bs-primary, #3a6eff);
-    color: #ffffff;
+    background: rgba(255, 255, 255, 0.25);
+    color: inherit;
     vertical-align: middle;
 }
 
-.source-toggle-btn:not(.is-active) .source-toggle-badge {
-    background: var(--text-secondary, #6b7280);
+.btn-outline-primary .source-toggle-badge {
+    background: var(--bs-primary, #3a6eff);
+    color: #ffffff;
 }
 
 .step-validation-feedback {

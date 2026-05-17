@@ -1,87 +1,193 @@
-/* Base carousel styling */
 .chord-carousel {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.chord-carousel-stage {
     position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    max-width: 16rem;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background: var(--modal-content-bg, #ffffff);
+    border: 1px solid var(--border-light, var(--modal-border-color, rgba(0, 0, 0, 0.06)));
 }
 
-/* Small size - for compact displays */
-.carousel-sm .chord-chart-img {
-    height: 120px;
-    min-height: 120px;
-    max-height: 120px;
-    max-width: 100px;
+.chord-chart-frame {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+}
+
+.chord-chart-frame-drawing {
+    /* SVG is rendered in currentColor; inherit theme text color */
+    color: var(--text-primary, #1f2937);
+    background: var(--modal-content-bg, #ffffff);
+}
+
+.chord-chart-frame-drawing ::deep svg {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.chord-chart-frame-image {
+    /* Uploaded chord-chart images are designed for white backgrounds */
+    background: #ffffff;
+}
+
+.chord-chart-img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
     object-fit: contain;
-    border-radius: 0.5em;
 }
 
-/* Medium size - default for inline song display */
-.carousel-md .chord-chart-img {
-    height: 150px;
-    min-height: 150px;
-    max-height: 150px;
-    max-width: 130px;
-    object-fit: contain;
-    border-radius: 0.5em;
+.chord-chart-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--text-secondary, #6b7280);
+    font-size: 0.85rem;
 }
 
-/* Large size - for detailed views */
-.carousel-lg .chord-chart-img {
-    height: 200px;
-    min-height: 200px;
-    max-height: 200px;
-    max-width: 170px;
-    object-fit: contain;
-    border-radius: 0.5em;
+.chord-chart-placeholder i {
+    font-size: 2rem;
+    opacity: 0.5;
 }
 
-/* Popover size - compact for hover displays */
-.carousel-popover .chord-chart-img {
-    height: 90px;
-    min-height: 90px;
-    max-height: 90px;
-    max-width: 75px;
-    object-fit: contain;
-    border-radius: 0.5em;
+.chord-carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(0, 0, 0, 0.45);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 150ms ease, background 150ms ease;
+    z-index: 2;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .carousel-md .chord-chart-img,
-    .carousel-lg .chord-chart-img {
-        height: 70px;
-        min-height: 70px;
-        max-height: 70px;
-        max-width: 60px;
-    }
+.chord-carousel-stage:hover .chord-carousel-nav,
+.chord-carousel-nav:focus-visible {
+    opacity: 1;
 }
 
-/* ============================================
-   GHOST / LOADING SKELETON
-   ============================================ */
+.chord-carousel-nav:hover {
+    background: rgba(0, 0, 0, 0.65);
+}
 
+.chord-carousel-nav-prev { left: 0.4rem; }
+.chord-carousel-nav-next { right: 0.4rem; }
+
+.chord-carousel-indicators {
+    display: flex;
+    gap: 0.3rem;
+    justify-content: center;
+    align-items: center;
+    margin-top: 0.1rem;
+}
+
+.chord-carousel-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    border: 0;
+    background: var(--border-medium, #d1d5db);
+    cursor: pointer;
+    padding: 0;
+    transition: background 120ms ease, transform 120ms ease;
+}
+
+.chord-carousel-dot.is-active {
+    background: var(--bs-primary, #3a6eff);
+    transform: scale(1.25);
+}
+
+.chord-carousel-actions {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.25rem;
+}
+
+.chord-carousel-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.6rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--border-light, rgba(0, 0, 0, 0.12));
+    background: transparent;
+    color: var(--text-secondary, #6b7280);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.chord-carousel-action-btn:hover {
+    color: var(--bs-primary, #3a6eff);
+    border-color: var(--bs-primary, #3a6eff);
+}
+
+.chord-carousel-action-btn.chord-carousel-action-primary {
+    color: var(--bs-primary, #3a6eff);
+    border-color: var(--bs-primary, #3a6eff);
+}
+
+.chord-carousel-action-btn.chord-carousel-action-danger:hover {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+.carousel-sm .chord-carousel-stage { max-width: 8rem; }
+.carousel-md .chord-carousel-stage { max-width: 12rem; }
+.carousel-lg .chord-carousel-stage { max-width: 14rem; }
+.carousel-popover .chord-carousel-stage { max-width: 6.5rem; }
+
+/* Loading skeleton */
 .chord-carousel--ghost {
     pointer-events: none;
 }
 
 .chord-carousel-ghost-img {
-    border-radius: 0.5em;
-    background: var(--border-light, #d1d5db);
-    animation: carousel-ghost-shimmer 1.4s ease-in-out infinite;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    max-width: 14rem;
+    border-radius: 0.75rem;
+    background: var(--bg-hover, var(--border-light, #d1d5db));
+    animation: chord-ghost-shimmer 1.4s ease-in-out infinite;
 }
 
-/* width + max-width both set so slider mode (no intrinsic card width) matches real img size */
-.carousel-sm       .chord-carousel-ghost-img { height: 130px; width: 100px;  max-width: 100px; }
-.carousel-md       .chord-carousel-ghost-img { height: 160px; width: 130px;  max-width: 130px; }
-.carousel-lg       .chord-carousel-ghost-img { height: 210px; width: 170px;  max-width: 170px; }
-.carousel-popover  .chord-carousel-ghost-img { height: 100px; width:  75px;  max-width:  75px; }
+.carousel-sm .chord-carousel-ghost-img { max-width: 8rem; }
+.carousel-md .chord-carousel-ghost-img { max-width: 12rem; }
+.carousel-popover .chord-carousel-ghost-img { max-width: 6.5rem; }
 
-@media (max-width: 768px) {
-    .carousel-md .chord-carousel-ghost-img,
-    .carousel-lg .chord-carousel-ghost-img { height: 80px; width: 60px; max-width: 60px; }
-}
-
-@keyframes carousel-ghost-shimmer {
+@keyframes chord-ghost-shimmer {
     0%, 100% { opacity: 0.4; }
-    50%       { opacity: 0.85; }
+    50% { opacity: 0.85; }
 }
-

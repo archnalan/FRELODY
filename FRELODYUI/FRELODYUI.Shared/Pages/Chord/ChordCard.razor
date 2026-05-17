@@ -1,147 +1,78 @@
-﻿@using System.Threading
 @inject ILogger<ChordCard> _logger
 
-<div class="row g-4">
-    <Virtualize Context="chord"
-                ItemsProvider="ProvideChordsAsync"
-                ItemSize="170"
-                OverscanCount="3"
-                @ref="_virtualize">
-                <ItemContent>
-            <div class="col-12 col-md-6 col-lg-3">
-                <div class="card h-100 shadow-sm" style="border-radius:.75rem;">
-                    <div class="card-img-top">
-                        <ChordCarousel Size="CarouselSize.Large" Chord="@chord" />
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">@chord.ChordName</h5>
-                        <p class="card-text mb-1">
-                            Skill Level: <span class="text-muted">@GetDifficultyText(chord.Difficulty)</span>
-                        </p>
-
-                        <div class="card-actions d-flex justify-content-center mt-3">
-                            <button class="btn btn-sm btn-info me-2"
-                                    data-bs-toggle="tooltip"
-                                    title="View Chord Details" 
-                                    @onclick="() => NavigateToDetails(chord.Id)">
-                                <i class="bi bi-list"></i>
-                            </button>
-
-                            <button class="btn btn-sm btn-primary me-2"
-                                    data-bs-toggle="tooltip"
-                                    title="Edit Chord"
-                                    @onclick="async () => await HandleEditChord(chord)">
-                                <i class="bi bi-pen"></i>
-                            </button>
-
-                            <button class="btn btn-sm btn-danger"
-                                    data-bs-toggle="tooltip"
-                                    title="Delete Chord"
-                                    @onclick="() => HandleDeleteChord(chord)">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </div>
+<div class="chord-grid">
+    @foreach (var chord in Chords)
+    {
+        <div class="chord-card" @key="chord.Id">
+            <div class="chord-card-thumb">
+                <ChordCarousel Size="CarouselSize.Medium" Chord="@chord" ShowActions="false" />
+            </div>
+            <div class="chord-card-body">
+                <div class="chord-card-meta">
+                    <h5 class="chord-card-title">@chord.ChordName</h5>
+                    <span class="chord-card-skill @SkillClass(chord.Difficulty)">
+                        @GetDifficultyText(chord.Difficulty)
+                    </span>
+                </div>
+                <div class="chord-card-actions">
+                    <button class="chord-card-icon-btn" title="View details"
+                            @onclick="() => NavigateToDetails(chord.Id)">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="chord-card-icon-btn" title="Edit chord"
+                            @onclick="async () => await HandleEditChord(chord)">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="chord-card-icon-btn chord-card-icon-btn-danger" title="Delete chord"
+                            @onclick="() => HandleDeleteChord(chord)">
+                        <i class="bi bi-trash"></i>
+                    </button>
                 </div>
             </div>
-                </ItemContent>
-    </Virtualize>
-        
+        </div>
+    }
 </div>
 
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="chord-grid-error">@error</div>
+}
+
 @code {
+    [Parameter] public List<ChordDto> Chords { get; set; } = new();
+    [Parameter] public EventCallback<ChordDto> OnSetToDelete { get; set; }
+    [Parameter] public EventCallback<ChordDto> OnSetOpenChordEdit { get; set; }
+    [Parameter] public EventCallback OnRefreshRequested { get; set; }
 
-    [Parameter]
-    public EventCallback<ChordDto> OnSetToDelete { get; set; }
-
-    [Parameter]
-    public EventCallback<ChordDto> OnSetOpenChordEdit { get; set; }
-
-    private string _searchTerm { get; set; } = string.Empty;
-    private Virtualize<ChordDto>? _virtualize;
     private string error = string.Empty;
 
-    private const string PlaceholderImagePath = "/_content/FRELODYUI.Shared/images/no_image_placeholder.png";
+    /// <summary>Backwards-compat hook so parents that previously called Refresh() still work.</summary>
+    public Task Refresh(string? searchTerm = null) => OnRefreshRequested.InvokeAsync();
 
-    private string Theme = "light";
-    private int currentIndex = 0;
-    private Timer? carouselTimer;
-
-
-    public async Task Refresh(string? searchTerm = null)
-    {
-        _searchTerm = searchTerm ?? string.Empty;
-
-        if (_virtualize is not null)
-        {
-            await _virtualize.RefreshDataAsync();
-        }
-    }
-
-    private async ValueTask<ItemsProviderResult<ChordDto>> ProvideChordsAsync(ItemsProviderRequest request)
-    {
-        try
-        {
-            error = string.Empty;
-
-            var offset = request.StartIndex;
-            var limit = request.Count <= 0 ? 10 : request.Count;
-
-            if (!string.IsNullOrWhiteSpace(_searchTerm))
-            {
-                var response = await _chordsApi.SearchChords(_searchTerm, offset, limit);
-                var page = response?.Content;
-                var items = page?.Data ?? new List<ChordDto>();
-                var total = page?.TotalSize ?? 0;
-                return new ItemsProviderResult<ChordDto>(items, total);
-            }
-            else
-            {
-                var response = await _chordsApi.GetChords(offset, limit);
-                var page = response?.Content;
-                var items = page?.Data ?? new List<ChordDto>();
-                var total = page?.TotalSize ?? 0;
-                return new ItemsProviderResult<ChordDto>(items, total);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching songs during virtualization.");
-            error = $"Error fetching songs: {ex.Message}";
-            return new ItemsProviderResult<ChordDto>(Array.Empty<ChordDto>(), 0);
-        }
-    }
-
-    private async Task HandleEditChord(ChordDto chord)
-    {
-        await OnSetOpenChordEdit.InvokeAsync(chord);
-    }
-
-    private void HandleDeleteChord(ChordDto chord)
-    {
-        OnSetToDelete.InvokeAsync(chord);
-    }
+    private async Task HandleEditChord(ChordDto chord) => await OnSetOpenChordEdit.InvokeAsync(chord);
+    private void HandleDeleteChord(ChordDto chord) => OnSetToDelete.InvokeAsync(chord);
 
     private void NavigateToDetails(string? chordId)
     {
-        // Navigation would be implemented based on your routing
         _logger.LogInformation($"Navigating to chord details: {chordId}");
         _navManager.NavigateTo($"/chords/{chordId}");
     }
 
-    private string GetDifficultyText(ChordDifficulty? difficulty)
+    private static string GetDifficultyText(ChordDifficulty? difficulty) => difficulty switch
     {
-        return difficulty switch
-        {
-            ChordDifficulty.Easy => "Beginner",
-            ChordDifficulty.Medium => "Intermediate",
-            ChordDifficulty.Advanced => "Advanced",
-            _ => "Unknown"
-        };
-    }
+        ChordDifficulty.Easy => "Beginner",
+        ChordDifficulty.Medium => "Intermediate",
+        ChordDifficulty.Advanced => "Advanced",
+        ChordDifficulty.Expert => "Expert",
+        _ => "Unknown"
+    };
 
-    public void Dispose()
+    private static string SkillClass(ChordDifficulty? difficulty) => difficulty switch
     {
-        carouselTimer?.Dispose();
-    }
+        ChordDifficulty.Easy => "chord-card-skill-easy",
+        ChordDifficulty.Medium => "chord-card-skill-medium",
+        ChordDifficulty.Advanced => "chord-card-skill-advanced",
+        ChordDifficulty.Expert => "chord-card-skill-expert",
+        _ => "chord-card-skill-unknown"
+    };
 }

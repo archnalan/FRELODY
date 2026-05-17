@@ -8,7 +8,7 @@
 
 <div class="w-100 h-100 overflow-auto position-relative">
     <div class="d-flex flex-column justify-content-start align-items-center">
-        <div class="w-75 position-sticky text-center top-0" style="z-index: 10; background-color: var(--modal-content-bg);">
+        <div class="chords-sticky-header w-75 position-sticky text-center top-0">
             <h3 class="m-3 text-primary">Chords</h3>
 
             @if (!string.IsNullOrEmpty(successMessage))
@@ -69,13 +69,16 @@
             else if (filteredChords.Any())
             {
                 <ChordCard @ref="chordCardRef"
+                           Chords="@filteredChords"
                            OnSetToDelete="SetToDelete"
-                           OnSetOpenChordEdit="OpenChordEditModal" />
+                           OnSetOpenChordEdit="OpenChordEditModal"
+                           OnRefreshRequested="LoadChords" />
             }
             else
             {
-                <div class="text-center py-5">
-                    <p>No chords found</p>
+                <div class="chords-empty">
+                    <i class="bi bi-music-note-list" style="font-size: 2rem; opacity: 0.4;"></i>
+                    <p class="mt-2 mb-0">No chords found</p>
                 </div>
             }
         </div>
@@ -137,16 +140,24 @@
         {
             await Task.Delay(SearchDebounceMs, token);
             if (token.IsCancellationRequested) return;
+            ApplyFilter();
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { /* expected while typing */ }
+    }
 
-            if (chordCardRef is not null)
-            {
-                await chordCardRef.Refresh(searchQuery.Trim().ToLowerInvariant());
-            }
-        }
-        catch (TaskCanceledException)
+    private void ApplyFilter()
+    {
+        var q = searchQuery?.Trim();
+        if (string.IsNullOrEmpty(q))
         {
-            // Swallow – expected when user keeps typing
+            filteredChords = chords;
+            return;
         }
+        filteredChords = chords
+            .Where(c => !string.IsNullOrEmpty(c.ChordName) &&
+                        c.ChordName.Contains(q, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     private async Task LoadChords()
@@ -157,8 +168,8 @@
             var response = await _chordsApi.GetChords();
             if(response.IsSuccessStatusCode)
             {
-                chords = response.Content?.Data!;
-                filteredChords = chords;
+                chords = response.Content?.Data ?? new List<ChordDto>();
+                ApplyFilter();
                 return;
             }
             else
@@ -270,7 +281,6 @@
             }
             await LoadChords();
             CloseDeleteModal();
-            if (chordCardRef != null) await chordCardRef.Refresh();
         }
         catch (Exception ex)
         {
@@ -326,7 +336,6 @@
             return;
         }
         await LoadChords();
-        if (chordCardRef != null) await chordCardRef.Refresh();
         CloseChordCreateModal();
     }
 

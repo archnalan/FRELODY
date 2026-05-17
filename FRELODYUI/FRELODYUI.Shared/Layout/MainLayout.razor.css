@@ -9,7 +9,10 @@
 main {
     flex: 1 1 auto;
     min-width: 0;
-    z-index:0;
+    /* No z-index here: a non-auto z-index on a flex child creates a stacking
+       context that traps fixed-position modals/dialogs rendered by descendant
+       pages (they can never overlay the sidebar). Stacking order is controlled
+       per-element below. */
 }
 
 article {

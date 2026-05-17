@@ -1,0 +1,24 @@
+.chords-sticky-header {
+    z-index: 5;    
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.chords-page-title {
+    margin: 0.5rem 0 1rem;
+    color: var(--bs-primary, #3a6eff);
+    font-weight: 700;
+}
+
+.chords-search-bar {
+    border: 1px solid var(--border-light, var(--modal-border-color, rgba(0, 0, 0, 0.08)));
+    background: var(--modal-content-bg, #ffffff);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.chords-empty {
+    padding: 3rem 1rem;
+    color: var(--text-secondary, #6b7280);
+    text-align: center;
+}
