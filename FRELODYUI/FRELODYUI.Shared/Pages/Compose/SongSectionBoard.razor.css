@@ -1,0 +1,67 @@
+/* ─────────────────────────────────────────────
+   SongSectionBoard — empty-state action row
+   ───────────────────────────────────────────── */
+
+.ssb-starter-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+}
+
+.ssb-starter-divider {
+    flex: 1;
+    height: 0;
+    border-top: 1px dashed var(--k-border);
+    min-width: 1.25rem;
+}
+
+.ssb-starter-divider.is-active {
+    border-top-color: var(--k-accent);
+    opacity: 0.7;
+}
+
+.ssb-starter-divider.is-muted {
+    opacity: 0.4;
+}
+
+.ssb-starter-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+/* ── Import pill ── */
+.ssb-import-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
+    color: #fff;
+    border: none;
+    border-radius: var(--k-radius-sm);
+    padding: 0.32rem 0.8rem;
+    font-weight: 600;
+    box-shadow: var(--k-shadow-sm);
+    transition: opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+}
+
+.ssb-import-btn:hover,
+.ssb-import-btn:focus {
+    color: #fff;
+    opacity: 0.92;
+    transform: translateY(-1px);
+    box-shadow: var(--k-shadow);
+}
+
+.ssb-import-btn:active { transform: translateY(0); }
+
+.ssb-import-btn i { font-size: 0.95rem; }
+
+@media (max-width: 480px) {
+    .ssb-starter-actions { flex-wrap: wrap; justify-content: center; }
+    .ssb-import-btn { padding: 0.32rem 0.7rem; }
+}

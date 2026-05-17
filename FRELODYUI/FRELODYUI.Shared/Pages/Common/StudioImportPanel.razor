@@ -1,0 +1,762 @@
+@using FRELODYUI.Shared.Services
+@inject ICameraService _cameraService
+@inject IOcrApi _ocrApi
+
+@*
+   Shared composer used by /studio and the /compose import modal.
+   Owns: textarea + URL detect + file upload + camera + format detection +
+         live database search suggestions + extraction dispatch.
+   Does NOT own: splash header, auth pill, starter cards, monitor preview.
+*@
+
+<div class="sip-root">
+    @if (_isScanning)
+    {
+        <div class="sip-scan-overlay">
+            <div class="sip-scan-overlay-content">
+                <div class="sip-scan-pulse"></div>
+                <span class="sip-scan-overlay-label">Processing image…</span>
+            </div>
+        </div>
+    }
+
+    <div class="sip-composer-wrap">
+        <div class="sip-composer @(_isProcessing ? "is-busy" : "")">
+            @* Textarea row *@
+            <div class="sip-composer-input-row">
+                <div class="sip-textarea-wrap">
+                    <textarea class="sip-textarea"
+                              @ref="_textareaRef"
+                              @bind="pastedText"
+                              @bind:event="oninput"
+                              rows="@(_isTextareaFocused || !CompactWhenIdle || !HasContentBelow ? Math.Max(MinRows, 1) : 1)"
+                              placeholder="@Placeholder"
+                              disabled="@_isProcessing"
+                              @onfocus="OnInputFocus"
+                              @onblur="OnTextareaBlur"
+                              @onkeydown="HandleKeyDown"
+                              @onkeydown:preventDefault="@_preventNextEnter">
+                    </textarea>
+
+                    @if (!string.IsNullOrEmpty(_detectedMidContentUrl))
+                    {
+                        <div class="sip-url-detected" role="status">
+                            <i class="bi bi-link-45deg sip-url-detected-icon" aria-hidden="true"></i>
+                            <span class="sip-url-detected-label">
+                                URL detected: <span class="sip-url-detected-host">@_detectedMidContentHost</span>
+                            </span>
+                            <button type="button" class="sip-url-detected-btn sip-url-detected-extract"
+                                    disabled="@_isProcessing" @onclick="ExtractDetectedUrl">
+                                Extract
+                            </button>
+                            <button type="button" class="sip-url-detected-btn sip-url-detected-dismiss"
+                                    @onclick="DismissDetectedUrl" aria-label="Dismiss">
+                                ×
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* Leading: file upload *@
+            <div class="sip-composer-leading">
+                <label for="@(FileInputId ?? $"sip-file-{_uid}")"
+                       class="sip-btn sip-btn-plus"
+                       aria-label="Upload file"
+                       title="Upload .pdf, .docx, or .txt"
+                       style="@(_isProcessing ? "pointer-events:none;opacity:0.45;" : "cursor:pointer;")">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                </label>
+            </div>
+
+            @* Footer: camera (if available) *@
+            <div class="sip-composer-footer">
+                @if (_cameraService.IsCameraAvailable)
+                {
+                    <button type="button"
+                            class="sip-btn sip-btn-action"
+                            disabled="@(_isProcessing || _isScanning)"
+                            @onclick="ScanImage"
+                            title="Scan a printed song sheet">
+                        <i class="bi bi-camera" aria-hidden="true"></i>
+                        <span class="sip-btn-label">@(_isScanning ? "Scanning…" : "Camera")</span>
+                    </button>
+                }
+            </div>
+
+            @* Trailing: extract *@
+            <div class="sip-composer-trailing">
+                <button type="button"
+                        class="sip-btn-submit"
+                        disabled="@(_isProcessing || string.IsNullOrWhiteSpace(pastedText))"
+                        @onclick="ProcessPastedText"
+                        title="Extract chords &amp; lyrics">
+                    @if (_isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"
+                              style="width:1rem;height:1rem;border-width:2px;"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-send-fill" aria-hidden="true"></i>
+                    }
+                </button>
+            </div>
+        </div>
+
+        @if (ShowFormatHint)
+        {
+            <p class="sip-format-hint-line">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                Accepts <code>[Am]word</code> inline chords, alternating chord&nbsp;&amp;&nbsp;lyric lines, plain text, or a URL &mdash; auto-detected
+            </p>
+        }
+
+        @if (detectedFormat != null)
+        {
+            <div class="sip-format-badge">
+                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                Detected: <strong>@GetFormatDisplayName(detectedFormat.Value)</strong>
+            </div>
+        }
+    </div>
+
+    <InputFile id="@(FileInputId ?? $"sip-file-{_uid}")" OnChange="HandleFileSelected" class="d-none" accept=".pdf,.docx,.txt"/>
+
+    @* Scanned image preview *@
+    @if (scannedImageBase64 != null)
+    {
+        <div class="sip-scan-wrap">
+            <div class="sip-scan-header">
+                <i class="bi bi-camera" aria-hidden="true"></i>
+                <span>Scanned image</span>
+                <button class="sip-scan-close" @onclick="ClearScannedImage" title="Remove image">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
+            </div>
+            <img src="data:image/jpeg;base64,@scannedImageBase64" alt="Scanned song sheet" class="sip-scan-thumb"/>
+        </div>
+    }
+
+    @* Live suggestions (search / recent) *@
+    @if (ShowDatabaseSearch && _showSuggestions)
+    {
+        <div class="sip-suggestions-wrap">
+            <StudioSuggestions Query="@_searchQuery"
+                               ShowSuggestions="@_showSuggestions"
+                               IsLoading="@_isSearching"
+                               Suggestions="@_suggestions"
+                               RecentSearches="@_recentSearches"
+                               SelectedIndex="@_selectedSuggestionIndex"
+                               OnSuggestionSelected="OnSuggestionSelectedInternal"
+                               OnRecentSearchSelected="OnRecentSearchSelected" />
+        </div>
+    }
+</div>
+
+@code {
+    // ── Parameters ──
+    [Parameter] public bool ShowDatabaseSearch { get; set; } = true;
+    [Parameter] public bool ShowFormatHint { get; set; } = true;
+    [Parameter] public bool CompactWhenIdle { get; set; } = false;
+    [Parameter] public bool HasContentBelow { get; set; } = false;
+    [Parameter] public int MinRows { get; set; } = 3;
+    [Parameter] public string Placeholder { get; set; } =
+        "Search for a song, paste lyrics with chords, or paste a URL…";
+
+    [Parameter] public EventCallback<SongExtractionResult> OnSongExtracted { get; set; }
+    [Parameter] public EventCallback<StudioSuggestion> OnDatabaseSuggestionSelected { get; set; }
+    [Parameter] public EventCallback<bool> ProcessingStateChanged { get; set; }
+    /// <summary>
+    /// Optional explicit id for the hidden file input so external labels (eg. starter cards)
+    /// can target it via <c>for=""</c>. When omitted, a unique id is generated.
+    /// </summary>
+    [Parameter] public string? FileInputId { get; set; }
+
+    // ── Public-ish state (bound) ──
+    public string pastedText { get; set; } = "";
+    public SongFormat? detectedFormat { get; set; }
+    public string? scannedImageBase64 { get; set; }
+
+    // ── Internal state ──
+    private readonly string _uid = Guid.NewGuid().ToString("N").Substring(0, 8);
+    private bool _isProcessing;
+    private bool _isScanning;
+    private bool _isSearching;
+    private bool _showSuggestions;
+    private bool _isTextareaFocused;
+    private bool _preventNextEnter;
+    private string _searchQuery = "";
+    private ElementReference _textareaRef;
+
+    private List<StudioSuggestion> _suggestions = new();
+    private List<string> _recentSearches = new();
+    private int _selectedSuggestionIndex = -1;
+    private CancellationTokenSource? _debounceCts;
+
+    private string? _detectedMidContentUrl;
+    private string? _detectedMidContentHost;
+    private string? _dismissedUrlForText;
+    private string _previousText = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRecentSearches();
+    }
+
+    // ── Public API for parent ──
+
+    /// <summary>Resets composer state (text, format, scanned image, suggestions).</summary>
+    public void Reset()
+    {
+        pastedText = "";
+        detectedFormat = null;
+        scannedImageBase64 = null;
+        _showSuggestions = false;
+        _detectedMidContentUrl = null;
+        _detectedMidContentHost = null;
+        _dismissedUrlForText = null;
+        StateHasChanged();
+    }
+
+    /// <summary>Pre-fill the textarea (used for "resume" hand-off from auth flow).</summary>
+    public void SetText(string text)
+    {
+        pastedText = text ?? "";
+        StateHasChanged();
+    }
+
+    /// <summary>Trigger the camera scan flow programmatically (used by starter cards).</summary>
+    public Task TriggerScanAsync() => ScanImage();
+
+    /// <summary>Whether the camera service reports an available camera.</summary>
+    public bool IsCameraAvailable => _cameraService.IsCameraAvailable;
+
+    /// <summary>Focus the textarea and place cursor at end.</summary>
+    public async Task FocusAsync()
+    {
+        try
+        {
+            await JsRt.InvokeVoidAsync("focusInputAndSetCursorToEnd", _textareaRef);
+        }
+        catch { /* no-op */ }
+    }
+
+    // ── Input handling ──
+    private async Task OnInputFocus()
+    {
+        _isTextareaFocused = true;
+        if (ShowDatabaseSearch && string.IsNullOrWhiteSpace(pastedText))
+        {
+            _showSuggestions = true;
+            _searchQuery = "";
+            await LoadRecentSearches();
+        }
+    }
+
+    private void OnTextareaBlur()
+    {
+        _isTextareaFocused = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        _preventNextEnter = false;
+
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            if (_showSuggestions && _selectedSuggestionIndex >= 0 &&
+                _suggestions.Count > _selectedSuggestionIndex)
+            {
+                _preventNextEnter = true;
+                await OnSuggestionSelectedInternal(_suggestions[_selectedSuggestionIndex]);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(pastedText) && !_isProcessing)
+            {
+                _preventNextEnter = true;
+                await ProcessPastedText();
+                return;
+            }
+        }
+
+        if (!_showSuggestions) return;
+
+        var totalItems = string.IsNullOrEmpty(_searchQuery)
+            ? Math.Min(_recentSearches.Count, 5)
+            : _suggestions.Count;
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                _selectedSuggestionIndex = Math.Min(_selectedSuggestionIndex + 1, totalItems - 1);
+                break;
+            case "ArrowUp":
+                _selectedSuggestionIndex = Math.Max(_selectedSuggestionIndex - 1, -1);
+                break;
+            case "Escape":
+                _showSuggestions = false;
+                _selectedSuggestionIndex = -1;
+                break;
+        }
+    }
+
+    // ── Debounced search ──
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (pastedText != _previousText)
+        {
+            _previousText = pastedText;
+            await DebouncedSearch(pastedText);
+        }
+    }
+
+    private async Task DebouncedSearch(string text)
+    {
+        _debounceCts?.Cancel();
+        _debounceCts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(300, _debounceCts.Token);
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                _searchQuery = "";
+                _suggestions.Clear();
+                _showSuggestions = ShowDatabaseSearch;
+                _detectedMidContentUrl = null;
+                _detectedMidContentHost = null;
+                _dismissedUrlForText = null;
+                StateHasChanged();
+                return;
+            }
+
+            if (LooksLikeUrl(text))
+            {
+                _showSuggestions = false;
+                _suggestions.Clear();
+                _detectedMidContentUrl = null;
+                _detectedMidContentHost = null;
+                StateHasChanged();
+                return;
+            }
+
+            DetectMidContentUrl(text);
+
+            if (text.Contains('\n') || text.Contains('['))
+            {
+                _showSuggestions = false;
+                StateHasChanged();
+                return;
+            }
+
+            if (!ShowDatabaseSearch)
+            {
+                _showSuggestions = false;
+                StateHasChanged();
+                return;
+            }
+
+            _searchQuery = text;
+            _showSuggestions = true;
+            _isSearching = true;
+            StateHasChanged();
+
+            var result = await _playlistsApi.EnhancedSongSearch(0, 10, text, cancellationToken: _debounceCts.Token);
+            if (result.IsSuccessStatusCode && result.Content?.Data != null)
+            {
+                _suggestions = result.Content.Data.Select(r => new StudioSuggestion
+                {
+                    Id = r.Id,
+                    Title = r.Title,
+                    Artist = r.WrittenBy ?? "Unknown Artist",
+                    SongNumber = r.SongNumber,
+                    Album = r.SongBookTitle ?? r.CategoryName,
+                    MatchType = r.MatchType,
+                    MatchSnippet = r.MatchSnippet,
+                    RelevanceScore = r.RelevanceScore,
+                    Source = SuggestionSource.Database
+                }).ToList();
+            }
+            else
+            {
+                _suggestions = new();
+            }
+
+            _isSearching = false;
+            await SaveRecentSearch(text);
+            StateHasChanged();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task OnSuggestionSelectedInternal(StudioSuggestion suggestion)
+    {
+        _showSuggestions = false;
+        _selectedSuggestionIndex = -1;
+        await OnDatabaseSuggestionSelected.InvokeAsync(suggestion);
+        StateHasChanged();
+    }
+
+    private async Task OnRecentSearchSelected(string term)
+    {
+        pastedText = term;
+        await DebouncedSearch(term);
+    }
+
+    // ── Extraction ──
+    private async Task ProcessPastedText()
+    {
+        if (string.IsNullOrWhiteSpace(pastedText)) return;
+
+        var trimmed = pastedText.Trim();
+        if (LooksLikeUrl(trimmed))
+        {
+            _debounceCts?.Cancel();
+            _debounceCts = new CancellationTokenSource();
+            await ProcessUrl(trimmed, _debounceCts.Token);
+            return;
+        }
+
+        await SetProcessing(true);
+        _showSuggestions = false;
+        StateHasChanged();
+
+        var song = _extractor.ExtractFromRawText(pastedText);
+        var lines = pastedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        detectedFormat = _extractor.DetectFormat(lines, 0);
+
+        await SetProcessing(false);
+        await EmitExtracted(song, ExtractionSource.PastedText);
+    }
+
+    /// <summary>True when the supplied text is a single absolute http(s) URL.</summary>
+    private static bool LooksLikeUrl(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var t = text.Trim();
+        if (t.Contains(' ') || t.Contains('\n')) return false;
+        return Uri.TryCreate(t, UriKind.Absolute, out var u) &&
+               (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp);
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex _urlRegex =
+        new(@"https?://[^\s<>""']+",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private void DetectMidContentUrl(string text)
+    {
+        _detectedMidContentUrl = null;
+        _detectedMidContentHost = null;
+
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        var match = _urlRegex.Match(text);
+        if (!match.Success) return;
+
+        var url = match.Value.TrimEnd('.', ',', ';', ':', ')', ']', '}', '"', '\'');
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var u)) return;
+        if (u.Scheme != Uri.UriSchemeHttp && u.Scheme != Uri.UriSchemeHttps) return;
+
+        if (string.Equals(text.Trim(), url, StringComparison.Ordinal)) return;
+        if (string.Equals(_dismissedUrlForText, text, StringComparison.Ordinal)) return;
+
+        _detectedMidContentUrl = url;
+        _detectedMidContentHost = u.Host;
+    }
+
+    private async Task ExtractDetectedUrl()
+    {
+        var url = _detectedMidContentUrl;
+        if (string.IsNullOrEmpty(url)) return;
+
+        _detectedMidContentUrl = null;
+        _detectedMidContentHost = null;
+        _debounceCts?.Cancel();
+        _debounceCts = new CancellationTokenSource();
+        await ProcessUrl(url, _debounceCts.Token);
+    }
+
+    private void DismissDetectedUrl()
+    {
+        _dismissedUrlForText = pastedText;
+        _detectedMidContentUrl = null;
+        _detectedMidContentHost = null;
+    }
+
+    private async Task ProcessUrl(string url, CancellationToken ct)
+    {
+        await SetProcessing(true);
+        StateHasChanged();
+
+        try
+        {
+            var response = await _webSongApi.FetchFromUrl(new WebSongFetchRequest { Url = url });
+
+            if (ct.IsCancellationRequested) return;
+
+            if (!response.IsSuccessStatusCode || response.Content is null)
+            {
+                _toastService.Show("Could not fetch that page.", ToastType.Error);
+                return;
+            }
+
+            var result = response.Content;
+            if (!result.IsSupported)
+            {
+                if (result.RequiresWebSearchFallback)
+                    _toastService.Show("Web search for this site is coming soon.", ToastType.Info);
+                else
+                    _toastService.Show(result.Message ?? "No chords found on that page.", ToastType.Warning);
+                return;
+            }
+
+            var song = _extractor.ExtractFromColumnAlignedText(
+                result.PreBlockText, result.Title, result.SongNumber);
+            await EmitExtracted(song, ExtractionSource.Url);
+        }
+        catch (TaskCanceledException) { }
+        catch (Exception ex)
+        {
+            _toastService.Show($"URL fetch failed: {ex.Message}", ToastType.Error);
+        }
+        finally
+        {
+            await SetProcessing(false);
+        }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            if (file == null) return;
+
+            scannedImageBase64 = null;
+            await SetProcessing(true);
+            _showSuggestions = false;
+            detectedFormat = null;
+            StateHasChanged();
+
+            var path = Path.Combine(Path.GetTempPath(), file.Name);
+            using (var stream = file.OpenReadStream())
+            using (var fs = new FileStream(path, FileMode.Create))
+            {
+                await stream.CopyToAsync(fs);
+            }
+
+            SimpleSongCreateDto? song = null;
+
+            if (file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                song = _extractor.ExtractSong(path);
+                if (song?.SongLyrics != null)
+                {
+                    pastedText = string.Join("\n", song.SongLyrics
+                        .GroupBy(s => s.LineNumber)
+                        .OrderBy(g => g.Key)
+                        .Select(g => string.Join("", g.OrderBy(s => s.LyricOrder)
+                            .Select(s => (string.IsNullOrEmpty(s.ChordName) ? "" : $"[{s.ChordName}]") + s.Lyric))));
+                }
+            }
+            else if (file.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+            {
+                var raw = File.ReadAllText(path);
+                pastedText = raw;
+                song = _extractor.ExtractFromRawText(raw);
+                var lines = raw.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                detectedFormat = _extractor.DetectFormat(lines, 0);
+            }
+            else if (file.Name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase))
+            {
+                var raw = _extractor.ExtractTextFromDocx(path);
+                pastedText = raw;
+                song = _extractor.ExtractFromRawText(raw);
+                var lines = raw.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                detectedFormat = _extractor.DetectFormat(lines, 0);
+            }
+
+            if (song != null)
+                await EmitExtracted(song, ExtractionSource.File);
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "File Processing Error",
+                Message = $"An error occurred while processing the file: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "fileError" }
+            });
+        }
+        finally
+        {
+            await SetProcessing(false);
+        }
+    }
+
+    private async Task ScanImage()
+    {
+        try
+        {
+            var result = await _cameraService.CapturePhotoAsync();
+            if (result == null) return;
+            await ProcessCapturedImage(result);
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Scan Error",
+                Message = $"Could not capture image: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "cameraError" }
+            });
+        }
+    }
+
+    private async Task ProcessCapturedImage(CameraResult imageResult)
+    {
+        scannedImageBase64 = null;
+        _isScanning = true;
+        await SetProcessing(true);
+        _showSuggestions = false;
+        detectedFormat = null;
+        StateHasChanged();
+
+        try
+        {
+            scannedImageBase64 = Convert.ToBase64String(imageResult.ImageData);
+            StateHasChanged();
+
+            var ocrRequest = new OcrExtractRequest
+            {
+                ImageBase64 = scannedImageBase64,
+                FileName = imageResult.FileName
+            };
+
+            var response = await _ocrApi.ExtractTextFromImage(ocrRequest);
+
+            if (response.IsSuccessStatusCode && response.Content != null && response.Content.Success)
+            {
+                pastedText = response.Content.ExtractedText;
+                var song = _extractor.ExtractFromOcrText(pastedText);
+                var lines = pastedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                detectedFormat = _extractor.DetectFormat(lines, 0);
+                await EmitExtracted(song, ExtractionSource.Ocr);
+            }
+            else
+            {
+                var errorMsg = response.Content?.ErrorMessage ?? "OCR extraction failed. Please try again with a clearer image.";
+                _modalService.Show(new ModalOptionDto
+                {
+                    Title = "Scan Error",
+                    Message = errorMsg,
+                    ButtonText = "OK",
+                    Context = new ModalContext { ActionType = "ocrError" }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Scan Processing Error",
+                Message = $"An error occurred while processing the scanned image: {ex.Message}",
+                ButtonText = "OK",
+                Context = new ModalContext { ActionType = "ocrError" }
+            });
+        }
+        finally
+        {
+            _isScanning = false;
+            await SetProcessing(false);
+        }
+    }
+
+    private void ClearScannedImage()
+    {
+        scannedImageBase64 = null;
+        StateHasChanged();
+    }
+
+    // ── Storage helpers ──
+    private async Task LoadRecentSearches()
+    {
+        try
+        {
+            _recentSearches = await _storageService.GetItemAsync<List<string>>("recentSearches")
+                              ?? new List<string>();
+        }
+        catch
+        {
+            _recentSearches = new();
+        }
+    }
+
+    private async Task SaveRecentSearch(string term)
+    {
+        if (string.IsNullOrWhiteSpace(term)) return;
+        _recentSearches.Remove(term);
+        _recentSearches.Insert(0, term);
+        if (_recentSearches.Count > 10) _recentSearches = _recentSearches.Take(10).ToList();
+        await _storageService.SetItemAsync("recentSearches", _recentSearches);
+    }
+
+    // ── Helpers ──
+    private async Task SetProcessing(bool busy)
+    {
+        if (_isProcessing == busy) return;
+        _isProcessing = busy;
+        await ProcessingStateChanged.InvokeAsync(busy);
+        StateHasChanged();
+    }
+
+    private async Task EmitExtracted(SimpleSongCreateDto song, ExtractionSource source)
+    {
+        if (OnSongExtracted.HasDelegate)
+        {
+            await OnSongExtracted.InvokeAsync(new SongExtractionResult
+            {
+                Song = song,
+                RawText = pastedText,
+                ScannedImageBase64 = scannedImageBase64,
+                Source = source,
+                DetectedFormat = detectedFormat
+            });
+        }
+    }
+
+    public async Task ShowRecentSearchesAsync()
+    {
+        if (!ShowDatabaseSearch) return;
+        _showSuggestions = true;
+        _searchQuery = "";
+        await LoadRecentSearches();
+        StateHasChanged();
+        await JsRt.InvokeVoidAsync("focusInputAndSetCursorToEnd", _textareaRef);
+    }
+
+    private string GetFormatDisplayName(SongFormat format) => format switch
+    {
+        SongFormat.InlineChord => "Inline Chords [Am]",
+        SongFormat.AlternatingChordLyric => "Alternating Chord/Lyric",
+        _ => "Plain Text"
+    };
+
+    public enum ExtractionSource { PastedText, Url, File, Ocr }
+
+    public class SongExtractionResult
+    {
+        public SimpleSongCreateDto Song { get; set; } = new();
+        public string? RawText { get; set; }
+        public string? ScannedImageBase64 { get; set; }
+        public ExtractionSource Source { get; set; }
+        public SongFormat? DetectedFormat { get; set; }
+    }
+}

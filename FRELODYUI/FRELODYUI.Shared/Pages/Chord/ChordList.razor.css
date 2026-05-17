@@ -1,5 +1,6 @@
 .chords-sticky-header {
-    z-index: 5;    
+    z-index: 5; 
+    background: var(--k-bg-app, #ffffff);   
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
 }

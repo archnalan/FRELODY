@@ -1,23 +1,10 @@
 @page "/studio"
 @using FRELODYUI.Shared.Services
-@inject IFormFactor FormFactor
-@inject ISongExtractionAiService _aiService
-@inject ICameraService _cameraService
-@inject IOcrApi _ocrApi
 
 <PageTitle>Studio</PageTitle>
 
 <div class="ii-page">
-    @if (isScanning)
-    {
-        <div class="ii-scan-overlay">
-            <div class="ii-scan-overlay-content">
-                <div class="ii-scan-pulse"></div>
-                <span class="ii-scan-overlay-label">Processing image…</span>
-            </div>
-        </div>
-    }
-    <div class="ii-scroll-root" style="@(isScanning ? "pointer-events:none;" : "")">
+    <div class="ii-scroll-root">
 
         @* ── Auth pill header ── *@
         <header class="ii-header">
@@ -25,20 +12,14 @@
                 @if (isAuthenticated)
                 {
                     <a href="/songs-library" class="ii-offer-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                             fill="currentColor" class="ii-offer-icon">
-                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-                        </svg>
+                        <i class="bi bi-collection ii-offer-icon" aria-hidden="true"></i>
                         <span>My Library</span>
                     </a>
                 }
                 else
                 {
                     <a href="/login?returnUrl=/studio" class="ii-offer-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                             fill="currentColor" class="ii-offer-icon">
-                            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 3.9 2.4-7.4L2 9.4h7.6z"/>
-                        </svg>
+                        <i class="bi bi-star-fill ii-offer-icon" aria-hidden="true"></i>
                         <span>Sign in free</span>
                     </a>
                 }
@@ -57,169 +38,19 @@
                     <p class="ii-splash-sub">Song Chord Lab</p>
                 </div>
 
-                @* ── Composer ── *@
-                <div class="ii-composer-wrap">
-                    <div class="ii-composer">
-                        @* Textarea row *@
-                        <div class="ii-composer-input-row">
-                            <div class="ii-textarea-wrap">
-                                <textarea class="ii-textarea"
-                                          @ref="textareaRef"
-                                          @bind="pastedText"
-                                          @bind:event="oninput"
-                                          rows="@(isTextareaFocused || (extractedSong == null && databaseSong == null) ? 3 : 1)"
-                                          placeholder="Search for a song, paste lyrics with chords, or paste a URL…"
-                                          disabled="@isProcessing"
-                                          @onfocus="OnInputFocus"
-                                          @onblur="OnTextareaBlur"
-                                          @onkeydown="HandleKeyDown"
-                                          @onkeydown:preventDefault="@_preventNextEnter">
-                                </textarea>
-                                @if (!string.IsNullOrEmpty(_detectedMidContentUrl))
-                                {
-                                    <div class="ii-url-detected" role="status">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                                             fill="none" stroke="currentColor" stroke-width="2"
-                                             stroke-linecap="round" stroke-linejoin="round" class="ii-url-detected-icon">
-                                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                                        </svg>
-                                        <span class="ii-url-detected-label">
-                                            URL detected: <span class="ii-url-detected-host">@_detectedMidContentHost</span>
-                                        </span>
-                                        <button type="button" class="ii-url-detected-btn ii-url-detected-extract"
-                                                disabled="@isProcessing" @onclick="ExtractDetectedUrl">
-                                            Extract from URL
-                                        </button>
-                                        <button type="button" class="ii-url-detected-btn ii-url-detected-dismiss"
-                                                @onclick="DismissDetectedUrl" aria-label="Dismiss">
-                                            ×
-                                        </button>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-
-                        @* Leading: file upload *@
-                        <div class="ii-composer-leading">
-                            <label for="studioFileInput"
-                                   class="ii-composer-btn ii-btn-plus"
-                                   aria-label="Upload file"
-                                   title="Upload .pdf, .docx, or .txt"
-                                   style="@(isProcessing ? "pointer-events:none;opacity:0.45;" : "cursor:pointer;")">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2"
-                                     stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="12" y1="5" x2="12" y2="19"/>
-                                    <line x1="5" y1="12" x2="19" y2="12"/>
-                                </svg>
-                            </label>
-                        </div>
-
-                        @* Footer: camera (if available) *@
-                        <div class="ii-composer-footer">
-                            @if (_cameraService.IsCameraAvailable)
-                            {
-                                <div class="ii-footer-actions">
-                                    <button type="button"
-                                            class="ii-composer-btn ii-btn-action"
-                                            disabled="@(isProcessing || isScanning)"
-                                            @onclick="ScanImage"
-                                            title="Scan a printed song sheet">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                                             fill="none" stroke="currentColor" stroke-width="2"
-                                             stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/>
-                                            <circle cx="12" cy="13" r="3"/>
-                                        </svg>
-                                        <span class="ii-btn-label">@(isScanning ? "Scanning…" : "Camera")</span>
-                                    </button>
-                                </div>
-                            }
-                        </div>
-
-                        @* Trailing: extract *@
-                        <div class="ii-composer-trailing">
-                            <button type="button"
-                                    class="ii-btn-submit"
-                                    disabled="@(isProcessing || string.IsNullOrWhiteSpace(pastedText))"
-                                    @onclick="ProcessPastedText"
-                                    title="Extract chords &amp; lyrics">
-                                @if (isProcessing)
-                                {
-                                    <span class="spinner-border spinner-border-sm" role="status"
-                                          style="width:1.1rem;height:1.1rem;border-width:2px;"></span>
-                                }
-                                else
-                                {
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                         viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                                    </svg>
-                                }
-                            </button>
-                        </div>
-                    </div>
-
-                    @* Format hint — informational, below the composer card *@
-                    <p class="ii-format-hint-line">
-                        <i class="bi bi-info-circle" aria-hidden="true"></i>
-                        Accepts <code>[Am]word</code> inline chords, alternating chord&nbsp;&amp;&nbsp;lyric lines, or plain text &mdash; auto-detected
-                    </p>
-
-                    @if (detectedFormat != null)
-                    {
-                        <div class="ii-format-badge">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-                            </svg>
-                            Detected: <strong>@GetFormatDisplayName(detectedFormat.Value)</strong>
-                        </div>
-                    }
-
+                @* ── Shared composer (textarea + URL detect + file + camera + suggestions) ── *@
+                <div class="ii-composer-host">
+                    <StudioImportPanel @ref="_importPanel"
+                                       ShowDatabaseSearch="true"
+                                       ShowFormatHint="true"
+                                       CompactWhenIdle="true"
+                                       HasContentBelow="@(extractedSong != null || databaseSong != null)"
+                                       FileInputId="studioFileInput"
+                                       MinRows="3"
+                                       OnSongExtracted="HandleSongExtracted"
+                                       OnDatabaseSuggestionSelected="HandleDatabaseSuggestion"
+                                       ProcessingStateChanged="HandleProcessingStateChanged" />
                 </div>
-
-                <InputFile id="studioFileInput" OnChange="HandleFileSelected" class="d-none" accept=".pdf,.docx,.txt"/>
-
-                @* ── Scanned image preview ── *@
-                @if (scannedImageBase64 != null)
-                {
-                    <div class="ii-scan-wrap">
-                        <div class="ii-scan-header">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                                 fill="none" stroke="currentColor" stroke-width="2"
-                                 stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/>
-                                <circle cx="12" cy="13" r="3"/>
-                            </svg>
-                            <span>Scanned image</span>
-                            <button class="ii-scan-close" @onclick="ClearScannedImage" title="Remove image">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2"
-                                     stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="18" y1="6" x2="6" y2="18"/>
-                                    <line x1="6" y1="6" x2="18" y2="18"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <img src="data:image/jpeg;base64,@scannedImageBase64" alt="Scanned song sheet" class="ii-scan-thumb"/>
-                    </div>
-                }
-
-                @* ── Live suggestions (search / recent) ── *@
-                @if (showSuggestions)
-                {
-                    <div class="ii-suggestions-wrap">
-                        <StudioSuggestions Query="@searchQuery"
-                                           ShowSuggestions="@showSuggestions"
-                                           IsLoading="@isSearching"
-                                           Suggestions="@suggestions"
-                                           RecentSearches="@recentSearches"
-                                           SelectedIndex="@selectedSuggestionIndex"
-                                           OnSuggestionSelected="OnSuggestionSelected"
-                                           OnRecentSearchSelected="OnRecentSearchSelected" />
-                    </div>
-                }
 
                 @* ── Monitor: extracted or database song ── *@
                 @if (extractedSong != null || databaseSong != null)
@@ -229,79 +60,59 @@
                                        DatabaseSong="@databaseSong"
                                        Source="@monitorSource"
                                        IsAuthenticated="@isAuthenticated"
-                                       PastedText="@pastedText"
-                                       ScannedImageBase64="@scannedImageBase64"
+                                       PastedText="@(_importPanel?.pastedText)"
+                                       ScannedImageBase64="@(_importPanel?.scannedImageBase64)"
                                        OnClearRequested="ClearMonitor"
                                        OnPlayPreview="HandlePlayPreview" />
                     </div>
                 }
 
                 @* ── Empty state: starter cards ── *@
-                @if (extractedSong == null && databaseSong == null && !isProcessing && !showSuggestions)
+                @if (extractedSong == null && databaseSong == null && !_isProcessing)
                 {
-                    <div class="ii-suggestions-wrap">
-                        <section class="ii-suggestions" aria-label="Get started">
-                            <ul class="ii-suggestions-list">
+                    <div class="ii-starter-wrap">
+                        <section class="ii-starter" aria-label="Get started">
+                            <ul class="ii-starter-list">
                                 <li>
-                                    <button type="button" class="ii-suggestion-btn" @onclick="ShowRecentSearches">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                             class="ii-suggestion-arrow">
-                                            <line x1="7" y1="17" x2="17" y2="7"/>
-                                            <polyline points="7 7 17 7 17 17"/>
-                                        </svg>
-                                        <span class="ii-suggestion-text">
-                                            <span class="ii-suggestion-title">Search by song title</span>
-                                            <span class="ii-suggestion-desc">Find any song from the library by title or artist</span>
+                                    <button type="button" class="ii-starter-btn" @onclick="ShowRecentSearches">
+                                        <i class="bi bi-search ii-starter-leading"></i>
+                                        <span class="ii-starter-text">
+                                            <span class="ii-starter-title">Search by song title</span>
+                                            <span class="ii-starter-desc">Find any song from the library by title or artist</span>
                                         </span>
+                                        <i class="bi bi-arrow-up-right ii-starter-arrow"></i>
                                     </button>
                                 </li>
                                 <li>
-                                    <button type="button" class="ii-suggestion-btn" @onclick="InsertExampleText">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                             class="ii-suggestion-arrow">
-                                            <line x1="7" y1="17" x2="17" y2="7"/>
-                                            <polyline points="7 7 17 7 17 17"/>
-                                        </svg>
-                                        <span class="ii-suggestion-text">
-                                            <span class="ii-suggestion-title">Paste with inline chords</span>
-                                            <span class="ii-suggestion-desc">[Am]Amazing [F]Grace, how [C]sweet the [G]sound</span>
+                                    <button type="button" class="ii-starter-btn" @onclick="InsertExampleText">
+                                        <i class="bi bi-text-paragraph ii-starter-leading"></i>
+                                        <span class="ii-starter-text">
+                                            <span class="ii-starter-title">Paste with inline chords</span>
+                                            <span class="ii-starter-desc">[Am]Amazing [F]Grace, how [C]sweet the [G]sound</span>
                                         </span>
+                                        <i class="bi bi-arrow-up-right ii-starter-arrow"></i>
                                     </button>
                                 </li>
                                 <li>
-                                    <label for="studioFileInput" class="ii-suggestion-btn" style="cursor:pointer;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                             viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                             class="ii-suggestion-arrow">
-                                            <line x1="7" y1="17" x2="17" y2="7"/>
-                                            <polyline points="7 7 17 7 17 17"/>
-                                        </svg>
-                                        <span class="ii-suggestion-text">
-                                            <span class="ii-suggestion-title">Upload a file</span>
-                                            <span class="ii-suggestion-desc">Import lyrics from a .pdf, .txt, or .docx file</span>
+                                    <label for="studioFileInput" class="ii-starter-btn" style="cursor:pointer;">
+                                        <i class="bi bi-file-earmark-arrow-up ii-starter-leading"></i>
+                                        <span class="ii-starter-text">
+                                            <span class="ii-starter-title">Upload a file</span>
+                                            <span class="ii-starter-desc">Import lyrics from a .pdf, .txt, or .docx file</span>
                                         </span>
+                                        <i class="bi bi-arrow-up-right ii-starter-arrow"></i>
                                     </label>
                                 </li>
-                                @if (_cameraService.IsCameraAvailable)
+                                @if (_importPanel?.IsCameraAvailable == true)
                                 {
                                     <li>
-                                        <button type="button" class="ii-suggestion-btn" @onclick="ScanImage">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                                 class="ii-suggestion-arrow">
-                                                <line x1="7" y1="17" x2="17" y2="7"/>
-                                                <polyline points="7 7 17 7 17 17"/>
-                                            </svg>
-                                            <span class="ii-suggestion-text">
-                                                <span class="ii-suggestion-title">Scan a song sheet</span>
-                                                <span class="ii-suggestion-desc">Use your camera to capture and extract chords</span>
+                                        <button type="button" class="ii-starter-btn" @onclick="TriggerScan">
+                                            <i class="bi bi-camera ii-starter-leading"></i>
+                                            <span class="ii-starter-text">
+                                                <span class="ii-starter-title">Scan a song sheet</span>
+                                                <span class="ii-starter-desc">Use your camera to capture and extract chords</span>
                                             </span>
+                                            <i class="bi bi-arrow-up-right ii-starter-arrow"></i>
                                         </button>
                                     </li>
                                 }
@@ -317,111 +128,23 @@
 
 @code {
     // ── State ──
-    private string pastedText = "";
-    private string searchQuery = "";
-    private bool isProcessing;
-    private bool isScanning;
-    private bool isSearching;
-    private bool showSuggestions;
     private bool isAuthenticated;
+    private bool _isProcessing;
     private bool _shouldScrollToMonitor;
-    private bool isTextareaFocused;
-    private ElementReference textareaRef;
     private ElementReference monitorWrapRef;
-    private SongFormat? detectedFormat;
-    private string? scannedImageBase64;
+    private StudioImportPanel? _importPanel;
 
     // ── Monitor data ──
     private SimpleSongCreateDto? extractedSong;
     private SongDto? databaseSong;
     private StudioMonitor.MonitorSource monitorSource = StudioMonitor.MonitorSource.Extracted;
 
-    // ── Suggestions ──
-    private List<StudioSuggestion> suggestions = new();
-    private List<string> recentSearches = new();
-    private int selectedSuggestionIndex = -1;
-    private CancellationTokenSource? _debounceCts;
-    // Set during HandleKeyDown to suppress newline insertion when Enter triggers submit.
-    private bool _preventNextEnter;
-    // First http(s) URL found mid-content (only set when there's other content too).
-    private string? _detectedMidContentUrl;
-    private string? _detectedMidContentHost;
-    // The user explicitly dismissed the inline URL prompt for the current text — don't re-show until text changes meaningfully.
-    private string? _dismissedUrlForText;
-
     protected override async Task OnInitializedAsync()
     {
         var authState = await _globalAuth.GetAuthenticationStateAsync();
         isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
-        await LoadRecentSearches();
     }
 
-    // ── Input handling ──
-    private async Task OnInputFocus()
-    {
-        isTextareaFocused = true;
-        // When focused with no text, show recent searches
-        if (string.IsNullOrWhiteSpace(pastedText))
-        {
-            showSuggestions = true;
-            searchQuery = "";
-            await LoadRecentSearches();
-        }
-    }
-
-    private void OnTextareaBlur()
-    {
-        isTextareaFocused = false;
-        StateHasChanged();
-    }
-
-    private async Task HandleKeyDown(KeyboardEventArgs e)
-    {
-        // Reset prevent-default flag from the previous keystroke.
-        _preventNextEnter = false;
-
-        // Enter (no Shift) submits — prevent the newline so the textarea stays clean.
-        if (e.Key == "Enter" && !e.ShiftKey)
-        {
-            // Suggestion-pick takes precedence when an item is highlighted.
-            if (showSuggestions && selectedSuggestionIndex >= 0 && suggestions.Count > selectedSuggestionIndex)
-            {
-                _preventNextEnter = true;
-                await OnSuggestionSelected(suggestions[selectedSuggestionIndex]);
-                return;
-            }
-
-            if (!string.IsNullOrWhiteSpace(pastedText) && !isProcessing)
-            {
-                _preventNextEnter = true;
-                await ProcessPastedText();
-                return;
-            }
-        }
-
-        if (!showSuggestions) return;
-
-        var totalItems = string.IsNullOrEmpty(searchQuery)
-            ? Math.Min(recentSearches.Count, 5)
-            : suggestions.Count;
-
-        switch (e.Key)
-        {
-            case "ArrowDown":
-                selectedSuggestionIndex = Math.Min(selectedSuggestionIndex + 1, totalItems - 1);
-                break;
-            case "ArrowUp":
-                selectedSuggestionIndex = Math.Max(selectedSuggestionIndex - 1, -1);
-                break;
-            case "Escape":
-                showSuggestions = false;
-                selectedSuggestionIndex = -1;
-                break;
-        }
-    }
-
-    // ── Debounced search ──
-    private string _previousText = "";
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -431,18 +154,11 @@
                 var resumeText = await _storageService.GetItemAsync<string>("studioResumeText");
                 if (!string.IsNullOrEmpty(resumeText))
                 {
-                    pastedText = resumeText;
+                    _importPanel?.SetText(resumeText);
                     await _storageService.RemoveItemAsync("studioResumeText");
-                    StateHasChanged();
                 }
             }
             catch { }
-        }
-
-        if (pastedText != _previousText)
-        {
-            _previousText = pastedText;
-            await DebouncedSearch(pastedText);
         }
 
         if (_shouldScrollToMonitor)
@@ -453,90 +169,24 @@
         }
     }
 
-    private async Task DebouncedSearch(string text)
+    // ── Panel callbacks ──
+    private void HandleProcessingStateChanged(bool busy)
     {
-        _debounceCts?.Cancel();
-        _debounceCts = new CancellationTokenSource();
-
-        try
-        {
-            await Task.Delay(300, _debounceCts.Token);
-
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                searchQuery = "";
-                suggestions.Clear();
-                showSuggestions = true;
-                _detectedMidContentUrl = null;
-                _detectedMidContentHost = null;
-                _dismissedUrlForText = null;
-                StateHasChanged();
-                return;
-            }
-
-            // If the input looks like a URL, suppress the title-search dropdown.
-            // The actual fetch happens on submit (Enter / submit button), not on paste.
-            if (LooksLikeUrl(text))
-            {
-                showSuggestions = false;
-                suggestions.Clear();
-                _detectedMidContentUrl = null;
-                _detectedMidContentHost = null;
-                StateHasChanged();
-                return;
-            }
-
-            // Look for a URL embedded mid-content. If found, surface a chip asking the user
-            // whether to extract from it (so they can keep typing/pasting other content too).
-            DetectMidContentUrl(text);
-
-            // If input looks like lyrics (multi-line or contains chord brackets), don't search
-            if (text.Contains('\n') || text.Contains('['))
-            {
-                showSuggestions = false;
-                StateHasChanged();
-                return;
-            }
-
-            searchQuery = text;
-            showSuggestions = true;
-            isSearching = true;
-            StateHasChanged();
-
-            var result = await _playlistsApi.EnhancedSongSearch(0, 10, text, cancellationToken: _debounceCts.Token);
-            if (result.IsSuccessStatusCode && result.Content?.Data != null)
-            {
-                suggestions = result.Content.Data.Select(r => new StudioSuggestion
-                {
-                    Id = r.Id,
-                    Title = r.Title,
-                    Artist = r.WrittenBy ?? "Unknown Artist",
-                    SongNumber = r.SongNumber,
-                    Album = r.SongBookTitle ?? r.CategoryName,
-                    MatchType = r.MatchType,
-                    MatchSnippet = r.MatchSnippet,
-                    RelevanceScore = r.RelevanceScore,
-                    Source = SuggestionSource.Database
-                }).ToList();
-            }
-            else
-            {
-                suggestions = new();
-            }
-
-            isSearching = false;
-            await SaveRecentSearch(text);
-            StateHasChanged();
-        }
-        catch (TaskCanceledException) { }
+        _isProcessing = busy;
+        StateHasChanged();
     }
 
-    // ── Suggestion selection ──
-    private async Task OnSuggestionSelected(StudioSuggestion suggestion)
+    private async Task HandleSongExtracted(StudioImportPanel.SongExtractionResult result)
     {
-        showSuggestions = false;
-        selectedSuggestionIndex = -1;
+        extractedSong = result.Song;
+        databaseSong = null;
+        monitorSource = StudioMonitor.MonitorSource.Extracted;
+        _shouldScrollToMonitor = true;
+        await InvokeAsync(StateHasChanged);
+    }
 
+    private async Task HandleDatabaseSuggestion(StudioSuggestion suggestion)
+    {
         if (suggestion.Source == SuggestionSource.Database && !string.IsNullOrWhiteSpace(suggestion.Id))
         {
             _navManager.NavigateTo($"/songs/{suggestion.Id}");
@@ -556,391 +206,37 @@
         StateHasChanged();
     }
 
-    private async Task OnRecentSearchSelected(string term)
+    // ── Starter cards ──
+    private async Task ShowRecentSearches()
     {
-        pastedText = term;
-        await DebouncedSearch(term);
+        if (_importPanel != null)
+            await _importPanel.ShowRecentSearchesAsync();
     }
 
-    // ── Extraction logic (from SongImport) ──
+    private void InsertExampleText()
+    {
+        _importPanel?.SetText("[Am]Amazing [F]Grace, how [C]sweet the [G]sound");
+    }
+
+    private async Task TriggerScan()
+    {
+        if (_importPanel != null)
+            await _importPanel.TriggerScanAsync();
+    }
+
+    // ── Monitor handlers ──
     private void HandlePlayPreview()
     {
-        // previewSong already stored in localStorage by StudioMonitor
         var isLanding = _navManager.Uri.Contains("/landing", StringComparison.OrdinalIgnoreCase);
         var path = isLanding ? "/songs/landing/preview" : "/songs/preview";
         _navManager.NavigateTo(path);
-    }
-
-    private async Task ProcessPastedText()
-    {
-        if (string.IsNullOrWhiteSpace(pastedText)) return;
-
-        // If the user submitted a URL, route through the server-side fetch instead
-        // of the local extractor. Existing paste/text/file flows are untouched.
-        var trimmed = pastedText.Trim();
-        if (LooksLikeUrl(trimmed))
-        {
-            _debounceCts?.Cancel();
-            _debounceCts = new CancellationTokenSource();
-            await ProcessUrl(trimmed, _debounceCts.Token);
-            return;
-        }
-
-        isProcessing = true;
-        showSuggestions = false;
-        StateHasChanged();
-
-        extractedSong = _extractor.ExtractFromRawText(pastedText);
-        databaseSong = null;
-        monitorSource = StudioMonitor.MonitorSource.Extracted;
-
-        var lines = pastedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-        detectedFormat = _extractor.DetectFormat(lines, 0);
-
-        isProcessing = false;
-        _shouldScrollToMonitor = true;
-        StateHasChanged();
-    }
-
-    /// <summary>True when the supplied text is a single absolute http(s) URL.</summary>
-    private static bool LooksLikeUrl(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return false;
-        var t = text.Trim();
-        if (t.Contains(' ') || t.Contains('\n')) return false;
-        return Uri.TryCreate(t, UriKind.Absolute, out var u) &&
-               (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp);
-    }
-
-    // Match http(s) URLs embedded in arbitrary text. Trailing punctuation is stripped after match.
-    private static readonly System.Text.RegularExpressions.Regex _urlRegex =
-        new(@"https?://[^\s<>""']+",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase |
-            System.Text.RegularExpressions.RegexOptions.Compiled);
-
-    /// <summary>
-    /// Find the first http(s) URL embedded in <paramref name="text"/> and update
-    /// <see cref="_detectedMidContentUrl"/> when it appears alongside other content.
-    /// </summary>
-    private void DetectMidContentUrl(string text)
-    {
-        _detectedMidContentUrl = null;
-        _detectedMidContentHost = null;
-
-        if (string.IsNullOrWhiteSpace(text)) return;
-
-        var match = _urlRegex.Match(text);
-        if (!match.Success) return;
-
-        var url = match.Value.TrimEnd('.', ',', ';', ':', ')', ']', '}', '"', '\'');
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var u)) return;
-        if (u.Scheme != Uri.UriSchemeHttp && u.Scheme != Uri.UriSchemeHttps) return;
-
-        // If the entire trimmed input IS the URL, the submit button already handles it — no chip needed.
-        if (string.Equals(text.Trim(), url, StringComparison.Ordinal)) return;
-
-        // Respect a prior dismissal for this exact text snapshot.
-        if (string.Equals(_dismissedUrlForText, text, StringComparison.Ordinal)) return;
-
-        _detectedMidContentUrl = url;
-        _detectedMidContentHost = u.Host;
-    }
-
-    private async Task ExtractDetectedUrl()
-    {
-        var url = _detectedMidContentUrl;
-        if (string.IsNullOrEmpty(url)) return;
-
-        _detectedMidContentUrl = null;
-        _detectedMidContentHost = null;
-        _debounceCts?.Cancel();
-        _debounceCts = new CancellationTokenSource();
-        await ProcessUrl(url, _debounceCts.Token);
-    }
-
-    private void DismissDetectedUrl()
-    {
-        _dismissedUrlForText = pastedText;
-        _detectedMidContentUrl = null;
-        _detectedMidContentHost = null;
-    }
-
-    /// <summary>
-    /// Server fetches the chord/lyric page (allowlisted hosts only); the UI runs the
-    /// column-aligned parser locally to produce the preview.
-    /// </summary>
-    private async Task ProcessUrl(string url, CancellationToken ct)
-    {
-        isProcessing = true;
-        StateHasChanged();
-
-        try
-        {
-            var response = await _webSongApi.FetchFromUrl(new WebSongFetchRequest { Url = url });
-
-            if (ct.IsCancellationRequested) return;
-
-            if (!response.IsSuccessStatusCode || response.Content is null)
-            {
-                _toastService.Show("Could not fetch that page.", ToastType.Error);
-                return;
-            }
-
-            var result = response.Content;
-
-            if (!result.IsSupported)
-            {
-                if (result.RequiresWebSearchFallback)
-                    _toastService.Show("Web search for this site is coming soon.", ToastType.Info);
-                else
-                    _toastService.Show(result.Message ?? "No chords found on that page.", ToastType.Warning);
-                return;
-            }
-
-            extractedSong = _extractor.ExtractFromColumnAlignedText(
-                result.PreBlockText, result.Title, result.SongNumber);
-            databaseSong = null;
-            monitorSource = StudioMonitor.MonitorSource.Extracted;
-            _shouldScrollToMonitor = true;
-        }
-        catch (TaskCanceledException) { }
-        catch (Exception ex)
-        {
-            _toastService.Show($"URL fetch failed: {ex.Message}", ToastType.Error);
-        }
-        finally
-        {
-            isProcessing = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task HandleFileSelected(InputFileChangeEventArgs e)
-    {
-        try
-        {
-            var file = e.File;
-            if (file == null) return;
-
-            // Clear all previous state before processing new input
-            extractedSong = null;
-            databaseSong = null;
-            pastedText = "";
-            scannedImageBase64 = null;
-            isProcessing = true;
-            showSuggestions = false;
-            detectedFormat = null;
-            StateHasChanged();
-
-            var path = Path.Combine(Path.GetTempPath(), file.Name);
-
-            using (var stream = file.OpenReadStream())
-            using (var fs = new FileStream(path, FileMode.Create))
-            {
-                await stream.CopyToAsync(fs);
-            }
-
-            if (file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            {
-                extractedSong = _extractor.ExtractSong(path);
-                if (extractedSong?.SongLyrics != null)
-                {
-                    pastedText = string.Join("\n", extractedSong.SongLyrics
-                        .GroupBy(s => s.LineNumber)
-                        .OrderBy(g => g.Key)
-                        .Select(g => string.Join("", g.OrderBy(s => s.LyricOrder)
-                            .Select(s => (string.IsNullOrEmpty(s.ChordName) ? "" : $"[{s.ChordName}]") + s.Lyric))));
-                }
-            }
-            else if (file.Name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
-            {
-                var raw = File.ReadAllText(path);
-                pastedText = raw;
-                extractedSong = _extractor.ExtractFromRawText(raw);
-                var lines = raw.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-                detectedFormat = _extractor.DetectFormat(lines, 0);
-            }
-            else if (file.Name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase))
-            {
-                var raw = _extractor.ExtractTextFromDocx(path);
-                pastedText = raw;
-                extractedSong = _extractor.ExtractFromRawText(raw);
-                var lines = raw.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-                detectedFormat = _extractor.DetectFormat(lines, 0);
-            }
-
-            databaseSong = null;
-            monitorSource = StudioMonitor.MonitorSource.Extracted;
-
-            _shouldScrollToMonitor = true;
-        }
-        catch (Exception ex)
-        {
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "File Processing Error",
-                Message = $"An error occurred while processing the file: {ex.Message}",
-                ButtonText = "OK",
-                Context = new ModalContext { ActionType = "fileError" }
-            });
-        }
-        finally
-        {
-            isProcessing = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task ScanImage()
-    {
-        try
-        {
-            var result = await _cameraService.CapturePhotoAsync();
-            if (result == null) return; // user cancelled — do not also open gallery
-
-            await ProcessCapturedImage(result);
-        }
-        catch (Exception ex)
-        {
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "Scan Error",
-                Message = $"Could not capture image: {ex.Message}",
-                ButtonText = "OK",
-                Context = new ModalContext { ActionType = "cameraError" }
-            });
-        }
-    }
-
-    private async Task ProcessCapturedImage(CameraResult imageResult)
-    {
-        // Clear all previous state before processing new scan
-        extractedSong = null;
-        databaseSong = null;
-        pastedText = "";
-        scannedImageBase64 = null;
-        isProcessing = true;
-        isScanning = true;
-        showSuggestions = false;
-        detectedFormat = null;
-        StateHasChanged();
-
-        try
-        {
-            scannedImageBase64 = Convert.ToBase64String(imageResult.ImageData);
-            StateHasChanged();
-
-            var ocrRequest = new OcrExtractRequest
-            {
-                ImageBase64 = scannedImageBase64,
-                FileName = imageResult.FileName
-            };
-
-            var response = await _ocrApi.ExtractTextFromImage(ocrRequest);
-
-            if (response.IsSuccessStatusCode && response.Content != null && response.Content.Success)
-            {
-                pastedText = response.Content.ExtractedText;
-                extractedSong = _extractor.ExtractFromOcrText(pastedText);
-                databaseSong = null;
-                monitorSource = StudioMonitor.MonitorSource.Extracted;
-
-                var lines = pastedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-                detectedFormat = _extractor.DetectFormat(lines, 0);
-
-                _shouldScrollToMonitor = true;
-            }
-            else
-            {
-                var errorMsg = response.Content?.ErrorMessage ?? "OCR extraction failed. Please try again with a clearer image.";
-                _modalService.Show(new ModalOptionDto
-                {
-                    Title = "Scan Error",
-                    Message = errorMsg,
-                    ButtonText = "OK",
-                    Context = new ModalContext { ActionType = "ocrError" }
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "Scan Processing Error",
-                Message = $"An error occurred while processing the scanned image: {ex.Message}",
-                ButtonText = "OK",
-                Context = new ModalContext { ActionType = "ocrError" }
-            });
-        }
-        finally
-        {
-            isProcessing = false;
-            isScanning = false;
-            StateHasChanged();
-        }
     }
 
     private void ClearMonitor()
     {
         extractedSong = null;
         databaseSong = null;
-        pastedText = "";
-        detectedFormat = null;
-        scannedImageBase64 = null;
-        showSuggestions = false;
+        _importPanel?.Reset();
         StateHasChanged();
     }
-
-    private void ClearScannedImage()
-    {
-        scannedImageBase64 = null;
-        StateHasChanged();
-    }
-
-    // ── Storage helpers ──
-    private async Task LoadRecentSearches()
-    {
-        try
-        {
-            recentSearches = await _storageService.GetItemAsync<List<string>>("recentSearches")
-                             ?? new List<string>();
-        }
-        catch
-        {
-            recentSearches = new();
-        }
-    }
-
-    private async Task SaveRecentSearch(string term)
-    {
-        if (string.IsNullOrWhiteSpace(term)) return;
-        recentSearches.Remove(term);
-        recentSearches.Insert(0, term);
-        if (recentSearches.Count > 10) recentSearches = recentSearches.Take(10).ToList();
-        await _storageService.SetItemAsync("recentSearches", recentSearches);
-    }
-
-
-
-    private async Task ShowRecentSearches()
-    {
-        showSuggestions = true;
-        searchQuery = "";
-        await LoadRecentSearches();
-        StateHasChanged();
-        await JsRt.InvokeVoidAsync("focusInputAndSetCursorToEnd", textareaRef);
-    }
-
-    private void InsertExampleText()
-    {
-        pastedText = "[Am]Amazing [F]Grace, how [C]sweet the [G]sound";
-    }
-
-    private string GetFormatDisplayName(SongFormat format) => format switch
-    {
-        SongFormat.InlineChord => "Inline Chords [Am]",
-        SongFormat.AlternatingChordLyric => "Alternating Chord/Lyric",
-        _ => "Plain Text"
-    };
-
 }

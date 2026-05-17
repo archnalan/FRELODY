@@ -1,0 +1,295 @@
+@using FRELODYUI.Shared.Services
+
+@*
+   Mobile-first modal that wraps StudioImportPanel. After extraction, the user
+   chooses Replace or Append; the modal raises OnImportApplied with the staged
+   payload and closes. No StudioMonitor is shown — the parent (SongBoard) renders
+   the imported content via its TabsComponent / SongSectionBoard pipeline.
+*@
+
+@if (IsVisible)
+{
+    <div class="sim-backdrop" @onclick="HandleBackdropClick">
+        <div class="sim-dialog" @onclick:stopPropagation="true" role="dialog" aria-modal="true" aria-label="Import song">
+            <header class="sim-header">
+                <div class="sim-header-title">
+                    <span class="sim-header-icon" aria-hidden="true">
+                        <i class="bi bi-cloud-arrow-down-fill"></i>
+                    </span>
+                    <div class="sim-header-text">
+                        <h2 class="sim-title">Import song</h2>
+                        <p class="sim-subtitle">Paste, scan, upload or search &mdash; we'll structure it for the editor.</p>
+                    </div>
+                </div>
+                <button type="button" class="sim-close" @onclick="RequestClose" title="Close" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </header>
+
+            <div class="sim-body">
+                <StudioImportPanel @ref="_panel"
+                                   ShowDatabaseSearch="true"
+                                   ShowFormatHint="true"
+                                   CompactWhenIdle="false"
+                                   MinRows="4"
+                                   Placeholder="Paste lyrics with chords, drop a URL, upload a file, or search the library…"
+                                   OnSongExtracted="HandleSongExtracted"
+                                   OnDatabaseSuggestionSelected="HandleDatabaseSuggestion"
+                                   ProcessingStateChanged="HandleProcessingStateChanged" />
+
+                @if (_stagedSong != null)
+                {
+                    <div class="sim-staged">
+                        <div class="sim-staged-meta">
+                            <span class="sim-staged-badge">
+                                <i class="bi bi-check-circle-fill"></i>
+                                Ready to apply
+                            </span>
+                            @if (!string.IsNullOrWhiteSpace(_stagedSong.Title))
+                            {
+                                <h3 class="sim-staged-title">@_stagedSong.Title</h3>
+                            }
+                            @if (_stagedSourceLabel != null)
+                            {
+                                <span class="sim-staged-source">@_stagedSourceLabel</span>
+                            }
+                        </div>
+                        <div class="sim-staged-stats">
+                            <span><i class="bi bi-grid-1x2"></i> @_stagedSectionCount sections</span>
+                            <span><i class="bi bi-list-ol"></i> @_stagedLineCount lines</span>
+                            <span><i class="bi bi-music-note"></i> @_stagedChordCount chords</span>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <footer class="sim-footer">
+                <button type="button" class="sim-btn sim-btn-ghost" @onclick="RequestClose">
+                    Cancel
+                </button>
+
+                <div class="sim-footer-primary">
+                    @if (_stagedSong != null)
+                    {
+                        @if (EditorHasContent)
+                        {
+                            <button type="button" class="sim-btn sim-btn-secondary"
+                                    disabled="@_isApplying"
+                                    @onclick="() => Apply(ImportMode.Append)">
+                                <i class="bi bi-plus-square"></i>
+                                <span>Append</span>
+                            </button>
+                        }
+                        <button type="button" class="sim-btn sim-btn-primary"
+                                disabled="@_isApplying"
+                                @onclick="() => Apply(ImportMode.Replace)">
+                            @if (_isApplying)
+                            {
+                                <span class="spinner-border spinner-border-sm"
+                                      style="width:0.85rem;height:0.85rem;border-width:2px;"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-arrow-down-square-fill"></i>
+                            }
+                            <span>@(EditorHasContent ? "Replace editor" : "Load into editor")</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <span class="sim-footer-hint">Provide content above to enable import</span>
+                    }
+                </div>
+            </footer>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+    /// <summary>True when the parent editor already has segments or a non-default title.</summary>
+    [Parameter] public bool EditorHasContent { get; set; }
+    [Parameter] public EventCallback<ImportApplyArgs> OnImportApplied { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private StudioImportPanel? _panel;
+    private SimpleSongCreateDto? _stagedSong;
+    private string? _stagedSourceLabel;
+    private int _stagedSectionCount;
+    private int _stagedLineCount;
+    private int _stagedChordCount;
+    private bool _isProcessing;
+    private bool _isApplying;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Reset staged state whenever the modal opens fresh.
+        if (!IsVisible && _stagedSong != null)
+        {
+            ClearStaged();
+        }
+        await Task.CompletedTask;
+    }
+
+    private void HandleProcessingStateChanged(bool busy)
+    {
+        _isProcessing = busy;
+        StateHasChanged();
+    }
+
+    private Task HandleSongExtracted(StudioImportPanel.SongExtractionResult result)
+    {
+        StageSong(result.Song, FormatSourceLabel(result.Source, result.DetectedFormat));
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleDatabaseSuggestion(StudioSuggestion suggestion)
+    {
+        if (string.IsNullOrWhiteSpace(suggestion.Id))
+        {
+            _toastService.Show("Could not load that song.", ToastType.Error);
+            return;
+        }
+
+        var response = await _songsApi.GetSongWithChordsById(suggestion.Id);
+        if (!response.IsSuccessStatusCode || response.Content == null)
+        {
+            _toastService.Show("Could not load that song from the library.", ToastType.Error);
+            return;
+        }
+
+        var dto = ConvertFromSongDto(response.Content);
+        StageSong(dto, $"From library · {suggestion.Title}");
+    }
+
+    private void StageSong(SimpleSongCreateDto song, string sourceLabel)
+    {
+        _stagedSong = song;
+        _stagedSourceLabel = sourceLabel;
+
+        var segs = song.SongLyrics?.Where(s => s.PartName != SongSection.FullLyrics).ToList()
+                   ?? new List<SegmentCreateDto>();
+        _stagedSectionCount = segs.Select(s => s.PartNumber).Distinct().Count();
+        _stagedLineCount = segs.Select(s => (s.PartNumber, s.LineNumber)).Distinct().Count();
+        _stagedChordCount = segs.Count(s => !string.IsNullOrWhiteSpace(s.ChordName));
+        StateHasChanged();
+    }
+
+    private async Task Apply(ImportMode mode)
+    {
+        if (_stagedSong == null) return;
+        _isApplying = true;
+        StateHasChanged();
+        try
+        {
+            await OnImportApplied.InvokeAsync(new ImportApplyArgs
+            {
+                Song = _stagedSong,
+                Mode = mode
+            });
+            await CloseInternal();
+        }
+        finally
+        {
+            _isApplying = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RequestClose()
+    {
+        if (_isApplying) return;
+        await CloseInternal();
+    }
+
+    private async Task HandleBackdropClick()
+    {
+        if (_isApplying) return;
+        await CloseInternal();
+    }
+
+    private async Task CloseInternal()
+    {
+        ClearStaged();
+        _panel?.Reset();
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(false);
+        await OnClose.InvokeAsync();
+    }
+
+    private void ClearStaged()
+    {
+        _stagedSong = null;
+        _stagedSourceLabel = null;
+        _stagedSectionCount = 0;
+        _stagedLineCount = 0;
+        _stagedChordCount = 0;
+    }
+
+    private static string FormatSourceLabel(StudioImportPanel.ExtractionSource source, SongFormat? format)
+    {
+        var src = source switch
+        {
+            StudioImportPanel.ExtractionSource.Url => "URL",
+            StudioImportPanel.ExtractionSource.File => "File",
+            StudioImportPanel.ExtractionSource.Ocr => "Scan",
+            _ => "Text"
+        };
+        if (format == null) return src;
+        var fmt = format switch
+        {
+            SongFormat.InlineChord => "Inline [Am]",
+            SongFormat.AlternatingChordLyric => "Chord/Lyric",
+            _ => "Plain"
+        };
+        return $"{src} · {fmt}";
+    }
+
+    private static SimpleSongCreateDto ConvertFromSongDto(SongDto song)
+    {
+        var lyrics = new List<SegmentCreateDto>();
+        if (song.SongParts != null)
+        {
+            foreach (var part in song.SongParts.OrderBy(p => p.PartNumber))
+            {
+                if (part.LyricLines == null) continue;
+                foreach (var line in part.LyricLines.OrderBy(l => l.LyricLineOrder))
+                {
+                    if (line.LyricSegments == null) continue;
+                    foreach (var seg in line.LyricSegments.OrderBy(s => s.LyricOrder))
+                    {
+                        lyrics.Add(new SegmentCreateDto
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Lyric = seg.Lyric,
+                            ChordId = seg.ChordId?.ToString(),
+                            ChordName = seg.Chord?.ChordName,
+                            ChordAlignment = seg.ChordAlignment,
+                            LineNumber = line.LyricLineOrder,
+                            PartNumber = part.PartNumber,
+                            PartName = part.PartName ?? SongSection.Verse,
+                            LyricOrder = seg.LyricOrder
+                        });
+                    }
+                }
+            }
+        }
+        return new SimpleSongCreateDto
+        {
+            Title = song.Title,
+            SongNumber = song.SongNumber,
+            Key = song.Key,
+            OriginalKey = song.OriginalKey,
+            SongLyrics = lyrics
+        };
+    }
+
+    public enum ImportMode { Replace, Append }
+
+    public class ImportApplyArgs
+    {
+        public SimpleSongCreateDto Song { get; set; } = new();
+        public ImportMode Mode { get; set; }
+    }
+}

@@ -142,9 +142,13 @@
                  IsRecovery="isRecoveryPreview"
                  SongData="@(isRecoveryPreview ? cacheData : songData)"
                  OnCancel="HandlePreviewCancel"
-                 OnSave="HandlePreviewConfirm" 
+                 OnSave="HandlePreviewConfirm"
                  EnableAccessEdit="@(!string.IsNullOrEmpty(SongId))"
                  OnMarkPrivateAccess="HandleMarkPrivateAccess" />
+
+<StudioImportModal @bind-IsVisible="showImportModal"
+                   EditorHasContent="@EditorHasContent"
+                   OnImportApplied="HandleImportApplied" />
 
 
 
@@ -220,8 +224,9 @@
 
     private RenderFragment RenderVerseTab(int id) => @<SongSectionBoard SectionId="@id"
                   Segments="@AllPartsSegments.GetValueOrDefault(id, new List<SegmentCreateDto>())"
-                  ActiveTab="activeTabItem" 
-                  OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)" />
+                  ActiveTab="activeTabItem"
+                  OnSegmentsUpdate="segments => HandleVerseUpdate(id, segments)"
+                  OnImportRequested="OpenImportModal" />
     ;
     private string FormattedSongNumber
     {
@@ -326,6 +331,8 @@
                                             this, segments => HandleVerseUpdate(part.PartNumber, segments)));
                                     builder.AddAttribute(3, "Segments", AllPartsSegments[part.PartNumber]);
                                     builder.AddAttribute(4, "ActiveTab", activeTabItem);
+                                    builder.AddAttribute(5, "OnImportRequested",
+                                        EventCallback.Factory.Create(this, OpenImportModal));
                                     builder.CloseComponent();
                                 }
                             });
@@ -537,6 +544,8 @@
                                     this, segments => HandleVerseUpdate(1, segments)));
                             builder.AddAttribute(3, "Segments", AllPartsSegments[1]);
                             builder.AddAttribute(4, "ActiveTab", activeTabItem);
+                            builder.AddAttribute(5, "OnImportRequested",
+                                EventCallback.Factory.Create(this, OpenImportModal));
                             builder.CloseComponent();
                         }
                     }
@@ -627,6 +636,8 @@
                                     this, segments => HandleVerseUpdate(currentPartNum, segments)));
                             builder.AddAttribute(3, "Segments", AllPartsSegments[currentPartNum]);
                             builder.AddAttribute(4, "ActiveTab", activeTabItem);
+                            builder.AddAttribute(5, "OnImportRequested",
+                                EventCallback.Factory.Create(this, OpenImportModal));
                             builder.CloseComponent();
                         }
                     });
@@ -1431,5 +1442,115 @@
         SongKey = OriginalKey;
         RecomputeKeyDelta();
         await InvokeAsync(StateHasChanged);
+    }
+
+    // ---------- Studio import modal ----------
+    private bool showImportModal;
+
+    /// <summary>True when the editor has any user-entered content worth preserving.</summary>
+    private bool EditorHasContent =>
+        (AllPartsSegments?.Values.Any(s => s.Any()) ?? false) ||
+        currentBookCategory != null ||
+        currentArtistAlbum != null ||
+        (!string.IsNullOrWhiteSpace(SongTitle) &&
+         !string.Equals(SongTitle, "My New Song", StringComparison.Ordinal));
+
+    private void OpenImportModal()
+    {
+        showImportModal = true;
+        StateHasChanged();
+    }
+
+    private async Task HandleImportApplied(StudioImportModal.ImportApplyArgs args)
+    {
+        if (args?.Song == null) return;
+
+        if (args.Mode == StudioImportModal.ImportMode.Append && EditorHasContent)
+        {
+            AppendImportedSong(args.Song);
+        }
+        else
+        {
+            // Replace: reuse the recovery rebuild pipeline.
+            await InitializeFromRecoveryData(args.Song);
+        }
+
+        // Force a clean re-render of the tabs container with new InitialItems.
+        songBoardKey = Guid.NewGuid().ToString();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Appends imported sections as new tabs after the current ones. Existing title,
+    /// keys, book/artist metadata stay untouched.
+    /// </summary>
+    private void AppendImportedSong(SimpleSongCreateDto importData)
+    {
+        if (importData?.SongLyrics == null || !importData.SongLyrics.Any())
+            return;
+
+        var existingMaxPart = AllPartsSegments.Keys.DefaultIfEmpty(0).Max();
+        var existingMaxDisplayOrder = initialPartsItems.Any()
+            ? initialPartsItems.Max(t => t.DisplayOrder)
+            : 0;
+
+        // Skip the FullLyrics tail — it's a flat preview block, not a real section.
+        var importedParts = importData.SongLyrics
+            .Where(s => s.PartName != SongSection.FullLyrics)
+            .GroupBy(s => s.PartNumber)
+            .OrderBy(g => g.Key)
+            .ToList();
+
+        int offset = 0;
+        foreach (var partGroup in importedParts)
+        {
+            offset++;
+            var newPartId = existingMaxPart + offset;
+            var partName = partGroup.First().PartName;
+
+            var segments = partGroup
+                .OrderBy(s => s.LineNumber)
+                .ThenBy(s => s.LyricOrder)
+                .Select(s => new SegmentCreateDto
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Lyric = s.Lyric,
+                    ChordId = s.ChordId,
+                    ChordName = s.ChordName,
+                    ChordAlignment = s.ChordAlignment,
+                    LineNumber = s.LineNumber,
+                    PartNumber = newPartId,
+                    PartName = partName,
+                    LyricOrder = s.LyricOrder
+                })
+                .ToList();
+
+            AllPartsSegments[newPartId] = segments;
+
+            var capturedId = newPartId;
+            initialPartsItems.Add(new TabItem
+            {
+                Id = capturedId,
+                SectionName = partName.ToString() ?? nameof(SongSection.Verse),
+                SectionNumber = capturedId,
+                DisplayOrder = existingMaxDisplayOrder + offset,
+                Content = builder =>
+                {
+                    builder.OpenComponent<SongSectionBoard>(0);
+                    builder.AddAttribute(1, "SectionId", capturedId);
+                    builder.AddAttribute(2, "OnSegmentsUpdate",
+                        EventCallback.Factory.Create<List<SegmentCreateDto>>(
+                            this, segs => HandleVerseUpdate(capturedId, segs)));
+                    builder.AddAttribute(3, "Segments", AllPartsSegments[capturedId]);
+                    builder.AddAttribute(4, "ActiveTab", activeTabItem);
+                    builder.AddAttribute(5, "OnImportRequested",
+                        EventCallback.Factory.Create(this, OpenImportModal));
+                    builder.CloseComponent();
+                }
+            });
+        }
+
+        _tabsManager.TabItems = initialPartsItems;
+        _tabsManager.TabsComponentKey = Guid.NewGuid().ToString();
     }
 }
