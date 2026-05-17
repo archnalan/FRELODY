@@ -1,0 +1,57 @@
+@namespace FRELODYUI.Shared.Components.ChordDraw
+@implements IAsyncDisposable
+@inject IJSRuntime _js
+
+<div class="cd-preview @(string.IsNullOrWhiteSpace(CssClass) ? null : CssClass)"
+     id="@_containerId"
+     aria-label="Chord diagram preview">
+    @if (!_jsRendered && !string.IsNullOrWhiteSpace(FallbackSvg))
+    {
+        @((MarkupString)FallbackSvg!)
+    }
+</div>
+
+@code {
+    [Parameter] public ChordDrawData? Chart { get; set; }
+    [Parameter] public string? FallbackSvg { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+    /// <summary>If true, JS rendering is skipped and only the fallback SVG is shown.</summary>
+    [Parameter] public bool StaticOnly { get; set; }
+
+    private readonly string _containerId = $"cd-prev-{Guid.NewGuid():N}";
+    private bool _jsRendered;
+    private string? _lastSerialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (StaticOnly) return;
+        if (Chart is null) return;
+
+        var serialized = System.Text.Json.JsonSerializer.Serialize(Chart);
+        if (serialized == _lastSerialized && _jsRendered) return;
+        _lastSerialized = serialized;
+
+        try
+        {
+            var ok = await _js.InvokeAsync<bool>("chordDrawing.render", _containerId, Chart);
+            _jsRendered = ok;
+            if (!ok && firstRender)
+            {
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            _jsRendered = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsRendered)
+        {
+            try { await _js.InvokeVoidAsync("chordDrawing.dispose", _containerId); }
+            catch { /* ignore */ }
+        }
+    }
+}

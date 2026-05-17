@@ -3,6 +3,7 @@ using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
 using FRELODYSHRD.Dtos.HybridDtos;
+using FRELODYSHRD.Models.ChordDraw;
 using Refit;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -45,5 +46,9 @@ namespace FRELODYUI.Shared.RefitApis
             [AliasAs("chartImage")] StreamPart? chartImage,
             [AliasAs("chartAudio")] StreamPart? chartAudio,
             [Query] string chartDataJson);
+
+        [Post("/api/chord-charts/preview-svg")]
+        [Headers("Accept: image/svg+xml")]
+        Task<IApiResponse<string>> PreviewSvg([Body] ChordDrawData chartData);
     }
 }

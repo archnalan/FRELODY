@@ -26,8 +26,12 @@
         <hr class="@GetLineClass()" />
 
         <div class="d-flex flex-column mt-3">
-            <strong class="mb-2">Chart Image:</strong>
-            @if (!string.IsNullOrEmpty(chartPreview))
+            <strong class="mb-2">Diagram:</strong>
+            @if (chart?.Source == ChordSource.Drawing && chart.ChordData is not null)
+            {
+                <ChordPreview Chart="chart.ChordData" FallbackSvg="@chart.RenderedSvg" CssClass="chart-detail-preview" />
+            }
+            else if (!string.IsNullOrEmpty(chartPreview))
             {
                 <img src="@chartPreview"
                      alt="chart preview"
@@ -36,7 +40,7 @@
             }
             else
             {
-                <div class="text-muted">No chart image available</div>
+                <div class="text-muted">No diagram available</div>
             }
         </div>
         <hr class="@GetLineClass()" />

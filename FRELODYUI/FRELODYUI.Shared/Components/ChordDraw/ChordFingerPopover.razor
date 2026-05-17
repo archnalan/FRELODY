@@ -1,0 +1,97 @@
+@namespace FRELODYUI.Shared.Components.ChordDraw
+
+@if (Visible && Finger != null)
+{
+    <div class="cd-popover-backdrop" @onclick="OnClose">
+        <div class="cd-popover" @onclick:stopPropagation="true" role="dialog" aria-label="Edit finger">
+            <div class="cd-popover-header">
+                <span>String @Finger.String &middot; Fret @Finger.Fret</span>
+                <button type="button" class="cd-popover-close" @onclick="OnClose" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="cd-popover-body">
+                @if (Mode == ChordEditMode.Text)
+                {
+                    <label class="cd-field">
+                        <span class="cd-field-label">Label</span>
+                        <input type="text"
+                               class="cd-input"
+                               maxlength="4"
+                               value="@Finger.Text"
+                               @oninput="OnTextInput"
+                               placeholder="e.g. 1, 2, 3" />
+                    </label>
+                }
+                else if (Mode == ChordEditMode.Color)
+                {
+                    <label class="cd-field">
+                        <span class="cd-field-label">Color</span>
+                        <input type="color"
+                               class="cd-input cd-input-color"
+                               value="@(string.IsNullOrEmpty(Finger.Color) ? "#3a6eff" : Finger.Color)"
+                               @oninput="OnColorInput" />
+                    </label>
+                    <button type="button" class="cd-btn-link" @onclick="OnClearColor">Reset</button>
+                }
+                else if (Mode == ChordEditMode.Shape)
+                {
+                    <span class="cd-field-label cd-field-label-block">Shape</span>
+                    <div class="cd-shape-row">
+                        @foreach (var shape in _shapes)
+                        {
+                            var isActive = (Finger.Shape ?? ChordShape.Circle) == shape;
+                            <button type="button"
+                                    class="cd-shape-btn @(isActive ? "is-active" : null)"
+                                    @onclick="() => OnSelectShape(shape)">
+                                @((MarkupString)ShapeGlyph(shape))
+                                <span>@shape</span>
+                            </button>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <button type="button" class="cd-btn-danger" @onclick="OnRemove">
+                        <i class="bi bi-trash"></i> Remove finger
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public ChordEditMode Mode { get; set; } = ChordEditMode.Fingers;
+    [Parameter] public ChordFinger? Finger { get; set; }
+    [Parameter] public EventCallback OnCloseRequested { get; set; }
+    [Parameter] public EventCallback OnRemoveRequested { get; set; }
+    [Parameter] public EventCallback<string?> OnTextChanged { get; set; }
+    [Parameter] public EventCallback<string?> OnColorChanged { get; set; }
+    [Parameter] public EventCallback<ChordShape> OnShapeChanged { get; set; }
+
+    private static readonly ChordShape[] _shapes =
+    {
+        ChordShape.Circle, ChordShape.Square, ChordShape.Triangle, ChordShape.Pentagon
+    };
+
+    private Task OnClose() => OnCloseRequested.InvokeAsync();
+    private Task OnRemove() => OnRemoveRequested.InvokeAsync();
+    private Task OnTextInput(ChangeEventArgs e)
+    {
+        var v = e.Value?.ToString();
+        return OnTextChanged.InvokeAsync(string.IsNullOrWhiteSpace(v) ? null : v);
+    }
+    private Task OnColorInput(ChangeEventArgs e) => OnColorChanged.InvokeAsync(e.Value?.ToString());
+    private Task OnClearColor() => OnColorChanged.InvokeAsync(null);
+    private Task OnSelectShape(ChordShape s) => OnShapeChanged.InvokeAsync(s);
+
+    private static string ShapeGlyph(ChordShape shape) => shape switch
+    {
+        ChordShape.Square   => "<svg class='cd-shape-glyph' viewBox='0 0 16 16'><rect x='2' y='2' width='12' height='12' rx='1' fill='currentColor'/></svg>",
+        ChordShape.Triangle => "<svg class='cd-shape-glyph' viewBox='0 0 16 16'><polygon points='8,2 14,14 2,14' fill='currentColor'/></svg>",
+        ChordShape.Pentagon => "<svg class='cd-shape-glyph' viewBox='0 0 16 16'><polygon points='8,1 15,6.5 12.5,15 3.5,15 1,6.5' fill='currentColor'/></svg>",
+        _                   => "<svg class='cd-shape-glyph' viewBox='0 0 16 16'><circle cx='8' cy='8' r='6' fill='currentColor'/></svg>"
+    };
+}

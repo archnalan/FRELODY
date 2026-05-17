@@ -1,0 +1,177 @@
+@namespace FRELODYUI.Shared.Components.ChordDraw
+
+@*
+    Self-contained interactive chord chart editor. Holds the ChordMatrix internally,
+    exposes the current ChordDrawData via two-way binding (Chart / ChartChanged) and
+    convenience callbacks. Reused by:
+      - the chord-chart create/edit wizard (Draw step)
+      - the standalone /chord-draw page
+*@
+
+<div class="cd-canvas">
+    @if (ShowSettings)
+    {
+        <details class="cd-canvas-settings" open="@SettingsOpen">
+            <summary class="cd-canvas-summary">
+                <span class="cd-canvas-summary-left">
+                    <i class="bi bi-sliders"></i>
+                    <span>Settings</span>
+                </span>
+                <i class="bi bi-chevron-down cd-canvas-chevron" aria-hidden="true"></i>
+            </summary>
+            <ChordSettingsPanel Settings="_settings" SettingsChanged="OnSettingsChanged" />
+        </details>
+    }
+
+    <div class="cd-canvas-stage">
+        <div class="cd-canvas-editor-wrap">
+            <ChordEditModeBar Mode="_mode" ModeChanged="OnModeChanged" />
+            <ChordEditor Matrix="_matrix"
+                         MatrixChanged="OnMatrixChanged"
+                         Mode="_mode"
+                         Position="_settings.Position"
+                         Tuning="_settings.Tuning"
+                         ShowTuning="true"
+                         OnCellLongPress="OnCellLongPress" />
+        </div>
+
+        <div class="cd-canvas-preview-wrap">
+            <ChordPreview Chart="_chart" />
+        </div>
+    </div>
+
+    <ChordFingerPopover Visible="_popoverVisible"
+                        Mode="_mode"
+                        Finger="_popoverFinger"
+                        OnCloseRequested="ClosePopover"
+                        OnRemoveRequested="RemoveFingerFromPopover"
+                        OnTextChanged="UpdateFingerText"
+                        OnColorChanged="UpdateFingerColor"
+                        OnShapeChanged="UpdateFingerShape" />
+</div>
+
+@code {
+    /// <summary>The current chord drawing. Two-way bindable.</summary>
+    [Parameter] public ChordDrawData? Chart { get; set; }
+    [Parameter] public EventCallback<ChordDrawData> ChartChanged { get; set; }
+
+    [Parameter] public bool ShowSettings { get; set; } = true;
+    [Parameter] public bool SettingsOpen { get; set; } = false;
+
+    private ChordMatrix _matrix = ChordMatrix.Empty();
+    private ChordDrawSettings _settings = ChordDrawSettings.CreateDefault();
+    private ChordDrawData _chart = ChordDrawData.CreateDefault();
+    private ChordEditMode _mode = ChordEditMode.Fingers;
+
+    private bool _popoverVisible;
+    private ChordFinger? _popoverFinger;
+    private int _popoverString;
+    private int _popoverFret;
+
+    protected override void OnParametersSet()
+    {
+        if (Chart is null) return;
+
+        // Detect external changes (different reference or different shape) and reinitialize
+        var inSerialized = System.Text.Json.JsonSerializer.Serialize(Chart);
+        var current = System.Text.Json.JsonSerializer.Serialize(_chart);
+        if (!ReferenceEquals(Chart, _chart) && inSerialized != current)
+        {
+            _chart = Chart;
+            _settings = Chart.Settings ?? ChordDrawSettings.CreateDefault();
+            try { _matrix = ChordMatrix.FromChart(Chart); }
+            catch { _matrix = ChordMatrix.Empty(_settings.Frets, _settings.Strings); }
+        }
+    }
+
+    private void ToggleSettingsOpen()
+    {
+        SettingsOpen = !SettingsOpen;
+    }
+
+    private Task OnModeChanged(ChordEditMode mode)
+    {
+        _mode = mode;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnSettingsChanged(ChordDrawSettings settings)
+    {
+        var stringsChanged = settings.Strings != _matrix.NumStrings;
+        var fretsChanged = settings.Frets != _matrix.NumFrets;
+
+        if (stringsChanged) _matrix = _matrix.SetNumStrings(settings.Strings);
+        if (fretsChanged) _matrix = _matrix.SetNumFrets(settings.Frets);
+
+        _settings = settings;
+        await EmitCurrentChart();
+    }
+
+    private async Task OnMatrixChanged(ChordMatrix matrix)
+    {
+        _matrix = matrix;
+        await EmitCurrentChart();
+    }
+
+    private async Task EmitCurrentChart()
+    {
+        _chart = _matrix.ToChart(_settings);
+        await ChartChanged.InvokeAsync(_chart);
+    }
+
+    private void OnCellLongPress((int @string, int fret) coord)
+    {
+        var cell = _matrix.Get(coord.fret, coord.@string);
+        if (cell.State != ChordCellState.Active && !ChordMatrix.IsBarreState(cell.State)) return;
+
+        _popoverString = coord.@string;
+        _popoverFret = coord.fret;
+        _popoverFinger = new ChordFinger
+        {
+            String = Math.Abs(coord.@string - _matrix.NumStrings),
+            Fret = coord.fret + 1,
+            Text = cell.Text,
+            Color = cell.Color,
+            TextColor = cell.TextColor,
+            Shape = cell.Shape
+        };
+        _popoverVisible = true;
+    }
+
+    private void ClosePopover()
+    {
+        _popoverVisible = false;
+        _popoverFinger = null;
+    }
+
+    private async Task RemoveFingerFromPopover()
+    {
+        _matrix = _matrix.Toggle(_popoverString, _popoverFret);
+        ClosePopover();
+        await EmitCurrentChart();
+    }
+
+    private async Task UpdateFingerText(string? text)
+    {
+        if (_popoverFinger is null) return;
+        _popoverFinger.Text = text;
+        _matrix = _matrix.Text(_popoverString, _popoverFret, text);
+        await EmitCurrentChart();
+    }
+
+    private async Task UpdateFingerColor(string? color)
+    {
+        if (_popoverFinger is null) return;
+        _popoverFinger.Color = color;
+        _matrix = _matrix.Color(_popoverString, _popoverFret, color);
+        await EmitCurrentChart();
+    }
+
+    private async Task UpdateFingerShape(ChordShape shape)
+    {
+        if (_popoverFinger is null) return;
+        _popoverFinger.Shape = shape;
+        _matrix = _matrix.SetShape(_popoverString, _popoverFret, shape);
+        await EmitCurrentChart();
+    }
+}

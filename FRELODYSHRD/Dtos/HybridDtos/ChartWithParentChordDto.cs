@@ -1,4 +1,5 @@
-﻿using FRELODYSHRD.Dtos.EditDtos;
+using FRELODYSHRD.Dtos.EditDtos;
+using FRELODYSHRD.Models.ChordDraw;
 using System.ComponentModel.DataAnnotations;
 
 namespace FRELODYSHRD.Dtos.HybridDtos
@@ -6,7 +7,7 @@ namespace FRELODYSHRD.Dtos.HybridDtos
     public class ChartWithParentChordDto
     {
         public Guid Id { get; set; }
-        public string FilePath { get; set; }
+        public string? FilePath { get; set; }
 
         [Range(1, 24)]
         public int? FretPosition { get; set; }
@@ -16,6 +17,12 @@ namespace FRELODYSHRD.Dtos.HybridDtos
 
         [StringLength(100)]
         public string? PositionDescription { get; set; }
+
+        public ChordSource Source { get; set; } = ChordSource.Image;
+
+        public ChordDrawData? ChordData { get; set; }
+
+        public string? RenderedSvg { get; set; }
 
         public ChordEditDto? ParentChord { get; set; }
     }

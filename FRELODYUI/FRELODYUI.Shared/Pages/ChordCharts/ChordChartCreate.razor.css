@@ -1,5 +1,126 @@
 ﻿
 /* ============================================
+   SOURCE TOGGLE (Drawing vs Image)
+   ============================================ */
+
+.source-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding: 0 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.source-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--cd-border, rgba(0, 0, 0, 0.12));
+    background: var(--cd-input-bg, #ffffff);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease;
+}
+
+.source-toggle-btn i {
+    font-size: 1.4rem;
+    color: var(--cd-fg-muted, #6b7280);
+}
+
+.source-toggle-btn:hover:not(:disabled) {
+    border-color: var(--cd-accent, #3a6eff);
+}
+
+.source-toggle-btn.is-active {
+    border-color: var(--cd-accent, #3a6eff);
+    background: var(--cd-accent-soft, rgba(58, 110, 255, 0.08));
+}
+
+.source-toggle-btn.is-active i { color: var(--cd-accent, #3a6eff); }
+
+.source-toggle-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.source-toggle-title {
+    display: block;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.source-toggle-sub {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-secondary, #6b7280);
+}
+
+.source-toggle-primary {
+    order: 0;
+}
+
+.source-toggle-secondary {
+    order: 1;
+    opacity: 0.85;
+}
+
+.source-toggle-secondary:hover:not(:disabled) {
+    opacity: 1;
+}
+
+.source-toggle-badge {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    background: var(--bs-primary, #3a6eff);
+    color: #ffffff;
+    vertical-align: middle;
+}
+
+.source-toggle-btn:not(.is-active) .source-toggle-badge {
+    background: var(--text-secondary, #6b7280);
+}
+
+.step-validation-feedback {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin: 0 1.5rem 0.75rem;
+    background: rgba(220, 53, 69, 0.08);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    border-radius: 0.5rem;
+    color: #dc3545;
+    font-size: 0.9rem;
+}
+
+.step-validation-feedback i {
+    flex-shrink: 0;
+    font-size: 1.1rem;
+}
+
+.review-with-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+@media (max-width: 480px) {
+    .source-toggle {
+        grid-template-columns: 1fr;
+        padding: 0 1rem;
+    }
+}
+
+/* ============================================
    WIZARD CONTAINER & CARD
    ============================================ */
 

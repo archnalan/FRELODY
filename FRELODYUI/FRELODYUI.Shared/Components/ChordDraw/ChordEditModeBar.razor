@@ -1,0 +1,39 @@
+@namespace FRELODYUI.Shared.Components.ChordDraw
+
+<div class="cd-mode-bar" role="tablist" aria-label="Edit mode">
+    @foreach (var item in _items)
+    {
+        var isActive = item.Mode == Mode;
+        <button type="button"
+                role="tab"
+                aria-selected="@isActive"
+                class="cd-mode-btn @(isActive ? "is-active" : null)"
+                title="@item.Title"
+                @onclick="() => SelectMode(item.Mode)">
+            <i class="bi @item.Icon" aria-hidden="true"></i>
+            <span class="cd-mode-label">@item.Label</span>
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public ChordEditMode Mode { get; set; } = ChordEditMode.Fingers;
+    [Parameter] public EventCallback<ChordEditMode> ModeChanged { get; set; }
+
+    private record Item(ChordEditMode Mode, string Label, string Icon, string Title);
+
+    private static readonly Item[] _items =
+    {
+        new(ChordEditMode.Fingers, "Fingers", "bi-record-circle", "Place or remove fingers and barres"),
+        new(ChordEditMode.Text,    "Text",    "bi-fonts",          "Edit finger labels"),
+        new(ChordEditMode.Color,   "Color",   "bi-palette",        "Recolor placed fingers"),
+        new(ChordEditMode.Shape,   "Shape",   "bi-hexagon",        "Cycle the shape of a finger")
+    };
+
+    private Task SelectMode(ChordEditMode mode)
+    {
+        if (mode == Mode) return Task.CompletedTask;
+        Mode = mode;
+        return ModeChanged.InvokeAsync(mode);
+    }
+}

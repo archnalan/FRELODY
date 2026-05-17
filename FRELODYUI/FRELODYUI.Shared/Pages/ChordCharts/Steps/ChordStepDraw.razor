@@ -1,0 +1,21 @@
+@namespace FRELODYUI.Shared.Pages.ChordCharts.Steps
+
+<div class="wizard-step-content">
+    <div class="step-body cd-step-draw">
+        <div class="cd-step-draw-header">
+            <h3 class="step-title">Draw the chord</h3>
+            <p class="step-help">
+                Tap a fret to place a finger. Drag across a fret to make a barre. Tap the O/× row to mark a string open or muted.
+            </p>
+        </div>
+
+        <ChordDrawCanvas Chart="@Chart" ChartChanged="OnChartChanged" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public ChordDrawData? Chart { get; set; }
+    [Parameter] public EventCallback<ChordDrawData> ChartChanged { get; set; }
+
+    private Task OnChartChanged(ChordDrawData chart) => ChartChanged.InvokeAsync(chart);
+}

@@ -1,0 +1,135 @@
+.cd-popover-backdrop {
+    position: fixed;
+    inset: 0;
+    background: var(--modal-overlay-bg, rgba(0, 0, 0, 0.5));
+    backdrop-filter: blur(var(--modal-overlay-blur, 4px));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    padding: 1rem;
+}
+
+.cd-popover {
+    width: 100%;
+    max-width: 22rem;
+    background: var(--modal-content-bg, #ffffff);
+    color: var(--modal-content-color, inherit);
+    border: 1px solid var(--modal-border-color, transparent);
+    border-radius: 0.85rem;
+    box-shadow: var(--modal-shadow, 0 12px 40px rgba(0, 0, 0, 0.18));
+    overflow: hidden;
+}
+
+.cd-popover-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--modal-header-bg, transparent);
+    border-bottom: 1px solid var(--modal-border-color, rgba(0, 0, 0, 0.08));
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.cd-popover-close {
+    background: transparent;
+    border: 0;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: inherit;
+}
+
+.cd-popover-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.cd-popover-body .cd-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.cd-popover-body .cd-field-label {
+    font-weight: 600;
+    color: var(--text-secondary, #6b7280);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+}
+
+.cd-popover-body .cd-input {
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--input-border, var(--border-light, rgba(0, 0, 0, 0.15)));
+    border-radius: 0.5rem;
+    background: var(--input-bg, #ffffff);
+    color: var(--input-color, inherit);
+    font: inherit;
+}
+
+.cd-input-color {
+    height: 2.5rem;
+    padding: 0.25rem;
+}
+
+.cd-shape-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.cd-shape-btn {
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-light, rgba(0, 0, 0, 0.15));
+    background: var(--input-bg, transparent);
+    color: var(--text-primary, inherit);
+    cursor: pointer;
+    font: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.cd-shape-btn:hover {
+    border-color: var(--bs-primary, #3a6eff);
+}
+
+.cd-shape-btn.is-active {
+    border-color: var(--bs-primary, #3a6eff);
+    color: var(--bs-primary, #3a6eff);
+    background: rgba(58, 110, 255, 0.10);
+}
+
+.cd-shape-glyph {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+}
+
+.cd-btn-link {
+    background: none;
+    border: 0;
+    color: var(--bs-primary, #3a6eff);
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.cd-btn-danger {
+    background: #dc3545;
+    color: white;
+    border: 0;
+    padding: 0.6rem 0.85rem;
+    border-radius: 0.5rem;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}

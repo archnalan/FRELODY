@@ -1,11 +1,14 @@
-﻿using FRELODYAPP.Areas.Admin.Interfaces;
+using FRELODYAPIs.Services.ChordCharts;
+using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Data;
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Models;
+using FRELODYAPP.Profiles;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
 using FRELODYSHRD.Dtos.HybridDtos;
+using FRELODYSHRD.Models.ChordDraw;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,15 +21,23 @@ namespace FRELODYAPP.Areas.Admin.LogicData
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly FileValidationService _fileValidationService;
         private readonly IChordService _chordService;
+        private readonly ChordSvgRenderer _svgRenderer;
         private readonly ILogger<ChordChartService> _logger;
 
-        public ChordChartService(SongDbContext context, ILogger<ChordChartService> logger, IWebHostEnvironment webHostEnvironment, FileValidationService fileValidationService, IChordService chordService)
+        public ChordChartService(
+            SongDbContext context,
+            ILogger<ChordChartService> logger,
+            IWebHostEnvironment webHostEnvironment,
+            FileValidationService fileValidationService,
+            IChordService chordService,
+            ChordSvgRenderer svgRenderer)
         {
             _context = context;
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _fileValidationService = fileValidationService;
             _chordService = chordService;
+            _svgRenderer = svgRenderer;
         }
 
         public async Task<ServiceResult<List<ChordChartEditDto>>> GetChordChartsAsync()
@@ -118,13 +129,6 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                     return ServiceResult<ChordChartEditDto>.Failure(
                         new BadRequestException("Chord chart data is required."));
 
-                var chartExists = await _context.ChordCharts
-                    .AnyAsync(ch => ch.FilePath == chartDto.FilePath);
-
-                if (chartExists)
-                    return ServiceResult<ChordChartEditDto>.Failure(
-                        new ConflictException($"Chart with file path: {chartDto.FilePath} already exists."));
-
                 if (!string.IsNullOrEmpty(chartDto.ChordId))
                 {
                     var chordExists = await _context.Chords.AnyAsync(ch => ch.Id == chartDto.ChordId);
@@ -134,6 +138,10 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                 }
 
                 var chart = chartDto.Adapt<ChordChart>();
+                if (chartDto.Source == ChordSource.Drawing && chartDto.ChordData != null)
+                {
+                    chart.RenderedSvg = SafeRenderSvg(chartDto.ChordData);
+                }
 
                 await _context.ChordCharts.AddAsync(chart);
                 await _context.SaveChangesAsync();
@@ -143,7 +151,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating chord chart: {FilePath}. Error: {Error}", chartDto?.FilePath, ex);
+                _logger.LogError(ex, "Error creating chord chart. Error: {Error}", ex);
                 return ServiceResult<ChordChartEditDto>.Failure(
                     new Exception($"Error creating chord chart. Details: {ex.Message}"));
             }
@@ -160,13 +168,6 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                 return ServiceResult<ChordChartEditDto>.Failure(
                     new NotFoundException($"Chord chart with ID: {chartDto.Id} does not exist."));
 
-            var chartExists = await _context.ChordCharts
-                .AnyAsync(ch => ch.FilePath == chartDto.FilePath && ch.Id != chartDto.Id);
-
-            if (chartExists)
-                return ServiceResult<ChordChartEditDto>.Failure(
-                    new ConflictException($"Chart: {chartDto.FilePath} already exists."));
-
             try
             {
                 chart.FilePath = chartDto.FilePath;
@@ -174,6 +175,13 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                 chart.FretPosition = chartDto.FretPosition;
                 chart.ChartAudioFilePath = chartDto.ChartAudioFilePath;
                 chart.PositionDescription = chartDto.PositionDescription;
+                chart.Source = chartDto.Source;
+
+                if (chartDto.Source == ChordSource.Drawing && chartDto.ChordData != null)
+                {
+                    chart.ChordDataJson = MappingConfig.SerializeChordData(chartDto.ChordData);
+                    chart.RenderedSvg = SafeRenderSvg(chartDto.ChordData);
+                }
 
                 await _context.SaveChangesAsync();
 
@@ -182,7 +190,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating chord chart: {FilePath}. Error: {Error}", chartDto.FilePath, ex);
+                _logger.LogError(ex, "Error updating chord chart. Error: {Error}", ex);
                 return ServiceResult<ChordChartEditDto>.Failure(new Exception(ex.Message));
             }
         }
@@ -208,27 +216,32 @@ namespace FRELODYAPP.Areas.Admin.LogicData
         }
 
         public async Task<ServiceResult<ChordChartEditDto>> CreateChordChartFilesAsync(
-        ChordChartCreateDto chartDto,
-        IFormFile chartImage,
-        IFormFile? chartAudio)
+            ChordChartCreateDto chartDto,
+            IFormFile? chartImage,
+            IFormFile? chartAudio)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Validate inputs
                 if (chartDto == null)
                     return ServiceResult<ChordChartEditDto>.Failure(
                         new BadRequestException("Chord chart data is required."));
 
-                if (chartImage == null || chartImage.Length == 0)
+                if (chartDto.Source == ChordSource.Image && (chartImage == null || chartImage.Length == 0))
                     return ServiceResult<ChordChartEditDto>.Failure(
-                        new BadRequestException("Chart image is required."));
+                        new BadRequestException("Chart image is required for image-source charts."));
 
-                // Validate files
-                var imageValidation = await _fileValidationService.ValidateFileAsync(chartImage);
-                if (!imageValidation.IsValid)
+                if (chartDto.Source == ChordSource.Drawing && chartDto.ChordData == null)
                     return ServiceResult<ChordChartEditDto>.Failure(
-                        new BadRequestException($"Image validation failed: {imageValidation.ErrorMessage}"));
+                        new BadRequestException("Chord data is required for drawing-source charts."));
+
+                if (chartImage != null && chartImage.Length > 0)
+                {
+                    var imageValidation = await _fileValidationService.ValidateFileAsync(chartImage);
+                    if (!imageValidation.IsValid)
+                        return ServiceResult<ChordChartEditDto>.Failure(
+                            new BadRequestException($"Image validation failed: {imageValidation.ErrorMessage}"));
+                }
 
                 if (chartAudio != null)
                 {
@@ -238,7 +251,6 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                             new BadRequestException($"Audio validation failed: {audioValidation.ErrorMessage}"));
                 }
 
-                // Validate chord exists
                 if (!string.IsNullOrEmpty(chartDto.ChordId))
                 {
                     var chordExists = await _context.Chords.AnyAsync(ch => ch.Id == chartDto.ChordId);
@@ -247,36 +259,27 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                             new BadRequestException($"Chord with ID: {chartDto.ChordId} does not exist."));
                 }
 
-                // Generate file paths and save files
-                var imagePath = await SaveChartFile(chartImage, "charts/images", chartDto);
+                string? imagePath = null;
                 string? audioPath = null;
+
+                if (chartImage != null && chartImage.Length > 0)
+                {
+                    imagePath = await SaveChartFile(chartImage, "charts/images", chartDto);
+                    chartDto.FilePath = imagePath;
+                }
 
                 if (chartAudio != null)
                 {
                     audioPath = await SaveChartFile(chartAudio, "charts/audio", chartDto);
+                    chartDto.ChartAudioFilePath = audioPath;
                 }
 
-                // Set file paths in DTO
-                chartDto.FilePath = imagePath;
-                chartDto.ChartAudioFilePath = audioPath;
-
-                // Check for duplicate file path
-                var chartExists = await _context.ChordCharts
-                    .AnyAsync(ch => ch.FilePath == chartDto.FilePath);
-
-                if (chartExists)
-                {
-                    // Clean up uploaded files before failing
-                    CleanupFile(imagePath, _webHostEnvironment);
-                    if (!string.IsNullOrEmpty(audioPath))
-                        CleanupFile(audioPath, _webHostEnvironment);
-
-                    return ServiceResult<ChordChartEditDto>.Failure(
-                        new ConflictException($"Chart with file path: {chartDto.FilePath} already exists."));
-                }
-
-                // Create chart entity
                 var chart = chartDto.Adapt<ChordChart>();
+                if (chartDto.Source == ChordSource.Drawing && chartDto.ChordData != null)
+                {
+                    chart.RenderedSvg = SafeRenderSvg(chartDto.ChordData);
+                }
+
                 await _context.ChordCharts.AddAsync(chart);
                 await _context.SaveChangesAsync();
 
@@ -288,8 +291,7 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-
-                _logger.LogError(ex, "Error creating chord chart with files: {FilePath}. Error: {Error}", chartDto?.FilePath, ex);
+                _logger.LogError(ex, "Error creating chord chart with files: {Error}", ex);
                 return ServiceResult<ChordChartEditDto>.Failure(
                     new Exception($"Error creating chord chart. Details: {ex.Message}"));
             }
@@ -312,11 +314,9 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                     return ServiceResult<ChordChartEditDto>.Failure(
                         new NotFoundException($"Chord chart with ID: {chartDto.Id} does not exist."));
 
-                // Store old file paths for cleanup
                 var oldImagePath = chart.FilePath;
                 var oldAudioPath = chart.ChartAudioFilePath;
 
-                // Handle image file upload
                 if (chartImage != null && chartImage.Length > 0)
                 {
                     var imageValidation = await _fileValidationService.ValidateFileAsync(chartImage);
@@ -328,7 +328,6 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                     chartDto.FilePath = imagePath;
                 }
 
-                // Handle audio file upload
                 if (chartAudio != null && chartAudio.Length > 0)
                 {
                     var audioValidation = await _fileValidationService.ValidateFileAsync(chartAudio);
@@ -340,38 +339,22 @@ namespace FRELODYAPP.Areas.Admin.LogicData
                     chartDto.ChartAudioFilePath = audioPath;
                 }
 
-                // Check for duplicate file path (excluding current chart)
-                if (!string.IsNullOrEmpty(chartDto.FilePath))
-                {
-                    var duplicateExists = await _context.ChordCharts
-                        .AnyAsync(ch => ch.FilePath == chartDto.FilePath && ch.Id != chartDto.Id);
-
-                    if (duplicateExists)
-                    {
-                        // Clean up newly uploaded files
-                        if (chartImage != null && !string.IsNullOrEmpty(chartDto.FilePath))
-                            CleanupFile(chartDto.FilePath, _webHostEnvironment);
-                        if (chartAudio != null && !string.IsNullOrEmpty(chartDto.ChartAudioFilePath))
-                            CleanupFile(chartDto.ChartAudioFilePath, _webHostEnvironment);
-
-                        return ServiceResult<ChordChartEditDto>.Failure(
-                            new ConflictException($"Chart: {chartDto.FilePath} already exists."));
-                    }
-                }
-
-                // Update chart properties
                 chart.FilePath = chartDto.FilePath ?? chart.FilePath;
                 chart.ChordId = chartDto.ChordId;
                 chart.FretPosition = chartDto.FretPosition;
                 chart.ChartAudioFilePath = chartDto.ChartAudioFilePath ?? chart.ChartAudioFilePath;
                 chart.PositionDescription = chartDto.PositionDescription;
+                chart.Source = chartDto.Source;
+
+                if (chartDto.Source == ChordSource.Drawing && chartDto.ChordData != null)
+                {
+                    chart.ChordDataJson = MappingConfig.SerializeChordData(chartDto.ChordData);
+                    chart.RenderedSvg = SafeRenderSvg(chartDto.ChordData);
+                }
 
                 await _context.SaveChangesAsync();
-
-                // Commit transaction before cleaning up old files
                 await transaction.CommitAsync();
 
-                // Clean up old files only after successful commit
                 if (chartImage != null && !string.IsNullOrEmpty(oldImagePath) && oldImagePath != chart.FilePath)
                     CleanupFile(oldImagePath, _webHostEnvironment);
                 if (chartAudio != null && !string.IsNullOrEmpty(oldAudioPath) && oldAudioPath != chart.ChartAudioFilePath)
@@ -383,9 +366,35 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-
-                _logger.LogError(ex, "Error updating chord chart with files: {FilePath}. Error: {Error}", chartDto?.FilePath, ex);
+                _logger.LogError(ex, "Error updating chord chart with files: {Error}", ex);
                 return ServiceResult<ChordChartEditDto>.Failure(new Exception(ex.Message));
+            }
+        }
+
+        public ServiceResult<string> RenderSvg(ChordDrawData chartData)
+        {
+            if (chartData == null)
+                return ServiceResult<string>.Failure(new BadRequestException("Chord data is required."));
+
+            try
+            {
+                var svg = _svgRenderer.Render(chartData);
+                return ServiceResult<string>.Success(svg);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rendering chord SVG: {Error}", ex);
+                return ServiceResult<string>.Failure(new Exception($"Error rendering chord SVG. Details: {ex.Message}"));
+            }
+        }
+
+        private string? SafeRenderSvg(ChordDrawData data)
+        {
+            try { return _svgRenderer.Render(data); }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to render server-side SVG for chord chart; persisting JSON only.");
+                return null;
             }
         }
 
@@ -396,19 +405,15 @@ namespace FRELODYAPP.Areas.Admin.LogicData
         {
             string webRootPath = _webHostEnvironment.WebRootPath;
 
-            // Get storage path
             string storagePath = Path.Combine("media", subfolder);
             string uploadPath = Path.Combine(webRootPath, storagePath);
 
-            // Ensure directory exists
             if (!Directory.Exists(uploadPath))
                 Directory.CreateDirectory(uploadPath);
 
-            // Generate filename with chord info
             string extension = Path.GetExtension(file.FileName);
             string baseFileName = Guid.NewGuid().ToString();
 
-            // Try to get chord name for filename
             if (!string.IsNullOrEmpty(chartDto.ChordId))
             {
                 try
@@ -432,13 +437,11 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             string fileName = $"{baseFileName}{extension}";
             string filePath = Path.Combine(uploadPath, fileName);
 
-            // Save file
             using (var fileStream = new FileStream(filePath, FileMode.Create))
             {
                 await file.CopyToAsync(fileStream);
             }
 
-            // Return web-friendly path
             return $"{storagePath}/{fileName}".Replace('\\', '/');
         }
 

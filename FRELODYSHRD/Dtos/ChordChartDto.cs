@@ -1,4 +1,4 @@
-﻿using FRELODYAPP.Data;
+using FRELODYAPP.Data;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -7,13 +7,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FRELODYAPP.Dtos.SubDtos;
+using FRELODYSHRD.Models.ChordDraw;
 
 namespace FRELODYSHRD.Dtos
 {
     public class ChordChartDto : BaseEntityDto
     {
-        [Required]
-        public string FilePath { get; set; }
+        public string? FilePath { get; set; }
         public string? ChordId { get; set; }
 
         [Range(1, 24)]
@@ -24,5 +24,13 @@ namespace FRELODYSHRD.Dtos
 
         [StringLength(100)]
         public string? PositionDescription { get; set; }
+
+        public ChordSource Source { get; set; } = ChordSource.Image;
+
+        public ChordDrawData? ChordData { get; set; }
+
+        public string? RenderedSvg { get; set; }
+
+        public string? RenderedPngPath { get; set; }
     }
 }

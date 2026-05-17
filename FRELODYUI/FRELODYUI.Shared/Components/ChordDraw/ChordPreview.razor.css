@@ -1,0 +1,18 @@
+.cd-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 220px;
+    padding: 1rem;
+    background: var(--modal-content-bg, #ffffff);
+    border: 1px solid var(--border-light, rgba(0, 0, 0, 0.08));
+    border-radius: 0.75rem;
+    color: var(--text-primary, #1f2937);
+}
+
+.cd-preview ::deep svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}

@@ -1,0 +1,99 @@
+.cd-editor-wrap {
+    width: 100%;
+    max-width: 26rem;
+    margin: 0 auto;
+    color: var(--text-primary, currentColor);
+    --cd-finger-color: var(--bs-primary, #3a6eff);
+}
+
+.cd-editor-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    user-select: none;
+    touch-action: none;
+    overflow: visible;
+}
+
+.cd-line {
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.cd-nut {
+    fill: currentColor;
+}
+
+.cd-marker {
+    cursor: pointer;
+}
+
+.cd-marker-hit {
+    fill: transparent;
+    pointer-events: all;
+}
+
+.cd-marker-shape {
+    stroke: currentColor;
+    fill: none;
+    pointer-events: none;
+}
+
+.cd-finger {
+    fill: var(--cd-finger-color);
+    pointer-events: none;
+}
+
+.cd-finger-text {
+    fill: #ffffff;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+.cd-barre {
+    fill: var(--cd-finger-color);
+    pointer-events: none;
+}
+
+.cd-barre.is-highlight {
+    opacity: 0.45;
+}
+
+.cd-position-text {
+    fill: currentColor;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+.cd-tuning-group {
+    cursor: pointer;
+}
+
+.cd-tuning-hit {
+    fill: transparent;
+    pointer-events: all;
+}
+
+.cd-tuning-label {
+    fill: currentColor;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    user-select: none;
+    pointer-events: none;
+}
+
+.cd-tuning-group:hover .cd-tuning-label {
+    fill: var(--bs-primary, #3a6eff);
+}
+
+.cd-cell-hit {
+    fill: transparent;
+    pointer-events: all;
+    cursor: pointer;
+}

@@ -1,7 +1,8 @@
-﻿@page "/chord-charts/create/{chordId}"
+@page "/chord-charts/create/{chordId}"
 @page "/chord-charts/edit/{Id}"
 @using FRELODYUI.Shared.Pages.Compose.ChordComponents
 @using FRELODYUI.Shared.Pages.ChordCharts.Steps
+@using FRELODYSHRD.Models.ChordDraw
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components
 @using Refit
@@ -11,7 +12,6 @@
 
 <div class="wizard-container">
     <div class="wizard-card">
-        <!-- Header with Back Button and Title -->
         <div class="wizard-header">
             <button class="back-button" @onclick="GoBack" type="button">
                 <i class="bi bi-arrow-left"></i>
@@ -23,7 +23,36 @@
             </div>
         </div>
 
-        <!-- Step Progress Indicator -->
+        <!-- Source toggle: Drawing (recommended) vs Image -->
+        <div class="source-toggle" role="tablist" aria-label="Chord source">
+            <button type="button"
+                    role="tab"
+                    class="source-toggle-btn source-toggle-primary @(FormModel.Source == ChordSource.Drawing ? "is-active" : null)"
+                    aria-selected="@(FormModel.Source == ChordSource.Drawing)"
+                    disabled="@(!string.IsNullOrEmpty(Id))"
+                    @onclick="() => SetSource(ChordSource.Drawing)">
+                <i class="bi bi-vector-pen"></i>
+                <div>
+                    <span class="source-toggle-title">Draw it
+                        <span class="source-toggle-badge">Recommended</span>
+                    </span>
+                    <span class="source-toggle-sub">Interactive editor</span>
+                </div>
+            </button>
+            <button type="button"
+                    role="tab"
+                    class="source-toggle-btn source-toggle-secondary @(FormModel.Source == ChordSource.Image ? "is-active" : null)"
+                    aria-selected="@(FormModel.Source == ChordSource.Image)"
+                    disabled="@(!string.IsNullOrEmpty(Id))"
+                    @onclick="() => SetSource(ChordSource.Image)">
+                <i class="bi bi-image"></i>
+                <div>
+                    <span class="source-toggle-title">Upload image</span>
+                    <span class="source-toggle-sub">PNG / JPG / SVG</span>
+                </div>
+            </button>
+        </div>
+
         <div class="wizard-progress">
             <div class="progress-steps">
                 @for (int i = 1; i <= TotalSteps; i++)
@@ -55,8 +84,7 @@
 
         <EditForm Model="@FormModel" OnValidSubmit="@HandleValidSubmit" FormName="chartForm" class="wizard-form">
             <DataAnnotationsValidator />
-            
-            <!-- Validation Summary -->
+
             @if (HasValidationErrors)
             {
                 <div class="validation-summary-container">
@@ -69,94 +97,161 @@
                 </div>
             }
 
-            <!-- Wizard Steps Container -->
             <div class="wizard-steps-container">
                 <div class="wizard-step @GetStepClass(1)" @key="1">
                     @if (CurrentStep == 1)
                     {
                         <ChordStepDetails @ref="chordStepDetailsRef"
-                                        FormModel="@FormModel"
-                                        Chords="@Chords"
-                                        SelectedChord="@SelectedChord"
-                                        IsChordEdit="@(!string.IsNullOrEmpty(Id))"
-                                        SelectedChordChanged ="OnSelectedChordChanged"
-                                        OpenCreateChordModal="@OpenCreateChordModal" />
+                                          FormModel="@FormModel"
+                                          Chords="@Chords"
+                                          SelectedChord="@SelectedChord"
+                                          IsChordEdit="@(!string.IsNullOrEmpty(Id))"
+                                          SelectedChordChanged="OnSelectedChordChanged"
+                                          OpenCreateChordModal="@OpenCreateChordModal" />
                     }
                 </div>
 
                 <div class="wizard-step @GetStepClass(2)" @key="2">
                     @if (CurrentStep == 2)
                     {
-                        <ChordStepMedia ChartPreview="@ChartPreview"
-                                      AudioPreview="@AudioPreview"
-                                      IsUploadingChart="@IsUploadingChart"
-                                      IsUploadingAudio="@IsUploadingAudio"
-                                      ChartUploadError="@ChartUploadError"
-                                      AudioUploadError="@AudioUploadError"
-                                      OnChartUpload="@HandleChartUpload"
-                                      OnAudioUpload="@HandleAudioUpload"
-                                      OnClearChart="@ClearChartFile"
-                                      OnClearAudio="@ClearAudioFile" />
+                        @if (FormModel.Source == ChordSource.Drawing)
+                        {
+                            <ChordStepDraw Chart="ChordChart" ChartChanged="OnChordChartChanged" />
+                        }
+                        else
+                        {
+                            <ChordStepMedia ChartPreview="@ChartPreview"
+                                            AudioPreview="@AudioPreview"
+                                            IsUploadingChart="@IsUploadingChart"
+                                            IsUploadingAudio="@IsUploadingAudio"
+                                            ChartUploadError="@ChartUploadError"
+                                            AudioUploadError="@AudioUploadError"
+                                            OnChartUpload="@HandleChartUpload"
+                                            OnAudioUpload="@HandleAudioUpload"
+                                            OnClearChart="@ClearChartFile"
+                                            OnClearAudio="@ClearAudioFile" />
+                        }
                     }
                 </div>
 
                 <div class="wizard-step @GetStepClass(3)" @key="3">
                     @if (CurrentStep == 3)
                     {
-                        <ChordStepNotes FormModel="@FormModel" />
-                    }
-                </div>
+                        <div class="wizard-step-content">
+                            <div class="step-body review-with-notes">
+                                <!-- Chord summary -->
+                                <div class="review-section">
+                                    <div class="review-section-header">
+                                        <h4 class="review-section-title">
+                                            <i class="bi bi-music-note-beamed"></i>
+                                            Chord
+                                        </h4>
+                                        <button type="button" class="edit-button" @onclick="() => NavigateToStep(1)">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                    </div>
+                                    <div class="review-content">
+                                        <div class="review-item">
+                                            <span class="review-label">Chord:</span>
+                                            <span class="review-value">@(SelectedChord?.ChordName ?? "Not selected")</span>
+                                        </div>
+                                        <div class="review-item">
+                                            <span class="review-label">Fret Position:</span>
+                                            <span class="review-value">@(FormModel.FretPosition?.ToString() ?? "1")</span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                <div class="wizard-step @GetStepClass(4)" @key="4">
-                    @if (CurrentStep == 4)
-                    {
-                        <ChordStepReview FormModel="@FormModel"
-                                       SelectedChord="@SelectedChord"
-                                       ChartPreview="@ChartPreview"
-                                       AudioPreview="@AudioPreview"
-                                       JumpToStep="@NavigateToStep" />
+                                <!-- Visual preview -->
+                                <div class="review-section">
+                                    <div class="review-section-header">
+                                        <h4 class="review-section-title">
+                                            <i class="bi @(FormModel.Source == ChordSource.Drawing ? "bi-diagram-3" : "bi-file-earmark-image")"></i>
+                                            @(FormModel.Source == ChordSource.Drawing ? "Diagram" : "Media")
+                                        </h4>
+                                        <button type="button" class="edit-button" @onclick="() => NavigateToStep(2)">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                    </div>
+                                    <div class="review-content">
+                                        @if (FormModel.Source == ChordSource.Drawing && ChordChart is not null)
+                                        {
+                                            <ChordPreview Chart="ChordChart" />
+                                        }
+                                        else if (FormModel.Source == ChordSource.Image && !string.IsNullOrEmpty(ChartPreview))
+                                        {
+                                            <div class="review-image-container">
+                                                <img src="@ChartPreview" alt="Chord chart preview" class="review-image" />
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="review-value-empty">Nothing to preview yet</span>
+                                        }
+
+                                        @if (!string.IsNullOrEmpty(AudioPreview))
+                                        {
+                                            <div class="review-audio-container">
+                                                <audio controls class="review-audio-player">
+                                                    <source src="@AudioPreview" />
+                                                </audio>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Notes -->
+                                <div class="form-group">
+                                    <label for="description" class="form-label">
+                                        <i class="bi bi-card-text label-icon"></i>
+                                        Notes (optional)
+                                    </label>
+                                    <InputTextArea id="description"
+                                                   @bind-Value="@FormModel.PositionDescription"
+                                                   class="form-control form-textarea"
+                                                   rows="4"
+                                                   placeholder="Fingering tips, difficulty, common progressions..." />
+                                    <ValidationMessage For="@(() => FormModel.PositionDescription)" class="validation-message" />
+                                </div>
+                            </div>
+                        </div>
                     }
                 </div>
             </div>
 
-            <!-- Wizard Navigation Footer -->
+            @if (!string.IsNullOrEmpty(StepValidationError))
+            {
+                <div class="step-validation-feedback" role="alert">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <span>@StepValidationError</span>
+                </div>
+            }
+
             <div class="wizard-footer">
                 @if (CurrentStep > 1)
                 {
-                    <button type="button" 
-                          class="btn-secondary wizard-btn-back" 
-                          @onclick="PreviousStep"
-                          disabled="@IsSubmitting">
-                        <i class="bi bi-arrow-left"></i>
-                        <span>Back</span>
+                    <button type="button" class="btn-secondary wizard-btn-back" @onclick="PreviousStep" disabled="@IsSubmitting">
+                        <i class="bi bi-arrow-left"></i><span>Back</span>
                     </button>
                 }
                 else
                 {
-                    <button type="button" 
-                          class="btn-secondary wizard-btn-back" 
-                          @onclick="GoBack"
-                          disabled="@IsSubmitting">
-                        <i class="bi bi-x"></i>
-                        <span>Cancel</span>
+                    <button type="button" class="btn-secondary wizard-btn-back" @onclick="GoBack" disabled="@IsSubmitting">
+                        <i class="bi bi-x"></i><span>Cancel</span>
                     </button>
                 }
 
                 @if (CurrentStep < TotalSteps)
                 {
-                    <button type="button" 
-                          class="btn-primary wizard-btn-next" 
-                          @onclick="NextStep"
-                          disabled="@(!CanProceedToNextStep() || IsUploadingChart || IsUploadingAudio)">
-                        <span>Continue</span>
-                        <i class="bi bi-arrow-right"></i>
+                    <button type="button" class="btn-primary wizard-btn-next" @onclick="NextStep"
+                            disabled="@(IsUploadingChart || IsUploadingAudio)">
+                        <span>Continue</span><i class="bi bi-arrow-right"></i>
                     </button>
                 }
                 else
                 {
-                    <button type="submit" 
-                          class="btn-primary wizard-btn-submit" 
-                          disabled="@(IsSubmitting || IsUploadingChart || IsUploadingAudio || !IsFormValid())">
+                    <button type="submit" class="btn-primary wizard-btn-submit"
+                            disabled="@(IsSubmitting || IsUploadingChart || IsUploadingAudio)">
                         @if (IsSubmitting)
                         {
                             <i class="spinner-border spinner-border-sm"></i>
@@ -171,7 +266,6 @@
                 }
             </div>
 
-            <!-- Global Error Message -->
             @if (!string.IsNullOrEmpty(ErrorMessage))
             {
                 <div class="error-alert">
@@ -192,7 +286,7 @@
 {
     <ChordCustomize Show="showCustomizeModal"
                     Content="SelectedChord"
-                    OnSave="HandleChordSaved" 
+                    OnSave="HandleChordSaved"
                     OnCancel="CloseCustomizeModal" />
 }
 
@@ -202,7 +296,6 @@
     [Parameter] public string? Id { get; set; }
     private string? ApiBaseUrl = "https://localhost:7077";
 
-    // Form Data
     private ChordChartDto FormModel = new();
     private List<ChordDto> Chords = new List<ChordDto>();
     private ChordDto? SelectedChord = null;
@@ -221,9 +314,11 @@
     private bool showCustomizeModal = false;
     private bool HasValidationErrors = false;
 
-    // Wizard Navigation State
+    private ChordDrawData? ChordChart;
+    private string StepValidationError = "";
+
     private int CurrentStep = 1;
-    private readonly int TotalSteps = 4;
+    private readonly int TotalSteps = 3;
     private HashSet<int> CompletedSteps = new();
 
     private ChordStepDetails? chordStepDetailsRef;
@@ -242,18 +337,51 @@
             SelectedChord = Chords.FirstOrDefault(c => c.Id == chordId) ?? new ChordDto();
             FormModel.ChordId = SelectedChord.Id;
         }
-        FormModel.FretPosition = 1;
+        if (FormModel.FretPosition is null) FormModel.FretPosition = 1;
+
+        if (string.IsNullOrEmpty(Id))
+        {
+            FormModel.Source = ChordSource.Drawing;
+            ChordChart ??= ChordDrawData.CreateDefault();
+        }
+    }
+
+    private void SetSource(ChordSource source)
+    {
+        if (!string.IsNullOrEmpty(Id)) return; // locked on edit; existing chart determines source
+        FormModel.Source = source;
+        if (source == ChordSource.Drawing)
+        {
+            ChordChart ??= ChordDrawData.CreateDefault();
+        }
+        StateHasChanged();
+    }
+
+    private Task OnChordChartChanged(ChordDrawData chart)
+    {
+        ChordChart = chart;
+        // Sync settings position into FormModel so the chord summary shows it
+        FormModel.FretPosition = chart.Settings.Position;
+        return Task.CompletedTask;
     }
 
     private void NextStep()
     {
-        if (CurrentStep < TotalSteps && CanProceedToNextStep())
+        if (CurrentStep >= TotalSteps) return;
+
+        var validation = ValidateStep(CurrentStep);
+        if (!string.IsNullOrEmpty(validation))
         {
-            CompletedSteps.Add(CurrentStep);
-            CurrentStep++;
-            ErrorMessage = "";
+            StepValidationError = validation;
             StateHasChanged();
+            return;
         }
+
+        CompletedSteps.Add(CurrentStep);
+        CurrentStep++;
+        ErrorMessage = "";
+        StepValidationError = "";
+        StateHasChanged();
     }
 
     private void PreviousStep()
@@ -262,6 +390,7 @@
         {
             CurrentStep--;
             ErrorMessage = "";
+            StepValidationError = "";
             StateHasChanged();
         }
     }
@@ -278,59 +407,71 @@
 
     private bool CanNavigateToStep(int step)
     {
-        if (step < CurrentStep)
-            return true;
-
+        if (step < CurrentStep) return true;
         for (int i = 1; i < step; i++)
-        {
-            if (!IsStepValid(i))
-                return false;
-        }
-
+            if (!IsStepValid(i)) return false;
         return true;
     }
 
-    private bool CanProceedToNextStep()
-    {
-        return IsStepValid(CurrentStep);
-    }
+    private bool CanProceedToNextStep() => IsStepValid(CurrentStep);
 
-    private bool IsStepValid(int step)
+    private bool IsStepValid(int step) => string.IsNullOrEmpty(ValidateStep(step));
+
+    private string ValidateStep(int step)
     {
-        return step switch
+        switch (step)
         {
-            1 => !string.IsNullOrEmpty(FormModel.ChordId),
-            2 => !string.IsNullOrEmpty(ChartPreview),
-            3 => true,
-            4 => true,
-            _ => false
-        };
+            case 1:
+                if (string.IsNullOrEmpty(FormModel.ChordId))
+                    return "Select a chord before continuing.";
+                return string.Empty;
+            case 2:
+                if (FormModel.Source == ChordSource.Drawing)
+                {
+                    if (ChordChart?.Chord is not { } c || (c.Fingers.Count == 0 && c.Barres.Count == 0))
+                        return "Place at least one finger on the fretboard before continuing.";
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(ChartPreview))
+                        return "Upload a chord chart image before continuing.";
+                }
+                return string.Empty;
+            case 3:
+                return string.Empty;
+            default:
+                return "Invalid step.";
+        }
     }
 
     private bool IsFormValid()
     {
-        return !string.IsNullOrEmpty(FormModel.ChordId) && 
-               !string.IsNullOrEmpty(ChartPreview);
+        if (string.IsNullOrEmpty(FormModel.ChordId)) return false;
+        return FormModel.Source == ChordSource.Drawing
+            ? ChordChart is { Chord: { } c } && (c.Fingers.Count > 0 || c.Barres.Count > 0)
+            : !string.IsNullOrEmpty(ChartPreview);
     }
 
-    private string GetStepClass(int step)
-    {
-        if (CurrentStep == step)
-            return "wizard-step-active";
-        else if (CurrentStep > step)
-            return "wizard-step-completed";
-        else
-            return "wizard-step-upcoming";
-    }
+    private string GetStepClass(int step) => CurrentStep == step ? "wizard-step-active"
+        : CurrentStep > step ? "wizard-step-completed" : "wizard-step-upcoming";
 
     private string GetStepLabel(int step)
     {
+        if (FormModel.Source == ChordSource.Drawing)
+        {
+            return step switch
+            {
+                1 => "Chord",
+                2 => "Draw",
+                3 => "Review",
+                _ => ""
+            };
+        }
         return step switch
         {
             1 => "Chord",
             2 => "Media",
-            3 => "Notes",
-            4 => "Review",
+            3 => "Review",
             _ => ""
         };
     }
@@ -360,14 +501,8 @@
         try
         {
             var response = await _chordsApi.GetChords();
-            if (response.IsSuccessStatusCode)
-            {
-                Chords = response.Content?.Data!;
-            }
-            else
-            {
-                ErrorMessage = "Failed to load chords";
-            }
+            if (response.IsSuccessStatusCode) Chords = response.Content?.Data!;
+            else ErrorMessage = "Failed to load chords";
         }
         catch (Exception ex)
         {
@@ -391,16 +526,19 @@
                 FormModel.PositionDescription = chart.PositionDescription;
                 FormModel.FilePath = chart.FilePath;
                 FormModel.ChartAudioFilePath = chart.ChartAudioFilePath;
+                FormModel.Source = chart.Source;
+                ChordChart = chart.ChordData;
+
+                if (FormModel.Source == ChordSource.Drawing && ChordChart is null)
+                {
+                    ChordChart = ChordDrawData.CreateDefault();
+                }
 
                 if (!string.IsNullOrEmpty(chart.FilePath))
-                {
                     ChartPreview = DisplayChart(chart.FilePath);
-                }
 
                 if (!string.IsNullOrEmpty(chart.ChartAudioFilePath))
-                {
                     AudioPreview = chart.ChartAudioFilePath;
-                }
 
                 SelectedChord = Chords.FirstOrDefault(c => c.Id == chart.ChordId) ?? new ChordDto();
             }
@@ -471,10 +609,8 @@
 
     private string DisplayChart(string filePath)
     {
-        if (string.IsNullOrEmpty(filePath))
-            return "";
-        if (filePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            return filePath;
+        if (string.IsNullOrEmpty(filePath)) return "";
+        if (filePath.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return filePath;
         return $"{ApiBaseUrl}/{filePath.TrimStart('/')}";
     }
 
@@ -482,6 +618,10 @@
     {
         SelectedChord = chord;
         FormModel.ChordId = chord?.Id;
+        if (FormModel.Source == ChordSource.Drawing && ChordChart is not null && !string.IsNullOrWhiteSpace(chord?.ChordName))
+        {
+            ChordChart.Settings.Title = chord!.ChordName;
+        }
         StateHasChanged();
         CanProceedToNextStep();
         await Task.CompletedTask;
@@ -503,9 +643,24 @@
 
     private async Task HandleValidSubmit()
     {
+        // Re-run step validation before hitting the API
+        var preflight = ValidateStep(1);
+        if (string.IsNullOrEmpty(preflight)) preflight = ValidateStep(2);
+        if (!string.IsNullOrEmpty(preflight))
+        {
+            ErrorMessage = preflight;
+            HasValidationErrors = true;
+            return;
+        }
+
         IsSubmitting = true;
         ErrorMessage = "";
         HasValidationErrors = false;
+
+        var jsonOpts = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        // Multipart is only safe to use when at least one file part is present; otherwise Refit
+        // produces a body with no parts which ASP.NET Core's form parser rejects.
+        var hasFileUpload = ChartStream != null || AudioStream != null;
 
         try
         {
@@ -520,18 +675,20 @@
                     FretPosition = FormModel.FretPosition,
                     PositionDescription = FormModel.PositionDescription,
                     FilePath = FormModel.FilePath,
-                    ChartAudioFilePath = FormModel.ChartAudioFilePath
+                    ChartAudioFilePath = FormModel.ChartAudioFilePath,
+                    Source = FormModel.Source,
+                    ChordData = FormModel.Source == ChordSource.Drawing ? ChordChart : null
                 };
 
-                var chartDataJson = JsonSerializer.Serialize(editDto, new JsonSerializerOptions
+                if (hasFileUpload)
                 {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-
-                response = await _chordChartsApi.UpdateChordChartFiles(
-                    ChartStream,
-                    AudioStream,
-                    chartDataJson);
+                    var chartDataJson = JsonSerializer.Serialize(editDto, jsonOpts);
+                    response = await _chordChartsApi.UpdateChordChartFiles(ChartStream, AudioStream, chartDataJson);
+                }
+                else
+                {
+                    response = await _chordChartsApi.UpdateChordChart(editDto);
+                }
             }
             else
             {
@@ -539,27 +696,27 @@
                 {
                     ChordId = FormModel.ChordId,
                     FretPosition = FormModel.FretPosition ?? 1,
-                    PositionDescription = FormModel.PositionDescription
+                    PositionDescription = FormModel.PositionDescription,
+                    Source = FormModel.Source,
+                    ChordData = FormModel.Source == ChordSource.Drawing ? ChordChart : null
                 };
 
-                var chartDataJson = JsonSerializer.Serialize(createDto, new JsonSerializerOptions
+                if (hasFileUpload)
                 {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-
-                response = await _chordChartsApi.CreateChordChartFiles(
-                    ChartStream,
-                    AudioStream,
-                    chartDataJson);
+                    var chartDataJson = JsonSerializer.Serialize(createDto, jsonOpts);
+                    response = await _chordChartsApi.CreateChordChartFiles(ChartStream, AudioStream, chartDataJson);
+                }
+                else
+                {
+                    response = await _chordChartsApi.CreateChordChart(createDto);
+                }
             }
 
             if (response.IsSuccessStatusCode)
             {
-                var chart = response.Content!;
                 var successMessage = !string.IsNullOrEmpty(FormModel.Id)
-                    ? $"Chord chart updated successfully"
-                    : $"Chord chart created successfully";
-
+                    ? "Chord chart updated successfully"
+                    : "Chord chart created successfully";
                 _navManager.NavigateTo($"/chords?success={Uri.EscapeDataString(successMessage)}");
             }
             else
@@ -585,7 +742,7 @@
     {
         showCustomizeModal = true;
         showDropdown = false;
-        SelectedChord.ChordName = SelectedChord.ChordName ?? "";
+        if (SelectedChord != null) SelectedChord.ChordName ??= "";
         StateHasChanged();
     }
 
@@ -616,11 +773,7 @@
                     Message = errorMessage,
                     ButtonText = "Close",
                     OptionType = OptionType.Error,
-                    Context = new ModalContext
-                    {
-                        ActionType = "CreateChord",
-                        Data = errorMessage
-                    }
+                    Context = new ModalContext { ActionType = "CreateChord", Data = errorMessage }
                 });
                 return;
             }
@@ -630,18 +783,13 @@
         SelectedChord = newChord;
         showDropdown = false;
         CloseCustomizeModal();
-        if (chordStepDetailsRef != null)
-            chordStepDetailsRef.ValidationError = string.Empty;
+        if (chordStepDetailsRef != null) chordStepDetailsRef.ValidationError = string.Empty;
     }
 
     private async Task GoBack()
     {
-        //_navManager.NavigateTo("/songs-list");
         await JsRt.InvokeVoidAsync("goBack");
     }
 
-    public void Dispose()
-    {
-        // Cleanup if needed
-    }
+    public void Dispose() { }
 }

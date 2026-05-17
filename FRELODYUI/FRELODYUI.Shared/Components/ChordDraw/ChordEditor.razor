@@ -1,0 +1,318 @@
+@namespace FRELODYUI.Shared.Components.ChordDraw
+@inject IJSRuntime _js
+
+@{
+    var strings = Matrix.NumStrings;
+    var frets = Matrix.NumFrets;
+    var emptyStates = Matrix.GetEmptyStringStates();
+
+    const int cellW = 48;
+    const int cellH = 56;
+    // Reserve extra room on the left when a position label ("Nfr") needs to be shown,
+    // so the text never gets clipped by the SVG viewBox.
+    var padLeft = Position > 1 ? 44 : 16;
+    const int padRight = 16;
+    const int padTop = 58;
+    int padBottom = (ShowTuning && Tuning is { Length: > 0 }) ? 40 : 16;
+    const int nutThick = 8;
+    // Strings are positioned at the EDGES of the visible grid (chordpic-style) so
+    // horizontal fret lines stop exactly at the leftmost and rightmost string.
+    var gridStart = padLeft;
+    var gridW = (strings - 1) * cellW;
+    var gridH = frets * cellH;
+    var totalW = padLeft + gridW + padRight;
+    var totalH = padTop + gridH + padBottom;
+    int StringX(int s) => gridStart + s * cellW;
+    int FretY(int f) => padTop + f * cellH + cellH / 2;
+}
+
+<div class="cd-editor-wrap">
+    <svg class="cd-editor-svg"
+         id="@_id"
+         viewBox="0 0 @totalW @totalH"
+         preserveAspectRatio="xMidYMid meet"
+         role="application"
+         aria-label="Chord diagram editor"
+         @onpointermove="OnPointerMove"
+         @onpointerup="OnPointerUp"
+         @onpointercancel="OnPointerCancel">
+
+        <!-- Open / muted markers above the nut -->
+        @for (var s = 0; s < strings; s++)
+        {
+            var sIdx = s;
+            var st = emptyStates[sIdx];
+            var x = StringX(sIdx);
+            var y = padTop - 26;
+            <g class="cd-marker" role="button"
+               aria-label="@MarkerLabel(sIdx, st)"
+               @onclick="() => OnToggleEmpty(sIdx)">
+                <rect class="cd-marker-hit" x="@(x - 16)" y="@(y - 16)" width="32" height="32" />
+                @switch (st)
+                {
+                    case ChordEmptyStringState.Open:
+                        <circle class="cd-marker-shape" cx="@x" cy="@y" r="9" fill="none" stroke-width="2" />
+                        break;
+                    case ChordEmptyStringState.Muted:
+                        <line class="cd-marker-shape" x1="@(x - 7)" y1="@(y - 7)" x2="@(x + 7)" y2="@(y + 7)" stroke-width="2.5" stroke-linecap="round" />
+                        <line class="cd-marker-shape" x1="@(x + 7)" y1="@(y - 7)" x2="@(x - 7)" y2="@(y + 7)" stroke-width="2.5" stroke-linecap="round" />
+                        break;
+                }
+            </g>
+        }
+
+        <!-- String lines -->
+        @for (var s = 0; s < strings; s++)
+        {
+            var x = StringX(s);
+            <line class="cd-line cd-line-string" x1="@x" y1="@padTop" x2="@x" y2="@(padTop + gridH)" />
+        }
+
+        <!-- Fret lines: span exactly between leftmost and rightmost strings -->
+        @{
+            var fretLeft = StringX(0);
+            var fretRight = StringX(strings - 1);
+        }
+        @for (var f = 1; f <= frets; f++)
+        {
+            var y = padTop + f * cellH;
+            <line class="cd-line cd-line-fret" x1="@fretLeft" y1="@y" x2="@fretRight" y2="@y" />
+        }
+
+        <!-- Nut or position label -->
+        @if (Position <= 1)
+        {
+            <rect class="cd-nut" x="@fretLeft" y="@(padTop - nutThick / 2)" width="@(fretRight - fretLeft)" height="@nutThick" />
+        }
+        else
+        {
+            <line class="cd-line cd-line-fret" x1="@fretLeft" y1="@padTop" x2="@fretRight" y2="@padTop" />
+            @((MarkupString)$"<text class=\"cd-position-text\" x=\"{fretLeft - 8}\" y=\"{padTop + cellH / 2 + 4}\" text-anchor=\"end\">{Position}fr</text>")
+        }
+
+        <!-- Barres -->
+        @for (var f = 0; f < frets; f++)
+        {
+            for (var s = 0; s < strings; s++)
+            {
+                var cell = Matrix.Get(f, s);
+                if (cell.State != ChordCellState.Left && cell.State != ChordCellState.LeftHighlight) continue;
+
+                var endS = s;
+                for (int t = s + 1; t < strings; t++)
+                {
+                    var st = Matrix.Get(f, t).State;
+                    if (st == ChordCellState.Right || st == ChordCellState.RightHighlight) { endS = t; break; }
+                    if (st != ChordCellState.Middle && st != ChordCellState.MiddleHighlight) break;
+                }
+                var hl = cell.State == ChordCellState.LeftHighlight;
+                var x1 = StringX(s);
+                var x2 = StringX(endS);
+                var cy = FretY(f);
+                var color = string.IsNullOrEmpty(cell.Color) ? null : cell.Color;
+                var fillClass = "cd-barre" + (hl ? " is-highlight" : "");
+                <rect class="@fillClass"
+                      x="@(x1 - 18)" y="@(cy - 14)"
+                      width="@(x2 - x1 + 36)" height="28"
+                      rx="14" ry="14"
+                      style="@(color != null ? $"fill:{color}" : null)" />
+                if (!string.IsNullOrEmpty(cell.Text))
+                {
+                    @((MarkupString)$"<text class=\"cd-finger-text\" x=\"{(x1 + x2) / 2}\" y=\"{cy + 5}\" text-anchor=\"middle\">{System.Net.WebUtility.HtmlEncode(cell.Text)}</text>")
+                }
+            }
+        }
+
+        <!-- Finger shapes -->
+        @for (var f = 0; f < frets; f++)
+        {
+            for (var s = 0; s < strings; s++)
+            {
+                var cell = Matrix.Get(f, s);
+                if (cell.State != ChordCellState.Active) continue;
+                var cx = StringX(s);
+                var cy = FretY(f);
+                var color = string.IsNullOrEmpty(cell.Color) ? null : cell.Color;
+                var shape = cell.Shape ?? ChordShape.Circle;
+                var style = color != null ? $"fill:{color}" : null;
+                switch (shape)
+                {
+                    case ChordShape.Square:
+                        <rect class="cd-finger" x="@(cx - 16)" y="@(cy - 16)" width="32" height="32" rx="2" ry="2" style="@style" />
+                        break;
+                    case ChordShape.Triangle:
+                        <polygon class="cd-finger" points="@($"{cx},{cy - 17} {cx + 16},{cy + 13} {cx - 16},{cy + 13}")" style="@style" />
+                        break;
+                    case ChordShape.Pentagon:
+                        <polygon class="cd-finger" points="@BuildPolygonPoints(cx, cy, 17, 5, -Math.PI / 2)" style="@style" />
+                        break;
+                    default:
+                        <circle class="cd-finger" cx="@cx" cy="@cy" r="16" style="@style" />
+                        break;
+                }
+                if (!string.IsNullOrEmpty(cell.Text))
+                {
+                    @((MarkupString)$"<text class=\"cd-finger-text\" x=\"{cx}\" y=\"{cy + 5}\" text-anchor=\"middle\">{System.Net.WebUtility.HtmlEncode(cell.Text)}</text>")
+                }
+            }
+        }
+
+        <!-- Clickable cell hit areas (centered on each string, on top of visuals) -->
+        @for (var f = 0; f < frets; f++)
+        {
+            for (var s = 0; s < strings; s++)
+            {
+                var fIdx = f;
+                var sIdx = s;
+                var x = StringX(sIdx) - cellW / 2;
+                var y = padTop + fIdx * cellH;
+                <rect class="cd-cell-hit"
+                      x="@x" y="@y" width="@cellW" height="@cellH"
+                      data-string="@sIdx" data-fret="@fIdx"
+                      @onpointerdown="(e) => OnPointerDown(e, sIdx, fIdx)"
+                      @onpointerdown:preventDefault="true" />
+            }
+        }
+
+        <!-- Tuning labels (clickable to toggle muted) -->
+        @if (ShowTuning && Tuning is { Length: > 0 })
+        {
+            for (var s = 0; s < strings; s++)
+            {
+                var sIdx = s;
+                var label = sIdx < Tuning.Length ? Tuning[sIdx] : "";
+                if (string.IsNullOrEmpty(label)) continue;
+                var lx = StringX(sIdx);
+                var ly = padTop + gridH + 22;
+                <g class="cd-tuning-group" @onclick="() => OnToggleEmpty(sIdx)">
+                    <rect class="cd-tuning-hit" x="@(lx - 16)" y="@(ly - 16)" width="32" height="24" />
+                    @((MarkupString)$"<text class=\"cd-tuning-label\" x=\"{lx}\" y=\"{ly}\" text-anchor=\"middle\">{System.Net.WebUtility.HtmlEncode(label)}</text>")
+                </g>
+            }
+        }
+    </svg>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ChordMatrix Matrix { get; set; } = default!;
+    [Parameter] public EventCallback<ChordMatrix> MatrixChanged { get; set; }
+    [Parameter] public ChordEditMode Mode { get; set; } = ChordEditMode.Fingers;
+    [Parameter] public int Position { get; set; } = 1;
+    [Parameter] public string[]? Tuning { get; set; }
+    [Parameter] public bool ShowTuning { get; set; } = true;
+    [Parameter] public EventCallback<(int @string, int fret)> OnCellLongPress { get; set; }
+
+    private readonly string _id = $"cd-editor-{Guid.NewGuid():N}";
+
+    private int? _downString;
+    private int? _downFret;
+    private int? _lastHoverString;
+    private bool _dragging;
+
+    private async Task OnPointerDown(PointerEventArgs e, int @string, int fret)
+    {
+        _downString = @string;
+        _downFret = fret;
+        _lastHoverString = @string;
+        _dragging = false;
+
+        if (Mode != ChordEditMode.Fingers)
+        {
+            var cell = Matrix.Get(fret, @string);
+            if (cell.State == ChordCellState.Active || ChordMatrix.IsBarreState(cell.State))
+            {
+                await OnCellLongPress.InvokeAsync((@string, fret));
+            }
+            _downString = null;
+            _downFret = null;
+        }
+    }
+
+    private async Task OnPointerMove(PointerEventArgs e)
+    {
+        if (_downString == null || _downFret == null) return;
+        if (Mode != ChordEditMode.Fingers) return;
+
+        var hit = await _js.InvokeAsync<HitTestResult?>(
+            "chordDrawing.hitTestCell", _id, e.ClientX, e.ClientY);
+        if (hit == null) return;
+        if (hit.Fret != _downFret) return;
+        if (hit.String == _lastHoverString) return;
+
+        _lastHoverString = hit.String;
+
+        if (hit.String != _downString)
+        {
+            _dragging = true;
+            var preview = Matrix.ClearHighlights().ConnectHighlight(_downFret.Value, _downString.Value, hit.String);
+            await MatrixChanged.InvokeAsync(preview);
+        }
+    }
+
+    private async Task OnPointerUp(PointerEventArgs e)
+    {
+        if (_downString == null || _downFret == null) return;
+
+        if (Mode == ChordEditMode.Fingers)
+        {
+            if (_dragging && _lastHoverString.HasValue && _lastHoverString != _downString)
+            {
+                var connected = Matrix.ClearHighlights().Connect(_downFret.Value, _downString.Value, _lastHoverString.Value);
+                await MatrixChanged.InvokeAsync(connected);
+            }
+            else
+            {
+                var toggled = Matrix.Toggle(_downString.Value, _downFret.Value);
+                await MatrixChanged.InvokeAsync(toggled);
+            }
+        }
+
+        ResetDrag();
+    }
+
+    private async Task OnPointerCancel(PointerEventArgs e)
+    {
+        if (_dragging)
+        {
+            await MatrixChanged.InvokeAsync(Matrix.ClearHighlights());
+        }
+        ResetDrag();
+    }
+
+    private void ResetDrag()
+    {
+        _downString = null;
+        _downFret = null;
+        _lastHoverString = null;
+        _dragging = false;
+    }
+
+    private Task OnToggleEmpty(int @string)
+    {
+        var updated = Matrix.ToggleEmptyState(@string);
+        return MatrixChanged.InvokeAsync(updated);
+    }
+
+    private static string MarkerLabel(int s, ChordEmptyStringState state) => state switch
+    {
+        ChordEmptyStringState.Open => $"String {s + 1}: open (tap to mute)",
+        ChordEmptyStringState.Muted => $"String {s + 1}: muted (tap to open)",
+        _ => $"String {s + 1}"
+    };
+
+    private static string BuildPolygonPoints(double cx, double cy, double r, int sides, double startAngle)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < sides; i++)
+        {
+            var a = startAngle + i * (2 * Math.PI / sides);
+            var x = cx + r * Math.Cos(a);
+            var y = cy + r * Math.Sin(a);
+            if (i > 0) sb.Append(' ');
+            sb.Append(System.FormattableString.Invariant($"{x:0.##},{y:0.##}"));
+        }
+        return sb.ToString();
+    }
+
+    private record HitTestResult(int String, int Fret);
+}

@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(ls *)"
+      "PowerShell(ls *)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet ef *)"
     ]
   }
 }

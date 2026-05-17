@@ -1,0 +1,165 @@
+@namespace FRELODYUI.Shared.Components.ChordDraw
+
+<div class="cd-settings">
+    <div class="cd-settings-row">
+        <label class="cd-field">
+            <span class="cd-field-label">Title</span>
+            <input type="text"
+                   class="cd-input"
+                   placeholder="e.g. F Major"
+                   value="@Settings.Title"
+                   @oninput="OnTitleInput"
+                   maxlength="32" />
+        </label>
+    </div>
+
+    <div class="cd-settings-row cd-settings-grid">
+        <label class="cd-field">
+            <span class="cd-field-label">Strings</span>
+            <select class="cd-input" value="@Settings.Strings" @onchange="OnStringsChange">
+                @foreach (var n in _stringOptions)
+                {
+                    <option value="@n">@n</option>
+                }
+            </select>
+        </label>
+
+        <label class="cd-field">
+            <span class="cd-field-label">Frets shown</span>
+            <select class="cd-input" value="@Settings.Frets" @onchange="OnFretsChange">
+                @foreach (var n in _fretOptions)
+                {
+                    <option value="@n">@n</option>
+                }
+            </select>
+        </label>
+
+        <label class="cd-field">
+            <span class="cd-field-label">Start fret</span>
+            <input type="number"
+                   class="cd-input"
+                   min="1" max="24"
+                   value="@Settings.Position"
+                   @oninput="OnPositionInput" />
+        </label>
+
+        <label class="cd-field">
+            <span class="cd-field-label">Orientation</span>
+            <select class="cd-input" value="@Settings.Orientation" @onchange="OnOrientationChange">
+                <option value="@ChordOrientation.Vertical">Vertical</option>
+                <option value="@ChordOrientation.Horizontal">Horizontal</option>
+            </select>
+        </label>
+
+        <label class="cd-field">
+            <span class="cd-field-label">Style</span>
+            <select class="cd-input" value="@Settings.Style" @onchange="OnStyleChange">
+                <option value="@ChordStyle.Normal">Normal</option>
+                <option value="@ChordStyle.Handdrawn">Hand-drawn</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="cd-settings-row">
+        <span class="cd-field-label cd-field-label-block">Tuning</span>
+        <div class="cd-tuning-row">
+            @for (var i = 0; i < Settings.Strings; i++)
+            {
+                var idx = i;
+                <input type="text"
+                       class="cd-input cd-tuning-input"
+                       maxlength="3"
+                       placeholder="-"
+                       value="@GetTuning(idx)"
+                       @oninput="(e) => OnTuningInput(idx, e)"
+                       aria-label="@($"Tuning for string {idx + 1}")" />
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ChordDrawSettings Settings { get; set; } = default!;
+    [Parameter] public EventCallback<ChordDrawSettings> SettingsChanged { get; set; }
+
+    private static readonly int[] _stringOptions = new[] { 4, 5, 6, 7 };
+    private static readonly int[] _fretOptions = new[] { 3, 4, 5, 6 };
+
+    private string GetTuning(int index)
+    {
+        if (Settings.Tuning == null || index >= Settings.Tuning.Length) return string.Empty;
+        return Settings.Tuning[index] ?? string.Empty;
+    }
+
+    private Task OnTitleInput(ChangeEventArgs e)
+    {
+        Settings.Title = e.Value?.ToString();
+        return SettingsChanged.InvokeAsync(Settings);
+    }
+
+    private Task OnStringsChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var n) && n >= 2 && n <= 12)
+        {
+            Settings.Strings = n;
+            // Resize tuning array
+            var tuning = Settings.Tuning ?? Array.Empty<string>();
+            if (tuning.Length < n)
+            {
+                var expanded = new string[n];
+                Array.Copy(tuning, expanded, tuning.Length);
+                for (var i = tuning.Length; i < n; i++) expanded[i] = string.Empty;
+                Settings.Tuning = expanded;
+            }
+            else if (tuning.Length > n)
+            {
+                var shrunk = new string[n];
+                Array.Copy(tuning, shrunk, n);
+                Settings.Tuning = shrunk;
+            }
+        }
+        return SettingsChanged.InvokeAsync(Settings);
+    }
+
+    private Task OnFretsChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var n) && n >= 1 && n <= 24)
+            Settings.Frets = n;
+        return SettingsChanged.InvokeAsync(Settings);
+    }
+
+    private Task OnPositionInput(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var n))
+            Settings.Position = Math.Clamp(n, 1, 24);
+        return SettingsChanged.InvokeAsync(Settings);
+    }
+
+    private Task OnOrientationChange(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<ChordOrientation>(e.Value?.ToString(), out var o))
+            Settings.Orientation = o;
+        return SettingsChanged.InvokeAsync(Settings);
+    }
+
+    private Task OnStyleChange(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<ChordStyle>(e.Value?.ToString(), out var s))
+            Settings.Style = s;
+        return SettingsChanged.InvokeAsync(Settings);
+    }
+
+    private Task OnTuningInput(int index, ChangeEventArgs e)
+    {
+        var tuning = Settings.Tuning ?? new string[Settings.Strings];
+        if (tuning.Length < Settings.Strings)
+        {
+            var expanded = new string[Settings.Strings];
+            Array.Copy(tuning, expanded, tuning.Length);
+            tuning = expanded;
+        }
+        tuning[index] = (e.Value?.ToString() ?? string.Empty).Trim();
+        Settings.Tuning = tuning;
+        return SettingsChanged.InvokeAsync(Settings);
+    }
+}

@@ -76,6 +76,7 @@ builder.Services.AddScoped<IArtistService,ArtistService>();
 builder.Services.AddScoped<ICategoryService,CategoryService>();
 builder.Services.AddScoped<IAlbumService,AlbumService>();
 builder.Services.AddScoped<ISongService,SongService>();
+builder.Services.AddSingleton<FRELODYAPIs.Services.ChordCharts.ChordSvgRenderer>();
 builder.Services.AddScoped<IChordChartService, ChordChartService>();
 builder.Services.AddScoped<IChordService, ChordService>();
 builder.Services.AddScoped<ILyricSegment, LyricSegmentService>();

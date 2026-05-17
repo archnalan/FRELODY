@@ -5,6 +5,7 @@ using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
 using FRELODYSHRD.Dtos.HybridDtos;
+using FRELODYSHRD.Models.ChordDraw;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -19,6 +20,12 @@ namespace FRELODYAPIs.Controllers
     {
         private readonly IChordChartService _chordChartService;
         private readonly ILogger<ChordChartsController> _logger;
+
+        private static readonly JsonSerializerOptions JsonOpts = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
 
         public ChordChartsController(IChordChartService chordChartService, ILogger<ChordChartsController> logger)
         {
@@ -134,17 +141,16 @@ namespace FRELODYAPIs.Controllers
         {
             try
             {
-                // Deserialize the chart data
-                var chartDto = JsonSerializer.Deserialize<ChordChartCreateDto>(chartDataJson, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                var chartDto = JsonSerializer.Deserialize<ChordChartCreateDto>(chartDataJson, JsonOpts);
 
                 if (chartDto == null)
                     return BadRequest(new { message = "Invalid chart data" });
 
-                if (chartImage == null || chartImage.Length == 0)
-                    return BadRequest(new { message = "Chart image is required" });
+                if (chartDto.Source == ChordSource.Image && (chartImage == null || chartImage.Length == 0))
+                    return BadRequest(new { message = "Chart image is required for image-source charts" });
+
+                if (chartDto.Source == ChordSource.Drawing && chartDto.ChordData == null)
+                    return BadRequest(new { message = "Chord drawing data is required for drawing-source charts" });
 
                 var result = await _chordChartService.CreateChordChartFilesAsync(
                     chartDto, chartImage, chartAudio);
@@ -170,10 +176,7 @@ namespace FRELODYAPIs.Controllers
         {
             try
             {
-                var chartDto = JsonSerializer.Deserialize<ChordChartEditDto>(chartDataJson, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                var chartDto = JsonSerializer.Deserialize<ChordChartEditDto>(chartDataJson, JsonOpts);
 
                 if (chartDto == null)
                     return BadRequest(new { message = "Invalid chart data" });
@@ -191,6 +194,16 @@ namespace FRELODYAPIs.Controllers
                 _logger.LogError(ex, "Error updating chord chart with files");
                 return StatusCode(500, new { message = "An error occurred while updating the chart" });
             }
+        }
+
+        [HttpPost]
+        [Produces("image/svg+xml")]
+        public IActionResult PreviewSvg([FromBody] ChordDrawData chartData)
+        {
+            var result = _chordChartService.RenderSvg(chartData);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error?.Message });
+            return Content(result.Data!, "image/svg+xml");
         }
     }
 }

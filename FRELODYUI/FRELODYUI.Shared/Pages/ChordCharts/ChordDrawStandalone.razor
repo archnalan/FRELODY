@@ -1,0 +1,74 @@
+@page "/chord-draw"
+@inject IJSRuntime _js
+
+<PageTitle>Chord Diagram Editor</PageTitle>
+
+<div class="cd-standalone">
+    <header class="cd-standalone-header">
+        <div>
+            <h1 class="cd-standalone-title">Chord diagram editor</h1>
+            <p class="cd-standalone-sub">
+                Tap to place a finger, drag across a fret for a barre, tap O/× above a string to mark it open or muted.
+            </p>
+        </div>
+        <div class="cd-standalone-actions">
+            <button type="button" class="btn btn-outline-secondary" @onclick="DownloadSvg" disabled="@(_chart is null)">
+                <i class="bi bi-download"></i> Download SVG
+            </button>
+            <button type="button" class="btn btn-primary" @onclick="DownloadPng" disabled="@(_chart is null)">
+                <i class="bi bi-file-earmark-image"></i> Download PNG
+            </button>
+        </div>
+    </header>
+
+    <ChordDrawCanvas Chart="_chart" ChartChanged="OnChartChanged" SettingsOpen="true" />
+</div>
+
+@code {
+    private ChordDrawData? _chart = ChordDrawData.CreateDefault();
+
+    private Task OnChartChanged(ChordDrawData chart)
+    {
+        _chart = chart;
+        return Task.CompletedTask;
+    }
+
+    private async Task DownloadSvg()
+    {
+        if (_chart is null) return;
+        var name = string.IsNullOrWhiteSpace(_chart.Settings.Title) ? "chord" : Sanitize(_chart.Settings.Title!);
+        var previewId = await FindPreviewElementId();
+        if (string.IsNullOrEmpty(previewId)) return;
+        var svg = await _js.InvokeAsync<string?>("chordDrawing.getSvgMarkup", previewId);
+        if (string.IsNullOrEmpty(svg)) return;
+        var b64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(svg));
+        await _js.InvokeVoidAsync("eval", $@"
+            (function(){{
+                var a=document.createElement('a');
+                a.href='data:image/svg+xml;base64,{b64}';
+                a.download='{name}.svg';
+                document.body.appendChild(a);a.click();document.body.removeChild(a);
+            }})();");
+    }
+
+    private async Task DownloadPng()
+    {
+        if (_chart is null) return;
+        var name = string.IsNullOrWhiteSpace(_chart.Settings.Title) ? "chord" : Sanitize(_chart.Settings.Title!);
+        var previewId = await FindPreviewElementId();
+        if (string.IsNullOrEmpty(previewId)) return;
+        await _js.InvokeAsync<bool>("chordDrawing.downloadPng", previewId, 800, name);
+    }
+
+    private async Task<string?> FindPreviewElementId()
+    {
+        return await _js.InvokeAsync<string?>("eval",
+            "(function(){var el=document.querySelector('.cd-preview');return el ? el.id : null;})();");
+    }
+
+    private static string Sanitize(string s)
+    {
+        var invalid = System.IO.Path.GetInvalidFileNameChars();
+        return new string(s.Where(c => !invalid.Contains(c) && c != ' ').Select(c => c == '/' ? '_' : c).ToArray());
+    }
+}

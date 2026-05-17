@@ -1,0 +1,49 @@
+.cd-mode-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+    border-radius: 0.75rem;
+}
+
+.cd-mode-btn {
+    flex: 1 1 auto;
+    min-width: 4rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.6rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-primary, currentColor);
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.cd-mode-btn:hover {
+    background: var(--bg-hover-secondary, rgba(0, 0, 0, 0.05));
+}
+
+.cd-mode-btn.is-active {
+    background: var(--input-bg, #ffffff);
+    border-color: var(--bs-primary, #3a6eff);
+    color: var(--bs-primary, #3a6eff);
+}
+
+.cd-mode-btn i {
+    font-size: 1rem;
+}
+
+@media (max-width: 480px) {
+    .cd-mode-label {
+        display: none;
+    }
+    .cd-mode-btn {
+        padding: 0.55rem;
+    }
+}
