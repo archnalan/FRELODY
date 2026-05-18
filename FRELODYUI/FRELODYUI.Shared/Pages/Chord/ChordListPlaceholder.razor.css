@@ -1,46 +1,84 @@
+/* Mirror ChordCard.razor.css breakpoints and card chrome exactly so the
+   skeleton has the same column count, gaps, padding, and thumb aspect as
+   the real cards — preventing layout shift when data arrives. */
+
 .clp-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--k-space-4);
     width: 100%;
+}
+
+@media (min-width: 576px) {
+    .clp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 992px) {
+    .clp-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--k-space-5); }
+}
+
+@media (min-width: 1400px) {
+    .clp-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 
 .clp-card {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    padding: 0.85rem;
-    background: var(--k-surface, var(--modal-content-bg, #ffffff));
-    border: 1px solid var(--k-border, var(--modal-border-color, rgba(0, 0, 0, 0.08)));
-    border-radius: var(--k-radius-md, 0.85rem);
-    box-shadow: var(--k-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.04));
+    background: var(--k-bg-surface, var(--modal-content-bg, #ffffff));
+    border: 1px solid var(--k-border, var(--border-light, rgba(0, 0, 0, 0.06)));
+    border-radius: var(--k-radius-md);
+    overflow: hidden;
+}
+
+.clp-thumb {
+    padding: var(--k-space-3) var(--k-space-3) 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .clp-diagram {
     display: block;
     width: 100%;
-    aspect-ratio: 1 / 1;
-    border-radius: var(--k-radius-sm, 0.6rem);
+    max-width: 16rem;
+    aspect-ratio: var(--k-aspect-chord);
+    border-radius: var(--k-radius-sm);
+}
+
+.clp-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-3);
+    padding: var(--k-space-3) var(--k-space-4) var(--k-space-4);
 }
 
 .clp-meta {
-    height: 0.8rem;
-    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--k-space-2);
 }
 
-.clp-line {
+.clp-title {
     height: 1rem;
     border-radius: 4px;
 }
 
-@media (max-width: 480px) {
-    .clp-grid {
-        grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
-        gap: 0.9rem;
-    }
+.clp-chip {
+    height: 0.7rem;
+    border-radius: var(--k-radius-pill);
+}
 
-    .clp-card {
-        padding: 0.7rem;
-        border-radius: var(--k-radius-sm, 0.7rem);
-    }
+.clp-actions {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    border-top: 1px solid var(--k-border, var(--border-light, rgba(0, 0, 0, 0.06)));
+    padding-top: 0.6rem;
+}
+
+.clp-action {
+    flex: 1;
+    height: 2rem;
+    border-radius: var(--k-radius-xs);
 }

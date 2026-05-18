@@ -1,20 +1,30 @@
-@* Loading skeleton for /chords ChordList grid. Mirrors the ChordCard layout
-   (diagram tile + meta line + two text lines) so the page doesn't jump when
-   the real cards swap in. *@
+@* Loading skeleton for /chords ChordList grid. Mirrors the ChordCard layout 1:1
+   (grid breakpoints, thumb aspect ratio, meta row, action row) so cards don't
+   jump or resize when the real data swaps in. *@
 
 <div class="clp-grid placeholder-glow" role="status" aria-label="Loading chords">
     @for (int i = 0; i < Count; i++)
     {
         <div class="clp-card">
-            <span class="placeholder clp-diagram" aria-hidden="true"></span>
-            <span class="placeholder clp-meta col-5" aria-hidden="true"></span>
-            <span class="placeholder clp-line col-9" aria-hidden="true"></span>
-            <span class="placeholder clp-line col-7" aria-hidden="true"></span>
+            <div class="clp-thumb">
+                <span class="placeholder clp-diagram" aria-hidden="true"></span>
+            </div>
+            <div class="clp-body">
+                <div class="clp-meta">
+                    <span class="placeholder clp-title col-7" aria-hidden="true"></span>
+                    <span class="placeholder clp-chip col-3" aria-hidden="true"></span>
+                </div>
+                <div class="clp-actions">
+                    <span class="placeholder clp-action" aria-hidden="true"></span>
+                    <span class="placeholder clp-action" aria-hidden="true"></span>
+                    <span class="placeholder clp-action" aria-hidden="true"></span>
+                </div>
+            </div>
         </div>
     }
     <span class="visually-hidden">Loading chords…</span>
 </div>
 
 @code {
-    [Parameter] public int Count { get; set; } = 8;
+    [Parameter] public int Count { get; set; } = 10;
 }

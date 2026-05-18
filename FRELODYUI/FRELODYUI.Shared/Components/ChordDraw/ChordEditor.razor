@@ -81,10 +81,17 @@
             <line class="cd-line cd-line-fret" x1="@fretLeft" y1="@y" x2="@fretRight" y2="@y" />
         }
 
-        <!-- Nut or position label -->
+        <!-- Nut or position label. The outer strings use stroke-linecap="round" which
+             extends them by half the string stroke-width (1px) past their x-coordinate,
+             so widen the nut by the same amount on each side to butt-join cleanly. -->
+        @{ const int stringHalfStroke = 1; }
         @if (Position <= 1)
         {
-            <rect class="cd-nut" x="@fretLeft" y="@(padTop - nutThick / 2)" width="@(fretRight - fretLeft)" height="@nutThick" />
+            <rect class="cd-nut"
+                  x="@(fretLeft - stringHalfStroke)"
+                  y="@(padTop - nutThick / 2)"
+                  width="@(fretRight - fretLeft + stringHalfStroke * 2)"
+                  height="@nutThick" />
         }
         else
         {

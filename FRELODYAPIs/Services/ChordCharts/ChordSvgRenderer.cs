@@ -75,10 +75,12 @@ namespace FRELODYAPIs.Services.ChordCharts
                 }
             }
 
-            // Nut / starting-fret label
+            // Nut / starting-fret label. Use linecap="butt" so the line ends exactly at
+            // x1/x2 (square would extend by nutThick/2 and overshoot the outer strings,
+            // whose default butt cap stops at gridLeft ± StrokeWidth/2).
             if (s.Position <= 1)
             {
-                sb.Append(CultureInfo.InvariantCulture, $"<line x1=\"{F(gridLeft - StrokeWidth / 2)}\" y1=\"{F(gridTop)}\" x2=\"{F(gridLeft + gridWidth + StrokeWidth / 2)}\" y2=\"{F(gridTop)}\" stroke=\"{Escape(color)}\" stroke-width=\"{F(nutThick)}\" stroke-linecap=\"square\"/>");
+                sb.Append(CultureInfo.InvariantCulture, $"<line x1=\"{F(gridLeft - StrokeWidth / 2)}\" y1=\"{F(gridTop)}\" x2=\"{F(gridLeft + gridWidth + StrokeWidth / 2)}\" y2=\"{F(gridTop)}\" stroke=\"{Escape(color)}\" stroke-width=\"{F(nutThick)}\" stroke-linecap=\"butt\"/>");
             }
             else
             {
