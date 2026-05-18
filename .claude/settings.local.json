@@ -8,7 +8,16 @@
       "Bash(git commit -m ' *)",
       "Bash(git fetch *)",
       "Bash(git merge *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(dotnet sln *)",
+      "Bash(git mv *)",
+      "Bash(rm -rf Ticketing/Ticketing.Api/bin Ticketing/Ticketing.Api/obj Ticketing/Ticketing.Web/bin Ticketing/Ticketing.Web/obj)",
+      "Bash(dotnet new *)",
+      "Bash(git branch *)",
+      "Bash(git archive *)",
+      "Bash(tar -xC ..)",
+      "Bash(git checkout *)",
+      "Bash(git stash *)"
     ]
   }
 }
