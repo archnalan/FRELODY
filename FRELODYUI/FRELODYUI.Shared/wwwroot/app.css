@@ -272,13 +272,44 @@ h1:focus {
     --k-role-guest-bg: #fae8ff;
     --k-role-guest-text: #86198f;
     /* Shape & motion */
+    --k-radius-xs: 0.4rem;
     --k-radius-sm: 6px;
     --k-radius: 10px;
+    --k-radius-md: 0.85rem;
     --k-radius-lg: 14px;
+    --k-radius-pill: 999px;
     --k-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
     --k-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
     --k-shadow-lg: 0 18px 40px -12px rgba(15, 23, 42, 0.18);
+    --k-shadow-hover: 0 10px 25px rgba(15, 23, 42, 0.08);
+    /* Spacing scale (4-pt rhythm). Keep one-off values local — only repeated
+       module-spanning values belong here. */
+    --k-space-1: 0.25rem;
+    --k-space-2: 0.5rem;
+    --k-space-3: 0.75rem;
+    --k-space-4: 1rem;
+    --k-space-5: 1.25rem;
+    --k-space-6: 1.5rem;
+    /* Motion */
+    --k-transition-fast: 120ms ease;
+    --k-transition: 160ms ease;
+    --k-transition-slow: 220ms ease-out;
+    /* Aspect ratios used by music surfaces (chord chart, ghost skeletons) */
+    --k-aspect-chord: 4 / 5;
+    /* Typography */
     --k-font-sans: inherit;
+    --k-font-size-xs: 0.7rem;
+    --k-font-size-sm: 0.85rem;
+    --k-font-size: 0.9rem;
+    /* Skill-level chip palettes (parallel structure to role chips) */
+    --k-skill-easy-bg: rgba(34, 197, 94, 0.12);
+    --k-skill-easy-text: #16a34a;
+    --k-skill-medium-bg: rgba(234, 179, 8, 0.14);
+    --k-skill-medium-text: #ca8a04;
+    --k-skill-advanced-bg: rgba(249, 115, 22, 0.14);
+    --k-skill-advanced-text: #ea580c;
+    --k-skill-expert-bg: rgba(220, 38, 38, 0.14);
+    --k-skill-expert-text: #dc2626;
 }
 
 [data-bs-theme="dark"] {
@@ -323,6 +354,26 @@ h1:focus {
     --k-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --k-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
     --k-shadow-lg: 0 18px 40px -12px rgba(0, 0, 0, 0.6);
+    --k-shadow-hover: 0 10px 25px rgba(0, 0, 0, 0.5);
+    /* Skill chips — softened tints for dark mode */
+    --k-skill-easy-bg: rgba(34, 197, 94, 0.18);
+    --k-skill-easy-text: #86efac;
+    --k-skill-medium-bg: rgba(234, 179, 8, 0.2);
+    --k-skill-medium-text: #fde047;
+    --k-skill-advanced-bg: rgba(249, 115, 22, 0.2);
+    --k-skill-advanced-text: #fdba74;
+    --k-skill-expert-bg: rgba(220, 38, 38, 0.22);
+    --k-skill-expert-text: #fca5a5;
+}
+
+/* ── Shared motion utilities ── */
+@keyframes k-shimmer {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.85; }
+}
+
+.k-shimmer {
+    animation: k-shimmer 1.4s ease-in-out infinite;
 }
 
 /* ==================== Admin layout shell ==================== */

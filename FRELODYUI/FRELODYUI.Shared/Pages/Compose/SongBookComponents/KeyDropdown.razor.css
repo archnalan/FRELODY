@@ -7,12 +7,13 @@
 .key-dropdown__label {
     display: block;
     font-size: 0.7rem;
-    font-weight: 500;
+    font-weight: 400;
     color: var(--text-secondary);
     margin-bottom: 0.15rem;
     line-height: 1;
     text-transform: uppercase;
     letter-spacing: 0.03em;
+    opacity: 0.85;
 }
 
 .key-dropdown__input {
@@ -24,9 +25,12 @@
     cursor: text;
 }
 
+    /* Lighter, less assertive placeholder so empty-state inputs read as hints, not values.
+       Selected/typed text keeps the heavier .key-dropdown__input weight above. */
     .key-dropdown__input::placeholder {
         color: var(--input-placeholder);
-        font-weight: 400;
+        font-weight: 300;
+        opacity: 0.7;
     }
 
     .key-dropdown__input:focus {

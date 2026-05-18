@@ -1,20 +1,24 @@
+/* ChordCarousel — built on the --k-* token layer.
+   Local nuance values (0.3rem indicator gap, sub-rem nav offsets) kept inline
+   on purpose: tightening these to the system rhythm would lose crispness. */
+
 .chord-carousel {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--k-space-2);
     align-items: center;
 }
 
 .chord-carousel-stage {
     position: relative;
     width: 100%;
-    aspect-ratio: 4 / 5;
+    aspect-ratio: var(--k-aspect-chord);
     max-width: 16rem;
-    border-radius: 0.75rem;
+    border-radius: var(--k-radius);
     overflow: hidden;
-    background: var(--modal-content-bg, #ffffff);
-    border: 1px solid var(--border-light, var(--modal-border-color, rgba(0, 0, 0, 0.06)));
+    background: var(--k-bg-surface, var(--modal-content-bg, #ffffff));
+    border: 1px solid var(--k-border, var(--border-light, rgba(0, 0, 0, 0.06)));
 }
 
 .chord-chart-frame {
@@ -23,13 +27,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.5rem;
+    padding: var(--k-space-2);
 }
 
 .chord-chart-frame-drawing {
-    /* SVG is rendered in currentColor; inherit theme text color */
-    color: var(--text-primary, #1f2937);
-    background: var(--modal-content-bg, #ffffff);
+    color: var(--k-text, var(--text-primary, #1f2937));
+    background: var(--k-bg-surface, var(--modal-content-bg, #ffffff));
 }
 
 .chord-chart-frame-drawing ::deep svg {
@@ -40,7 +43,6 @@
 }
 
 .chord-chart-frame-image {
-    /* Uploaded chord-chart images are designed for white backgrounds */
     background: #ffffff;
 }
 
@@ -59,9 +61,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    color: var(--text-secondary, #6b7280);
-    font-size: 0.85rem;
+    gap: var(--k-space-2);
+    color: var(--k-text-muted, var(--text-secondary, #6b7280));
+    font-size: var(--k-font-size-sm);
 }
 
 .chord-chart-placeholder i {
@@ -84,7 +86,7 @@
     justify-content: center;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 150ms ease, background 150ms ease;
+    transition: opacity var(--k-transition-fast), background var(--k-transition-fast);
     z-index: 2;
 }
 
@@ -116,7 +118,7 @@
     background: var(--border-medium, #d1d5db);
     cursor: pointer;
     padding: 0;
-    transition: background 120ms ease, transform 120ms ease;
+    transition: background var(--k-transition-fast), transform var(--k-transition-fast);
 }
 
 .chord-carousel-dot.is-active {
@@ -140,13 +142,13 @@
     min-width: 2rem;
     height: 2rem;
     padding: 0 0.6rem;
-    border-radius: 0.4rem;
-    border: 1px solid var(--border-light, rgba(0, 0, 0, 0.12));
+    border-radius: var(--k-radius-xs);
+    border: 1px solid var(--k-border, var(--border-light, rgba(0, 0, 0, 0.12)));
     background: transparent;
-    color: var(--text-secondary, #6b7280);
-    font-size: 0.85rem;
+    color: var(--k-text-muted, var(--text-secondary, #6b7280));
+    font-size: var(--k-font-size-sm);
     cursor: pointer;
-    transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+    transition: color var(--k-transition-fast), border-color var(--k-transition-fast), background var(--k-transition-fast);
 }
 
 .chord-carousel-action-btn:hover {
@@ -160,8 +162,8 @@
 }
 
 .chord-carousel-action-btn.chord-carousel-action-danger:hover {
-    color: #dc3545;
-    border-color: #dc3545;
+    color: var(--k-danger, #dc3545);
+    border-color: var(--k-danger, #dc3545);
 }
 
 .carousel-sm .chord-carousel-stage { max-width: 8rem; }
@@ -169,25 +171,20 @@
 .carousel-lg .chord-carousel-stage { max-width: 14rem; }
 .carousel-popover .chord-carousel-stage { max-width: 6.5rem; }
 
-/* Loading skeleton */
+/* Loading skeleton — reuses global k-shimmer keyframes from app.css. */
 .chord-carousel--ghost {
     pointer-events: none;
 }
 
 .chord-carousel-ghost-img {
     width: 100%;
-    aspect-ratio: 4 / 5;
+    aspect-ratio: var(--k-aspect-chord);
     max-width: 14rem;
-    border-radius: 0.75rem;
-    background: var(--bg-hover, var(--border-light, #d1d5db));
-    animation: chord-ghost-shimmer 1.4s ease-in-out infinite;
+    border-radius: var(--k-radius);
+    background: var(--k-bg-hover, var(--bg-hover, #d1d5db));
+    animation: k-shimmer 1.4s ease-in-out infinite;
 }
 
 .carousel-sm .chord-carousel-ghost-img { max-width: 8rem; }
 .carousel-md .chord-carousel-ghost-img { max-width: 12rem; }
 .carousel-popover .chord-carousel-ghost-img { max-width: 6.5rem; }
-
-@keyframes chord-ghost-shimmer {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 0.85; }
-}

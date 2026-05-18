@@ -44,27 +44,7 @@
         <div class="w-75 mt-3">
             @if (isLoading)
             {
-                <div class="row g-4">
-                    @for (int i = 0; i < 4; i++)
-                    {
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <div class="d-flex flex-column gap-3">
-                                <div class="placeholder-glow">
-                                    <div class="placeholder w-100" style="height: 15rem; background-color: #e9ecef"></div>
-                                </div>
-                                <div class="placeholder-glow">
-                                    <div class="placeholder" style="width: 7rem; height: 1rem"></div>
-                                </div>
-                                <div class="placeholder-glow">
-                                    <div class="placeholder w-100" style="height: 1.25rem"></div>
-                                </div>
-                                <div class="placeholder-glow">
-                                    <div class="placeholder w-100" style="height: 1.25rem"></div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
+                <ChordListPlaceholder Count="8" />
             }
             else if (filteredChords.Any())
             {

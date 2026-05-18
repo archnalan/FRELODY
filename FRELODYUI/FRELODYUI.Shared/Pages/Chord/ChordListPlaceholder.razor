@@ -1,0 +1,20 @@
+@* Loading skeleton for /chords ChordList grid. Mirrors the ChordCard layout
+   (diagram tile + meta line + two text lines) so the page doesn't jump when
+   the real cards swap in. *@
+
+<div class="clp-grid placeholder-glow" role="status" aria-label="Loading chords">
+    @for (int i = 0; i < Count; i++)
+    {
+        <div class="clp-card">
+            <span class="placeholder clp-diagram" aria-hidden="true"></span>
+            <span class="placeholder clp-meta col-5" aria-hidden="true"></span>
+            <span class="placeholder clp-line col-9" aria-hidden="true"></span>
+            <span class="placeholder clp-line col-7" aria-hidden="true"></span>
+        </div>
+    }
+    <span class="visually-hidden">Loading chords…</span>
+</div>
+
+@code {
+    [Parameter] public int Count { get; set; } = 8;
+}

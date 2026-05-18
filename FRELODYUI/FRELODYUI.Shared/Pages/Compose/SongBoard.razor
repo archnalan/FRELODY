@@ -1440,6 +1440,10 @@
     private async Task ResyncWorkingKey()
     {
         SongKey = OriginalKey;
+        // Push into the child dropdown directly — its internal searchTerm/_lastBoundKey
+        // wouldn't otherwise re-sync until the next parameter cycle, leaving the visible
+        // input out of step with the parent's SongKey.
+        _songKeyRef?.SetKey(SongKey);
         RecomputeKeyDelta();
         await InvokeAsync(StateHasChanged);
     }
