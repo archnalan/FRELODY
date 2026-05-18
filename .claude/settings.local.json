@@ -3,7 +3,12 @@
     "allow": [
       "PowerShell(ls *)",
       "Bash(dotnet build *)",
-      "Bash(dotnet ef *)"
+      "Bash(dotnet ef *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(git push *)"
     ]
   }
 }
