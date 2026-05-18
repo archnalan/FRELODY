@@ -11,8 +11,10 @@ namespace FRELODYAPIs.Services.ChordCharts
     /// </summary>
     public sealed class ChordSvgRenderer
     {
+        // CellHeight = 1.5 × CellWidth matches svguitar's default fretSize so the saved
+        // fallback SVG has the same neck proportions as the live JS preview / editor.
         private const double CellWidth = 40;
-        private const double CellHeight = 44;
+        private const double CellHeight = 60;
         private const double PaddingX = 28;
         private const double PaddingTop = 60;
         private const double PaddingBottom = 28;

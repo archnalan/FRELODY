@@ -6,8 +6,10 @@
     var frets = Matrix.NumFrets;
     var emptyStates = Matrix.GetEmptyStringStates();
 
+    // Match svguitar's default fretSize (1.5× string spacing) so the editor's neck
+    // proportions line up with the live JS preview used on /chords.
     const int cellW = 48;
-    const int cellH = 56;
+    const int cellH = 72;
     // Reserve extra room on the left when a position label ("Nfr") needs to be shown,
     // so the text never gets clipped by the SVG viewBox.
     var padLeft = Position > 1 ? 44 : 16;

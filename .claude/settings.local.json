@@ -1,4 +1,5 @@
 {
+  "worktree": { "bgIsolation": "none" },
   "permissions": {
     "allow": [
       "PowerShell(ls *)",
@@ -17,7 +18,10 @@
       "Bash(git archive *)",
       "Bash(tar -xC ..)",
       "Bash(git checkout *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:omnibrain.github.io)"
     ]
   }
 }
