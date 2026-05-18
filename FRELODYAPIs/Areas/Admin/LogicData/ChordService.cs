@@ -62,10 +62,18 @@ namespace FRELODYAPP.Areas.Admin.LogicData
         {
             try
             {
+                // AsNoTracking — read-only path; skip change-tracking work and snapshots.
+                // AsSplitQuery — Include on a collection defaults to a single JOIN, which
+                //   duplicates the parent row per child (cartesian explosion) and grows
+                //   payload with the number of charts. Split query issues two SELECTs
+                //   (one for chords, one for charts keyed by chord id) — much faster for
+                //   one-to-many fan-out on this page.
                 var chords = await _context.Chords
-                               .OrderBy(c => c.ChordName)
-                               .Include(ch => ch.ChordCharts)
-                               .ToListAsync();
+                    .AsNoTracking()
+                    .OrderBy(c => c.ChordName)
+                    .Include(ch => ch.ChordCharts!.OrderBy(c => c.FretPosition))
+                    .AsSplitQuery()
+                    .ToListAsync();
 
                 var chordsDto = chords.Adapt<List<ChordWithChartsDto>>();
 

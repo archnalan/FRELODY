@@ -100,6 +100,10 @@ else
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public string CarouselId { get; set; } = "chordCarousel";
 
+    // When the parent already has the chord's charts (e.g. /chords loads all chords +
+    // their charts in a single bulk call), pass them in here to skip the per-card fetch.
+    [Parameter] public List<ChordChartEditDto>? PreloadedCharts { get; set; }
+
     private List<ChordChartEditDto> Charts { get; set; } = new();
     private const string PlaceholderImagePath = "/_content/FRELODYUI.Shared/images/no_image_placeholder.png";
     private int _currentChartIndex = 0;
@@ -123,6 +127,13 @@ else
     {
         try
         {
+            // Fast path: parent already supplied the charts (bulk fetch on /chords).
+            if (PreloadedCharts is not null)
+            {
+                Charts = PreloadedCharts;
+                return;
+            }
+
             if (Chord != null && !string.IsNullOrEmpty(Chord.Id))
             {
                 await LoadCharts(Chord.Id);

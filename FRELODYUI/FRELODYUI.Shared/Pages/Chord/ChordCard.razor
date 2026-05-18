@@ -3,9 +3,15 @@
 <div class="chord-grid">
     @foreach (var chord in Chords)
     {
+        var preloaded = chord.Id is not null
+            ? ChartsByChordId?.GetValueOrDefault(chord.Id)
+            : null;
         <div class="chord-card" @key="chord.Id">
             <div class="chord-card-thumb">
-                <ChordCarousel Size="CarouselSize.Medium" Chord="@chord" ShowActions="false" />
+                <ChordCarousel Size="CarouselSize.Medium"
+                               Chord="@chord"
+                               PreloadedCharts="@preloaded"
+                               ShowActions="false" />
             </div>
             <div class="chord-card-body">
                 <div class="chord-card-meta">
@@ -40,6 +46,9 @@
 
 @code {
     [Parameter] public List<ChordDto> Chords { get; set; } = new();
+    // Optional lookup so the parent can pre-supply each chord's charts (avoids the
+    // N+1 fetch storm from per-card ChordCarousel calls on /chords).
+    [Parameter] public Dictionary<string, List<ChordChartEditDto>>? ChartsByChordId { get; set; }
     [Parameter] public EventCallback<ChordDto> OnSetToDelete { get; set; }
     [Parameter] public EventCallback<ChordDto> OnSetOpenChordEdit { get; set; }
     [Parameter] public EventCallback OnRefreshRequested { get; set; }

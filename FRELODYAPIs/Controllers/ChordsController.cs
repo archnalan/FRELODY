@@ -36,6 +36,18 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
 
         [HttpGet]
         [AllowAnonymous]
+        [ProducesResponseType(typeof(PaginationDetails<ChordDto>), 200)]
+        public async Task<IActionResult> GetChordsWithCharts()
+        {
+            var chordResult = await _chordService.GetChordsWithChartsAsync();
+            if (!chordResult.IsSuccess)
+                return StatusCode(chordResult.StatusCode, new { message = chordResult.Error.Message });
+
+            return Ok(chordResult.Data);
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(ChordDto), 200)]
         public async Task<IActionResult> GetChordById([FromQuery] string id)
         {

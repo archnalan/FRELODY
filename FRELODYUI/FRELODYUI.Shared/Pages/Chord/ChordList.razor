@@ -1,5 +1,6 @@
 ﻿@page "/chords"
 @using FRELODYUI.Shared.Pages.Compose.ChordComponents
+@using FRELODYSHRD.Dtos.HybridDtos
 @using Microsoft.AspNetCore.Components
 @using System.Threading
 @inject NavigationManager NavigationManager
@@ -50,6 +51,7 @@
             {
                 <ChordCard @ref="chordCardRef"
                            Chords="@filteredChords"
+                           ChartsByChordId="@chartsByChordId"
                            OnSetToDelete="SetToDelete"
                            OnSetOpenChordEdit="OpenChordEditModal"
                            OnRefreshRequested="LoadChords" />
@@ -77,6 +79,7 @@
 @code {
     private List<ChordDto> chords = new();
     private List<ChordDto> filteredChords = new();
+    private Dictionary<string, List<ChordChartEditDto>> chartsByChordId = new();
     private string searchQuery = "";
     private string successMessage = "";
     private bool isLoading = true;
@@ -145,10 +148,25 @@
         try
         {
             isLoading = true;
-            var response = await _chordsApi.GetChords();
+            // Single bulk call: chords + their charts in one round trip (server-side
+            // split query). Replaces the old GetChords + per-card GetChartsByChordId
+            // N+1 pattern, where each ChordCarousel fetched its own charts.
+            var response = await _chordsApi.GetChordsWithCharts();
             if(response.IsSuccessStatusCode)
             {
-                chords = response.Content?.Data ?? new List<ChordDto>();
+                var data = response.Content ?? new List<ChordWithChartsDto>();
+                chords = data
+                    .Select(c => new ChordDto
+                    {
+                        Id = c.Id,
+                        ChordName = c.ChordName,
+                        Difficulty = c.Difficulty,
+                        ChordAudioFilePath = c.ChordAudioFilePath
+                    })
+                    .ToList();
+                chartsByChordId = data
+                    .Where(c => !string.IsNullOrEmpty(c.Id))
+                    .ToDictionary(c => c.Id!, c => c.Charts ?? new List<ChordChartEditDto>());
                 ApplyFilter();
                 return;
             }
