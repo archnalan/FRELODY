@@ -137,11 +137,30 @@
             filteredChords = chords;
             return;
         }
+
+        // Token-based AND match across name + quality + chart descriptions.
+        // Each whitespace-separated token must match SOMEWHERE on the chord, so
+        // "a minor" finds Am (token "a" hits name, token "minor" hits quality)
+        // but not Cm (token "a" matches nothing).
+        var tokens = q.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
         filteredChords = chords
-            .Where(c =>
-                (!string.IsNullOrEmpty(c.ChordName) && c.ChordName.Contains(q, StringComparison.OrdinalIgnoreCase))
-                || ChartDescriptionContains(c.Id, q))
+            .Where(c => tokens.All(token => TokenMatches(c, token)))
             .ToList();
+    }
+
+    private bool TokenMatches(ChordDto chord, string token)
+    {
+        if (!string.IsNullOrEmpty(chord.ChordName)
+            && chord.ChordName.Contains(token, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var quality = FRELODYUI.Shared.Helpers.ChordQualityHelper.GetQualityLabel(chord.ChordName);
+        if (!string.IsNullOrEmpty(quality)
+            && quality.Contains(token, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return ChartDescriptionContains(chord.Id, token);
     }
 
     private bool ChartDescriptionContains(string? chordId, string query)

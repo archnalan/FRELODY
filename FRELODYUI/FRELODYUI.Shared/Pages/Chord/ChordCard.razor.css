@@ -108,6 +108,27 @@
     color: var(--k-text-muted, #6b7280);
 }
 
+.chord-card-catalog-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.55rem;
+    margin-right: auto; /* pushes action buttons to the right */
+    border-radius: var(--k-radius-pill);
+    font-size: var(--k-font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    background: var(--k-accent-soft, rgba(99, 102, 241, 0.12));
+    color: var(--k-accent-soft-text, #4338ca);
+    white-space: nowrap;
+}
+
+.chord-card-catalog-tag .bi {
+    font-size: 0.85em;
+    line-height: 1;
+}
+
 .chord-card-actions {
     display: flex;
     gap: 0.4rem;

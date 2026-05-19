@@ -58,14 +58,26 @@ else if (Charts.Count > 0)
                 </button>
                 @if (CurrentChart != null)
                 {
-                    <button type="button" class="chord-carousel-action-btn" title="Edit current chart"
-                            @onclick="@(() => EditChart(CurrentChart.Id))">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button type="button" class="chord-carousel-action-btn chord-carousel-action-danger" title="Delete current chart"
-                            @onclick="@(() => DeleteChart(CurrentChart.Id))">
-                        <i class="bi bi-trash"></i>
-                    </button>
+                    @if (CurrentChart.Source == ChordSource.Standard)
+                    {
+                        // Standard catalog charts are read-only. Customize forks the voicing
+                        // into a user-owned Drawing chart so the standard one stays canonical.
+                        <button type="button" class="chord-carousel-action-btn" title="Customize this chart (creates your own editable copy)"
+                                @onclick="@(() => CustomizeChart(CurrentChart.Id))">
+                            <i class="bi bi-copy"></i>
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="chord-carousel-action-btn" title="Edit current chart"
+                                @onclick="@(() => EditChart(CurrentChart.Id))">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="chord-carousel-action-btn chord-carousel-action-danger" title="Delete current chart"
+                                @onclick="@(() => DeleteChart(CurrentChart.Id))">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    }
                 }
             </div>
         }
@@ -258,6 +270,14 @@ else
 
     private void EditChart(string chartId)
         => _navManager.NavigateTo($"/chord-charts/edit/{chartId}");
+
+    private void CustomizeChart(string chartId)
+    {
+        // Send the user to the create wizard with the source chart pre-loaded as
+        // a Drawing fork. The original Standard chart stays untouched.
+        if (Chord?.Id is null) return;
+        _navManager.NavigateTo($"/chord-charts/create/{Chord.Id}?cloneFrom={chartId}");
+    }
 
     private async Task DeleteChart(string chartId)
     {

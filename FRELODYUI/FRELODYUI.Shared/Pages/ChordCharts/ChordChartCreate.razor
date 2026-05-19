@@ -294,6 +294,7 @@
 @code {
     [Parameter] public string? chordId { get; set; }
     [Parameter] public string? Id { get; set; }
+    [SupplyParameterFromQuery] public string? CloneFrom { get; set; }
     private string? ApiBaseUrl = "https://localhost:7077";
 
     private ChordChartDto FormModel = new();
@@ -332,6 +333,11 @@
             await LoadChartForEdit(Id);
             HeaderText = "Edit";
         }
+        else if (!string.IsNullOrEmpty(CloneFrom))
+        {
+            await LoadChartForClone(CloneFrom);
+            HeaderText = "Customize";
+        }
         else if (!string.IsNullOrEmpty(chordId))
         {
             SelectedChord = Chords.FirstOrDefault(c => c.Id == chordId) ?? new ChordDto();
@@ -343,6 +349,32 @@
         {
             FormModel.Source = ChordSource.Drawing;
             ChordChart ??= ChordDrawData.CreateDefault();
+        }
+    }
+
+    private async Task LoadChartForClone(string sourceChartId)
+    {
+        try
+        {
+            var response = await _chordChartsApi.GetChordChartById(sourceChartId);
+            if (!response.IsSuccessStatusCode || response.Content is null) return;
+
+            var source = response.Content;
+            // Copy the editable bits but NOT Id - this becomes a brand-new chart owned
+            // by the current user, leaving the standard catalog entry untouched.
+            FormModel.ChordId = source.ChordId;
+            FormModel.FretPosition = source.FretPosition ?? 1;
+            FormModel.PositionDescription = string.IsNullOrWhiteSpace(source.PositionDescription)
+                ? "Custom"
+                : $"{source.PositionDescription} (custom)";
+            FormModel.Source = ChordSource.Drawing;
+            ChordChart = source.ChordData ?? ChordDrawData.CreateDefault();
+            SelectedChord = Chords.FirstOrDefault(c => c.Id == source.ChordId) ?? new ChordDto();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading source chart for clone");
+            ErrorMessage = "Failed to load the chart you're customizing.";
         }
     }
 

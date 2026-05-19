@@ -48,15 +48,18 @@
                             </span>
                             <span class="detail-value">@chord.ChordName</span>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">
-                                <i class="bi bi-bar-chart-steps"></i>
-                                Difficulty Level
-                            </span>
-                            <span class="detail-value difficulty-@GetDifficultyClass(chord.Difficulty ?? 0)">
-                                @GetDifficultyText(chord.Difficulty ?? 0)
-                            </span>
-                        </div>
+                        @if (chord.Difficulty.HasValue)
+                        {
+                            <div class="detail-item">
+                                <span class="detail-label">
+                                    <i class="bi bi-bar-chart-steps"></i>
+                                    Difficulty Level
+                                </span>
+                                <span class="detail-value difficulty-@GetDifficultyClass(chord.Difficulty.Value)">
+                                    @GetDifficultyText(chord.Difficulty.Value)
+                                </span>
+                            </div>
+                        }
                         <div class="detail-item">
                             <span class="detail-label">
                                 <i class="bi bi-tag"></i>

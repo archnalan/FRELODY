@@ -1,3 +1,4 @@
+@using FRELODYUI.Shared.Helpers
 @inject ILogger<ChordCard> _logger
 
 <div class="chord-grid">
@@ -6,6 +7,7 @@
         var preloaded = chord.Id is not null
             ? ChartsByChordId?.GetValueOrDefault(chord.Id)
             : null;
+        var isStandard = preloaded?.Any(ch => ch.Source == ChordSource.Standard) == true;
         <div class="chord-card" @key="chord.Id">
             <div class="chord-card-thumb">
                 <ChordCarousel Size="CarouselSize.Medium"
@@ -16,23 +18,39 @@
             <div class="chord-card-body">
                 <div class="chord-card-meta">
                     <h5 class="chord-card-title">@chord.ChordName</h5>
-                    <span class="chord-card-skill @SkillClass(chord.Difficulty)">
-                        @GetDifficultyText(chord.Difficulty)
+                    <span class="chord-card-skill chord-card-skill-unknown">
+                        @ChordQualityHelper.GetQualityLabel(chord.ChordName)
                     </span>
+                    @if (chord.Difficulty.HasValue)
+                    {
+                        <span class="chord-card-skill @SkillClass(chord.Difficulty)">
+                            @GetDifficultyText(chord.Difficulty)
+                        </span>
+                    }
                 </div>
                 <div class="chord-card-actions">
+                    @if (isStandard)
+                    {
+                        <span class="chord-card-catalog-tag" title="Part of the standard chord catalog (read-only)">
+                            <i class="bi bi-bookmark-star"></i>
+                            Catalog
+                        </span>
+                    }
                     <button class="chord-card-icon-btn" title="View details"
                             @onclick="() => NavigateToDetails(chord.Id)">
                         <i class="bi bi-eye"></i>
                     </button>
-                    <button class="chord-card-icon-btn" title="Edit chord"
-                            @onclick="async () => await HandleEditChord(chord)">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="chord-card-icon-btn chord-card-icon-btn-danger" title="Delete chord"
-                            @onclick="() => HandleDeleteChord(chord)">
-                        <i class="bi bi-trash"></i>
-                    </button>
+                    @if (!isStandard)
+                    {
+                        <button class="chord-card-icon-btn" title="Edit chord"
+                                @onclick="async () => await HandleEditChord(chord)">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="chord-card-icon-btn chord-card-icon-btn-danger" title="Delete chord"
+                                @onclick="() => HandleDeleteChord(chord)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    }
                 </div>
             </div>
         </div>
@@ -75,6 +93,7 @@
         ChordDifficulty.Expert => "Expert",
         _ => "Unknown"
     };
+
 
     private static string SkillClass(ChordDifficulty? difficulty) => difficulty switch
     {
