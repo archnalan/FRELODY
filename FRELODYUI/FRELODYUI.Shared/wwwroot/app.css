@@ -366,6 +366,17 @@ h1:focus {
     --k-skill-expert-text: #fca5a5;
 }
 
+/* Chord chart SVGs: finger circles + barre rects use fill="currentColor" so they
+   render in the theme text color. That works in light mode (dark circle + hardcoded
+   white text = visible) but breaks in dark mode (white circle + white text = hidden).
+   Force a stable contrast fill for these in dark mode so the white text stays readable. */
+[data-bs-theme="dark"] .chord-chart-frame svg circle[fill="currentColor"],
+[data-bs-theme="dark"] .chord-chart-frame svg rect[fill="currentColor"],
+[data-bs-theme="dark"] .chord-chart-frame-drawing svg circle[fill="currentColor"],
+[data-bs-theme="dark"] .chord-chart-frame-drawing svg rect[fill="currentColor"] {
+    fill: var(--bs-primary, #0d6efd);
+}
+
 /* ── Shared motion utilities ── */
 @keyframes k-shimmer {
     0%, 100% { opacity: 0.4; }

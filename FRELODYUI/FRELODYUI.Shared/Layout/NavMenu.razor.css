@@ -380,6 +380,11 @@
     }
 
         .nav-item ::deep a.active:hover {
+            /* Keep the active blue bg on hover so the white icon stays visible
+               (the inactive :hover rule would otherwise paint over with --bg-hover,
+               which has poor contrast against the white-filtered active icon). */
+            background-color: var(--bg-active);
+            color: white;
             transform: translateX(0);
         }
 

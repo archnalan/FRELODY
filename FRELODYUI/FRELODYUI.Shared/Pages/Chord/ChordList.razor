@@ -45,7 +45,7 @@
         <div class="w-75 mt-3">
             @if (isLoading)
             {
-                <ChordListPlaceholder Count="8" />
+                <ChordListPlaceholder Count="10" />
             }
             else if (filteredChords.Any())
             {
@@ -138,9 +138,18 @@
             return;
         }
         filteredChords = chords
-            .Where(c => !string.IsNullOrEmpty(c.ChordName) &&
-                        c.ChordName.Contains(q, StringComparison.OrdinalIgnoreCase))
+            .Where(c =>
+                (!string.IsNullOrEmpty(c.ChordName) && c.ChordName.Contains(q, StringComparison.OrdinalIgnoreCase))
+                || ChartDescriptionContains(c.Id, q))
             .ToList();
+    }
+
+    private bool ChartDescriptionContains(string? chordId, string query)
+    {
+        if (string.IsNullOrEmpty(chordId)) return false;
+        if (!chartsByChordId.TryGetValue(chordId, out var charts) || charts is null) return false;
+        return charts.Any(ch => !string.IsNullOrEmpty(ch.PositionDescription)
+            && ch.PositionDescription.Contains(query, StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task LoadChords()
