@@ -9,8 +9,12 @@ namespace FRELODYAPP.Models
 	{
 
 		[StringLength(15)]
-		[RegularExpression(@"^([A-G])(#|b|bb|##)?(m|maj|min|sus|aug|dim|add)?(\d+)?(/([A-G])(#|b|bb|##)?)?$",
-		ErrorMessage = "Invalid Chord Format!")]
+		// Industry-standard approach: only sanity-check that the name starts with a
+		// root note letter. Real chord notation is too varied across genres for a
+		// regex to be both inclusive and strict. Meaningful validation happens at the
+		// use site (lookup against the standard catalog, transposition, rendering).
+		[RegularExpression(@"^[A-G].*$",
+		    ErrorMessage = "Chord name must start with a note letter A-G.")]
 		public string ChordName { get; set; }
 
 		[Range(1, 3)]

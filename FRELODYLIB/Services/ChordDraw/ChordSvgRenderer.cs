@@ -2,7 +2,7 @@ using FRELODYSHRD.Models.ChordDraw;
 using System.Globalization;
 using System.Text;
 
-namespace FRELODYAPIs.Services.ChordCharts
+namespace FRELODYAPP.Services.ChordDraw
 {
     /// <summary>
     /// Renders a ChordDrawData to a self-contained SVG string for storage / OG cards / print

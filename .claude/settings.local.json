@@ -1,5 +1,4 @@
 {
-  "worktree": { "bgIsolation": "none" },
   "permissions": {
     "allow": [
       "PowerShell(ls *)",
@@ -21,7 +20,17 @@
       "Bash(git stash *)",
       "WebSearch",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:omnibrain.github.io)"
+      "WebFetch(domain:omnibrain.github.io)",
+      "WebFetch(domain:appliedguitartheory.com)",
+      "WebFetch(domain:www.fingerstyleguitar.rocks)",
+      "WebFetch(domain:www.guitarmusictheory.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(dotnet run *)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(pwsh -NoProfile -File tools/Update-ChordSource.ps1)"
     ]
+  },
+  "worktree": {
+    "bgIsolation": "none"
   }
 }

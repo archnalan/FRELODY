@@ -156,7 +156,11 @@ else
 
     private RenderFragment RenderChart(ChordChartEditDto chart) => __builder =>
     {
-        if (chart.Source == ChordSource.Drawing)
+        // Drawing (user-built) and Standard (seeded catalog) both carry RenderedSvg + ChordData
+        // and have no FilePath. Image-sourced charts use FilePath.
+        var hasSvgData = chart.Source == ChordSource.Drawing || chart.Source == ChordSource.Standard;
+
+        if (hasSvgData)
         {
             if (!string.IsNullOrEmpty(chart.RenderedSvg))
             {

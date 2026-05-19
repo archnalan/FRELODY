@@ -364,3 +364,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Generated chord seed files (derived from _source/chords-db.guitar.json by FRELODYLIB.Tools).
+# The source JSON + importer is the canonical seed; per-root folders are regenerable artifacts.
+FRELODYAPIs/wwwroot/seed-chords/*/
+!FRELODYAPIs/wwwroot/seed-chords/_source/

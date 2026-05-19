@@ -27,7 +27,7 @@
 
         <div class="d-flex flex-column mt-3">
             <strong class="mb-2">Diagram:</strong>
-            @if (chart?.Source == ChordSource.Drawing && chart.ChordData is not null)
+            @if ((chart?.Source == ChordSource.Drawing || chart?.Source == ChordSource.Standard) && chart.ChordData is not null)
             {
                 <ChordPreview Chart="chart.ChordData" FallbackSvg="@chart.RenderedSvg" CssClass="chart-detail-preview" />
             }

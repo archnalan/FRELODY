@@ -59,6 +59,7 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<UserLoginHistory> UserLoginHistories { get; set; }
         public DbSet<ContentChangeLog> ContentChangeLogs { get; set; }
         public DbSet<EmailOtpVerification> EmailOtpVerifications { get; set; }
+        public DbSet<SeedVersion> SeedVersions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

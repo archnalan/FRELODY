@@ -1,4 +1,4 @@
-using FRELODYAPIs.Services.ChordCharts;
+using FRELODYAPP.Services.ChordDraw;
 using FRELODYAPP.Areas.Admin.Interfaces;
 using FRELODYAPP.Data;
 using FRELODYAPP.Data.Infrastructure;

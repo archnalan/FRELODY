@@ -76,7 +76,8 @@ builder.Services.AddScoped<IArtistService,ArtistService>();
 builder.Services.AddScoped<ICategoryService,CategoryService>();
 builder.Services.AddScoped<IAlbumService,AlbumService>();
 builder.Services.AddScoped<ISongService,SongService>();
-builder.Services.AddSingleton<FRELODYAPIs.Services.ChordCharts.ChordSvgRenderer>();
+builder.Services.AddSingleton<FRELODYAPP.Services.ChordDraw.ChordSvgRenderer>();
+builder.Services.AddScoped<FRELODYAPP.Services.Seed.IStandardChordSeedService, FRELODYAPP.Services.Seed.StandardChordSeedService>();
 builder.Services.AddScoped<IChordChartService, ChordChartService>();
 builder.Services.AddScoped<IChordService, ChordService>();
 builder.Services.AddScoped<ILyricSegment, LyricSegmentService>();
@@ -395,8 +396,20 @@ using (var scope = app.Services.CreateScope())
 		context.Database.Migrate(); //Ensures migrations are applied
 	}
 	catch(Exception ex)
-	{		
+	{
 		logger.LogError(ex, "An Error occured when while seeding data in the Database");
+	}
+
+	try
+	{
+		var chordSeeder = services.GetRequiredService<FRELODYAPP.Services.Seed.IStandardChordSeedService>();
+		var result = await chordSeeder.SeedIfNeededAsync();
+		if (result.Ran)
+			logger.LogInformation("Standard chord catalog seeded: +{Chords} chords, {Voicings} voicings.", result.ChordsInserted, result.VoicingsSeeded);
+	}
+	catch (Exception ex)
+	{
+		logger.LogError(ex, "Standard chord catalog seeding failed; continuing startup.");
 	}
 }
 
