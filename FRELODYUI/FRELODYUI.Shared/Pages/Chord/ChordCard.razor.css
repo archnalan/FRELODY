@@ -2,28 +2,34 @@
    skill-chip tints. Per-card "nuance" values (specific gap pixels, padding
    offsets) stay local on purpose so we don't flatten the design. */
 
+/* Mobile-first ladder capped at 3 columns because the page shell maxes at
+   65rem — fitting more than three 16rem cards in that width crowds them.
+   Cards center inside each cell (see .chord-card max-width below) so the
+   card chrome stays in proportion with the chord-chart-frame's 4/5 ratio. */
 .chord-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--k-space-4);
     width: 100%;
 }
 
 @media (min-width: 576px) {
-    .chord-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .chord-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 992px) {
-    .chord-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--k-space-5); }
-}
-
-@media (min-width: 1400px) {
-    .chord-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .chord-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--k-space-5); }
 }
 
 .chord-card {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    /* Cap card width so the card chrome stays in proportion with the
+       chord-chart-frame's 4/5 aspect inside — bigger grid cells just add
+       breathing room around the card rather than stretching the chart. */
+    max-width: 16rem;
+    margin-inline: auto;
     background: var(--k-bg-surface, var(--modal-content-bg, #ffffff));
     border: 1px solid var(--k-border, var(--border-light, rgba(0, 0, 0, 0.06)));
     border-radius: var(--k-radius-md);
@@ -42,6 +48,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Let the carousel stage fill the card thumb instead of being capped at the
+   carousel-md default of 12rem — the grid already governs card width, so
+   delegating to the parent gives bigger, more legible charts on large
+   screens without affecting other carousel-md call sites. */
+.chord-card-thumb ::deep .chord-carousel-stage,
+.chord-card-thumb ::deep .chord-carousel-ghost-img {
+    max-width: 100%;
 }
 
 .chord-card-body {

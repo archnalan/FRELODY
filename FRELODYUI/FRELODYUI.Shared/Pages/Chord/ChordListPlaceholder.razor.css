@@ -4,26 +4,25 @@
 
 .clp-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--k-space-4);
     width: 100%;
 }
 
 @media (min-width: 576px) {
-    .clp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .clp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 992px) {
-    .clp-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--k-space-5); }
-}
-
-@media (min-width: 1400px) {
-    .clp-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .clp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--k-space-5); }
 }
 
 .clp-card {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 16rem;
+    margin-inline: auto;
     background: var(--k-bg-surface, var(--modal-content-bg, #ffffff));
     border: 1px solid var(--k-border, var(--border-light, rgba(0, 0, 0, 0.06)));
     border-radius: var(--k-radius-md);
@@ -40,7 +39,6 @@
 .clp-diagram {
     display: block;
     width: 100%;
-    max-width: 16rem;
     aspect-ratio: var(--k-aspect-chord);
     border-radius: var(--k-radius-sm);
 }

@@ -76,15 +76,63 @@
                         <h2 class="detail-section-title">
                             <i class="bi bi-grid-3x3"></i>
                             Chord Charts
+                            @if (charts?.Count > 0)
+                            {
+                                <span class="charts-count-badge">@charts.Count</span>
+                            }
                         </h2>
-                        <button type="button" class="add-chart-button" @onclick="() => AddChart(chord.Id)">
-                            <i class="bi bi-plus-circle"></i>
-                            Add Chart
-                        </button>
+                        <div class="detail-section-header-actions">
+                            <button type="button" class="charts-view-toggle"
+                                    @onclick="ToggleChartGrid"
+                                    title="@(showChartGrid ? "Show horizontal slider" : "Show all charts")">
+                                <i class="bi bi-@(showChartGrid ? "list" : "grid-3x3")"></i>
+                            </button>
+                            <button type="button" class="add-chart-button" @onclick="() => AddChart(chord.Id)">
+                                <i class="bi bi-plus-circle"></i>
+                                Add Chart
+                            </button>
+                        </div>
                     </div>
                     <div class="detail-section-body">
                         <div class="charts-container">
-                            <ChordCarousel @ref="chordCarouselRef" Chord="@chord" />
+                            @if (isLoadingCharts)
+                            {
+                                <div class="charts-loading">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <span>Loading charts...</span>
+                                </div>
+                            }
+                            else if (charts is null || charts.Count == 0)
+                            {
+                                <div class="charts-empty">
+                                    <i class="bi bi-music-note-list"></i>
+                                    <p>No charts yet for this chord.</p>
+                                    <button class="add-chart-button" @onclick="() => AddChart(chord.Id)">
+                                        <i class="bi bi-plus-circle"></i>
+                                        Add the first chart
+                                    </button>
+                                </div>
+                            }
+                            else if (showChartGrid)
+                            {
+                                <div class="detail-charts-grid">
+                                    @foreach (var chart in charts)
+                                    {
+                                        @RenderChartCard(chart)
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="detail-charts-slider">
+                                    <div class="detail-charts-track">
+                                        @foreach (var chart in charts)
+                                        {
+                                            @RenderChartCard(chart)
+                                        }
+                                    </div>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -197,10 +245,54 @@
     public string? Id { get; set; }
 
     private ChordDto? chord;
+    private List<ChordChartEditDto>? charts;
     private bool isLoading = true;
+    private bool isLoadingCharts = false;
+    private bool showChartGrid = false;
     private bool showChordModal = false;
     private string modalHeaderText = "Edit";
-    private ChordCarousel? chordCarouselRef;
+
+    // Shared template used by both the horizontal slider and the grid view so
+    // we don't duplicate the card markup. Each card delegates to ChordCarousel
+    // with a single-chart PreloadedCharts list — that reuses the existing
+    // SVG/image/drawing render branches without needing a separate component.
+    private RenderFragment<ChordChartEditDto> RenderChartCard => chart =>
+@<div class="detail-chart-card" @key="@chart.Id">
+    <div class="detail-chart-actions">
+        @if (chart.Source == ChordSource.Standard)
+        {
+            <button type="button" class="detail-chart-action"
+                    title="Customize (creates an editable copy)"
+                    @onclick="@(() => CustomizeChart(chart.Id))">
+                <i class="bi bi-copy"></i>
+            </button>
+        }
+        else
+        {
+            <button type="button" class="detail-chart-action"
+                    title="Edit chart"
+                    @onclick="@(() => EditChart(chart.Id))">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <button type="button" class="detail-chart-action detail-chart-action-danger"
+                    title="Delete chart"
+                    @onclick="@(() => DeleteChart(chart.Id))">
+                <i class="bi bi-trash"></i>
+            </button>
+        }
+    </div>
+    @{ var label = ResolveChartLabel(chart); }
+    @if (!string.IsNullOrEmpty(label))
+    {
+        <h6 class="detail-chart-label">@label</h6>
+    }
+    <ChordCarousel Chord="@chord"
+                   PreloadedCharts="@(new List<ChordChartEditDto> { chart })"
+                   Size="CarouselSize.Medium"
+                   ShowActions="false"
+                   CarouselId="@($"detail-chart-{chart.Id}")" />
+</div>
+    ;
 
     protected override async Task OnInitializedAsync()
     {
@@ -287,6 +379,89 @@
         {
             isLoading = false;
         }
+
+        if (chord is not null && !string.IsNullOrEmpty(chord.Id))
+        {
+            await LoadCharts(chord.Id);
+        }
+    }
+
+    private async Task LoadCharts(string chordId)
+    {
+        try
+        {
+            isLoadingCharts = true;
+            var response = await _chordChartsApi.GetChartsByChordId(chordId);
+            if (response.IsSuccessStatusCode)
+            {
+                charts = (response.Content ?? new List<ChordChartEditDto>())
+                    .OrderBy(c => c.FretPosition ?? int.MaxValue)
+                    .ToList();
+            }
+            else
+            {
+                charts = new List<ChordChartEditDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading charts");
+            charts = new List<ChordChartEditDto>();
+        }
+        finally
+        {
+            isLoadingCharts = false;
+        }
+    }
+
+    private void ToggleChartGrid() => showChartGrid = !showChartGrid;
+
+    private string ResolveChartLabel(ChordChartEditDto chart)
+    {
+        if (!string.IsNullOrEmpty(chart.PositionDescription)) return chart.PositionDescription;
+        if (chart.FretPosition is int fp)
+            return fp <= 1 ? "Open position" : $"Fret {fp}";
+        return string.Empty;
+    }
+
+    private void EditChart(string chartId) => _navManager.NavigateTo($"/chord-charts/edit/{chartId}");
+
+    private void CustomizeChart(string chartId)
+    {
+        if (chord?.Id is null) return;
+        _navManager.NavigateTo($"/chord-charts/create/{chord.Id}?cloneFrom={chartId}");
+    }
+
+    private void DeleteChart(string chartId)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Delete Chart",
+            Message = "Are you sure you want to delete this chart?",
+            DangerText = "This action cannot be undone!",
+            OptionType = OptionType.Warning,
+            Context = new ModalContext { ActionType = "DeleteChart", Data = chartId },
+            OnConfirmCallback = async () =>
+            {
+                var response = await _chordChartsApi.DeleteChordChart(chartId);
+                if (response.IsSuccessStatusCode)
+                {
+                    charts?.RemoveAll(c => c.Id == chartId);
+                    StateHasChanged();
+                }
+                else
+                {
+                    var errorMsg = _apiResponseHandler.GetApiErrorMessage(response);
+                    _modalService.Show(new ModalOptionDto
+                    {
+                        Title = "Error",
+                        Message = $"Failed to delete chart. {errorMsg}",
+                        OptionType = OptionType.Error,
+                        Context = new ModalContext { ActionType = "DeleteChart", Data = chartId }
+                    });
+                }
+            }
+        });
     }
 
     private async Task HandleChordSubmit(ChordDto submittedChord)
@@ -322,7 +497,6 @@
         }
         
         await LoadChordDetails(submittedChord.Id ?? "");
-        if (chordCarouselRef != null) await chordCarouselRef.LoadCharts(submittedChord.Id ?? "");
         CloseChordModal();
     }
 

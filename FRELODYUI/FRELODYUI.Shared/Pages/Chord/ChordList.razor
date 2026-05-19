@@ -8,8 +8,8 @@
 @implements IDisposable
 
 <div class="w-100 h-100 overflow-auto position-relative">
-    <div class="d-flex flex-column justify-content-start align-items-center">
-        <div class="chords-sticky-header w-75 position-sticky text-center top-0">
+    <div class="chords-shell d-flex flex-column justify-content-start align-items-stretch mx-auto">
+        <div class="chords-sticky-header position-sticky text-center top-0">
             <h3 class="m-3 text-primary">Chords</h3>
 
             @if (!string.IsNullOrEmpty(successMessage))
@@ -18,9 +18,9 @@
                     @successMessage
                 </div>
             }
-            <div class="rounded-3 border shadow p-3 mb-2" style="min-width:15rem">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex w-50 position-relative me-3">
+            <div class="rounded-3 border shadow p-3 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="flex-grow-1 position-relative me-2">
                         <input type="text"
                                class="form-control h-12 ps-5 rounded-3"
                                placeholder="Search a chord..."
@@ -42,7 +42,7 @@
             </div>
         </div>
         
-        <div class="w-75 mt-3">
+        <div class="chords-grid-wrap mt-3">
             @if (isLoading)
             {
                 <ChordListPlaceholder Count="10" />

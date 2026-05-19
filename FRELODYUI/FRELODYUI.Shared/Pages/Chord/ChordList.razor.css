@@ -1,6 +1,28 @@
+/* Shell width tracks the /playlists (55rem) and /compose (65rem) vibe so the
+   chord grid feels balanced instead of sprawling edge-to-edge. 65rem keeps
+   3 comfortable columns on desktop while leaving generous breathing room
+   on ultrawide. */
+.chords-shell {
+    width: 100%;
+    max-width: 65rem;
+    padding-left: var(--k-space-3);
+    padding-right: var(--k-space-3);
+}
+
+@media (min-width: 992px) {
+    .chords-shell {
+        padding-left: var(--k-space-4);
+        padding-right: var(--k-space-4);
+    }
+}
+
+.chords-grid-wrap {
+    width: 100%;
+}
+
 .chords-sticky-header {
-    z-index: 5; 
-    background: var(--k-bg-app, #ffffff);   
+    z-index: 5;
+    background: var(--k-bg-app, #ffffff);
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
 }

@@ -227,10 +227,53 @@
 
 .charts-container {
     min-height: 200px;
+    display: block;
+}
+
+.detail-section-header-actions {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: var(--k-space-2);
 }
+
+.charts-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    padding: 0.1rem 0.45rem;
+    margin-left: 0.4rem;
+    border-radius: var(--k-radius-pill);
+    background: var(--bg-active);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.charts-view-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--k-radius-sm);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background var(--k-transition-fast), border-color var(--k-transition-fast), color var(--k-transition-fast);
+}
+
+    .charts-view-toggle:hover {
+        background: var(--bg-hover);
+        border-color: var(--gradient-primary-start);
+        color: var(--gradient-primary-start);
+    }
+
+    .charts-view-toggle i {
+        font-size: 0.95rem;
+    }
 
 .add-chart-button {
     display: inline-flex;
@@ -256,6 +299,179 @@
     .add-chart-button i {
         font-size: 0.875rem;
     }
+
+/* Inline loading + empty states for the charts section */
+.charts-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.charts-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+    .charts-empty i {
+        font-size: 2.25rem;
+        opacity: 0.4;
+    }
+
+    .charts-empty p {
+        margin: 0;
+        font-size: 0.95rem;
+    }
+
+/* Horizontal slider — same UX as Song.razor's chord-charts-section default
+   view. The track scrolls horizontally on overflow; on narrow viewports cards
+   keep a comfortable min-width so charts stay legible. */
+.detail-charts-slider {
+    position: relative;
+    width: 100%;
+}
+
+.detail-charts-track {
+    display: flex;
+    gap: var(--k-space-3);
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    padding: 0.25rem 0.1rem 0.5rem;
+    scrollbar-width: thin;
+}
+
+    .detail-charts-track::-webkit-scrollbar { height: 6px; }
+    .detail-charts-track::-webkit-scrollbar-thumb {
+        background: var(--border-medium);
+        border-radius: 3px;
+    }
+
+    .detail-charts-track > .detail-chart-card {
+        flex: 0 0 auto;
+        width: 12rem;
+    }
+
+@media (min-width: 768px) {
+    .detail-charts-track > .detail-chart-card { width: 13rem; }
+}
+
+@media (min-width: 1200px) {
+    .detail-charts-track > .detail-chart-card { width: 14rem; }
+}
+
+/* Grid view — one column on phones (full bleed for a single chart at a time),
+   stepping up to four on large desktops so users can scan every voicing
+   side by side. Mirrors the chord-card grid ladder for visual consistency. */
+.detail-charts-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--k-space-3);
+    width: 100%;
+}
+
+@media (min-width: 576px) {
+    .detail-charts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 992px) {
+    .detail-charts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--k-space-4); }
+}
+
+@media (min-width: 1400px) {
+    .detail-charts-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.detail-chart-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.4rem;
+    padding: var(--k-space-3);
+    background: var(--input-bg);
+    border: 1px solid var(--border-light);
+    border-radius: var(--k-radius-md);
+    transition: border-color var(--k-transition-fast), box-shadow var(--k-transition-fast), transform var(--k-transition-fast);
+}
+
+    .detail-chart-card:hover {
+        border-color: var(--gradient-primary-start);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+.detail-chart-label {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Hover-revealed action overlay — clean by default, no chrome competing with
+   the chart frame, but discoverable on hover/focus. */
+.detail-chart-actions {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity var(--k-transition-fast);
+    z-index: 2;
+}
+
+.detail-chart-card:hover .detail-chart-actions,
+.detail-chart-card:focus-within .detail-chart-actions {
+    opacity: 1;
+}
+
+.detail-chart-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: var(--k-radius-xs);
+    border: 1px solid var(--border-medium);
+    background: var(--card-bg, var(--input-bg));
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background var(--k-transition-fast), border-color var(--k-transition-fast), color var(--k-transition-fast);
+}
+
+    .detail-chart-action:hover {
+        background: var(--bg-hover);
+        border-color: var(--gradient-primary-start);
+        color: var(--gradient-primary-start);
+    }
+
+    .detail-chart-action.detail-chart-action-danger:hover {
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+
+/* Let the embedded ChordCarousel stage fill the card instead of capping at
+   carousel-md's default 12rem — same trick used by ChordCard for the
+   /chords grid. */
+.detail-chart-card ::deep .chord-carousel-stage {
+    max-width: 100%;
+}
 
 /* ============================================
    AUDIO SECTION
