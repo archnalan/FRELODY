@@ -1,176 +1,212 @@
-﻿@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using SortDirection = FRELODYAPP.Dtos.SubDtos.SortDirection
 @inject ILogger<SongList> _logger
 @implements IDisposable
 
-@if (_isTransitioning)
+@if (ViewStyle == ActiveView.Expanded)
 {
-    <FRELODYUI.Shared.Pages.PlaceHolders.SongListPlaceholder ActiveView="ViewStyle" ShowHeader="true" Count="@(ViewStyle == ActiveView.Expanded ? 8 : 6)" />
+    <div class="song-table-card">
+        <div class="song-quickgrid-scroll">
+            <QuickGrid @ref="_grid"
+                           TGridItem="SongListItemDto"
+                           ItemsProvider="ProvideSongsAsync"
+                           Virtualize="true"
+                           ItemSize="56"
+                           Class="song-quickgrid"
+                           Theme="frelody">
+                    <TemplateColumn Title="#" Class="qg-col-check" Align="Align.Center">
+                        @{
+                            var rowSelected = IsSelected(context.Id ?? "");
+                        }
+                        <button type="button"
+                                class="qg-check @(rowSelected ? "qg-check--on" : "")"
+                                title="@(rowSelected ? "Deselect" : "Select")"
+                                @onclick="() => ToggleSongSelection(context.Id ?? string.Empty)">
+                            @if (rowSelected)
+                            {
+                                <i class="bi bi-check-circle-fill"></i>
+                            }
+                            else
+                            {
+                                <span class="qg-check__num">@(context.SongNumber > 0 ? context.SongNumber.ToString() : "–")</span>
+                            }
+                        </button>
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Title" Sortable="true" Class="qg-col-title">
+                        <a class="qg-title-cell"
+                           href="javascript:void(0)"
+                           title="@context.Title"
+                           @onclick="() => HandleSongClick(context.Id ?? string.Empty)"
+                           @onclick:preventDefault>
+                            @context.Title
+                        </a>
+                    </TemplateColumn>
+
+                    <PropertyColumn Property="@(s => s.CategoryName ?? s.AlbumTitle)"
+                                    Title="Category"
+                                    Sortable="true"
+                                    Class="qg-col-meta qg-col-md" />
+
+                    <PropertyColumn Property="@(s => s.WrittenBy ?? s.ArtistName)"
+                                    Title="Artist"
+                                    Sortable="true"
+                                    Class="qg-col-meta qg-col-lg" />
+
+                    <TemplateColumn Title="Rating" Sortable="true" Class="qg-col-rating qg-col-sm" Align="Align.Center">
+                        @if (context.Rating.HasValue && context.Rating > 0)
+                        {
+                            <span class="qg-rating">
+                                <i class="bi bi-star-fill"></i>
+                                <span>@context.Rating.Value.ToString("0.#")</span>
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">–</span>
+                        }
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="" Class="qg-col-actions" Align="Align.Right">
+                        @if (!IsInSelectionMode)
+                        {
+                            <span class="qg-actions" @onclick:stopPropagation>
+                                <button class="row-action-btn" title="Play" @onclick="() => OnSongDisplay(context.Id)">
+                                    <i class="bi bi-play-fill"></i>
+                                </button>
+                                <button class="row-action-btn" title="Details" @onclick="() => NavigateToDetails(context.Id)">
+                                    <i class="bi bi-info-circle"></i>
+                                </button>
+                                <button class="row-action-btn" title="Share" disabled="@isGeneratingLink" @onclick="() => ShareLink(context.Id)">
+                                    <i class="bi bi-upload"></i>
+                                </button>
+                                @if (!string.IsNullOrEmpty(currentUserId) && context.CreatedBy == currentUserId)
+                                {
+                                    <button class="row-action-btn row-action-btn--danger" title="Delete" @onclick="() => RemoveSong(context.Id)">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                }
+                            </span>
+                        }
+                    </TemplateColumn>
+                </QuickGrid>
+        </div>
+
+        @if (_isInitialLoading)
+        {
+            <div class="song-loading-overlay" aria-hidden="true">
+                <FRELODYUI.Shared.Pages.PlaceHolders.SongListPlaceholder ActiveView="ActiveView.Expanded" ShowHeader="true" Count="8" />
+            </div>
+        }
+    </div>
 }
 else
 {
-    <div class="@(ViewStyle == ActiveView.Expanded ? "song-table-card" : "")">
-    @if (ViewStyle == ActiveView.Expanded)
+    @* ─────────── Card / grid view ─────────── *@
+    @if (_isInitialLoading)
     {
-        <div class="song-table-header">
-            <span class="song-row__num">#</span>
-            <span class="song-row__title">Title</span>
-            <span class="song-row__meta d-none d-md-flex">Category</span>
-            <span class="song-row__meta d-none d-lg-flex">Artist</span>
-            <span class="song-row__rating d-none d-sm-flex">Rating</span>
-            <span class="song-row__actions"></span>
-        </div>
+        <FRELODYUI.Shared.Pages.PlaceHolders.SongListPlaceholder ActiveView="ActiveView.Collapsed" Count="6" />
     }
-
-    @* Shimmer overlay: stays visible until first data batch arrives *@
-    @if (_isLoadingData)
+    else
     {
-        <div class="song-loading-overlay">
-            <FRELODYUI.Shared.Pages.PlaceHolders.SongListPlaceholder ActiveView="ViewStyle" Count="@(ViewStyle == ActiveView.Expanded ? 8 : 6)" />
-        </div>
-    }
-
-    <div class="@(ViewStyle == ActiveView.Collapsed ? "row" : "")" style="@(_isLoadingData ? "height:0;overflow:hidden" : "")">
-    <Virtualize @key="RefreshKey" 
-                Context="song"
-                ItemsProvider="ProvideSongsAsync"
-                ItemSize="@(ViewStyle == ActiveView.Expanded ? 56 : 170)"
-                OverscanCount="3"
-                @ref="_virtualize">
-        <ItemContent>
-            @if (ViewStyle == ActiveView.Expanded)
+        <div class="row">
+            @foreach (var song in _cardItems)
             {
-            <!-- ── List / tabular row ── -->
-            <div class="song-row @(IsSelected(song.Id ?? "") ? "song-row--selected" : "")"
-                 @onclick="@(() => HandleSongClick(song.Id ?? ""))"
-                 @onpointerdown="@(e => HandlePointerDown(song.Id ?? "", e))"
-                 @onpointerup="@(() => HandlePointerUp())"
-                 @onpointercancel="@(() => HandlePointerUp())"
-                 @onpointerleave="@(() => HandlePointerUp())">
-
-                @if (IsSelected(song.Id ?? ""))
-                {
-                    <span class="song-row__check"><i class="bi bi-check-circle-fill text-success"></i></span>
-                }
-                else
-                {
-                    <span class="song-row__num">@(song.SongNumber > 0 ? song.SongNumber.ToString() : "–")</span>
-                }
-
-                <span class="song-row__title" title="@song.Title">@song.Title</span>
-
-                <span class="song-row__meta d-none d-md-flex" title="@(song.CategoryName ?? song.AlbumTitle ?? "–")">
-                    @(song.CategoryName ?? song.AlbumTitle ?? "–")
-                </span>
-
-                <span class="song-row__meta d-none d-lg-flex" title="@(song.WrittenBy ?? song.ArtistName ?? "–")">
-                    @(song.WrittenBy ?? song.ArtistName ?? "–")
-                </span>
-
-                <span class="song-row__rating d-none d-sm-flex">
-                    @if (song.Rating.HasValue && song.Rating > 0)
-                    {
-                        <i class="bi bi-star-fill"></i>
-                        <span>@song.Rating.Value.ToString("0.#")</span>
-                    }
-                    else
-                    {
-                        <span class="text-muted">–</span>
-                    }
-                </span>
-
-                @if (!IsInSelectionMode)
-                {
-                    <span class="song-row__actions" @onclick:stopPropagation>
-                        <button class="row-action-btn" title="Play" @onclick="@(() => OnSongDisplay(song.Id))">
-                            <i class="bi bi-play-fill"></i>
-                        </button>
-                        <button class="row-action-btn" title="Details" @onclick="@(() => NavigateToDetails(song.Id))">
-                            <i class="bi bi-info-circle"></i>
-                        </button>
-                        <button class="row-action-btn" title="Share" @onclick="@(() => ShareLink(song.Id))" disabled="@isGeneratingLink">
-                            <i class="bi bi-upload"></i>
-                        </button>
-                        @if (!string.IsNullOrEmpty(currentUserId) && song.CreatedBy == currentUserId)
+                <div class="col-12 col-md-6 col-lg-4 mb-4"
+                     @key="song.Id"
+                     @onclick="() => HandleSongClick(song.Id ?? string.Empty)"
+                     @onpointerdown="@(e => HandlePointerDown(song.Id ?? string.Empty, e))"
+                     @onpointerup="HandlePointerUp"
+                     @onpointercancel="HandlePointerUp"
+                     @onpointerleave="HandlePointerUp"
+                     style="cursor:pointer; position:relative;">
+                    <div class="card h-100 shadow-sm @(IsSelected(song.Id ?? "") ? "border-success border-2" : "")"
+                         style="border-radius:0.5rem">
+                        @if (IsSelected(song.Id ?? ""))
                         {
-                            <button class="row-action-btn row-action-btn--danger" title="Delete" @onclick="@(() => RemoveSong(song.Id))">
-                                <i class="bi bi-trash3"></i>
-                            </button>
+                            <div class="position-absolute top-0 end-0 m-2" style="z-index:1">
+                                <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                            </div>
                         }
-                    </span>
-                }
-            </div>
-        }
-        else
-        {
-            <!-- ── Grid / card view ── -->
-            <div class="col-12 col-md-6 col-lg-4 mb-4"
-                 @onclick="@(() => HandleSongClick(song.Id ?? ""))"
-                 @onpointerdown="@(e => HandlePointerDown(song.Id ?? "", e))"
-                 @onpointerup="@(() => HandlePointerUp())"
-                 @onpointercancel="@(() => HandlePointerUp())"
-                 @onpointerleave="@(() => HandlePointerUp())"
-                 style="cursor:pointer; position:relative;">
-                <div class="card h-100 shadow-sm @(IsSelected(song.Id ?? "") ? "border-success border-2" : "")"
-                     style="border-radius:0.5rem">
-                    @if (IsSelected(song.Id ?? ""))
-                    {
-                        <div class="position-absolute top-0 end-0 m-2" style="z-index:1">
-                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
-                        </div>
-                    }
-                    <div class="card-body d-flex flex-column justify-content-between">
-                        <div class="d-flex justify-content-between mb-3">
-                            <h5 class="card-title mb-3">
-                                <span>@(song.SongNumber > 0 ? song.SongNumber.ToString() : "").</span>
-                                <span class="ms-2">@song.Title</span>
-                            </h5>
-                            @if (!IsInSelectionMode)
-                            {
-                                <span class="cursor-pointer text-muted ms-2"
-                                      title="Share this song"
-                                      @onclick="() => ShareLink(song.Id)"
-                                      @onclick:stopPropagation
-                                      disabled="@isGeneratingLink">
-                                    <i class="bi bi-upload"></i>
-                                </span>
-                            }
-                        </div>
-                        <div>
-                            <span class="font-weight-light text-muted">By @(song.WrittenBy ?? song.ArtistName ?? "unknown")</span>
-                        </div>
-                        <div class="d-flex flex-column flex-md-row justify-content-end mt-3 gap-2">
-                            <SongRating SongId="@song.Id" ShowSummary="true" ShowPanel="false" />
-                            @if (!IsInSelectionMode)
-                            {
-                                <div class="d-flex justify-content-center gap-2">
-                                    <button class="btn btn-outline-primary btn-sm"
-                                            @onclick="() => NavigateToDetails(song.Id)"
-                                            @onclick:stopPropagation>
-                                        <i class="bi bi-list"></i>
-                                    </button>
-                                    <button class="btn btn-primary btn-sm" @onclick="@(() => OnSongDisplay(song.Id))"><i class="bi bi-play-fill"></i></button>
-                                    @if (!string.IsNullOrEmpty(currentUserId) && song.CreatedBy == currentUserId)
-                                    {
-                                        <button class="btn btn-outline-danger btn-sm"
-                                                @onclick="() => RemoveSong(song.Id)"
+                        <div class="card-body d-flex flex-column justify-content-between">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h5 class="card-title mb-3">
+                                    <span>@(song.SongNumber > 0 ? song.SongNumber.ToString() : "").</span>
+                                    <span class="ms-2">@song.Title</span>
+                                </h5>
+                                @if (!IsInSelectionMode)
+                                {
+                                    <span class="cursor-pointer text-muted ms-2"
+                                          title="Share this song"
+                                          @onclick="() => ShareLink(song.Id)"
+                                          @onclick:stopPropagation
+                                          disabled="@isGeneratingLink">
+                                        <i class="bi bi-upload"></i>
+                                    </span>
+                                }
+                            </div>
+                            <div>
+                                <span class="font-weight-light text-muted">By @(song.WrittenBy ?? song.ArtistName ?? "unknown")</span>
+                            </div>
+                            <div class="d-flex flex-column flex-md-row justify-content-end mt-3 gap-2">
+                                <SongRating SongId="@song.Id" ShowSummary="true" ShowPanel="false" />
+                                @if (!IsInSelectionMode)
+                                {
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <button class="btn btn-outline-primary btn-sm"
+                                                @onclick="() => NavigateToDetails(song.Id)"
                                                 @onclick:stopPropagation>
-                                            <i class="bi bi-trash3"></i>
+                                            <i class="bi bi-list"></i>
                                         </button>
-                                    }
-                                </div>
-                            }
+                                        <button class="btn btn-primary btn-sm" @onclick="() => OnSongDisplay(song.Id)" @onclick:stopPropagation>
+                                            <i class="bi bi-play-fill"></i>
+                                        </button>
+                                        @if (!string.IsNullOrEmpty(currentUserId) && song.CreatedBy == currentUserId)
+                                        {
+                                            <button class="btn btn-outline-danger btn-sm"
+                                                    @onclick="() => RemoveSong(song.Id)"
+                                                    @onclick:stopPropagation>
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
+            }
+        </div>
+
+        @if (_cardHasMore || _isCardLoadingMore)
+        {
+            <div class="d-flex justify-content-center my-3">
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        disabled="@_isCardLoadingMore"
+                        @onclick="LoadMoreCardsAsync">
+                    @if (_isCardLoadingMore)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                        <span>Loading…</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-arrow-down-circle me-2"></i>
+                        <span>Load more (@(_cardTotal - _cardItems.Count) left)</span>
+                    }
+                </button>
             </div>
         }
-    </ItemContent>
-    <Placeholder>
-        <FRELODYUI.Shared.Pages.PlaceHolders.SongListPlaceholder ActiveView="ViewStyle" IsSingleItem="true" />
-    </Placeholder>
-</Virtualize>
-    </div>
-    </div>
+
+        @if (_cardItems.Count == 0)
+        {
+            <div class="text-center text-muted my-5">
+                <i class="bi bi-music-note-list fs-1 d-block mb-2"></i>
+                <span>No songs found.</span>
+            </div>
+        }
+    }
 }
 
 @if (showSuccessMessage)
@@ -190,27 +226,32 @@ else
 
 @code {
     [Parameter] public ActiveView ViewStyle { get; set; }
-    [Parameter]public ViewMode ViewMode { get; set; }
+    [Parameter] public ViewMode ViewMode { get; set; }
     [Parameter] public EventCallback<string> OnSongLongPress { get; set; }
     [Parameter] public EventCallback OnSelectionModeChanged { get; set; }
     [Parameter] public EventCallback OnAuthenticationRequired { get; set; }
     [Parameter] public HashSet<string> SelectedSongIds { get; set; } = new();
 
-    private string error = string.Empty;
-    private bool IsNavigating = false;
-    private bool IsFromLanding = false;
+    private QuickGrid<SongListItemDto>? _grid;
     private string? currentUserId;
+    private bool IsFromLanding = false;
+    private string error = string.Empty;
 
     private string _searchTerm = string.Empty;
-    private string RefreshKey = Guid.NewGuid().ToString();
-
-    private Virtualize<SongListItemDto>? _virtualize;
+    private bool _isInitialLoading = true;
     private bool isGeneratingLink = false;
-    private bool isLoading = false;
     private bool showSuccessMessage = false;
     private string successMessage = string.Empty;
 
-    // Long press state
+    // Card view state
+    private List<SongListItemDto> _cardItems = new();
+    private int _cardOffset = 0;
+    private int _cardTotal = 0;
+    private bool _cardHasMore = true;
+    private bool _isCardLoadingMore = false;
+    private const int CardPageSize = 24;
+
+    // Long press state (card view only)
     private System.Threading.Timer? _longPressTimer;
     private string? _currentPressedSongId;
     private bool _isLongPressTriggered = false;
@@ -225,25 +266,193 @@ else
         {
             currentUserId = user.Data.Id;
         }
-    }
 
-    private bool _isTransitioning = false;
-    private bool _isLoadingData = true;
+        if (ViewStyle == ActiveView.Collapsed)
+        {
+            await LoadInitialCardsAsync();
+        }
+    }
 
     public async Task SetActiveView(ActiveView changeStyle)
     {
         if (ViewStyle == changeStyle) return;
-        _isTransitioning = true;
+
+        _isInitialLoading = true;
         ViewStyle = changeStyle;
         StateHasChanged();
-        await Task.Delay(80);
-        _isLoadingData = true;
-        RefreshKey = Guid.NewGuid().ToString();
-        _isTransitioning = false;
+
+        if (changeStyle == ActiveView.Collapsed)
+        {
+            await LoadInitialCardsAsync();
+        }
+        // Expanded view: QuickGrid mounts and its ItemsProvider flips _isInitialLoading off.
+    }
+
+    public async Task SearchTermChanged(string searchTerm)
+    {
+        _searchTerm = searchTerm ?? string.Empty;
+
+        if (ViewStyle == ActiveView.Expanded)
+        {
+            if (_grid is not null)
+                await _grid.RefreshDataAsync();
+        }
+        else
+        {
+            await LoadInitialCardsAsync();
+        }
+    }
+
+    public async Task Refresh()
+    {
+        error = string.Empty;
+
+        if (ViewStyle == ActiveView.Expanded)
+        {
+            if (_grid is not null)
+                await _grid.RefreshDataAsync();
+        }
+        else
+        {
+            await LoadInitialCardsAsync();
+        }
+    }
+
+    public async Task ExitSelectionMode()
+    {
+        SelectedSongIds?.Clear();
+        await OnSelectionModeChanged.InvokeAsync();
         StateHasChanged();
     }
 
+    // ─────────────────────── Data fetching ───────────────────────
+
+    private async ValueTask<GridItemsProviderResult<SongListItemDto>> ProvideSongsAsync(GridItemsProviderRequest<SongListItemDto> request)
+    {
+        try
+        {
+            var sortBy = MapColumnToSortField(request.SortByColumn?.Title);
+            var sortDir = request.SortByAscending ? SortDirection.Asc : SortDirection.Desc;
+            var limit = request.Count ?? 50;
+
+            var (items, total) = await FetchPageAsync(request.StartIndex, limit, sortBy, sortDir, request.CancellationToken);
+
+            if (request.StartIndex == 0 && _isInitialLoading)
+            {
+                _isInitialLoading = false;
+                _ = InvokeAsync(StateHasChanged);
+            }
+
+            return GridItemsProviderResult.From(items: items, totalItemCount: total);
+        }
+        catch (OperationCanceledException)
+        {
+            return GridItemsProviderResult.From<SongListItemDto>(new List<SongListItemDto>(), 0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching songs for QuickGrid.");
+            error = $"Error fetching songs: {ex.Message}";
+            _isInitialLoading = false;
+            return GridItemsProviderResult.From<SongListItemDto>(new List<SongListItemDto>(), 0);
+        }
+    }
+
+    private async Task<(List<SongListItemDto> Items, int Total)> FetchPageAsync(
+        int offset, int limit, SongListSortField? sortBy, SortDirection sortDir, CancellationToken ct = default)
+    {
+        var query = new SongListQuery
+        {
+            Offset = offset,
+            Limit = limit <= 0 ? 10 : limit,
+            Search = string.IsNullOrWhiteSpace(_searchTerm) ? null : _searchTerm,
+            SortBy = sortBy,
+            SortDir = sortDir,
+        };
+
+        var response = await _songsApi.GetSongList(query);
+        var page = response?.Content;
+        return (page?.Data ?? new List<SongListItemDto>(), page?.TotalSize ?? 0);
+    }
+
+    private async Task LoadInitialCardsAsync()
+    {
+        _isInitialLoading = true;
+        _cardItems.Clear();
+        _cardOffset = 0;
+        _cardTotal = 0;
+        _cardHasMore = true;
+        StateHasChanged();
+
+        await FetchCardPageAsync();
+
+        _isInitialLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadMoreCardsAsync()
+    {
+        if (_isCardLoadingMore || !_cardHasMore) return;
+        await FetchCardPageAsync();
+        StateHasChanged();
+    }
+
+    private async Task FetchCardPageAsync()
+    {
+        if (_isCardLoadingMore) return;
+        _isCardLoadingMore = true;
+
+        try
+        {
+            var (items, total) = await FetchPageAsync(_cardOffset, CardPageSize, sortBy: null, sortDir: SortDirection.Asc);
+            if (items.Count > 0)
+                _cardItems.AddRange(items);
+
+            _cardTotal = total;
+            _cardOffset = _cardItems.Count;
+            _cardHasMore = _cardItems.Count < _cardTotal;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching card page.");
+            error = $"Error fetching songs: {ex.Message}";
+            _cardHasMore = false;
+        }
+        finally
+        {
+            _isCardLoadingMore = false;
+        }
+    }
+
+    private static SongListSortField? MapColumnToSortField(string? title) => title switch
+    {
+        "Title" => SongListSortField.Title,
+        "Category" => SongListSortField.Category,
+        "Artist" => SongListSortField.Artist,
+        "Rating" => SongListSortField.Rating,
+        "#" => SongListSortField.SongNumber,
+        _ => null,
+    };
+
+    // ─────────────────────── Selection / long press ───────────────────────
+
     private bool IsSelected(string songId) => SelectedSongIds?.Contains(songId) ?? false;
+
+    private async Task ToggleSongSelection(string songId)
+    {
+        if (string.IsNullOrEmpty(songId)) return;
+
+        // Auth gate matches long-press behaviour
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            await OnAuthenticationRequired.InvokeAsync();
+            return;
+        }
+
+        await OnSongLongPress.InvokeAsync(songId);
+        await OnSelectionModeChanged.InvokeAsync();
+        StateHasChanged();
+    }
 
     private void HandlePointerDown(string songId, PointerEventArgs e)
     {
@@ -254,8 +463,7 @@ else
             _ => InvokeAsync(() => TriggerLongPress(songId)),
             null,
             LongPressDurationMs,
-            Timeout.Infinite
-        );
+            Timeout.Infinite);
     }
 
     private void HandlePointerUp()
@@ -267,217 +475,79 @@ else
 
     private async Task TriggerLongPress(string songId)
     {
-        if (_currentPressedSongId == songId)
+        if (_currentPressedSongId != songId) return;
+
+        _isLongPressTriggered = true;
+
+        if (string.IsNullOrEmpty(currentUserId))
         {
-            _isLongPressTriggered = true;
-
-            // Check if user is authenticated before allowing selection
-            if (string.IsNullOrEmpty(currentUserId))
-            {
-                await OnAuthenticationRequired.InvokeAsync();
-                _longPressTimer?.Dispose();
-                _longPressTimer = null;
-                _isLongPressTriggered = false;
-                return;
-            }
-
-            await OnSongLongPress.InvokeAsync(songId);
-            await OnSelectionModeChanged.InvokeAsync();
-            _longPressTimer?.Dispose();
-            _longPressTimer = null;
+            await OnAuthenticationRequired.InvokeAsync();
+            HandlePointerUp();
+            _isLongPressTriggered = false;
+            return;
         }
+
+        await OnSongLongPress.InvokeAsync(songId);
+        await OnSelectionModeChanged.InvokeAsync();
+        HandlePointerUp();
     }
 
     private async Task HandleSongClick(string songId)
     {
-        // Wait a bit to see if this was a long press
+        if (string.IsNullOrEmpty(songId)) return;
+
+        // Give the long-press timer a chance to fire first (card view)
         await Task.Delay(50);
 
-        // If long press was triggered, ignore the click
         if (_isLongPressTriggered)
         {
             _isLongPressTriggered = false;
             return;
         }
 
-        // If we're in selection mode, toggle selection
         if (IsInSelectionMode)
         {
             await ToggleSongSelection(songId);
         }
         else
         {
-            // Normal behavior - navigate to song
             OnSongDisplay(songId);
         }
     }
 
-    private async Task ToggleSongSelection(string songId)
+    // ─────────────────────── Actions ───────────────────────
+
+    private void NavigateToDetails(string? id)
     {
-        await OnSongLongPress.InvokeAsync(songId);
-        
-        // If all songs are deselected, exit selection mode
-        if (!IsInSelectionMode)
-        {
-            await OnSelectionModeChanged.InvokeAsync();
-        }
-        
-        StateHasChanged();
-    }
-
-    public async Task ExitSelectionMode()
-    {
-        SelectedSongIds?.Clear();
-        await OnSelectionModeChanged.InvokeAsync();
-        StateHasChanged();
-    }
-
-    private async ValueTask<ItemsProviderResult<SongListItemDto>> ProvideSongsAsync(ItemsProviderRequest request)
-    {
-        try
-        {
-            error = string.Empty;
-
-            var offset = request.StartIndex;
-            var limit = request.Count <= 0 ? 10 : request.Count;
-
-            if (!string.IsNullOrWhiteSpace(_searchTerm))
-            {
-                var response = await _songsApi.SearchSongList(_searchTerm, offset, limit);
-                var page = response?.Content;
-                var items = page?.Data ?? new List<SongListItemDto>();
-                var total = page?.TotalSize ?? 0;
-
-                if (offset == 0 && _isLoadingData)
-                {
-                    _isLoadingData = false;
-                    await InvokeAsync(StateHasChanged);
-                }
-
-                return new ItemsProviderResult<SongListItemDto>(items, total);
-            }
-            else
-            {
-                var response = await _songsApi.GetSongList(offset, limit);
-                var page = response?.Content;
-                var items = page?.Data ?? new List<SongListItemDto>();
-                var total = page?.TotalSize ?? 0;
-
-                if (offset == 0 && _isLoadingData)
-                {
-                    _isLoadingData = false;
-                    await InvokeAsync(StateHasChanged);
-                }
-
-                return new ItemsProviderResult<SongListItemDto>(items, total);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching songs during virtualization.");
-            error = $"Error fetching songs: {ex.Message}";
-            _isLoadingData = false;
-            return new ItemsProviderResult<SongListItemDto>(Array.Empty<SongListItemDto>(), 0);
-        }
-    }
-
-    private void RemoveSong(string? songId)
-    {
-        if(!string.IsNullOrEmpty(songId))
-        {
-            _modalService.Show(new ModalOptionDto
-            {
-                Title = "Delete Song",
-                Message = "Are you sure you want to delete this song?",
-                DangerText = "This action cannot be undone.",
-                ButtonText = "Delete",
-                OptionType = OptionType.Confirmation,
-                Context = new ModalContext { ActionType = "DeleteSong", Data = songId },
-                OnConfirmCallback = async () =>
-                {
-                    var response = await _songsApi.DeleteSong(songId);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        await Refresh();
-                    }
-                    else
-                    {
-                        var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
-                        _modalService.Show(new ModalOptionDto
-                        {
-                            Title = "Error Deleting Song",
-                            Message = errorMessage,
-                            ButtonText = "Close",
-                            OptionType = OptionType.Error
-                        });
-                    }
-                }
-            });
-        }         
-    }
-
-    public async Task SearchTermChanged(string searchTerm)
-    {
-        _searchTerm = searchTerm;
-        _isLoadingData = true;
-        RefreshKey = Guid.NewGuid().ToString();
-        await Task.CompletedTask;
-        StateHasChanged();
-    }
-
-    private async Task Refresh()
-    {
-        error = string.Empty;
-        if (_virtualize is not null)
-            await _virtualize.RefreshDataAsync();
-    }
-
-    private void NavigateToDetails(string id)
-    {
+        if (string.IsNullOrEmpty(id)) return;
         _navManager.NavigateTo($"/player/details/{id}");
     }
 
-    private void NavigateToPlay(string id)
+    private void OnSongDisplay(string? songId)
     {
-        _navManager.NavigateTo($"/player/{id}");
-    }
-
-    private void OnSongDisplay(string songId)
-    {
-        // Don't navigate if there are selected songs (we're in selection mode)
-        if (IsInSelectionMode) return;
+        if (string.IsNullOrEmpty(songId) || IsInSelectionMode) return;
 
         try
         {
-            IsNavigating = true;
-            StateHasChanged();
-            // Log the song play from list (fire and forget)
             _ = Task.Run(async () =>
-          {
-              try
-              {
-                  await _storageService.SetItemAsync("ActiveView", ViewStyle);
-                  await _storageService.SetItemAsync("ViewMode", ViewMode);
-                  await _playHistoryApi.LogSongPlay(songId, "SongList");
-              }
-              catch (Exception ex)
-              {
-                  _logger.LogWarning(ex, "Failed to log song play from list for song {SongId}", songId);
-              }
-          });
-            if (IsFromLanding)
             {
-                _navManager.NavigateTo($"/songs/landing/{songId}");
-            }
-            else
-            {
-                _navManager.NavigateTo($"/songs/{songId}");                
-            }
+                try
+                {
+                    await _storageService.SetItemAsync("ActiveView", ViewStyle);
+                    await _storageService.SetItemAsync("ViewMode", ViewMode);
+                    await _playHistoryApi.LogSongPlay(songId, "SongList");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to log song play from list for song {SongId}", songId);
+                }
+            });
+
+            _navManager.NavigateTo(IsFromLanding ? $"/songs/landing/{songId}" : $"/songs/{songId}");
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error navigating to song: {ex.Message}");
+            _logger.LogError(ex, "Error navigating to song.");
             _modalService.Show(new ModalOptionDto
             {
                 Title = "Error",
@@ -486,15 +556,46 @@ else
                 OptionType = OptionType.Error
             });
         }
-        finally
-        {
-            IsNavigating = false;
-            StateHasChanged();
-        }
     }
-    
-    private async Task ShareLink(string songId)
+
+    private void RemoveSong(string? songId)
     {
+        if (string.IsNullOrEmpty(songId)) return;
+
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Delete Song",
+            Message = "Are you sure you want to delete this song?",
+            DangerText = "This action cannot be undone.",
+            ButtonText = "Delete",
+            OptionType = OptionType.Confirmation,
+            Context = new ModalContext { ActionType = "DeleteSong", Data = songId },
+            OnConfirmCallback = async () =>
+            {
+                var response = await _songsApi.DeleteSong(songId);
+                if (response.IsSuccessStatusCode)
+                {
+                    await Refresh();
+                }
+                else
+                {
+                    var errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+                    _modalService.Show(new ModalOptionDto
+                    {
+                        Title = "Error Deleting Song",
+                        Message = errorMessage,
+                        ButtonText = "Close",
+                        OptionType = OptionType.Error
+                    });
+                }
+            }
+        });
+    }
+
+    private async Task ShareLink(string? songId)
+    {
+        if (string.IsNullOrEmpty(songId)) return;
+
         isGeneratingLink = true;
         StateHasChanged();
 
@@ -523,14 +624,13 @@ else
             StateHasChanged();
         }
     }
-    
+
     private async Task ShowSuccessMessage(string message)
     {
         successMessage = message;
         showSuccessMessage = true;
         StateHasChanged();
 
-        // Auto-hide after 3 seconds
         await Task.Delay(3000);
         showSuccessMessage = false;
         StateHasChanged();

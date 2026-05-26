@@ -1,130 +1,232 @@
 /* ══════════════════════════════════════
-   SongList — loading shimmer overlay
-   ══════════════════════════════════════ */
-.song-loading-overlay {
-    position: relative;
-    z-index: 5;
-}
-
-/* ══════════════════════════════════════
-   SongList — card wrapper (list view)
+   SongList — card wrapper (table view)
    ══════════════════════════════════════ */
 .song-table-card {
+    position: relative;
     border: 1px solid var(--border-light);
-    border-radius: 0.75rem;
+    border-radius: var(--k-radius-md, 0.75rem);
     background: var(--modal-content-bg);
     overflow: clip;
 }
 
+/* Scroll container that bounds QuickGrid's height
+   so virtualization works against a fixed viewport
+   instead of the entire page. */
+.song-quickgrid-scroll {
+    width: 100%;
+    max-height: clamp(20rem, 70vh, 50rem);
+    overflow-y: auto;
+    /* Smoother scroll on touch */
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 575.98px) {
+    .song-quickgrid-scroll {
+        max-height: calc(100dvh - 13rem);
+    }
+}
+
 /* ══════════════════════════════════════
-   SongList — sticky table header
+   Loading placeholder overlay — sits on
+   top of an always-rendered QuickGrid so
+   QuickGrid can size + fetch normally.
    ══════════════════════════════════════ */
-.song-table-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
+.song-loading-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
     background: var(--modal-content-bg);
-    border-bottom: 2px solid var(--border-light);
+    border-radius: inherit;
+    overflow: hidden;
+}
+
+/* ══════════════════════════════════════
+   QuickGrid theme override (::deep so
+   QuickGrid's own elements inherit).
+   ══════════════════════════════════════ */
+::deep .song-quickgrid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    background: transparent;
+}
+
+/* Sticky header: stays visible while body rows scroll */
+::deep .song-quickgrid thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 8px 12px;
+    text-align: left;
     font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--text-secondary, #6b7280);
+    background: var(--modal-content-bg);
+    border-bottom: 2px solid var(--border-light);
+    white-space: nowrap;
 }
 
-@media (max-width: 575.98px) {
-    .song-table-header {
-        padding: 6px 8px;
-        gap: 6px;
-    }
-}
-
-/* ══════════════════════════════════════
-   SongList — tabular row (list view)
-   ══════════════════════════════════════ */
-.song-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    min-height: 48px;
-    border-bottom: 1px solid var(--border-light);
+::deep .song-quickgrid thead th button {
+    color: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+::deep .song-quickgrid thead th button:hover {
+    color: var(--text-primary);
+}
+
+/* ─── Sort indicators: modern up/down arrows ─── */
+::deep .song-quickgrid thead th[aria-sort] button::after,
+::deep .song-quickgrid thead th.col-sort-asc button::after,
+::deep .song-quickgrid thead th.col-sort-desc button::after {
+    font-family: "bootstrap-icons";
+    font-size: 0.85em;
+    line-height: 1;
+    opacity: 0.7;
+}
+
+::deep .song-quickgrid thead th[aria-sort="ascending"] button::after,
+::deep .song-quickgrid thead th.col-sort-asc button::after {
+    content: "\F148"; /* bi-arrow-up */
+}
+
+::deep .song-quickgrid thead th[aria-sort="descending"] button::after,
+::deep .song-quickgrid thead th.col-sort-desc button::after {
+    content: "\F128"; /* bi-arrow-down */
+}
+
+/* Neutralise any built-in QuickGrid sort glyph */
+::deep .song-quickgrid thead th .sort-indicator,
+::deep .song-quickgrid thead th .col-sort-asc-indicator,
+::deep .song-quickgrid thead th .col-sort-desc-indicator {
+    display: none !important;
+}
+
+::deep .song-quickgrid tbody tr {
     transition: background-color 0.12s;
 }
 
-.song-row:hover {
+::deep .song-quickgrid tbody tr:hover {
     background: var(--bg-hover, rgba(0, 0, 0, 0.04));
 }
 
-.song-row--selected {
-    background: rgba(25, 135, 84, 0.08);
-    border-color: var(--bs-success);
+::deep .song-quickgrid tbody td {
+    padding: 8px 12px;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border-light);
 }
 
-.song-row--placeholder {
-    pointer-events: none;
+/* ─── Column sizing ─── */
+::deep .qg-col-check {
+    width: 3rem;
 }
 
-/* Number / check column */
-.song-row__num,
-.song-row__check {
-    flex: 0 0 2.5rem;
-    text-align: center;
+::deep .qg-col-meta {
+    width: 9rem;
+}
+
+::deep .qg-col-rating {
+    width: 4.5rem;
+}
+
+::deep .qg-col-actions {
+    width: 8rem;
+}
+
+/* ─── Responsive hiding via Bootstrap-style breakpoints ─── */
+@media (max-width: 575.98px) {
+    ::deep .qg-col-sm {
+        display: none;
+    }
+}
+
+@media (max-width: 767.98px) {
+    ::deep .qg-col-md {
+        display: none;
+    }
+}
+
+@media (max-width: 991.98px) {
+    ::deep .qg-col-lg {
+        display: none;
+    }
+}
+
+/* ─── Cell contents ─── */
+::deep .qg-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    border-radius: var(--k-radius-sm, 6px);
+    background: none;
+    color: var(--text-secondary, #6b7280);
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--text-secondary, #6b7280);
-    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
 }
 
-.song-row__check {
+::deep .qg-check:hover {
+    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+    color: var(--text-primary);
+}
+
+::deep .qg-check--on {
+    color: var(--bs-success);
     font-size: 1.1rem;
 }
 
-/* Title — takes remaining space */
-.song-row__title {
-    flex: 1 1 0;
-    min-width: 0;
-    font-size: 0.88rem;
-    font-weight: 500;
+::deep .qg-check--on:hover {
+    background: rgba(25, 135, 84, 0.1);
+}
+
+::deep .qg-check__num {
+    line-height: 1;
+}
+
+::deep .qg-title-cell {
+    display: block;
     color: var(--text-primary);
-    white-space: nowrap;
+    font-weight: 500;
+    text-decoration: none;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-align: left;
+    cursor: pointer;
 }
 
-/* Meta columns (category, artist) */
-.song-row__meta {
-    flex: 0 0 8rem;
-    min-width: 0;
-    font-size: 0.78rem;
-    color: var(--text-secondary, #6b7280);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: left;
+::deep .qg-title-cell:hover {
+    color: var(--bs-primary);
 }
 
-/* Rating */
-.song-row__rating {
-    flex: 0 0 3.5rem;
-    display: flex;
+::deep .qg-rating {
+    display: inline-flex;
     align-items: center;
     gap: 3px;
-    font-size: 0.78rem;
     color: var(--bs-warning, #f59e0b);
-    justify-content: center;
+    font-size: 0.78rem;
 }
 
-.song-row__rating .text-muted {
-    color: var(--text-secondary, #6b7280) !important;
-}
-
-/* Actions */
-.song-row__actions {
-    flex: 0 0 7.5rem;
+::deep .qg-actions {
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -133,13 +235,12 @@
     transition: opacity 0.15s;
 }
 
-.song-row:hover .song-row__actions {
+::deep tr:hover .qg-actions {
     opacity: 1;
 }
 
-/* On touch devices, always show actions */
 @media (hover: none) {
-    .song-row__actions {
+    ::deep .qg-actions {
         opacity: 1;
     }
 }
@@ -151,7 +252,7 @@
     width: 30px;
     height: 30px;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--k-radius-sm, 6px);
     background: none;
     color: var(--text-secondary, #6b7280);
     font-size: 0.9rem;
@@ -169,30 +270,24 @@
     color: var(--bs-danger);
 }
 
-/* ── Responsive tweaks ── */
+/* ── Mobile tweaks ── */
 @media (max-width: 575.98px) {
-    .song-row {
-        padding: 8px 8px;
-        gap: 6px;
+    ::deep .song-quickgrid thead th,
+    ::deep .song-quickgrid tbody td {
+        padding: 6px 8px;
     }
 
-    .song-row__num,
-    .song-row__check {
-        flex: 0 0 2rem;
-        font-size: 0.75rem;
+    ::deep .qg-col-check {
+        width: 2.25rem;
     }
 
-    .song-row__title {
-        font-size: 0.84rem;
+    ::deep .qg-col-actions {
+        width: 6rem;
     }
 
     .row-action-btn {
         width: 28px;
         height: 28px;
         font-size: 0.85rem;
-    }
-
-    .song-row__actions {
-        flex: 0 0 5.5rem;
     }
 }

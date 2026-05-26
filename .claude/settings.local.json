@@ -27,7 +27,13 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(dotnet run *)",
       "WebFetch(domain:api.github.com)",
-      "Bash(pwsh -NoProfile -File tools/Update-ChordSource.ps1)"
+      "Bash(pwsh -NoProfile -File tools/Update-ChordSource.ps1)",
+      "WebFetch(domain:apexcharts.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:www.apexcharts.com)",
+      "Bash(dotnet restore *)",
+      "Bash(ildasm -text Microsoft.AspNetCore.Components.QuickGrid.dll)",
+      "Bash(dotnet --list-runtimes)"
     ]
   },
   "worktree": {

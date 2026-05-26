@@ -247,19 +247,9 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
 
         [HttpGet]
         [ProducesResponseType(typeof(PaginationDetails<SongListItemDto>), 200)]
-        public async Task<IActionResult> GetSongList([FromQuery] int offset, [FromQuery] int limit)
+        public async Task<IActionResult> GetSongList([FromQuery] SongListQuery query)
         {
-            var result = await _songService.GetSongListAsync(offset, limit);
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { message = result.Error.Message });
-            return Ok(result.Data);
-        }
-
-        [HttpGet]
-        [ProducesResponseType(typeof(PaginationDetails<SongListItemDto>), 200)]
-        public async Task<IActionResult> SearchSongList([FromQuery] string? keywords, [FromQuery] int offset, [FromQuery] int limit)
-        {
-            var result = await _songService.SearchSongListAsync(keywords, offset, limit);
+            var result = await _songService.GetSongListAsync(query);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { message = result.Error.Message });
             return Ok(result.Data);

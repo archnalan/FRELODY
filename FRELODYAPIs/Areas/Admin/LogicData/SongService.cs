@@ -1374,37 +1374,60 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #endregion
 
         #region Get Song List (with joins)
-        public async Task<ServiceResult<PaginationDetails<SongListItemDto>>> GetSongListAsync(int offset, int limit)
+        public async Task<ServiceResult<PaginationDetails<SongListItemDto>>> GetSongListAsync(SongListQuery query)
         {
             try
             {
-                limit = limit <= 0 ? 10 : limit;
+                query ??= new SongListQuery();
+                var offset = Math.Max(0, query.Offset);
+                var limit = query.Limit <= 0 ? 10 : Math.Min(query.Limit, 200);
 
-                var query = from s in _context.Songs
-                            join c in _context.Categories on s.CategoryId equals c.Id into cg
-                            from c in cg.DefaultIfEmpty()
-                            join sb in _context.SongBooks on s.SongBookId equals sb.Id into sbg
-                            from sb in sbg.DefaultIfEmpty()
-                            join al in _context.Albums on s.AlbumId equals al.Id into alg
-                            from al in alg.DefaultIfEmpty()
-                            join ar in _context.Artists on s.ArtistId equals ar.Id into arg
-                            from ar in arg.DefaultIfEmpty()
-                            orderby s.SongNumber, s.Rating descending
-                            select new SongListItemDto
-                            {
-                                Id = s.Id,
-                                SongNumber = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
-                                Title = s.Title,
-                                WrittenBy = s.WrittenBy,
-                                CategoryName = c != null ? c.Name : null,
-                                SongBookTitle = sb != null ? sb.Title : null,
-                                AlbumTitle = al != null ? al.Title : null,
-                                ArtistName = ar != null ? ar.Name : null,
-                                Rating = s.Rating,
-                                CreatedBy = s.CreatedBy,
-                            };
+                var songs = _context.Songs.AsQueryable();
 
-                var page = await query.ToPaginatedResultAsync(offset, limit);
+                if (!string.IsNullOrWhiteSpace(query.Search))
+                {
+                    var kw = query.Search.Trim();
+                    if (int.TryParse(kw, out var songNumber))
+                    {
+                        songs = songs.Where(s =>
+                            (s.SongNumber ?? 0) == songNumber ||
+                            EF.Functions.Like(s.Title, $"%{kw}%") ||
+                            (s.Slug != null && EF.Functions.Like(s.Slug, $"%{kw}%")));
+                    }
+                    else
+                    {
+                        songs = songs.Where(s =>
+                            EF.Functions.Like(s.Title, $"%{kw}%") ||
+                            (s.Slug != null && EF.Functions.Like(s.Slug, $"%{kw}%")));
+                    }
+                }
+
+                var projected = from s in songs
+                                join c in _context.Categories on s.CategoryId equals c.Id into cg
+                                from c in cg.DefaultIfEmpty()
+                                join sb in _context.SongBooks on s.SongBookId equals sb.Id into sbg
+                                from sb in sbg.DefaultIfEmpty()
+                                join al in _context.Albums on s.AlbumId equals al.Id into alg
+                                from al in alg.DefaultIfEmpty()
+                                join ar in _context.Artists on s.ArtistId equals ar.Id into arg
+                                from ar in arg.DefaultIfEmpty()
+                                select new SongListItemDto
+                                {
+                                    Id = s.Id,
+                                    SongNumber = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
+                                    Title = s.Title,
+                                    WrittenBy = s.WrittenBy,
+                                    CategoryName = c != null ? c.Name : null,
+                                    SongBookTitle = sb != null ? sb.Title : null,
+                                    AlbumTitle = al != null ? al.Title : null,
+                                    ArtistName = ar != null ? ar.Name : null,
+                                    Rating = s.Rating,
+                                    CreatedBy = s.CreatedBy,
+                                };
+
+                projected = ApplySongListOrdering(projected, query.SortBy, query.SortDir);
+
+                var page = await projected.ToPaginatedResultAsync(offset, limit);
 
                 return ServiceResult<PaginationDetails<SongListItemDto>>.Success(page);
             }
@@ -1415,65 +1438,32 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
-        public async Task<ServiceResult<PaginationDetails<SongListItemDto>>> SearchSongListAsync(string? keywords, int offset, int limit)
+        private static IQueryable<SongListItemDto> ApplySongListOrdering(
+            IQueryable<SongListItemDto> source,
+            SongListSortField? sortBy,
+            SortDirection dir)
         {
-            try
+            var descending = dir == SortDirection.Desc;
+
+            return sortBy switch
             {
-                limit = limit <= 0 ? 10 : limit;
-
-                var baseQuery = _context.Songs.AsQueryable();
-
-                if (!string.IsNullOrWhiteSpace(keywords))
-                {
-                    var kw = keywords.Trim();
-                    if (int.TryParse(kw, out var songNumber))
-                    {
-                        baseQuery = baseQuery.Where(s =>
-                            (s.SongNumber ?? 0) == songNumber ||
-                            EF.Functions.Like(s.Title, $"%{kw}%") ||
-                            (s.Slug != null && EF.Functions.Like(s.Slug, $"%{kw}%")));
-                    }
-                    else
-                    {
-                        baseQuery = baseQuery.Where(s =>
-                            EF.Functions.Like(s.Title, $"%{kw}%") ||
-                            (s.Slug != null && EF.Functions.Like(s.Slug, $"%{kw}%")));
-                    }
-                }
-
-                var query = from s in baseQuery
-                            join c in _context.Categories on s.CategoryId equals c.Id into cg
-                            from c in cg.DefaultIfEmpty()
-                            join sb in _context.SongBooks on s.SongBookId equals sb.Id into sbg
-                            from sb in sbg.DefaultIfEmpty()
-                            join al in _context.Albums on s.AlbumId equals al.Id into alg
-                            from al in alg.DefaultIfEmpty()
-                            join ar in _context.Artists on s.ArtistId equals ar.Id into arg
-                            from ar in arg.DefaultIfEmpty()
-                            orderby s.SongNumber, s.Rating descending
-                            select new SongListItemDto
-                            {
-                                Id = s.Id,
-                                SongNumber = s.SongNumber.HasValue && s.SongNumber.Value > 0 ? s.SongNumber.Value : 0,
-                                Title = s.Title,
-                                WrittenBy = s.WrittenBy,
-                                CategoryName = c != null ? c.Name : null,
-                                SongBookTitle = sb != null ? sb.Title : null,
-                                AlbumTitle = al != null ? al.Title : null,
-                                ArtistName = ar != null ? ar.Name : null,
-                                Rating = s.Rating,
-                                CreatedBy = s.CreatedBy,
-                            };
-
-                var page = await query.ToPaginatedResultAsync(offset, limit);
-
-                return ServiceResult<PaginationDetails<SongListItemDto>>.Success(page);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in SearchSongListAsync");
-                return ServiceResult<PaginationDetails<SongListItemDto>>.Failure(ex);
-            }
+                SongListSortField.Title => descending
+                    ? source.OrderByDescending(x => x.Title)
+                    : source.OrderBy(x => x.Title),
+                SongListSortField.Rating => descending
+                    ? source.OrderByDescending(x => x.Rating).ThenBy(x => x.SongNumber)
+                    : source.OrderBy(x => x.Rating).ThenBy(x => x.SongNumber),
+                SongListSortField.Category => descending
+                    ? source.OrderByDescending(x => x.CategoryName).ThenBy(x => x.SongNumber)
+                    : source.OrderBy(x => x.CategoryName).ThenBy(x => x.SongNumber),
+                SongListSortField.Artist => descending
+                    ? source.OrderByDescending(x => x.ArtistName ?? x.WrittenBy).ThenBy(x => x.SongNumber)
+                    : source.OrderBy(x => x.ArtistName ?? x.WrittenBy).ThenBy(x => x.SongNumber),
+                SongListSortField.SongNumber => descending
+                    ? source.OrderByDescending(x => x.SongNumber).ThenByDescending(x => x.Rating)
+                    : source.OrderBy(x => x.SongNumber).ThenByDescending(x => x.Rating),
+                _ => source.OrderBy(x => x.SongNumber).ThenByDescending(x => x.Rating),
+            };
         }
 
         public async Task<ServiceResult<PaginationDetails<SongListItemDto>>> GetFavoriteSongListAsync(string? userId = null, int? offset = 0, int? limit = 10)
