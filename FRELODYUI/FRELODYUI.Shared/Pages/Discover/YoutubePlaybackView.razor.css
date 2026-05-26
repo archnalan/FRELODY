@@ -1,0 +1,147 @@
+/* ── Wrapper: mobile stacked, desktop grid ── */
+.pv-wrap {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Player ── */
+.pv-player-wrap {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    overflow: hidden;
+    border-radius: var(--k-radius-md) var(--k-radius-md) 0 0;
+    flex-shrink: 0;
+}
+
+/* The mount div and the YT iframe it becomes */
+.pv-player-wrap > div,
+.pv-player-wrap iframe {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+}
+
+/* ── Right column ── */
+.pv-side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-4);
+    padding: var(--k-space-4);
+}
+
+/* ── Metadata chips ── */
+.pv-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--k-space-2);
+}
+
+.pv-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: var(--k-radius-pill);
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+    font-size: var(--k-font-size-xs);
+    font-weight: 600;
+    border: 1px solid rgba(79, 70, 229, 0.15);
+}
+
+[data-bs-theme="dark"] .pv-chip {
+    border-color: rgba(129, 140, 248, 0.2);
+}
+
+/* ── Beat measure strip ── */
+.pv-beat-strip {
+    display: flex;
+    gap: var(--k-space-3);
+    align-items: center;
+}
+
+.pv-beat-dot {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    background: var(--k-border-strong);
+    transition:
+        background var(--k-transition-beat),
+        transform var(--k-transition-beat);
+    flex-shrink: 0;
+}
+
+.pv-beat-dot--active {
+    background: var(--k-beat-pulse);
+    transform: scale(1.5);
+}
+
+/* ── Actions ── */
+.pv-actions {
+    display: flex;
+    gap: var(--k-space-2);
+    flex-wrap: wrap;
+    padding: 0 var(--k-space-4) var(--k-space-4);
+}
+
+.pv-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 1.1rem;
+    border-radius: var(--k-radius-pill);
+    font-size: var(--k-font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+        background var(--k-transition-fast),
+        border-color var(--k-transition-fast),
+        color var(--k-transition-fast),
+        transform var(--k-transition-fast);
+}
+
+.pv-btn--ghost {
+    background: transparent;
+    border: 1px solid var(--k-border);
+    color: var(--k-text-muted);
+}
+
+.pv-btn--ghost:hover {
+    border-color: var(--k-accent);
+    color: var(--k-accent);
+    background: var(--k-accent-soft);
+    transform: translateY(-1px);
+}
+
+/* ── Desktop: player left, side column right ── */
+@media (min-width: 720px) {
+    .pv-wrap {
+        display: grid;
+        grid-template-columns: 3fr 2fr;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+            "player side"
+            "actions actions";
+        gap: var(--k-space-4);
+        align-items: start;
+    }
+
+    .pv-player-wrap {
+        grid-area: player;
+        border-radius: var(--k-radius-md);
+        aspect-ratio: 16 / 9;
+    }
+
+    .pv-side {
+        grid-area: side;
+        padding: 0;
+    }
+
+    .pv-actions {
+        grid-area: actions;
+        padding: 0 0 var(--k-space-4);
+    }
+}

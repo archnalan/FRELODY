@@ -1,0 +1,213 @@
+@using FRELODYUI.Shared.Pages.Discover
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="pv-wrap">
+
+    <!-- Player — replaced by YT iframe after init -->
+    <div class="pv-player-wrap">
+        <YoutubePlayerMount Id="@_playerId" />
+    </div>
+
+    <!-- Right column: meta + beat + chords -->
+    <div class="pv-side">
+
+        @if (!string.IsNullOrEmpty(Transcription.KeySignature) ||
+             Transcription.Bpm is not null ||
+             !string.IsNullOrEmpty(Transcription.TimeSignature))
+        {
+            <div class="pv-meta">
+                @if (!string.IsNullOrEmpty(Transcription.KeySignature))
+                {
+                    <span class="pv-chip">
+                        <i class="bi bi-music-note-beamed"></i>
+                        @Transcription.KeySignature
+                    </span>
+                }
+                @if (Transcription.Bpm is not null)
+                {
+                    <span class="pv-chip">
+                        <i class="bi bi-activity"></i>
+                        @Transcription.Bpm.Value.ToString("F1") BPM
+                    </span>
+                }
+                @if (!string.IsNullOrEmpty(Transcription.TimeSignature))
+                {
+                    <span class="pv-chip">
+                        <i class="bi bi-music-note-list"></i>
+                        @Transcription.TimeSignature
+                    </span>
+                }
+            </div>
+        }
+
+        @if (Transcription.Beats.Count > 0)
+        {
+            <div class="pv-beat-strip" aria-hidden="true">
+                @for (int i = 0; i < _timeSigNumerator; i++)
+                {
+                    var pos = i;
+                    <div class="pv-beat-dot @(pos == _beatInMeasure && _isPlaying ? "pv-beat-dot--active" : "")"></div>
+                }
+            </div>
+        }
+
+        @if (Transcription.SyncedChords.Count > 0)
+        {
+            <YoutubeChordGrid
+                SyncedChords="Transcription.SyncedChords"
+                ActiveChord="@_activeChordName"
+                TimeSignature="Transcription.TimeSignature"
+                OnSeekTo="SeekToAsync" />
+        }
+
+    </div>
+
+    <!-- Actions — full width below both columns -->
+    <div class="pv-actions">
+        @if (OnReanalyze.HasDelegate)
+        {
+            <button type="button" class="pv-btn pv-btn--ghost" @onclick="() => OnReanalyze.InvokeAsync()">
+                <i class="bi bi-arrow-clockwise"></i>
+                Re-analyze
+            </button>
+        }
+        @if (Video is not null)
+        {
+            <a class="pv-btn pv-btn--ghost" href="@Video.YouTubeUrl" target="_blank" rel="noopener noreferrer">
+                <i class="bi bi-youtube"></i>
+                Open on YouTube
+            </a>
+        }
+    </div>
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public YouTubeTranscriptionDto Transcription { get; set; } = default!;
+    [Parameter] public YouTubeVideoDto? Video { get; set; }
+    [Parameter] public EventCallback OnReanalyze { get; set; }
+
+    private string _playerId => $"yt-player-{Transcription.VideoId}";
+
+    private DotNetObjectReference<YoutubePlaybackView>? _dotNetRef;
+    private PeriodicTimer? _syncTimer;
+    private CancellationTokenSource? _cts;
+
+    private int _activeSyncedIndex = -1;
+    private int _activeBeatIndex = -1;
+    private bool _isPlaying;
+
+    private string? _activeChordName =>
+        _activeSyncedIndex >= 0 && _activeSyncedIndex < Transcription.SyncedChords.Count
+            ? Transcription.SyncedChords[_activeSyncedIndex].Chord
+            : null;
+
+    private int _timeSigNumerator = 4;
+    private int _beatInMeasure => _activeBeatIndex >= 0 ? _activeBeatIndex % _timeSigNumerator : 0;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Transcription.TimeSignature))
+        {
+            var slash = Transcription.TimeSignature.IndexOf('/');
+            if (slash > 0 && int.TryParse(Transcription.TimeSignature[..slash], out var n) && n is >= 2 and <= 8)
+                _timeSigNumerator = n;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("ytPlayer.initialize", Transcription.VideoId, _playerId, _dotNetRef);
+    }
+
+    [JSInvokable]
+    public void OnPlayerReady() { /* waiting for user to press play */ }
+
+    [JSInvokable]
+    public void OnPlayerStateChange(int state)
+    {
+        _isPlaying = state == 1;
+        if (_isPlaying)
+            StartSyncLoop();
+        else
+            StopSyncLoop();
+    }
+
+    private void StartSyncLoop()
+    {
+        StopSyncLoop();
+        _cts = new CancellationTokenSource();
+        _syncTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+        _ = SyncLoopAsync(_cts.Token);
+    }
+
+    private void StopSyncLoop()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
+        _syncTimer?.Dispose();
+        _syncTimer = null;
+    }
+
+    private async Task SyncLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (await _syncTimer!.WaitForNextTickAsync(ct))
+            {
+                var t = (float)await JS.InvokeAsync<double>("ytPlayer.getCurrentTime");
+                var si = FindActiveSynced(t);
+                var bi = FindActiveBeat(t);
+                if (si != _activeSyncedIndex || bi != _activeBeatIndex)
+                {
+                    _activeSyncedIndex = si;
+                    _activeBeatIndex = bi;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private int FindActiveSynced(float t)
+    {
+        var list = Transcription.SyncedChords;
+        if (list.Count == 0 || t < list[0].Time) return -1;
+        int lo = 0, hi = list.Count - 1;
+        while (lo < hi)
+        {
+            int mid = (lo + hi + 1) / 2;
+            if (list[mid].Time <= t) lo = mid;
+            else hi = mid - 1;
+        }
+        return lo;
+    }
+
+    private int FindActiveBeat(float t)
+    {
+        var list = Transcription.Beats;
+        if (list.Count == 0 || t < list[0]) return -1;
+        int lo = 0, hi = list.Count - 1;
+        while (lo < hi)
+        {
+            int mid = (lo + hi + 1) / 2;
+            if (list[mid] <= t) lo = mid;
+            else hi = mid - 1;
+        }
+        return lo;
+    }
+
+    private async Task SeekToAsync(float seconds)
+        => await JS.InvokeVoidAsync("ytPlayer.seekTo", seconds);
+
+    public async ValueTask DisposeAsync()
+    {
+        StopSyncLoop();
+        try { await JS.InvokeVoidAsync("ytPlayer.destroy"); } catch { }
+        _dotNetRef?.Dispose();
+    }
+}

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.9.34607.119
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11811.120 insiders
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FRELODYAPIs", "FRELODYAPIs\FRELODYAPIs.csproj", "{62C513B5-3F1D-4E6C-8FD7-DC976DA4533D}"
 EndProject

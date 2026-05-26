@@ -1,8 +1,11 @@
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Models;
 using FRELODYSHRD.Dtos;
+using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYAPIs.Services.ChordMini;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using YoutubeExplode;
 using YoutubeExplode.Common;
 using YoutubeExplode.Search;
@@ -15,11 +18,13 @@ namespace FRELODYAPIs.Controllers
     {
         private readonly SongDbContext _db;
         private readonly YoutubeClient _youtube;
+        private readonly IChordMiniService _chordMini;
 
-        public YouTubeController(SongDbContext db)
+        public YouTubeController(SongDbContext db, IChordMiniService chordMini)
         {
             _db = db;
             _youtube = new YoutubeClient();
+            _chordMini = chordMini;
         }
 
         [HttpGet("search")]
@@ -91,6 +96,93 @@ namespace FRELODYAPIs.Controllers
             }
         }
 
+        [HttpPost("analyze")]
+        [ProducesResponseType(typeof(YouTubeTranscriptionDto), 200)]
+        public async Task<ActionResult<YouTubeTranscriptionDto>> Analyze(
+            [FromBody] YouTubeAnalyzeRequest request,
+            CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(request.VideoId))
+                return BadRequest(new { message = "videoId is required." });
+
+            // Return cached result when not forcing a refresh
+            if (!request.ForceRefresh)
+            {
+                var cached = await _db.YouTubeTranscriptions
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t =>
+                        t.VideoId == request.VideoId &&
+                        t.BeatModel == request.BeatModel &&
+                        t.ChordModel == request.ChordModel &&
+                        t.ChordDict == request.ChordDict,
+                        ct);
+
+                if (cached is not null)
+                    return Ok(MapTranscriptionToDto(cached));
+            }
+
+            // Run full analysis via ChordMini sidecar
+            YouTubeTranscriptionDto result;
+            try
+            {
+                result = await _chordMini.AnalyzeAsync(request, ct);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(502, new { message = $"ChordMini analysis failed: {ex.Message}" });
+            }
+
+            // Persist result (upsert by unique index)
+            var existing = await _db.YouTubeTranscriptions.FirstOrDefaultAsync(t =>
+                t.VideoId == request.VideoId &&
+                t.BeatModel == request.BeatModel &&
+                t.ChordModel == request.ChordModel &&
+                t.ChordDict == request.ChordDict, ct);
+
+            if (existing is null)
+            {
+                existing = new YouTubeTranscription { VideoId = request.VideoId };
+                _db.YouTubeTranscriptions.Add(existing);
+            }
+
+            existing.BeatModel = request.BeatModel;
+            existing.ChordModel = request.ChordModel;
+            existing.ChordDict = request.ChordDict;
+            existing.BeatsJson = JsonSerializer.Serialize(result.Beats);
+            existing.ChordsJson = JsonSerializer.Serialize(result.Chords);
+            existing.SyncedChordsJson = JsonSerializer.Serialize(result.SyncedChords);
+            existing.Bpm = result.Bpm;
+            existing.TimeSignature = result.TimeSignature;
+            existing.TotalProcessingSeconds = result.TotalProcessingSeconds;
+            existing.CreatedAt = DateTimeOffset.UtcNow;
+
+            await _db.SaveChangesAsync(ct);
+            result.Id = existing.Id;
+            return Ok(result);
+        }
+
+        [HttpGet("transcriptions/{videoId}")]
+        [ProducesResponseType(typeof(YouTubeTranscriptionDto), 200)]
+        public async Task<ActionResult<YouTubeTranscriptionDto>> GetTranscription(
+            string videoId,
+            [FromQuery] string beatModel = "beat-transformer",
+            [FromQuery] string chordModel = "chord-cnn-lstm",
+            [FromQuery] string chordDict = "full")
+        {
+            var t = await _db.YouTubeTranscriptions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t =>
+                    t.VideoId == videoId &&
+                    t.BeatModel == beatModel &&
+                    t.ChordModel == chordModel &&
+                    t.ChordDict == chordDict);
+
+            if (t is null)
+                return NotFound(new { message = $"No transcription found for '{videoId}'." });
+
+            return Ok(MapTranscriptionToDto(t));
+        }
+
         private async Task<YouTubeVideoDto> UpsertAndMapAsync(
             string videoId, string title, string? channel, string? thumbnail, int durationSeconds)
         {
@@ -119,6 +211,23 @@ namespace FRELODYAPIs.Controllers
             ChannelTitle = v.ChannelTitle,
             ThumbnailUrl = v.ThumbnailUrl,
             DurationSeconds = v.DurationSeconds
+        };
+
+        private static YouTubeTranscriptionDto MapTranscriptionToDto(YouTubeTranscription t) => new()
+        {
+            Id = t.Id,
+            VideoId = t.VideoId,
+            BeatModel = t.BeatModel,
+            ChordModel = t.ChordModel,
+            ChordDict = t.ChordDict,
+            Beats = JsonSerializer.Deserialize<List<float>>(t.BeatsJson) ?? [],
+            Chords = JsonSerializer.Deserialize<List<ChordEventDto>>(t.ChordsJson) ?? [],
+            SyncedChords = JsonSerializer.Deserialize<List<SyncedChordDto>>(t.SyncedChordsJson) ?? [],
+            Bpm = t.Bpm,
+            TimeSignature = t.TimeSignature,
+            KeySignature = t.KeySignature,
+            TotalProcessingSeconds = t.TotalProcessingSeconds,
+            CreatedAt = t.CreatedAt
         };
     }
 }

@@ -294,6 +294,11 @@ h1:focus {
     --k-transition-fast: 120ms ease;
     --k-transition: 160ms ease;
     --k-transition-slow: 220ms ease-out;
+    /* Beat/chord playback surfaces */
+    --k-chord-active-bg: #eef2ff;
+    --k-chord-active-border: #4f46e5;
+    --k-beat-pulse: #3b82f6;
+    --k-transition-beat: 80ms ease;
     /* Aspect ratios used by music surfaces (chord chart, ghost skeletons) */
     --k-aspect-chord: 4 / 5;
     /* Typography */
@@ -364,6 +369,10 @@ h1:focus {
     --k-skill-advanced-text: #fdba74;
     --k-skill-expert-bg: rgba(220, 38, 38, 0.22);
     --k-skill-expert-text: #fca5a5;
+    /* Beat/chord playback surfaces — dark variants */
+    --k-chord-active-bg: #1e1b4b;
+    --k-chord-active-border: #818cf8;
+    --k-beat-pulse: #60a5fa;
 }
 
 /* Chord chart SVGs: finger circles + barre rects use fill="currentColor" so they

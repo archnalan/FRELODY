@@ -1,0 +1,9 @@
+<div id="@Id"></div>
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
+
+    // Never re-render — the YouTube IFrame API replaces this div with an iframe.
+    // Allowing Blazor to reconcile the DOM here would destroy the embedded player.
+    protected override bool ShouldRender() => false;
+}

@@ -137,6 +137,13 @@ builder.Services.AddHttpClient("NvidiaAI", client =>
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", nvidiaKey);
     client.Timeout = TimeSpan.FromSeconds(60);
 });
+builder.Services.AddHttpClient("ChordMini", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ChordMini__BaseUrl"] ?? "http://localhost:5001");
+    client.Timeout = TimeSpan.FromMinutes(10);
+});
+builder.Services.AddScoped<FRELODYAPIs.Services.ChordMini.IChordMiniService,
+                            FRELODYAPIs.Services.ChordMini.ChordMiniService>();
 builder.Services.AddIdentity<User, IdentityRole>
             (options =>
             {

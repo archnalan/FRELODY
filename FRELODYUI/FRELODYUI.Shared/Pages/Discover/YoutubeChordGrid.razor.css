@@ -1,0 +1,42 @@
+.ycg-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--ycg-cols, 4), 1fr);
+    gap: var(--k-space-2);
+}
+
+.ycg-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.65rem var(--k-space-2);
+    border-radius: var(--k-radius-sm);
+    border: 1.5px solid var(--k-border);
+    background: var(--k-bg-surface);
+    color: var(--k-text);
+    font-size: var(--k-font-size-sm);
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    min-height: 2.75rem;
+    transition:
+        border-color var(--k-transition-beat),
+        background var(--k-transition-beat),
+        color var(--k-transition-beat),
+        box-shadow var(--k-transition-beat),
+        transform var(--k-transition-fast);
+}
+
+.ycg-cell:hover:not(.ycg-cell--active) {
+    border-color: var(--k-accent);
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+    transform: translateY(-1px);
+}
+
+.ycg-cell--active {
+    background: var(--k-chord-active-bg);
+    border-color: var(--k-chord-active-border);
+    color: var(--k-chord-active-border);
+    box-shadow: 0 0 0 2px var(--k-chord-active-border);
+    transform: scale(1.04);
+}

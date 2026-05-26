@@ -1,0 +1,41 @@
+<div class="ycg-grid" style="--ycg-cols: @_cols">
+    @foreach (var chord in _uniqueChords)
+    {
+        <button type="button"
+                class="ycg-cell @(chord.Name == ActiveChord ? "ycg-cell--active" : "")"
+                @onclick="() => OnSeekTo.InvokeAsync(chord.FirstTime)"
+                title="Jump to @(chord.Name) at @(chord.FirstTime.ToString("F1"))s">
+            @chord.Name
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public List<SyncedChordDto> SyncedChords { get; set; } = [];
+    [Parameter] public string? ActiveChord { get; set; }
+    [Parameter] public string? TimeSignature { get; set; }
+    [Parameter] public EventCallback<float> OnSeekTo { get; set; }
+
+    private record UniqueChord(string Name, float FirstTime);
+    private List<UniqueChord> _uniqueChords = [];
+    private int _cols = 4;
+
+    protected override void OnParametersSet()
+    {
+        _cols = 4;
+        if (!string.IsNullOrEmpty(TimeSignature))
+        {
+            var slash = TimeSignature.IndexOf('/');
+            if (slash > 0 && int.TryParse(TimeSignature[..slash], out var n) && n is >= 2 and <= 8)
+                _cols = n;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        _uniqueChords = [];
+        foreach (var sc in SyncedChords)
+        {
+            if (seen.Add(sc.Chord))
+                _uniqueChords.Add(new UniqueChord(sc.Chord, sc.Time));
+        }
+    }
+}

@@ -1,46 +1,13 @@
 {
   "permissions": {
+    "ask": [
+      "Bash(git *)",
+      "PowerShell(git *)"
+    ],
+    "defaultMode": "bypassPermissions",
     "allow": [
-      "PowerShell(ls *)",
-      "Bash(dotnet build *)",
-      "Bash(dotnet ef *)",
-      "Bash(git add *)",
-      "Bash(git commit -m ' *)",
-      "Bash(git fetch *)",
-      "Bash(git merge *)",
-      "Bash(git push *)",
-      "Bash(dotnet sln *)",
-      "Bash(git mv *)",
-      "Bash(rm -rf Ticketing/Ticketing.Api/bin Ticketing/Ticketing.Api/obj Ticketing/Ticketing.Web/bin Ticketing/Ticketing.Web/obj)",
-      "Bash(dotnet new *)",
-      "Bash(git branch *)",
-      "Bash(git archive *)",
-      "Bash(tar -xC ..)",
-      "Bash(git checkout *)",
-      "Bash(git stash *)",
-      "WebSearch",
-      "WebFetch(domain:github.com)",
-      "WebFetch(domain:omnibrain.github.io)",
-      "WebFetch(domain:appliedguitartheory.com)",
-      "WebFetch(domain:www.fingerstyleguitar.rocks)",
-      "WebFetch(domain:www.guitarmusictheory.com)",
-      "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(dotnet run *)",
-      "WebFetch(domain:api.github.com)",
-      "Bash(pwsh -NoProfile -File tools/Update-ChordSource.ps1)",
-      "WebFetch(domain:apexcharts.com)",
-      "WebFetch(domain:www.npmjs.com)",
-      "WebFetch(domain:www.apexcharts.com)",
-      "Bash(dotnet restore *)",
-      "Bash(ildasm -text Microsoft.AspNetCore.Components.QuickGrid.dll)",
-      "Bash(dotnet --list-runtimes)",
-      "Skill(update-config)",
-      "Bash(Get-ChildItem -Path \"D:\\\\PROGRAMMER\\\\TYPESCRIPT\\\\ChordMiniApp\" -Recurse -Directory -Force)",
-      "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(xargs ls -1)",
-      "Bash(not exist *)",
-      "PowerShell(Move-Item *)",
-      "Bash(Get-ChildItem *)"
+      "Bash(Test-Path \"D:\\\\PROGRAMMER\\\\.NET\\\\Projects 26\\\\FRELODY\\\\FRELODYUI\\\\FRELODYUI.Web\\\\wwwroot\\\\index.html\")",
+      "Bash(Test-Path \"D:\\\\PROGRAMMER\\\\.NET\\\\Projects 26\\\\FRELODY\\\\FRELODYUI\\\\FRELODYUI.Web.Client\\\\wwwroot\\\\index.html\")"
     ]
   },
   "worktree": {

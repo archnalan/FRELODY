@@ -507,6 +507,8 @@ These go after `--k-transition-slow` in the existing token block (`app.css` arou
 
 ## Reference — ChordMiniApp Source Locations
 
+> **READ-ONLY reference.** ChordMiniApp (`D:\PROGRAMMER\TYPESCRIPT\ChordMiniApp`) is a separate project kept alongside FRELODY solely so we can read its source without going to GitHub. **Never write to, commit in, or modify any file under that path.** It exists here for reference only.
+
 For porting guidance, key ChordMiniApp files at `D:\PROGRAMMER\TYPESCRIPT\ChordMiniApp`:
 
 | What | ChordMiniApp File |
