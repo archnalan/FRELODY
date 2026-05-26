@@ -92,7 +92,7 @@ services:
       OpenTelemetry__EnableConsole: "false"
       OpenTelemetry__Headers: ""
 
-      ChordMini__BaseUrl: "http://chordmini-backend:5001"
+      ChordMini__BaseUrl: "http://chordmini-backend:8080"
 
     depends_on:
       sqlserver:
@@ -184,7 +184,7 @@ services:
     platform: linux/amd64
     container_name: frelody-chordmini
     ports:
-      - "5001:5001"
+      - "5001:8080"
     environment:
       FLASK_ENV: production
       MAX_CONTENT_LENGTH_MB: "150"
