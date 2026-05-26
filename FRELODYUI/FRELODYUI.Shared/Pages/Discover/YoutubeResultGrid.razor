@@ -1,0 +1,56 @@
+@using FRELODYSHRD.Dtos
+
+<div class="yt-grid">
+    @foreach (var video in Videos)
+    {
+        var captured = video;
+        <div class="yt-card" @onclick="() => OnVideoSelected.InvokeAsync(captured)"
+             role="button" tabindex="0"
+             @onkeydown="(e) => HandleKeyDown(e, captured)"
+             title="@video.Title">
+            <div class="yt-card__thumb-wrap">
+                @if (!string.IsNullOrEmpty(video.ThumbnailUrl))
+                {
+                    <img src="@video.ThumbnailUrl" alt="" class="yt-card__thumb" loading="lazy" />
+                }
+                else
+                {
+                    <div class="yt-card__thumb-empty">
+                        <i class="bi bi-play-circle-fill" aria-hidden="true"></i>
+                    </div>
+                }
+                <span class="yt-card__dur">@FormatDuration(video.DurationSeconds)</span>
+                <div class="yt-card__play-overlay" aria-hidden="true">
+                    <i class="bi bi-play-fill"></i>
+                </div>
+            </div>
+            <div class="yt-card__body">
+                <p class="yt-card__title">@video.Title</p>
+                <p class="yt-card__channel">
+                    <i class="bi bi-person-circle" aria-hidden="true"></i>
+                    @video.ChannelTitle
+                </p>
+                <span class="yt-card__action">Analyze &amp; Play <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public List<YouTubeVideoDto> Videos { get; set; } = [];
+    [Parameter] public EventCallback<YouTubeVideoDto> OnVideoSelected { get; set; }
+
+    private Task HandleKeyDown(KeyboardEventArgs e, YouTubeVideoDto video)
+    {
+        if (e.Key == "Enter" || e.Key == " ") return OnVideoSelected.InvokeAsync(video);
+        return Task.CompletedTask;
+    }
+
+    private static string FormatDuration(int totalSeconds)
+    {
+        var ts = TimeSpan.FromSeconds(totalSeconds);
+        return totalSeconds >= 3600
+            ? ts.ToString(@"h\:mm\:ss")
+            : ts.ToString(@"m\:ss");
+    }
+}

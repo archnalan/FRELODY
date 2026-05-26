@@ -162,6 +162,10 @@ builder.Services.AddRefitClient<IWebSongExtractionApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddRefitClient<IYouTubeApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -1,0 +1,363 @@
+/* ── Page shell ─────────────────────────────────────────────── */
+.dc-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+/* Propagate grid layout into child components */
+::deep .yt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--k-space-3);
+}
+
+@media (max-width: 480px) {
+    ::deep .yt-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Hero ───────────────────────────────────────────────────── */
+.dc-hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem var(--k-space-4) 3rem;
+    text-align: center;
+    overflow: hidden;
+    transition: padding var(--k-transition-slow);
+}
+
+.dc-hero--compact {
+    padding: 1.75rem var(--k-space-4) 1.5rem;
+}
+
+/* Radial accent glow */
+.dc-hero-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+        ellipse 70% 55% at 50% 0%,
+        var(--k-accent-soft) 0%,
+        transparent 75%
+    );
+    opacity: 0.9;
+}
+
+[data-bs-theme="dark"] .dc-hero-glow {
+    opacity: 0.6;
+}
+
+.dc-hero-inner {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--k-space-4);
+}
+
+/* YouTube badge */
+.dc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.85rem;
+    border-radius: var(--k-radius-pill);
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+    font-size: var(--k-font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    border: 1px solid rgba(79, 70, 229, 0.18);
+}
+
+[data-bs-theme="dark"] .dc-badge {
+    border-color: rgba(129, 140, 248, 0.25);
+}
+
+.dc-badge .bi-youtube {
+    color: #ff0000;
+    font-size: 0.85rem;
+}
+
+/* Heading */
+.dc-heading {
+    font-size: clamp(1.8rem, 5vw, 2.75rem);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.15;
+}
+
+/* Subheading */
+.dc-subheading {
+    font-size: var(--k-font-size-sm);
+    color: var(--text-secondary);
+    margin: calc(-1 * var(--k-space-2)) 0 0;
+    max-width: 440px;
+    line-height: 1.6;
+}
+
+/* ── Search bar ─────────────────────────────────────────────── */
+.dc-search-form {
+    width: 100%;
+}
+
+.dc-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-2);
+    background: var(--input-bg);
+    border: 1.5px solid var(--input-border);
+    border-radius: var(--k-radius-pill);
+    padding: var(--k-space-2) var(--k-space-2) var(--k-space-2) var(--k-space-4);
+    box-shadow: var(--k-shadow-sm), 0 0 0 0 transparent;
+    transition:
+        border-color var(--k-transition-fast),
+        box-shadow var(--k-transition-fast);
+}
+
+.dc-search-wrap--focused {
+    border-color: var(--k-accent);
+    box-shadow:
+        var(--k-shadow-sm),
+        0 0 0 3px var(--k-accent-soft);
+}
+
+.dc-search-icon {
+    flex-shrink: 0;
+    font-size: 1rem;
+    color: var(--k-text-muted);
+    transition: color var(--k-transition-fast);
+}
+
+.dc-search-wrap--focused .dc-search-icon {
+    color: var(--k-accent);
+}
+
+.dc-search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 1rem;
+    padding: 0.45rem 0;
+    outline: none;
+    line-height: 1.4;
+}
+
+.dc-search-input::placeholder {
+    color: var(--k-text-subtle);
+}
+
+.dc-search-input::-webkit-search-cancel-button {
+    cursor: pointer;
+    opacity: 0.45;
+}
+
+/* Submit button — accent pill */
+.dc-search-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: none;
+    border-radius: 50%;
+    background: var(--k-accent);
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition:
+        background var(--k-transition-fast),
+        transform var(--k-transition-fast),
+        opacity var(--k-transition-fast);
+}
+
+.dc-search-btn:hover:not(:disabled) {
+    background: var(--k-accent-hover);
+    transform: scale(1.06);
+}
+
+.dc-search-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* Spinner (replaces button during load) */
+.dc-search-spinner {
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dc-spinner-ring {
+    display: block;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--k-accent-soft);
+    border-top-color: var(--k-accent);
+    border-radius: 50%;
+    animation: dc-spin 0.7s linear infinite;
+}
+
+@keyframes dc-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Suggestion chips ───────────────────────────────────────── */
+.dc-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--k-space-2);
+    margin-top: calc(-1 * var(--k-space-2));
+}
+
+.dc-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.85rem;
+    border-radius: var(--k-radius-pill);
+    border: 1px solid var(--k-border);
+    background: var(--k-bg-surface);
+    color: var(--k-text-muted);
+    font-size: var(--k-font-size-xs);
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+        border-color var(--k-transition-fast),
+        color var(--k-transition-fast),
+        background var(--k-transition-fast);
+}
+
+.dc-chip:hover {
+    border-color: var(--k-accent);
+    color: var(--k-accent);
+    background: var(--k-accent-soft);
+}
+
+/* ── Results section ────────────────────────────────────────── */
+.dc-results-section {
+    flex: 1;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 var(--k-space-4) var(--k-space-6);
+}
+
+.dc-results-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-2);
+    margin-bottom: var(--k-space-4);
+    font-size: var(--k-font-size-xs);
+    color: var(--k-text-subtle);
+}
+
+.dc-results-query {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* ── Alert ──────────────────────────────────────────────────── */
+.dc-alert {
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-3);
+    padding: var(--k-space-3) var(--k-space-4);
+    border-radius: var(--k-radius-md);
+    background: var(--k-danger-soft);
+    color: var(--k-danger-soft-text);
+    font-size: var(--k-font-size-sm);
+    margin-bottom: var(--k-space-4);
+    border: 1px solid rgba(220, 38, 38, 0.18);
+}
+
+.dc-alert-retry {
+    margin-left: auto;
+    background: none;
+    border: 1px solid currentColor;
+    border-radius: var(--k-radius-pill);
+    color: inherit;
+    font-size: var(--k-font-size-xs);
+    font-weight: 600;
+    padding: 0.2rem 0.7rem;
+    cursor: pointer;
+    transition: opacity var(--k-transition-fast);
+}
+
+.dc-alert-retry:hover { opacity: 0.7; }
+
+/* ── Empty / prompt states ──────────────────────────────────── */
+.dc-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 3rem var(--k-space-4);
+    gap: var(--k-space-3);
+}
+
+.dc-state-icon-wrap {
+    width: 3.5rem;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--k-accent-soft);
+    color: var(--k-accent);
+    font-size: 1.5rem;
+}
+
+.dc-state--empty .dc-state-icon-wrap {
+    background: var(--k-bg-hover);
+    color: var(--k-text-subtle);
+}
+
+.dc-state-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.dc-state-sub {
+    font-size: var(--k-font-size-sm);
+    color: var(--k-text-subtle);
+    margin: 0;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .dc-hero {
+        padding: 2.5rem var(--k-space-3) 2rem;
+    }
+
+    .dc-hero--compact {
+        padding: 1.25rem var(--k-space-3) 1rem;
+    }
+
+    .dc-results-section {
+        padding: 0 var(--k-space-3) var(--k-space-5);
+    }
+
+    .dc-chips {
+        gap: var(--k-space-2);
+    }
+}

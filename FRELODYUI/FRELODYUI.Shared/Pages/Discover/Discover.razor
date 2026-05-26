@@ -1,0 +1,192 @@
+@page "/discover"
+@using FRELODYSHRD.Dtos
+@using FRELODYUI.Shared.Pages.Discover
+@using FRELODYUI.Shared.Pages.PlaceHolders
+@inject IYouTubeApi _youtubeApi
+@inject NavigationManager _nav
+
+<PageTitle>Discover — FRELODY</PageTitle>
+
+<div class="dc-page">
+
+    @* ── Hero ─────────────────────────────────────────────────────── *@
+    <section class="dc-hero @(_hasSearched ? "dc-hero--compact" : "")">
+        <div class="dc-hero-glow" aria-hidden="true"></div>
+
+        <div class="dc-hero-inner">
+            @if (!_hasSearched)
+            {
+                <span class="dc-badge">
+                    <i class="bi bi-youtube" aria-hidden="true"></i> YouTube
+                </span>
+                <h1 class="dc-heading">
+                    Discover &amp; Play Along
+                </h1>
+                <p class="dc-subheading">
+                    Search any song on YouTube and get synchronized chords and beat analysis.
+                </p>
+            }
+
+            @* ── Search bar ───────────────────────────────────────── *@
+            <form class="dc-search-form" @onsubmit="HandleSearch" @onsubmit:preventDefault>
+                <div class="dc-search-wrap @(_focused ? "dc-search-wrap--focused" : "")">
+                    <i class="bi bi-search dc-search-icon" aria-hidden="true"></i>
+                    <input type="search"
+                           class="dc-search-input"
+                           placeholder="Song title, artist, or YouTube URL…"
+                           @bind="_query"
+                           @bind:event="oninput"
+                           @onfocus="() => _focused = true"
+                           @onblur="() => _focused = false"
+                           @onkeydown="HandleKeyDown"
+                           aria-label="Search YouTube"
+                           autocomplete="off"
+                           spellcheck="false" />
+                    @if (_loading)
+                    {
+                        <span class="dc-search-spinner" role="status" aria-label="Searching">
+                            <span class="dc-spinner-ring"></span>
+                        </span>
+                    }
+                    else
+                    {
+                        <button type="submit"
+                                class="dc-search-btn"
+                                disabled="@(string.IsNullOrWhiteSpace(_query))"
+                                aria-label="Search">
+                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </button>
+                    }
+                </div>
+            </form>
+
+            @* ── Suggestion chips (only on landing) ───────────────── *@
+            @if (!_hasSearched)
+            {
+                <div class="dc-chips" role="group" aria-label="Suggested searches">
+                    @foreach (var suggestion in _suggestions)
+                    {
+                        <button class="dc-chip" type="button" @onclick="() => QuickSearch(suggestion)">
+                            @suggestion
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+
+    @* ── Results area ─────────────────────────────────────────────── *@
+    <section class="dc-results-section">
+
+        @if (_error is not null)
+        {
+            <div class="dc-alert" role="alert">
+                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                <span>@_error</span>
+                <button class="dc-alert-retry" type="button" @onclick="HandleSearch">Retry</button>
+            </div>
+        }
+
+        @if (_loading)
+        {
+            <YoutubeResultPlaceholder Count="8" />
+        }
+        else if (_results is { Count: > 0 })
+        {
+            <div class="dc-results-meta">
+                <span>@_results.Count results</span>
+                <span class="dc-results-query">"@_searchedQuery"</span>
+            </div>
+            <YoutubeResultGrid Videos="_results" OnVideoSelected="OnVideoSelected" />
+        }
+        else if (_hasSearched && _error is null)
+        {
+            <div class="dc-state dc-state--empty">
+                <div class="dc-state-icon-wrap">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                </div>
+                <p class="dc-state-heading">No results found</p>
+                <p class="dc-state-sub">Try a different song title or artist name.</p>
+            </div>
+        }
+        else if (!_hasSearched)
+        {
+            <div class="dc-state dc-state--prompt">
+                <div class="dc-state-icon-wrap">
+                    <i class="bi bi-music-note-beamed" aria-hidden="true"></i>
+                </div>
+                <p class="dc-state-heading">Ready to discover</p>
+                <p class="dc-state-sub">Your search results will appear here.</p>
+            </div>
+        }
+
+    </section>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string? q { get; set; }
+    [SupplyParameterFromQuery] public string? v { get; set; }
+
+    private string _query = string.Empty;
+    private string _searchedQuery = string.Empty;
+    private List<YouTubeVideoDto>? _results;
+    private bool _loading;
+    private bool _hasSearched;
+    private bool _focused;
+    private string? _error;
+
+    private static readonly string[] _suggestions =
+        ["worship songs", "fingerstyle guitar", "Ed Sheeran", "jazz standards", "hillsong"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(v))
+        {
+            _nav.NavigateTo($"/discover/{v}", replace: true);
+            return;
+        }
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            _query = q;
+            await SearchAsync();
+        }
+    }
+
+    private async Task HandleSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_query)) return;
+        await SearchAsync();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await HandleSearch();
+    }
+
+    private async Task QuickSearch(string term)
+    {
+        _query = term;
+        await SearchAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        _loading = true;
+        _error = null;
+        _hasSearched = true;
+        _searchedQuery = _query.Trim();
+        _results = null;
+        StateHasChanged();
+
+        var response = await _youtubeApi.SearchAsync(_searchedQuery, limit: 12);
+        if (response.IsSuccessStatusCode && response.Content is not null)
+            _results = response.Content;
+        else
+            _error = "Search failed. Please try again.";
+
+        _loading = false;
+    }
+
+    private void OnVideoSelected(YouTubeVideoDto video) =>
+        _nav.NavigateTo($"/discover/{video.VideoId}");
+}

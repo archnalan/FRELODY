@@ -33,7 +33,14 @@
       "WebFetch(domain:www.apexcharts.com)",
       "Bash(dotnet restore *)",
       "Bash(ildasm -text Microsoft.AspNetCore.Components.QuickGrid.dll)",
-      "Bash(dotnet --list-runtimes)"
+      "Bash(dotnet --list-runtimes)",
+      "Skill(update-config)",
+      "Bash(Get-ChildItem -Path \"D:\\\\PROGRAMMER\\\\TYPESCRIPT\\\\ChordMiniApp\" -Recurse -Directory -Force)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(xargs ls -1)",
+      "Bash(not exist *)",
+      "PowerShell(Move-Item *)",
+      "Bash(Get-ChildItem *)"
     ]
   },
   "worktree": {

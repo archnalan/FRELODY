@@ -4,8 +4,7 @@ public enum SuggestionSource
 {
     Database,
     Recent,
-    Extracted,
-    YouTube
+    Extracted
 }
 
 public class StudioSuggestion

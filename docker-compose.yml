@@ -92,6 +92,8 @@ services:
       OpenTelemetry__EnableConsole: "false"
       OpenTelemetry__Headers: ""
 
+      ChordMini__BaseUrl: "http://chordmini-backend:5001"
+
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -176,10 +178,28 @@ services:
     networks:
       - frelody-net
 
+  # ── ChordMini Python ML backend ─────────────────────────────
+  chordmini-backend:
+    build:
+      context: D:\PROGRAMMER\TYPESCRIPT\ChordMiniApp\python_backend
+      dockerfile: Dockerfile
+    container_name: frelody-chordmini
+    ports:
+      - "5001:5001"
+    environment:
+      FLASK_ENV: production
+      MAX_CONTENT_LENGTH_MB: "150"
+    volumes:
+      - frelody_media:/app/media
+      - chordmini_models:/app/models
+    networks:
+      - frelody-net
+
 volumes:
   sqlserver_data:
   frelody_media:
   frelody_dp_keys:
+  chordmini_models:
 
 networks:
   frelody-net:

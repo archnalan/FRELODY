@@ -124,6 +124,10 @@ builder.Services.AddRefitClient<IWebSongExtractionApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddRefitClient<IYouTubeApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
 // Add device-specific services used by the FRELODYUI.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 builder.Services.AddSingleton<IApiResponseHandler, ApiResponseHandler>();

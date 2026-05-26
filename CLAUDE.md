@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working Approach
+
+- **Confidence before action** — Do not make any changes until you have 95% confidence in what you need to build. Ask follow-up questions until you reach that confidence.
+- **Subagents for exploration** — Use subagents for any exploration or research. If a task needs 3+ files or multi-file analysis, spawn a subagent and return only summarized insights. This offloads decision-making from your prompts to your config.
+
 ## Solution Structure
 
 FRELODY is a .NET 10 music management platform (chord charts, lyrics, song extraction, AI parsing). The solution file is `FRELODYAPP.sln` with these projects:

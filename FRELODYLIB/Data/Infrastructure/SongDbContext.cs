@@ -60,6 +60,8 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<ContentChangeLog> ContentChangeLogs { get; set; }
         public DbSet<EmailOtpVerification> EmailOtpVerifications { get; set; }
         public DbSet<SeedVersion> SeedVersions { get; set; }
+        public DbSet<YouTubeVideo> YouTubeVideos { get; set; } = default!;
+        public DbSet<YouTubeTranscription> YouTubeTranscriptions { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -470,6 +472,21 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<IdentityUserLogin<string>>().HasKey(x => new { x.LoginProvider, x.ProviderKey });
             builder.Entity<IdentityUserRole<string>>().HasKey(x => new { x.UserId, x.RoleId });
             builder.Entity<IdentityUserToken<string>>().HasKey(x => new { x.UserId, x.LoginProvider, x.Name });
+
+            builder.Entity<YouTubeVideo>(b =>
+            {
+                b.HasIndex(v => v.VideoId).IsUnique();
+                b.HasMany(v => v.Transcriptions)
+                 .WithOne(t => t.Video)
+                 .HasForeignKey(t => t.VideoId)
+                 .HasPrincipalKey(v => v.VideoId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<YouTubeTranscription>(b =>
+            {
+                b.HasIndex(t => new { t.VideoId, t.BeatModel, t.ChordModel, t.ChordDict }).IsUnique();
+            });
 
             OnModelCreatingPartial(builder);
         }
