@@ -73,8 +73,10 @@ services:
   frelody-web:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      # The client (browser) will call the API via https://domain
-      ApiSettings__BaseUrl: "https://${SERVER_HOST}"
+      # Server-side Blazor calls the API directly via the internal Docker network.
+      # The WASM (browser) client uses its own wwwroot/appsettings.Production.json
+      # which already has the public HTTPS URL — this env var does not affect it.
+      ApiSettings__BaseUrl: "http://frelody-api:8080"
     # Port 5080 no longer needs to be exposed publicly if Nginx handles it
     ports:
       - "5080:5080"

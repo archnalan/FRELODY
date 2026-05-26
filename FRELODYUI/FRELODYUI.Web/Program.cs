@@ -163,7 +163,11 @@ builder.Services.AddRefitClient<IWebSongExtractionApi>()
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<IYouTubeApi>()
-                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .ConfigureHttpClient(c =>
+                {
+                    c.BaseAddress = baseAddressApi;
+                    c.Timeout = TimeSpan.FromMinutes(10);
+                })
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
 var app = builder.Build();
