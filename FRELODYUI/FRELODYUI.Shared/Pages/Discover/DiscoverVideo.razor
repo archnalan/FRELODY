@@ -116,21 +116,22 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var resp = await YoutubeApi.GetVideoAsync(VideoId);
+        var resp = await YoutubeApi.GetVideo(VideoId);
         if (resp.IsSuccessStatusCode)
             _video = resp.Content;
 
-        var cached = await YoutubeApi.GetTranscriptionAsync(VideoId);
+        var cached = await YoutubeApi.GetTranscription(VideoId);
         if (cached.IsSuccessStatusCode && cached.Content is not null)
         {
             _result = cached.Content;
             _state = AnalysisState.Complete;
         }
-        else
-        {
-            // No cached result — start analysis automatically
-            _ = RunAnalysisAsync(forceRefresh: false);
-        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _state == AnalysisState.Idle)
+            await RunAnalysisAsync(forceRefresh: false);
     }
 
     private Task AnalyzeAsync() => RunAnalysisAsync(forceRefresh: false);
@@ -141,6 +142,7 @@
         _state = AnalysisState.Extracting;
         _stageIndex = 0;
         _errorMessage = null;
+        StateHasChanged();
 
         _stageTimer = new System.Threading.Timer(_ =>
         {
@@ -150,7 +152,7 @@
 
         try
         {
-            var resp = await YoutubeApi.AnalyzeAsync(new YouTubeAnalyzeRequest
+            var resp = await YoutubeApi.Analyze(new YouTubeAnalyzeRequest
             {
                 VideoId = VideoId,
                 ForceRefresh = forceRefresh
@@ -176,6 +178,7 @@
         {
             _stageTimer?.Dispose();
             _stageTimer = null;
+            StateHasChanged();
         }
     }
 

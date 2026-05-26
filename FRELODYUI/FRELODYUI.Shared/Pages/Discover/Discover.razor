@@ -1,9 +1,14 @@
 @page "/discover"
+@rendermode InteractiveServer
 @using FRELODYSHRD.Dtos
 @using FRELODYUI.Shared.Pages.Discover
 @using FRELODYUI.Shared.Pages.PlaceHolders
 @inject IYouTubeApi _youtubeApi
 @inject NavigationManager _nav
+@if (IsLanding)
+{
+    @layout LandingLayout
+}
 
 <PageTitle>Discover — FRELODY</PageTitle>
 
@@ -78,18 +83,17 @@
     @* ── Results area ─────────────────────────────────────────────── *@
     <section class="dc-results-section">
 
-        @if (_error is not null)
+        @if (_loading)
+        {
+            <YoutubeResultPlaceholder Count="8" />
+        }
+        else if (_error is not null)
         {
             <div class="dc-alert" role="alert">
                 <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
                 <span>@_error</span>
                 <button class="dc-alert-retry" type="button" @onclick="HandleSearch">Retry</button>
             </div>
-        }
-
-        @if (_loading)
-        {
-            <YoutubeResultPlaceholder Count="8" />
         }
         else if (_results is { Count: > 0 })
         {
@@ -99,7 +103,7 @@
             </div>
             <YoutubeResultGrid Videos="_results" OnVideoSelected="OnVideoSelected" />
         }
-        else if (_hasSearched && _error is null)
+        else if (_hasSearched)
         {
             <div class="dc-state dc-state--empty">
                 <div class="dc-state-icon-wrap">
@@ -109,7 +113,7 @@
                 <p class="dc-state-sub">Try a different song title or artist name.</p>
             </div>
         }
-        else if (!_hasSearched)
+        else
         {
             <div class="dc-state dc-state--prompt">
                 <div class="dc-state-icon-wrap">
@@ -124,6 +128,7 @@
 </div>
 
 @code {
+    [Parameter] public bool IsLanding { get; set; }
     [SupplyParameterFromQuery] public string? q { get; set; }
     [SupplyParameterFromQuery] public string? v { get; set; }
 
@@ -154,7 +159,7 @@
 
     private async Task HandleSearch()
     {
-        if (string.IsNullOrWhiteSpace(_query)) return;
+        if (_loading || string.IsNullOrWhiteSpace(_query)) return;
         await SearchAsync();
     }
 
@@ -165,6 +170,7 @@
 
     private async Task QuickSearch(string term)
     {
+        if (_loading) return;
         _query = term;
         await SearchAsync();
     }
@@ -178,7 +184,7 @@
         _results = null;
         StateHasChanged();
 
-        var response = await _youtubeApi.SearchAsync(_searchedQuery, limit: 12);
+        var response = await _youtubeApi.Search(_searchedQuery, limit: 12);
         if (response.IsSuccessStatusCode && response.Content is not null)
             _results = response.Content;
         else

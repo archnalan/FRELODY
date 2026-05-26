@@ -1,8 +1,8 @@
 ﻿@page "/discover/landing"
 @layout LandingLayout
 
-<Discover/>
+<Discover IsLanding="IsDiscoverLanding" />
 
 @code {
-
+    public bool IsDiscoverLanding => true;
 }

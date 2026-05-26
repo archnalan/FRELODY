@@ -12,7 +12,7 @@ using YoutubeExplode.Search;
 
 namespace FRELODYAPIs.Controllers
 {
-    [Route("api/youtube")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
     public class YouTubeController : ControllerBase
     {
@@ -27,7 +27,7 @@ namespace FRELODYAPIs.Controllers
             _chordMini = chordMini;
         }
 
-        [HttpGet("search")]
+        [HttpGet]
         [ProducesResponseType(typeof(List<YouTubeVideoDto>), 200)]
         public async Task<ActionResult<List<YouTubeVideoDto>>> Search(
             [FromQuery] string q,
@@ -67,9 +67,9 @@ namespace FRELODYAPIs.Controllers
             return Ok(results);
         }
 
-        [HttpGet("videos/{videoId}")]
+        [HttpGet]
         [ProducesResponseType(typeof(YouTubeVideoDto), 200)]
-        public async Task<ActionResult<YouTubeVideoDto>> GetVideo(string videoId)
+        public async Task<ActionResult<YouTubeVideoDto>> GetVideo([FromQuery] string videoId)
         {
             var cached = await _db.YouTubeVideos
                 .AsNoTracking()
@@ -96,7 +96,7 @@ namespace FRELODYAPIs.Controllers
             }
         }
 
-        [HttpPost("analyze")]
+        [HttpPost]
         [ProducesResponseType(typeof(YouTubeTranscriptionDto), 200)]
         public async Task<ActionResult<YouTubeTranscriptionDto>> Analyze(
             [FromBody] YouTubeAnalyzeRequest request,
@@ -161,10 +161,10 @@ namespace FRELODYAPIs.Controllers
             return Ok(result);
         }
 
-        [HttpGet("transcriptions/{videoId}")]
+        [HttpGet]
         [ProducesResponseType(typeof(YouTubeTranscriptionDto), 200)]
         public async Task<ActionResult<YouTubeTranscriptionDto>> GetTranscription(
-            string videoId,
+            [FromQuery] string videoId,
             [FromQuery] string beatModel = "beat-transformer",
             [FromQuery] string chordModel = "chord-cnn-lstm",
             [FromQuery] string chordDict = "full")

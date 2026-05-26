@@ -6,18 +6,18 @@ namespace FRELODYUI.Shared.RefitApis
 {
     public interface IYouTubeApi
     {
-        [Get("/api/youtube/search")]
-        Task<IApiResponse<List<YouTubeVideoDto>>> SearchAsync([Query] string q, [Query] int limit = 10);
+        [Get("/api/you-tube/search")]
+        Task<IApiResponse<List<YouTubeVideoDto>>> Search([Query] string q, [Query] int limit = 10);
 
-        [Get("/api/youtube/videos/{videoId}")]
-        Task<IApiResponse<YouTubeVideoDto>> GetVideoAsync(string videoId);
+        [Get("/api/you-tube/get-video")]
+        Task<IApiResponse<YouTubeVideoDto>> GetVideo([Query] string videoId);
 
-        [Post("/api/youtube/analyze")]
-        Task<IApiResponse<YouTubeTranscriptionDto>> AnalyzeAsync([Body] YouTubeAnalyzeRequest request);
+        [Post("/api/you-tube/analyze")]
+        Task<IApiResponse<YouTubeTranscriptionDto>> Analyze([Body] YouTubeAnalyzeRequest request);
 
-        [Get("/api/youtube/transcriptions/{videoId}")]
-        Task<IApiResponse<YouTubeTranscriptionDto>> GetTranscriptionAsync(
-            string videoId,
+        [Get("/api/you-tube/get-transcription")]
+        Task<IApiResponse<YouTubeTranscriptionDto>> GetTranscription(
+            [Query] string videoId,
             [Query] string beatModel = "beat-transformer",
             [Query] string chordModel = "chord-cnn-lstm",
             [Query] string chordDict = "full");
