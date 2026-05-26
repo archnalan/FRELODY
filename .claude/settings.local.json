@@ -1,14 +1,19 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(Test-Path \"D:\\\\PROGRAMMER\\\\.NET\\\\Projects 26\\\\FRELODY\\\\FRELODYUI\\\\FRELODYUI.Web\\\\wwwroot\\\\index.html\")",
+      "Bash(Test-Path \"D:\\\\PROGRAMMER\\\\.NET\\\\Projects 26\\\\FRELODY\\\\FRELODYUI\\\\FRELODYUI.Web.Client\\\\wwwroot\\\\index.html\")",
+      "Bash(gh api *)",
+      "PowerShell(gh api *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:hub.docker.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ],
     "ask": [
       "Bash(git *)",
       "PowerShell(git *)"
     ],
-    "defaultMode": "bypassPermissions",
-    "allow": [
-      "Bash(Test-Path \"D:\\\\PROGRAMMER\\\\.NET\\\\Projects 26\\\\FRELODY\\\\FRELODYUI\\\\FRELODYUI.Web\\\\wwwroot\\\\index.html\")",
-      "Bash(Test-Path \"D:\\\\PROGRAMMER\\\\.NET\\\\Projects 26\\\\FRELODY\\\\FRELODYUI\\\\FRELODYUI.Web.Client\\\\wwwroot\\\\index.html\")"
-    ]
+    "defaultMode": "bypassPermissions"
   },
   "worktree": {
     "bgIsolation": "none"

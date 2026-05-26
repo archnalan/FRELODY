@@ -180,9 +180,8 @@ services:
 
   # ── ChordMini Python ML backend ─────────────────────────────
   chordmini-backend:
-    build:
-      context: D:\PROGRAMMER\TYPESCRIPT\ChordMiniApp\python_backend
-      dockerfile: Dockerfile
+    image: ptnghia/chordminiapp-backend:latest
+    platform: linux/amd64
     container_name: frelody-chordmini
     ports:
       - "5001:5001"
