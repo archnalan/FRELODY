@@ -1,14 +1,10 @@
 @page "/discover"
-@rendermode InteractiveServer
+@rendermode InteractiveWebAssembly
 @using FRELODYSHRD.Dtos
 @using FRELODYUI.Shared.Pages.Discover
 @using FRELODYUI.Shared.Pages.PlaceHolders
 @inject IYouTubeApi _youtubeApi
 @inject NavigationManager _nav
-@if (IsLanding)
-{
-    @layout LandingLayout
-}
 
 <PageTitle>Discover — FRELODY</PageTitle>
 

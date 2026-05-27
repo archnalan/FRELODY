@@ -129,7 +129,29 @@ namespace FRELODYAPIs.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(502, new { message = $"ChordMini analysis failed: {ex.Message}" });
+                return StatusCode(502, new { message = ex.Message });
+            }
+
+            // Ensure the parent YouTubeVideo row exists (FK requirement)
+            var videoExists = await _db.YouTubeVideos.AnyAsync(v => v.VideoId == request.VideoId, ct);
+            if (!videoExists)
+            {
+                try
+                {
+                    var video = await _youtube.Videos.GetAsync(request.VideoId, ct);
+                    await UpsertAndMapAsync(
+                        video.Id.Value,
+                        video.Title,
+                        video.Author.ChannelTitle,
+                        video.Thumbnails.GetWithHighestResolution()?.Url,
+                        (int)video.Duration.GetValueOrDefault().TotalSeconds);
+                }
+                catch
+                {
+                    // Fallback: insert a minimal placeholder so the FK is satisfied
+                    _db.YouTubeVideos.Add(new YouTubeVideo { VideoId = request.VideoId, Title = request.VideoId });
+                    await _db.SaveChangesAsync(ct);
+                }
             }
 
             // Persist result (upsert by unique index)

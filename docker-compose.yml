@@ -66,12 +66,13 @@ services:
       AllowedOrigins__1: "http://localhost:8080"
       AllowedOrigins__2: "http://localhost:4200"
       AllowedOrigins__3: "http://localhost:3000"
-      AllowedOrigins__4: "http://frelody.com"
-      AllowedOrigins__5: "https://frelody.com"
-      AllowedOrigins__6: "http://www.frelody.com"
-      AllowedOrigins__7: "https://www.frelody.com"
-      AllowedOrigins__8: "http://164.68.118.82"
-      AllowedOrigins__9: "http://164.68.118.82:8080"
+      AllowedOrigins__4: "http://localhost"
+      AllowedOrigins__5: "http://frelody.com"
+      AllowedOrigins__6: "https://frelody.com"
+      AllowedOrigins__7: "http://www.frelody.com"
+      AllowedOrigins__8: "https://www.frelody.com"
+      AllowedOrigins__9: "http://164.68.118.82"
+      AllowedOrigins__10: "http://164.68.118.82:8080"
 
       # Frontend URL for password reset emails
       AppSettings__FrontendUrl: "http://localhost:5080"
@@ -93,6 +94,7 @@ services:
       OpenTelemetry__Headers: ""
 
       ChordMini__BaseUrl: "http://chordmini-backend:8080"
+      ChordMini__YtdlpUrl: "http://chordmini-backend:8081"
 
     depends_on:
       sqlserver:
@@ -183,14 +185,21 @@ services:
     image: ptnghia/chordminiapp-backend:latest
     platform: linux/amd64
     container_name: frelody-chordmini
+    # Run gunicorn (main app, port 8080) + yt-dlp sidecar (port 8081) together
+    command:
+      - "sh"
+      - "-c"
+      - "gunicorn --bind 0.0.0.0:8080 --workers 2 --timeout 600 --worker-class sync --max-requests 1000 --max-requests-jitter 100 --preload app:app & python /app/ytdlp_server.py"
     ports:
       - "5001:8080"
+      - "5002:8081"
     environment:
       FLASK_ENV: production
       MAX_CONTENT_LENGTH_MB: "150"
     volumes:
       - frelody_media:/app/media
       - chordmini_models:/app/models
+      - ./docker/ytdlp_server.py:/app/ytdlp_server.py:ro
     networks:
       - frelody-net
 

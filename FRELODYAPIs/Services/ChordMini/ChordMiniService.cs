@@ -1,18 +1,15 @@
 using System.Diagnostics;
-using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
-using YoutubeExplode;
-using YoutubeExplode.Videos.Streams;
 
 namespace FRELODYAPIs.Services.ChordMini
 {
     public class ChordMiniService : IChordMiniService
     {
-        private readonly HttpClient _http;
-        private readonly YoutubeClient _youtube = new();
+        private readonly HttpClient _chordmini;
+        private readonly HttpClient _ytdlp;
 
         private static readonly JsonSerializerOptions _json = new()
         {
@@ -22,32 +19,51 @@ namespace FRELODYAPIs.Services.ChordMini
 
         public ChordMiniService(IHttpClientFactory factory)
         {
-            _http = factory.CreateClient("ChordMini");
+            _chordmini = factory.CreateClient("ChordMini");
+            _ytdlp = factory.CreateClient("ChordMiniYtdlp");
         }
 
         public async Task<YouTubeTranscriptionDto> AnalyzeAsync(YouTubeAnalyzeRequest request, CancellationToken ct = default)
         {
             var sw = Stopwatch.StartNew();
-            var tempFile = Path.Combine(Path.GetTempPath(), $"frelody_{request.VideoId}_{Guid.NewGuid():N}.tmp");
+
+            // 1. Download audio via yt-dlp sidecar running inside chordmini container
+            var extractResp = await _ytdlp.PostAsync(
+                "/api/ytdlp/extract",
+                JsonContent(new { videoId = request.VideoId }),
+                ct);
+
+            if (!extractResp.IsSuccessStatusCode)
+            {
+                var raw = await extractResp.Content.ReadAsStringAsync(ct);
+                string msg;
+                try
+                {
+                    using var errDoc = JsonDocument.Parse(raw);
+                    msg = errDoc.RootElement.TryGetProperty("error", out var ep)
+                        ? ep.GetString() ?? raw
+                        : raw;
+                }
+                catch { msg = raw; }
+                throw new InvalidOperationException(msg);
+            }
+
+            var extractBody = await extractResp.Content.ReadAsStringAsync(ct);
+            using var extractDoc = JsonDocument.Parse(extractBody);
+            var filePath = extractDoc.RootElement.GetProperty("filePath").GetString()
+                ?? throw new InvalidOperationException("yt-dlp extract returned no filePath");
 
             try
             {
-                // 1. Download best audio stream from YouTube to a temp file
-                var manifest = await _youtube.Videos.Streams.GetManifestAsync(request.VideoId, ct);
-                var streamInfo = manifest.GetAudioOnlyStreams().GetWithHighestBitrate();
-                await _youtube.Videos.Streams.DownloadAsync(streamInfo, tempFile, cancellationToken: ct);
-
-                var audioFileName = $"{request.VideoId}.{streamInfo.Container.Name}";
-
-                // 2. Detect beats
-                var beatsResult = await PostAudioAsync<BeatsResult>(
-                    "/api/detect-beats", tempFile, audioFileName,
+                // 2. Detect beats — pass file path directly (same container filesystem)
+                var beatsResult = await PostAudioPathAsync<BeatsResult>(
+                    "/api/detect-beats", filePath,
                     new Dictionary<string, string> { ["detector"] = request.BeatModel },
                     ct);
 
-                // 3. Recognize chords
-                var chordsResult = await PostAudioAsync<ChordsResult>(
-                    "/api/recognize-chords", tempFile, audioFileName,
+                // 3. Recognize chords — same file path
+                var chordsResult = await PostAudioPathAsync<ChordsResult>(
+                    "/api/recognize-chords", filePath,
                     new Dictionary<string, string>
                     {
                         ["detector"] = request.ChordModel,
@@ -82,31 +98,40 @@ namespace FRELODYAPIs.Services.ChordMini
             }
             finally
             {
-                if (File.Exists(tempFile))
-                    File.Delete(tempFile);
+                // Clean up temp file in chordmini container
+                try
+                {
+                    await _ytdlp.SendAsync(new HttpRequestMessage(HttpMethod.Delete, "/api/ytdlp/cleanup")
+                    {
+                        Content = JsonContent(new { filePath })
+                    }, ct);
+                }
+                catch { /* best-effort */ }
             }
         }
 
-        private async Task<T> PostAudioAsync<T>(
-            string endpoint, string filePath, string fileName,
+        private async Task<T> PostAudioPathAsync<T>(
+            string endpoint, string audioPath,
             Dictionary<string, string> fields, CancellationToken ct)
         {
             using var form = new MultipartFormDataContent();
-            var fileBytes = await File.ReadAllBytesAsync(filePath, ct);
-            var fileContent = new ByteArrayContent(fileBytes);
-            fileContent.Headers.ContentType = new MediaTypeHeaderValue("audio/mpeg");
-            form.Add(fileContent, "file", fileName);
+            form.Add(new StringContent(audioPath), "audio_path");
 
             foreach (var (key, value) in fields)
                 form.Add(new StringContent(value), key);
 
-            using var resp = await _http.PostAsync(endpoint, form, ct);
-            resp.EnsureSuccessStatusCode();
+            using var resp = await _chordmini.PostAsync(endpoint, form, ct);
 
             var body = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+                throw new InvalidOperationException($"{endpoint} returned {(int)resp.StatusCode}: {body}");
+
             return JsonSerializer.Deserialize<T>(body, _json)
                 ?? throw new InvalidOperationException($"Null response from {endpoint}. Body: {body}");
         }
+
+        private static System.Net.Http.StringContent JsonContent(object obj) =>
+            new(JsonSerializer.Serialize(obj), System.Text.Encoding.UTF8, "application/json");
 
         private static List<SyncedChordDto> ComputeSyncedChords(List<float> beats, List<RawChordEvent> chords)
         {
@@ -139,8 +164,6 @@ namespace FRELODYAPIs.Services.ChordMini
             float avg = beats.Zip(beats.Skip(1), (a, b) => b - a).Sum() / (beats.Count - 1);
             return avg > 0 ? MathF.Round(60f / avg, 1) : null;
         }
-
-        // ── Internal response shapes ──────────────────────────────────────────
 
         private sealed class BeatsResult
         {
