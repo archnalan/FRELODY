@@ -12,6 +12,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<string>> AddUserToRoleAsync(string userId, string roleName);
         Task<ServiceResult<CreateUserResponseDto>> CreateUser([Required] CreateUserDto createUserDto);
         Task<ServiceResult<LoginResponseDto>> ExternalLoginCallback(GoogleAuthRequestDto googleAuthRequestDto);
+        Task<ServiceResult<LoginResponseDto>> GoogleOneTapLogin(string credential);
         Task<ServiceResult<UpdateUserProfileOutDto>> GetUserProfile(string id = null, string userName = null);
         Task<ServiceResult<List<ComboBoxDto>>> GetUsersForComboBoxes();
         Task<ServiceResult<string>> InitiatePasswordReset(string emailAddress);

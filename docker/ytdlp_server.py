@@ -206,6 +206,22 @@ class Handler(BaseHTTPRequestHandler):
             thumbs = info.get("thumbnails") or []
             thumb = thumbs[-1].get("url") if thumbs else None
 
+        # Native pixel dimensions so the player stage can match the real aspect
+        # ratio (TikTok clips vary between portrait 9:16 and landscape 16:9).
+        # yt-dlp exposes top-level width/height; fall back to the best thumbnail.
+        width = info.get("width")
+        height = info.get("height")
+        if not (width and height):
+            thumbs = info.get("thumbnails") or []
+            best = max(
+                (t for t in thumbs if t.get("width") and t.get("height")),
+                key=lambda t: t.get("width") * t.get("height"),
+                default=None,
+            )
+            if best:
+                width = best.get("width")
+                height = best.get("height")
+
         self._send(200, {
             "id": str(info.get("id") or ""),
             "title": info.get("title") or info.get("description") or "Untitled",
@@ -213,6 +229,8 @@ class Handler(BaseHTTPRequestHandler):
             "thumbnail": thumb,
             "durationSeconds": int(info.get("duration") or 0),
             "webpageUrl": info.get("webpage_url") or url,
+            "width": int(width) if width else None,
+            "height": int(height) if height else None,
         })
 
     def do_DELETE(self):

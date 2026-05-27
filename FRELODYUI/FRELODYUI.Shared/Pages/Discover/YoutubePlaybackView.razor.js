@@ -67,6 +67,28 @@ export function makeDraggable(el, handleSelector) {
     STATE.set(el, { handle, onDown, onMove, onUp, onResize });
 }
 
+// Escape closes the CSS-overlay "maximize" view. Kept here (not the global
+// songFullscreen) so the playback view owns its own lifecycle.
+let _escHandler = null;
+
+export function watchEscape(dotNetRef) {
+    unwatchEscape();
+    _escHandler = (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync('OnMaximizeEscape');
+        }
+    };
+    document.addEventListener('keydown', _escHandler);
+}
+
+export function unwatchEscape() {
+    if (_escHandler) {
+        document.removeEventListener('keydown', _escHandler);
+        _escHandler = null;
+    }
+}
+
 export function dispose(el) {
     const s = STATE.get(el);
     if (!s) return;

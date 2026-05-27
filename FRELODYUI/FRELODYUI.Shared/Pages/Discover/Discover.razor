@@ -154,6 +154,7 @@
 
     private enum SearchMode { YouTube, TikTok }
     private SearchMode _mode = SearchMode.YouTube;
+    private const string ModeKey = "discover_source_mode";
 
     private string _query = string.Empty;
     private string _searchedQuery = string.Empty;
@@ -180,6 +181,21 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Restore the last-used source toggle — but never override an in-progress
+        // search (e.g. arriving via ?q=, which is always a YouTube query).
+        if (!firstRender || _hasSearched) return;
+        if (!await _localStorage.IsStorageAvailableAsync()) return;
+
+        var saved = await _localStorage.GetItemAsync<string>(ModeKey);
+        if (Enum.TryParse<SearchMode>(saved, out var mode) && mode != _mode)
+        {
+            _mode = mode;
+            StateHasChanged();
+        }
+    }
+
     private void SetMode(SearchMode mode)
     {
         if (_mode == mode) return;
@@ -188,6 +204,7 @@
         _results = null;
         _hasSearched = false;
         _query = string.Empty;
+        _ = _localStorage.SetItemAsync(ModeKey, mode.ToString());
     }
 
     private async Task HandleSearch()

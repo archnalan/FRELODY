@@ -1129,39 +1129,19 @@
             // Debounce: wait before firing so rapid +/− taps only resolve once
             await Task.Delay(300, token);
 
-            var resolved = new List<ChordDto>();
-            foreach (var chord in uniqueSongChords)
-            {
-                if (token.IsCancellationRequested) break;
+            // Resolve each transposed chord name to its catalog chart via the shared
+            // resolver (exact-match only — a missing chord shows a name-only placeholder
+            // rather than a near-miss substitute).
+            var names = uniqueSongChords
+                .Select(c => GetTransposedChordName(c.ChordName))
+                .ToList();
 
-                var transposedName = GetTransposedChordName(chord.ChordName);
-                try
-                {
-                    var response = await _chordsApi.SearchChords(transposedName, 0, 5);
-                    if (response.IsSuccessStatusCode && response.Content?.Data?.Any() == true)
-                    {
-                        // Prefer an exact name match; fall back to first result if none
-                        var match = response.Content.Data
-                            .FirstOrDefault(c => c.ChordName.Equals(transposedName, StringComparison.OrdinalIgnoreCase))
-                            ?? response.Content.Data.First();
-                        resolved.Add(match);
-                    }
-                    else
-                    {
-                        // Chord not in DB yet — show placeholder with correct name
-                        resolved.Add(new ChordDto { ChordName = transposedName });
-                    }
-                }
-                catch
-                {
-                    resolved.Add(new ChordDto { ChordName = transposedName });
-                }
-            }
+            var resolved = await _chartResolver.ResolveAsync(names, token);
 
             if (!token.IsCancellationRequested)
                 transposedChords = resolved;
         }
-        catch (TaskCanceledException) { }
+        catch (OperationCanceledException) { }
         finally
         {
             if (!token.IsCancellationRequested)

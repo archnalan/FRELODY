@@ -1,9 +1,7 @@
 @using FRELODYUI.Shared.Pages.Discover
 @using FRELODYUI.Shared.Pages.Chord
-@using FRELODYUI.Shared.Services
 @inject IJSRuntime JS
 @inject IYouTubeApi YoutubeApi
-@inject IChordsApi ChordsApi
 @implements IAsyncDisposable
 
 <div class="pv">
@@ -78,27 +76,57 @@
             </p>
         }
 
-        @if (Transcription.Beats.Count > 0)
-        {
-            <div class="pv-beat-strip" aria-hidden="true">
-                @for (int i = 0; i < _timeSigNumerator; i++)
-                {
-                    var pos = i;
-                    <div class="pv-beat-dot @(pos == _beatInMeasure && _isPlaying ? "pv-beat-dot--active" : "")"></div>
-                }
-            </div>
-        }
-
         @if (Transcription.SyncedChords.Count > 0)
         {
-            <YoutubeChordGrid
-                SyncedChords="Transcription.SyncedChords"
-                Beats="Transcription.Beats"
-                ActiveBeatIndex="_activeBeatIndex"
-                TimeSignature="Transcription.TimeSignature"
-                CapoShift="-_capo"
-                PreferFlat="_preferFlat"
-                OnSeekTo="SeekToAsync" />
+            <div class="pv-stage @(_isMaximized ? "pv-stage--max" : "")" @ref="_stageEl">
+
+                <div class="pv-stage-bar">
+                    @if (_isMaximized)
+                    {
+                        <div class="pv-capo pv-stage-capo">
+                            <span class="pv-capo-label">Capo</span>
+                            <div class="pv-capo-stepper">
+                                <button type="button" class="pv-capo-btn" @onclick="DecreaseCapo"
+                                        disabled="@(_capo <= 0)" aria-label="Lower capo">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <span class="pv-capo-value">@(_capo == 0 ? "Off" : _capo.ToString())</span>
+                                <button type="button" class="pv-capo-btn" @onclick="IncreaseCapo"
+                                        disabled="@(_capo >= MaxCapo)" aria-label="Raise capo">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                    <button type="button" class="pv-stage-max-btn" @onclick="ToggleMaximize"
+                            title="@(_isMaximized ? "Exit full view" : "Maximize chord chart")"
+                            aria-label="@(_isMaximized ? "Exit full view" : "Maximize chord chart")">
+                        <i class="bi @(_isMaximized ? "bi-fullscreen-exit" : "bi-arrows-fullscreen")"></i>
+                    </button>
+                </div>
+
+                @if (Transcription.Beats.Count > 0)
+                {
+                    <div class="pv-beat-strip" aria-hidden="true">
+                        @for (int i = 0; i < _timeSigNumerator; i++)
+                        {
+                            var pos = i;
+                            <div class="pv-beat-dot @(pos == _beatInMeasure && _isPlaying ? "pv-beat-dot--active" : "")"></div>
+                        }
+                    </div>
+                }
+
+                <YoutubeChordGrid
+                    SyncedChords="Transcription.SyncedChords"
+                    Beats="Transcription.Beats"
+                    ActiveBeatIndex="_activeBeatIndex"
+                    TimeSignature="Transcription.TimeSignature"
+                    CapoShift="-_capo"
+                    PreferFlat="_preferFlat"
+                    OnSeekTo="SeekToAsync"
+                    OnChordPreview="HandleChordPreview"
+                    OnChordPreviewEnd="HandleChordPreviewEnd" />
+            </div>
         }
 
         <!-- Chord shapes used in this song (capo-aware) -->
@@ -195,8 +223,9 @@
         </div>
     </div>
 
-    <!-- Floating, draggable player window. position:fixed → takes no layout space. -->
-    <div class="pv-float@(_playerCollapsed ? " pv-float--collapsed" : "")" @ref="_floatEl">
+    <!-- Floating, draggable player window. position:fixed → takes no layout space.
+         Docks inline at the bottom on small screens. -->
+    <div class="@FloatClass" @ref="_floatEl">
         <div class="pv-float-bar" data-pv-drag>
             <span class="pv-float-title">
                 <i class="bi bi-grip-vertical pv-float-grip" aria-hidden="true"></i>
@@ -209,10 +238,44 @@
                 <i class="bi @(_playerCollapsed ? "bi-chevron-up" : "bi-chevron-down")"></i>
             </button>
         </div>
-        <div class="pv-float-stage">
+        <div class="pv-float-stage" style="@_stageStyle">
             <YoutubePlayerMount Id="@_playerId" />
         </div>
     </div>
+
+    <!-- Chord-chart preview: hover (pointer) or tap (touch) on a grid chord.
+         Pinned (touch) variant carries a "Play here" seek button so the grid
+         stays two-way with the player even without a hover gesture. -->
+    @if (_showChordPopover && (_popoverChord is not null || _popoverPinned))
+    {
+        @if (_popoverPinned)
+        {
+            <button class="pv-pop-backdrop" type="button" aria-label="Close chord preview"
+                    @onclick="HideChordPopover"></button>
+        }
+        <div class="pv-chord-pop @(_popoverPinned ? "pv-chord-pop--pinned" : "")"
+             style="top:@(_popoverTop.ToString(System.Globalization.CultureInfo.InvariantCulture))px; left:@(_popoverLeft.ToString(System.Globalization.CultureInfo.InvariantCulture))px;">
+            <span class="pv-chord-pop-name">@(_popoverChord?.ChordName ?? _popoverName)</span>
+            @if (_popoverChord is not null)
+            {
+                <ChordCarousel Chord="_popoverChord"
+                               Size="CarouselSize.Popover"
+                               ShowActions="false"
+                               CarouselId="@($"pv-pop-{_popoverChord.Id ?? _popoverChord.ChordName}")" />
+            }
+            else
+            {
+                <span class="pv-chord-pop-empty">No chart yet</span>
+            }
+            @if (_popoverPinned)
+            {
+                <button class="pv-chord-pop-play" type="button" @onclick="PlayFromPopoverAsync">
+                    <i class="bi bi-play-fill" aria-hidden="true"></i>
+                    Play here
+                </button>
+            }
+        </div>
+    }
 
 </div>
 
@@ -229,12 +292,40 @@
     // Both expose the same initialize/getCurrentTime/seekTo/destroy interface.
     [Parameter] public string PlayerApi { get; set; } = "ytPlayer";
 
+    // Fallback orientation hint used only when real pixel dimensions are unknown:
+    // vertical media (e.g. TikTok) gets a 9:16 stage + narrower window, landscape
+    // (YouTube) stays 16:9.
+    [Parameter] public bool PlayerVertical { get; set; }
+
+    // Real clip dimensions (TikTok via yt-dlp). When present they drive the exact
+    // stage aspect ratio so the player never letterboxes into a mismatched box.
+    [Parameter] public int? VideoWidth { get; set; }
+    [Parameter] public int? VideoHeight { get; set; }
+
     // Optional external "open on …" link. When unset, falls back to the YouTube video.
     [Parameter] public string? SourceUrl { get; set; }
     [Parameter] public string SourceName { get; set; } = "YouTube";
     [Parameter] public string SourceIcon { get; set; } = "bi-youtube";
 
     private string _playerId => $"media-player-{Transcription.VideoId}";
+
+    // Portrait → narrow window; landscape → standard. Driven by real dimensions
+    // when known, else the PlayerVertical hint.
+    private bool _floatVertical;
+    // Inline aspect-ratio for the stage when real dimensions are known (else the
+    // scoped CSS default for the orientation applies).
+    private string? _stageStyle;
+
+    private string FloatClass
+    {
+        get
+        {
+            var c = "pv-float";
+            if (_playerCollapsed) c += " pv-float--collapsed";
+            if (_floatVertical) c += " pv-float--vertical";
+            return c;
+        }
+    }
 
     private DotNetObjectReference<YoutubePlaybackView>? _dotNetRef;
     private PeriodicTimer? _syncTimer;
@@ -251,6 +342,19 @@
     private ElementReference _floatEl;
     private IJSObjectReference? _dragModule;
     private bool _playerCollapsed;
+
+    // ── Maximize (CSS overlay so the floating player stays visible over it) ──
+    private ElementReference _stageEl;
+    private bool _isMaximized;
+
+    // ── Chord-chart preview popover ──────────────────────────────────────────
+    private bool _showChordPopover;
+    private bool _popoverPinned;          // touch tap → pinned with a Play-here button
+    private ChordDto? _popoverChord;
+    private string? _popoverName;
+    private float _popoverTime;
+    private double _popoverTop;
+    private double _popoverLeft;
 
     private int _timeSigNumerator = 4;
     private int _beatInMeasure => _activeBeatIndex >= 0 ? _activeBeatIndex % _timeSigNumerator : 0;
@@ -282,6 +386,19 @@
                 _timeSigNumerator = n;
         }
 
+        // Size the player to the clip's real aspect ratio when yt-dlp reported it,
+        // killing the black bars; otherwise fall back to the orientation hint.
+        if (VideoWidth is > 0 && VideoHeight is > 0)
+        {
+            _stageStyle = $"aspect-ratio: {VideoWidth} / {VideoHeight};";
+            _floatVertical = VideoHeight > VideoWidth;
+        }
+        else
+        {
+            _stageStyle = null;
+            _floatVertical = PlayerVertical;
+        }
+
         // Rebuild the unique-chord list (and refetch diagrams) only when the
         // underlying transcription changes — not on every beat tick.
         if (!ReferenceEquals(_builtChordsRef, Transcription.SyncedChords))
@@ -306,9 +423,10 @@
         }
     }
 
-    private void IncreaseCapo() { if (_capo < MaxCapo) { _capo++; _ = RefetchChordCardsAsync(); } }
-    private void DecreaseCapo() { if (_capo > 0) { _capo--; _ = RefetchChordCardsAsync(); } }
-    private void ResetCapo()    { if (_capo != 0) { _capo = 0; _ = RefetchChordCardsAsync(); } }
+    // Capo changes re-resolve the chord shapes, so any open preview is stale → close it.
+    private void IncreaseCapo() { if (_capo < MaxCapo) { _capo++; HideChordPopover(); _ = RefetchChordCardsAsync(); } }
+    private void DecreaseCapo() { if (_capo > 0) { _capo--; HideChordPopover(); _ = RefetchChordCardsAsync(); } }
+    private void ResetCapo()    { if (_capo != 0) { _capo = 0; HideChordPopover(); _ = RefetchChordCardsAsync(); } }
 
     // Resolves each unique chord (at the current capo) to a ChordDto so the
     // ChordCarousel can show the matching fingering diagram. Debounced so rapid
@@ -328,39 +446,20 @@
         {
             await Task.Delay(300, token);
 
-            var resolved = new List<ChordDto>(_uniqueRawChords.Count);
-            foreach (var raw in _uniqueRawChords)
-            {
-                if (token.IsCancellationRequested) return;
+            // Capo lowers the fingered shapes: shift every chord down by the capo fret,
+            // then resolve charts through the shared resolver (same path as the song player).
+            var names = _uniqueRawChords
+                .Select(raw => ChordLabel.PlainName(ChordLabel.TransposeRaw(raw, -_capo, _preferFlat)))
+                .Where(n => !string.IsNullOrEmpty(n))
+                .Select(n => n!)
+                .ToList();
 
-                var name = ChordLabel.PlainName(ChordLabel.TransposeRaw(raw, -_capo, _preferFlat));
-                if (string.IsNullOrEmpty(name)) continue;
-
-                try
-                {
-                    var resp = await ChordsApi.SearchChords(name, 0, 5);
-                    if (resp.IsSuccessStatusCode && resp.Content?.Data?.Any() == true)
-                    {
-                        var match = resp.Content.Data
-                            .FirstOrDefault(c => c.ChordName.Equals(name, StringComparison.OrdinalIgnoreCase))
-                            ?? resp.Content.Data.First();
-                        resolved.Add(match);
-                    }
-                    else
-                    {
-                        resolved.Add(new ChordDto { ChordName = name });
-                    }
-                }
-                catch
-                {
-                    resolved.Add(new ChordDto { ChordName = name });
-                }
-            }
+            var resolved = await _chartResolver.ResolveAsync(names, token);
 
             if (token.IsCancellationRequested) return;
             _chordCards = resolved;
         }
-        catch (TaskCanceledException) { return; }
+        catch (OperationCanceledException) { return; }
         finally
         {
             if (!token.IsCancellationRequested)
@@ -467,6 +566,85 @@
     private async Task SeekToAsync(float seconds)
         => await JS.InvokeVoidAsync($"{PlayerApi}.seekTo", seconds);
 
+    // ── Chord preview popover (raised by the grid) ───────────────────────────
+    // The grid hands us the raw chord; we resolve it to the same capo-aware
+    // ChordDto card already loaded for the "Chord shapes" section so the diagram
+    // matches exactly and tracks capo changes.
+    private void HandleChordPreview(YoutubeChordGrid.ChordPreview p)
+    {
+        _popoverChord = FindCard(p.Raw);
+        _popoverName = ChordLabel.Display(ChordLabel.TransposeRaw(p.Raw, -_capo, _preferFlat));
+        _popoverTime = p.Time;
+        _popoverPinned = p.Pinned;
+
+        // Anchor above the cell, nudging back on-screen near the edges.
+        const double w = 120, h = 160;
+        _popoverTop = p.Y - h - 12;
+        if (_popoverTop < 8) _popoverTop = p.Y + 16;
+        _popoverLeft = Math.Max(8, p.X - w / 2);
+
+        _showChordPopover = true;
+        StateHasChanged();
+    }
+
+    private void HandleChordPreviewEnd()
+    {
+        // Pinned (touch) popovers stay until dismissed; hover ones close on leave.
+        if (_popoverPinned) return;
+        HideChordPopover();
+    }
+
+    private void HideChordPopover()
+    {
+        if (!_showChordPopover) return;
+        _showChordPopover = false;
+        _popoverPinned = false;
+        _popoverChord = null;
+        _popoverName = null;
+        StateHasChanged();
+    }
+
+    private async Task PlayFromPopoverAsync()
+    {
+        await SeekToAsync(_popoverTime);
+        HideChordPopover();
+    }
+
+    private ChordDto? FindCard(string? raw)
+    {
+        var name = ChordLabel.PlainName(ChordLabel.TransposeRaw(raw, -_capo, _preferFlat));
+        if (string.IsNullOrEmpty(name)) return null;
+        return _chordCards.FirstOrDefault(c =>
+            string.Equals(c.ChordName, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // ── Maximize: CSS overlay (keeps the floating player on top & playing) ────
+    private async Task ToggleMaximize()
+    {
+        _isMaximized = !_isMaximized;
+        HideChordPopover();
+        StateHasChanged();
+        try
+        {
+            if (_dragModule is not null)
+            {
+                if (_isMaximized)
+                    await _dragModule.InvokeVoidAsync("watchEscape", _dotNetRef);
+                else
+                    await _dragModule.InvokeVoidAsync("unwatchEscape");
+            }
+        }
+        catch { /* esc handling is a progressive enhancement */ }
+    }
+
+    [JSInvokable]
+    public void OnMaximizeEscape()
+    {
+        if (!_isMaximized) return;
+        _isMaximized = false;
+        InvokeAsync(StateHasChanged);
+    }
+
     private async Task SaveToLibraryAsync()
     {
         if (_isSaving) return;
@@ -528,7 +706,7 @@
         StopSyncLoop();
         try { _chordRefetchCts?.Cancel(); _chordRefetchCts?.Dispose(); } catch { }
         try { await JS.InvokeVoidAsync($"{PlayerApi}.destroy"); } catch { }
-        try { if (_dragModule is not null) { await _dragModule.InvokeVoidAsync("dispose", _floatEl); await _dragModule.DisposeAsync(); } } catch { }
+        try { if (_dragModule is not null) { await _dragModule.InvokeVoidAsync("unwatchEscape"); await _dragModule.InvokeVoidAsync("dispose", _floatEl); await _dragModule.DisposeAsync(); } } catch { }
         _dotNetRef?.Dispose();
     }
 }

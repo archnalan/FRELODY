@@ -46,7 +46,8 @@ namespace FRELODYAPIs.Services.ChordMini
                 ?? throw new InvalidOperationException("Empty metadata response.");
             return new MediaInfo(
                 info.Id, info.Title, info.Uploader,
-                info.Thumbnail, info.DurationSeconds, info.WebpageUrl ?? url);
+                info.Thumbnail, info.DurationSeconds, info.WebpageUrl ?? url,
+                info.Width, info.Height);
         }
 
         private async Task<YouTubeTranscriptionDto> RunPipelineAsync(
@@ -171,6 +172,8 @@ namespace FRELODYAPIs.Services.ChordMini
             [JsonPropertyName("thumbnail")] public string? Thumbnail { get; set; }
             [JsonPropertyName("durationSeconds")] public int DurationSeconds { get; set; }
             [JsonPropertyName("webpageUrl")] public string? WebpageUrl { get; set; }
+            [JsonPropertyName("width")] public int? Width { get; set; }
+            [JsonPropertyName("height")] public int? Height { get; set; }
         }
 
         private static List<SyncedChordDto> ComputeSyncedChords(List<float> beats, List<RawChordEvent> chords)

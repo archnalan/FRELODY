@@ -1,0 +1,140 @@
+.cap {
+    position: fixed;
+    right: var(--k-space-4);
+    bottom: var(--k-space-4);
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-3);
+    padding: var(--k-space-3) var(--k-space-4) var(--k-space-3) var(--k-space-3);
+    max-width: min(20rem, calc(100vw - 2 * var(--k-space-4)));
+    border-radius: var(--k-radius-lg);
+    background: var(--k-bg-surface);
+    border: 1px solid var(--k-border);
+    box-shadow: var(--k-shadow-lg);
+    animation: cap-in var(--k-transition-slow, 0.3s) ease;
+}
+
+@keyframes cap-in {
+    from { opacity: 0; transform: translateY(0.75rem); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.cap-close {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border: none;
+    border-radius: var(--k-radius-sm);
+    background: transparent;
+    color: var(--k-text-subtle);
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: background var(--k-transition-fast), color var(--k-transition-fast);
+}
+
+.cap-close:hover {
+    background: var(--k-bg-hover);
+    color: var(--k-text-muted);
+}
+
+.cap-avatar {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: var(--k-accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: var(--k-font-size-sm);
+    letter-spacing: 0.02em;
+}
+
+.cap-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 0.05rem;
+}
+
+.cap-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--k-text-subtle);
+    font-weight: 600;
+}
+
+.cap-name {
+    font-size: var(--k-font-size-sm);
+    font-weight: 700;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cap-email {
+    font-size: var(--k-font-size-xs);
+    color: var(--k-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cap-go {
+    flex-shrink: 0;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: none;
+    border-radius: 50%;
+    background: var(--k-accent);
+    color: #fff;
+    cursor: pointer;
+    transition: filter var(--k-transition-fast), transform var(--k-transition-fast);
+}
+
+.cap-go:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateX(1px);
+}
+
+.cap-go:disabled {
+    opacity: 0.7;
+    cursor: progress;
+}
+
+.cap-spinner {
+    width: 0.9rem;
+    height: 0.9rem;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: cap-spin 0.6s linear infinite;
+}
+
+@keyframes cap-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* On small screens, stretch across the bottom for an easy tap target. */
+@media (max-width: 600px) {
+    .cap {
+        left: var(--k-space-3);
+        right: var(--k-space-3);
+        bottom: var(--k-space-3);
+        max-width: none;
+    }
+}

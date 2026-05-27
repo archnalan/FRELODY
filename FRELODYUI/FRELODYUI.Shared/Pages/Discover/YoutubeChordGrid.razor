@@ -16,7 +16,9 @@ else
                     <button type="button"
                             @key="cell.Index"
                             class="@CellClass(cell)"
-                            @onclick="() => OnSeekTo.InvokeAsync(cell.Time)"
+                            @onclick="(e) => OnCellClick(cell, e)"
+                            @onmouseenter="(e) => OnCellEnter(cell, e)"
+                            @onmouseleave="OnCellLeave"
                             title="@CellTitle(cell)">
                         @if (cell.ShowLabel)
                         {
@@ -40,12 +42,24 @@ else
     [Parameter] public string? TimeSignature { get; set; }
     [Parameter] public EventCallback<float> OnSeekTo { get; set; }
 
+    // Raised when a chord cell is previewed: hover on pointer devices, tap on
+    // touch (Pinned=true → parent shows a "Play here" seek button).
+    [Parameter] public EventCallback<ChordPreview> OnChordPreview { get; set; }
+    [Parameter] public EventCallback OnChordPreviewEnd { get; set; }
+
     // Semitone shift applied to the *displayed* chord shapes (capo → negative).
     // The audio is untouched; this only changes which shapes the player fingers.
     [Parameter] public int CapoShift { get; set; }
     [Parameter] public bool PreferFlat { get; set; }
 
-    private record BeatCell(int Index, string Display, bool IsRest, bool ShowLabel, bool IsDownbeat, float Time);
+    // Carries the *raw* (pre-capo) chord up so the parent resolves the same
+    // capo-aware diagram it shows in the "Chord shapes" section.
+    public record ChordPreview(string? Raw, float Time, double X, double Y, bool Pinned);
+
+    private record BeatCell(int Index, string Display, bool IsRest, bool ShowLabel, bool IsDownbeat, float Time, string? Raw);
+
+    // Whether the device supports true hover (pointer). Touch → tap interactions.
+    private bool _hoverCapable = true;
     private record Measure(int StartIndex, List<BeatCell> Cells);
 
     private List<Measure> _measures = [];
@@ -118,7 +132,7 @@ else
                 var display = DisplayFor(current);
                 var isRest = ChordLabel.IsNoChord(current);
                 var showLabel = current is not null && display != prevDisplay;
-                cells.Add(new BeatCell(i, display, isRest, showLabel, i % _beatsPerMeasure == 0, Beats[i]));
+                cells.Add(new BeatCell(i, display, isRest, showLabel, i % _beatsPerMeasure == 0, Beats[i], current));
                 prevDisplay = display;
             }
         }
@@ -131,7 +145,7 @@ else
                 var sc = SyncedChords[i];
                 var display = DisplayFor(sc.Chord);
                 var isRest = ChordLabel.IsNoChord(sc.Chord);
-                cells.Add(new BeatCell(i, display, isRest, display != prevDisplay, i % _beatsPerMeasure == 0, sc.Time));
+                cells.Add(new BeatCell(i, display, isRest, display != prevDisplay, i % _beatsPerMeasure == 0, sc.Time, sc.Chord));
                 prevDisplay = display;
             }
         }
@@ -158,8 +172,46 @@ else
     private static string CellTitle(BeatCell cell)
         => $"{(cell.IsRest ? "Rest" : cell.Display)} · {cell.Time.ToString("F1")}s";
 
+    // A cell that currently sounds a real chord (not a pre-intro gap or a rest).
+    private static bool HasChord(BeatCell cell) => cell.Raw is not null && !cell.IsRest;
+
+    // Pointer click → seek (two-way grid). Touch tap on a chord → pinned preview.
+    private async Task OnCellClick(BeatCell cell, MouseEventArgs e)
+    {
+        if (!_hoverCapable && HasChord(cell))
+        {
+            await OnChordPreview.InvokeAsync(new ChordPreview(cell.Raw, cell.Time, e.ClientX, e.ClientY, true));
+            return;
+        }
+        await OnSeekTo.InvokeAsync(cell.Time);
+    }
+
+    private async Task OnCellEnter(BeatCell cell, MouseEventArgs e)
+    {
+        if (!_hoverCapable || !HasChord(cell)) return;
+        await OnChordPreview.InvokeAsync(new ChordPreview(cell.Raw, cell.Time, e.ClientX, e.ClientY, false));
+    }
+
+    private async Task OnCellLeave()
+    {
+        if (!_hoverCapable) return;
+        await OnChordPreviewEnd.InvokeAsync();
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            try
+            {
+                _module ??= await JS.InvokeAsync<IJSObjectReference>(
+                    "import", "./_content/FRELODYUI.Shared/Pages/Discover/YoutubeChordGrid.razor.js");
+                _hoverCapable = await _module.InvokeAsync<bool>("hoverCapable");
+                StateHasChanged();
+            }
+            catch { /* assume hover-capable until proven otherwise */ }
+        }
+
         // Keep the playing measure in view while the audio advances.
         if (ActiveBeatIndex < 0 || ActiveBeatIndex == _lastScrolledIndex) return;
         _lastScrolledIndex = ActiveBeatIndex;

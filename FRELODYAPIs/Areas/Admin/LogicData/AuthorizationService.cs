@@ -179,82 +179,7 @@ namespace FRELODYAPP.Data
                     };
                     var objFromGoogle = await GoogleJsonWebSignature.ValidateAsync(tokenResponse.Id_token, settings);
 
-                    // Check if user exists by external login provider
-                    var userFromDb = await _userManager.FindByLoginAsync("google", objFromGoogle.Subject);
-
-                    if (userFromDb != null)
-                    {
-                        // Existing external login user - sign in directly
-                        return await LoginUserNoPassword(userFromDb, userFromDb.TenantId);
-                    }
-
-                    // Check if user exists by email
-                    userFromDb = await _userManager.FindByEmailAsync(objFromGoogle.Email);
-                    if (userFromDb != null)
-                    {
-                        // Link Google login to existing account
-                        await _userManager.AddLoginAsync(userFromDb, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
-                        return await LoginUserNoPassword(userFromDb, userFromDb.TenantId);
-                    }
-
-                    // Create new user with a new tenant (each Google sign-up = new company/tenant)
-                    var nameParts = (objFromGoogle.Name ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-                    var fullName = objFromGoogle.Name ?? "User";
-                    var emailPrefix = objFromGoogle.Email?.Split('@')[0] ?? "user";
-
-                    var newTenant = new Tenant
-                    {
-                        TenantName = fullName,
-                        Email = objFromGoogle.Email,
-                        DateCreated = DateTime.UtcNow
-                    };
-
-                    var newUser = new User()
-                    {
-                        Email = objFromGoogle.Email,
-                        UserName = $"@{emailPrefix}",
-                        FirstName = nameParts.FirstOrDefault() ?? "",
-                        LastName = nameParts.Length > 1 ? nameParts[1] : "",
-                        EmailConfirmed = objFromGoogle.EmailVerified,
-                        ProfilePicUrl = objFromGoogle.Picture,
-                        TenantId = newTenant.Id,
-                        IsActive = true,
-                        DateCreated = DateTimeOffset.UtcNow
-                    };
-
-                    var strategy = _context.Database.CreateExecutionStrategy();
-                    return await strategy.ExecuteAsync(async () =>
-                    {
-                        using var scope = await _context.Database.BeginTransactionAsync();
-
-                        // Create tenant first
-                        await _context.Tenants.AddAsync(newTenant);
-                        await _context.SaveChangesAsync();
-
-                        var result = await _userManager.CreateAsync(newUser);
-                        if (!result.Succeeded)
-                        {
-                            return ServiceResult<LoginResponseDto>.Failure(
-                                new BadRequestException(string.Join("\n", result.Errors.Select(e => e.Description))));
-                        }
-
-                        var loginResult = await _userManager.AddLoginAsync(newUser, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
-                        if (!loginResult.Succeeded)
-                        {
-                            return ServiceResult<LoginResponseDto>.Failure(
-                                new BadRequestException(string.Join("\n", loginResult.Errors.Select(e => e.Description))));
-                        }
-
-                        // Add default role for self-registered users
-                        var defaultRole = UserRoles.User;
-                        if (await _roleManager.RoleExistsAsync(defaultRole))
-                        {
-                            await _userManager.AddToRoleAsync(newUser, defaultRole);
-                        }
-
-                        await scope.CommitAsync();
-                        return await LoginUserNoPassword(newUser, newTenant.Id);
-                    });
+                    return await ProcessGoogleUserAsync(objFromGoogle);
                 }
                 catch (Exception ex)
                 {
@@ -267,6 +192,117 @@ namespace FRELODYAPP.Data
                 _logger.LogError("Google OAuth token exchange failed. Response: {ResponseContent}", responseContent);
                 return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Failed to authenticate. Please try again later"));
             }
+        }
+
+        // Google One Tap (GIS) hands back a signed ID-token credential directly — no
+        // authorization-code exchange. We verify it against our client_id (audience) and
+        // Google's signature/issuer, then reuse the same link/create flow as the redirect path.
+        public async Task<ServiceResult<LoginResponseDto>> GoogleOneTapLogin(string credential)
+        {
+            if (string.IsNullOrWhiteSpace(credential))
+                return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Missing Google credential"));
+
+            try
+            {
+                var settings = new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { _config["GoogleAuth:client_id"] }
+                };
+                var objFromGoogle = await GoogleJsonWebSignature.ValidateAsync(credential, settings);
+
+                return await ProcessGoogleUserAsync(objFromGoogle);
+            }
+            catch (InvalidJwtException)
+            {
+                return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Invalid or expired Google credential"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Google One Tap sign-in failed");
+                return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Failed to authenticate. Please try again later"));
+            }
+        }
+
+        // Shared post-validation flow for both Google paths: link to an existing login/email,
+        // or create a brand-new user + tenant. Caller is responsible for verifying the token.
+        private async Task<ServiceResult<LoginResponseDto>> ProcessGoogleUserAsync(GoogleJsonWebSignature.Payload objFromGoogle)
+        {
+            // Check if user exists by external login provider
+            var userFromDb = await _userManager.FindByLoginAsync("google", objFromGoogle.Subject);
+
+            if (userFromDb != null)
+            {
+                // Existing external login user - sign in directly
+                return await LoginUserNoPassword(userFromDb, userFromDb.TenantId);
+            }
+
+            // Check if user exists by email
+            userFromDb = await _userManager.FindByEmailAsync(objFromGoogle.Email);
+            if (userFromDb != null)
+            {
+                // Link Google login to existing account
+                await _userManager.AddLoginAsync(userFromDb, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
+                return await LoginUserNoPassword(userFromDb, userFromDb.TenantId);
+            }
+
+            // Create new user with a new tenant (each Google sign-up = new company/tenant)
+            var nameParts = (objFromGoogle.Name ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+            var fullName = objFromGoogle.Name ?? "User";
+            var emailPrefix = objFromGoogle.Email?.Split('@')[0] ?? "user";
+
+            var newTenant = new Tenant
+            {
+                TenantName = fullName,
+                Email = objFromGoogle.Email,
+                DateCreated = DateTime.UtcNow
+            };
+
+            var newUser = new User()
+            {
+                Email = objFromGoogle.Email,
+                UserName = $"@{emailPrefix}",
+                FirstName = nameParts.FirstOrDefault() ?? "",
+                LastName = nameParts.Length > 1 ? nameParts[1] : "",
+                EmailConfirmed = objFromGoogle.EmailVerified,
+                ProfilePicUrl = objFromGoogle.Picture,
+                TenantId = newTenant.Id,
+                IsActive = true,
+                DateCreated = DateTimeOffset.UtcNow
+            };
+
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using var scope = await _context.Database.BeginTransactionAsync();
+
+                // Create tenant first
+                await _context.Tenants.AddAsync(newTenant);
+                await _context.SaveChangesAsync();
+
+                var result = await _userManager.CreateAsync(newUser);
+                if (!result.Succeeded)
+                {
+                    return ServiceResult<LoginResponseDto>.Failure(
+                        new BadRequestException(string.Join("\n", result.Errors.Select(e => e.Description))));
+                }
+
+                var loginResult = await _userManager.AddLoginAsync(newUser, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
+                if (!loginResult.Succeeded)
+                {
+                    return ServiceResult<LoginResponseDto>.Failure(
+                        new BadRequestException(string.Join("\n", loginResult.Errors.Select(e => e.Description))));
+                }
+
+                // Add default role for self-registered users
+                var defaultRole = UserRoles.User;
+                if (await _roleManager.RoleExistsAsync(defaultRole))
+                {
+                    await _userManager.AddToRoleAsync(newUser, defaultRole);
+                }
+
+                await scope.CommitAsync();
+                return await LoginUserNoPassword(newUser, newTenant.Id);
+            });
         }
 
         public async Task<ServiceResult<LoginResponseDto>> Login(UserLogin userLogin)

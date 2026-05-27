@@ -229,6 +229,130 @@
     border-color: rgba(129, 140, 248, 0.2);
 }
 
+/* ── Chord stage: beat strip + grid, with a maximize affordance ── */
+.pv-stage {
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-3);
+}
+
+.pv-stage-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--k-space-2);
+}
+
+.pv-stage-max-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-sm);
+    background: transparent;
+    color: var(--k-text-muted);
+    cursor: pointer;
+    transition: background var(--k-transition-fast), color var(--k-transition-fast);
+}
+
+.pv-stage-max-btn:hover {
+    background: var(--k-bg-hover);
+    color: var(--k-accent);
+}
+
+/* Maximized: CSS overlay (not native fullscreen) so the floating player stays
+   on top and playable while the chord chart fills the screen. */
+.pv-stage--max {
+    position: fixed;
+    inset: 0;
+    z-index: 1030;
+    margin: 0;
+    padding: var(--k-space-4);
+    background: var(--k-bg-surface);
+    overflow: auto;
+    gap: var(--k-space-4);
+}
+
+.pv-stage--max .pv-stage-bar {
+    justify-content: space-between;
+}
+
+.pv-stage--max .pv-stage-capo {
+    gap: var(--k-space-2);
+}
+
+/* Bigger, easier-to-follow cells while maximized (::deep pierces the grid's
+   CSS isolation since it renders inside this stage). */
+.pv-stage--max ::deep .ycg {
+    gap: var(--k-space-3);
+}
+
+.pv-stage--max ::deep .ycg-beat {
+    min-height: 3.25rem;
+}
+
+.pv-stage--max ::deep .ycg-beat-label {
+    font-size: 1.15rem;
+}
+
+/* ── Chord-chart preview popover (hover on pointer, tap-to-pin on touch) ── */
+.pv-pop-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: default;
+}
+
+.pv-chord-pop {
+    position: fixed;
+    z-index: 1051;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--k-space-2);
+    width: 120px;
+    padding: var(--k-space-3);
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-md);
+    background: var(--k-bg-surface);
+    box-shadow: var(--k-shadow-lg);
+    pointer-events: none; /* hover variant must not steal the mouseleave */
+}
+
+.pv-chord-pop--pinned {
+    pointer-events: auto;
+}
+
+.pv-chord-pop-name {
+    font-size: var(--k-font-size-sm);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.pv-chord-pop-empty {
+    font-size: var(--k-font-size-xs);
+    color: var(--k-text-muted);
+}
+
+.pv-chord-pop-play {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.8rem;
+    border: none;
+    border-radius: var(--k-radius-pill);
+    background: var(--k-accent);
+    color: #fff;
+    font-size: var(--k-font-size-xs);
+    font-weight: 600;
+    cursor: pointer;
+}
+
 /* ── Beat measure strip ── */
 .pv-beat-strip {
     display: flex;
@@ -408,6 +532,15 @@
     background: #000;
 }
 
+/* Vertical sources (TikTok): taller-than-wide stage + a narrower window. */
+.pv-float--vertical {
+    width: min(12rem, calc(100vw - 2 * var(--k-space-4)));
+}
+
+.pv-float--vertical .pv-float-stage {
+    aspect-ratio: 9 / 16;
+}
+
 .pv-float-stage > div,
 .pv-float-stage iframe {
     width: 100%;
@@ -421,16 +554,39 @@
     display: none;
 }
 
-/* ── Small screens: a touch narrower, still bottom-left and movable ── */
+/* ── Small screens: dock the player inline at the bottom of the content ──
+   Screen real-estate is tight, so instead of floating over the chords the
+   player drops into normal flow beneath pv-main and takes its own space. */
 @media (max-width: 600px) {
     .pv-main {
         padding: var(--k-space-3);
-        padding-bottom: 11rem;
+        /* No floating overlap to clear anymore. */
+        padding-bottom: var(--k-space-3);
     }
 
-    .pv-float {
-        left: var(--k-space-3);
-        bottom: var(--k-space-3);
-        width: min(13.5rem, calc(100vw - 2 * var(--k-space-3)));
+    .pv-float,
+    .pv-float--vertical {
+        position: static;
+        left: auto;
+        top: auto;
+        right: auto;
+        bottom: auto;
+        width: auto;
+        margin: 0 var(--k-space-3) var(--k-space-3);
+        box-shadow: var(--k-shadow-sm);
+    }
+
+    /* Docked: the title bar is no longer a drag handle. */
+    .pv-float-bar {
+        cursor: default;
+    }
+
+    /* Center a vertical (TikTok) stage and size it by height so it stays portrait
+       and never dominates the viewport. */
+    .pv-float--vertical .pv-float-stage {
+        aspect-ratio: 9 / 16;
+        height: 60vh;
+        width: auto;
+        margin: 0 auto;
     }
 }

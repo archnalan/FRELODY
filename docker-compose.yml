@@ -77,6 +77,16 @@ services:
       # Frontend URL for password reset emails
       AppSettings__FrontendUrl: "http://localhost:5080"
 
+      # ── Google OAuth ───────────────────────────────────────────────────────
+      # Sourced from .env (same pattern as docker-compose.prod.yml). Without
+      # these the API falls back to the appsettings.json placeholders
+      # (MY_GOOGLE_CLIENT_ID / MY_GOOGLE_CLIENT_SECRET) and Google rejects the
+      # consent request with "Error 401: invalid_client". The redirect URI and
+      # the JS origin must also be registered in the Google Cloud console.
+      GoogleAuth__client_id: "${GOOGLE_CLIENT_ID}"
+      GoogleAuth__client_secret: "${GOOGLE_CLIENT_SECRET}"
+      GoogleAuth__redirectUri: "${GOOGLE_REDIRECT_URI:-http://localhost:5080/login}"
+
       # ── Share-link landing (OG previews) ───────────────────────────────────
       # User-facing origin for copied share URLs. Nginx (port 80) proxies
       # /shared/* and /share-og/* to this API container, so the public origin

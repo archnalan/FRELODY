@@ -19,5 +19,6 @@ namespace FRELODYAPIs.Services.ChordMini
 
     public sealed record MediaInfo(
         string Id, string Title, string? Uploader,
-        string? Thumbnail, int DurationSeconds, string WebpageUrl);
+        string? Thumbnail, int DurationSeconds, string WebpageUrl,
+        int? Width = null, int? Height = null);
 }

@@ -42,6 +42,10 @@ namespace FRELODYAPIs.Controllers
             }
 
             var dto = await UpsertAndMapAsync(info, ct);
+            // Dimensions come straight from the fresh yt-dlp probe (not persisted);
+            // the playback view uses them to size the player to the clip's ratio.
+            dto.Width = info.Width;
+            dto.Height = info.Height;
             return Ok(dto);
         }
 

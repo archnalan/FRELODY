@@ -84,6 +84,8 @@
                  OnConfirmModal="ConfirmGlobalModal" />
 }
 
+<ContinueAsPrompt />
+
 @code{
     private GlobalErrorBoundary errorBoundaryRef = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;

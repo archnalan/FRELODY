@@ -17,6 +17,9 @@ namespace FRELODYUI.Shared.RefitApis
         [Post("/api/authorization/external-login-callback")]
         Task<IApiResponse<LoginResponseDto>> ExternalLoginCallback([Body] GoogleAuthRequestDto googleAuthRequestDto);
 
+        [Post("/api/authorization/google-one-tap")]
+        Task<IApiResponse<LoginResponseDto>> GoogleOneTap([Body] GoogleOneTapRequestDto request);
+
         [Get("/api/authorization/get-google-o-auth-config")]
         Task<IApiResponse<OAuthConfigDto>> GetGoogleOAuthConfig();
 

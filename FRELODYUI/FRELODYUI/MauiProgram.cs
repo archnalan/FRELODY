@@ -33,6 +33,7 @@ namespace FRELODYUI
             builder.Services.AddScoped<IModalService, ModalService>();
             builder.Services.AddScoped<IStorageService, MauiStorageService>();
             builder.Services.AddScoped<ChordLyricExtrator>();
+            builder.Services.AddScoped<IChordChartResolver, ChordChartResolver>();
             builder.Services.AddScoped<ISongExtractionAiService, SongExtractionAiService>();
             builder.Services.AddScoped<TabManagementService>();
             builder.Services.AddScoped<HeroDataService>();

@@ -3,6 +3,7 @@ using FRELODYAPP.Dtos.UserDtos;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.UserDtos;
+using FRELODYUI.Shared.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,7 @@ namespace FRELODYUI.Shared.Services
     public class GlobalAuthStateProvider : AuthenticationStateProvider
     {
         private const string SessionStateKey = "sessionState";
+        private const string RememberedUserKey = "last_user";
         private const string AuthenticationType = "jwt";
         
         private readonly IStorageService _localStorage;
@@ -123,7 +125,10 @@ namespace FRELODYUI.Shared.Services
 
                 var user = new ClaimsPrincipal(identityResult.Data);
                 NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
-                
+
+                // Remember who this was so we can offer "Continue as …" later (survives expiry).
+                await CacheRememberedUserAsync(loginResponse);
+
                 _logger.LogInformation("User marked as authenticated successfully");
                 return ServiceResult<bool>.Success(true);
             }
@@ -263,6 +268,40 @@ namespace FRELODYUI.Shared.Services
         {
             var user = await GetLoggedInUserAsync();
             return user?.Id;
+        }
+
+        /// <summary>
+        /// The last successfully signed-in user (name + tokens), or null. Used by the
+        /// "Continue as …" prompt. Survives access-token expiry (separate storage key).
+        /// </summary>
+        public async Task<RememberedUser?> GetRememberedUserAsync()
+        {
+            try { return await _localStorage.GetItemAsync<RememberedUser>(RememberedUserKey); }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not read remembered user");
+                return null;
+            }
+        }
+
+        private async Task CacheRememberedUserAsync(LoginResponseDto loginResponse)
+        {
+            try
+            {
+                var u = loginResponse.User;
+                await _localStorage.SetItemAsync(RememberedUserKey, new RememberedUser
+                {
+                    FirstName = u?.FirstName,
+                    LastName = u?.LastName,
+                    Email = u?.Email,
+                    Token = loginResponse.Token,
+                    RefreshToken = loginResponse.RefreshToken
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not cache remembered user");
+            }
         }
 
         private async Task<ServiceResult<LoginResponseDto>> GetSessionFromStorageAsync()

@@ -75,6 +75,19 @@ namespace FRELODYAPIs.Controllers
             return Ok(result.Data);
         }
 
+        [HttpPost]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(LoginResponseDto), 200)]
+        public async Task<IActionResult> GoogleOneTap([FromBody] GoogleOneTapRequestDto request)
+        {
+            var result = await _authorizationDAL.GoogleOneTapLogin(request.Credential);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
+            return Ok(result.Data);
+        }
+
         [HttpGet]
         [Authorize]
         [ProducesResponseType(typeof(UpdateUserProfileOutDto), 200)]
