@@ -1,6 +1,9 @@
 @using FRELODYUI.Shared.Pages.Discover
+@using FRELODYUI.Shared.Pages.Chord
+@using FRELODYUI.Shared.Services
 @inject IJSRuntime JS
 @inject IYouTubeApi YoutubeApi
+@inject IChordsApi ChordsApi
 @implements IAsyncDisposable
 
 <div class="pv">
@@ -8,33 +11,71 @@
     <!-- Main column: meta + beat + chord grid. Full width — the player floats. -->
     <div class="pv-main">
 
-        @if (!string.IsNullOrEmpty(Transcription.KeySignature) ||
-             Transcription.Bpm is not null ||
-             !string.IsNullOrEmpty(Transcription.TimeSignature))
+        <div class="pv-toolbar">
+            @if (!string.IsNullOrEmpty(Transcription.KeySignature) ||
+                 Transcription.Bpm is not null ||
+                 !string.IsNullOrEmpty(Transcription.TimeSignature))
+            {
+                <div class="pv-meta">
+                    @if (!string.IsNullOrEmpty(Transcription.KeySignature))
+                    {
+                        <span class="pv-chip" title="@(_capo > 0 ? $"Play in {PlayKeyLabel}; sounds in {Transcription.KeySignature}" : null)">
+                            <i class="bi bi-music-note-beamed"></i>
+                            @PlayKeyLabel
+                            @if (_capo > 0)
+                            {
+                                <span class="pv-chip-sub">sounds @Transcription.KeySignature</span>
+                            }
+                        </span>
+                    }
+                    @if (Transcription.Bpm is not null)
+                    {
+                        <span class="pv-chip">
+                            <i class="bi bi-activity"></i>
+                            @Transcription.Bpm.Value.ToString("F1") BPM
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(Transcription.TimeSignature))
+                    {
+                        <span class="pv-chip">
+                            <i class="bi bi-music-note-list"></i>
+                            @Transcription.TimeSignature
+                        </span>
+                    }
+                </div>
+            }
+
+            @if (Transcription.SyncedChords.Count > 0)
+            {
+                <div class="pv-capo">
+                    <span class="pv-capo-label">Capo</span>
+                    <div class="pv-capo-stepper">
+                        <button type="button" class="pv-capo-btn" @onclick="DecreaseCapo"
+                                disabled="@(_capo <= 0)" aria-label="Lower capo">
+                            <i class="bi bi-dash"></i>
+                        </button>
+                        <span class="pv-capo-value">@(_capo == 0 ? "Off" : _capo.ToString())</span>
+                        <button type="button" class="pv-capo-btn" @onclick="IncreaseCapo"
+                                disabled="@(_capo >= MaxCapo)" aria-label="Raise capo">
+                            <i class="bi bi-plus"></i>
+                        </button>
+                    </div>
+                    @if (_capo > 0)
+                    {
+                        <button type="button" class="pv-capo-reset" @onclick="ResetCapo" title="Reset capo">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (_capo > 0)
         {
-            <div class="pv-meta">
-                @if (!string.IsNullOrEmpty(Transcription.KeySignature))
-                {
-                    <span class="pv-chip">
-                        <i class="bi bi-music-note-beamed"></i>
-                        @Transcription.KeySignature
-                    </span>
-                }
-                @if (Transcription.Bpm is not null)
-                {
-                    <span class="pv-chip">
-                        <i class="bi bi-activity"></i>
-                        @Transcription.Bpm.Value.ToString("F1") BPM
-                    </span>
-                }
-                @if (!string.IsNullOrEmpty(Transcription.TimeSignature))
-                {
-                    <span class="pv-chip">
-                        <i class="bi bi-music-note-list"></i>
-                        @Transcription.TimeSignature
-                    </span>
-                }
-            </div>
+            <p class="pv-capo-hint">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                Showing shapes to finger with a capo on fret @_capo — the recording still sounds in @Transcription.KeySignature.
+            </p>
         }
 
         @if (Transcription.Beats.Count > 0)
@@ -55,7 +96,60 @@
                 Beats="Transcription.Beats"
                 ActiveBeatIndex="_activeBeatIndex"
                 TimeSignature="Transcription.TimeSignature"
+                CapoShift="-_capo"
+                PreferFlat="_preferFlat"
                 OnSeekTo="SeekToAsync" />
+        }
+
+        <!-- Chord shapes used in this song (capo-aware) -->
+        @if (_uniqueRawChords.Count > 0)
+        {
+            <section class="pv-chords">
+                <div class="pv-chords-head">
+                    <h3 class="pv-chords-title">
+                        <i class="bi bi-music-note-list" aria-hidden="true"></i>
+                        Chord shapes
+                        <span class="pv-chords-count">@_uniqueRawChords.Count</span>
+                    </h3>
+                    <button type="button" class="pv-chords-toggle"
+                            @onclick="() => _chordsCollapsed = !_chordsCollapsed"
+                            title="@(_chordsCollapsed ? "Show chord shapes" : "Hide chord shapes")">
+                        <i class="bi @(_chordsCollapsed ? "bi-chevron-down" : "bi-chevron-up")"></i>
+                    </button>
+                </div>
+
+                @if (!_chordsCollapsed)
+                {
+                    <div class="pv-chords-grid">
+                        @if (_chordsLoading)
+                        {
+                            @for (int g = 0; g < _uniqueRawChords.Count; g++)
+                            {
+                                <div class="pv-chord-card">
+                                    <div class="pv-chord-name-ghost k-shimmer"></div>
+                                    <ChordCarousel IsLoading="true"
+                                                   Size="CarouselSize.Medium"
+                                                   ShowActions="false"
+                                                   CarouselId="@($"pv-ghost-{g}")" />
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            @foreach (var chord in _chordCards)
+                            {
+                                <div class="pv-chord-card" @key="chord.Id ?? chord.ChordName">
+                                    <span class="pv-chord-name">@chord.ChordName</span>
+                                    <ChordCarousel Chord="@chord"
+                                                   Size="CarouselSize.Medium"
+                                                   ShowActions="false"
+                                                   CarouselId="@($"pv-chord-{chord.Id ?? chord.ChordName}")" />
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </section>
         }
 
         <!-- Actions -->
@@ -161,6 +255,24 @@
     private int _timeSigNumerator = 4;
     private int _beatInMeasure => _activeBeatIndex >= 0 ? _activeBeatIndex % _timeSigNumerator : 0;
 
+    // ── Capo + chord shapes ──────────────────────────────────────────────
+    private const int MaxCapo = 11;
+    private int _capo;
+    private bool _preferFlat;
+    private bool _chordsCollapsed;
+
+    // Distinct playable raw labels in first-seen order — capo-independent identity.
+    private readonly List<string> _uniqueRawChords = [];
+    private List<ChordDto> _chordCards = [];
+    private bool _chordsLoading;
+    private CancellationTokenSource? _chordRefetchCts;
+
+    private object? _builtChordsRef;
+
+    private string PlayKeyLabel => _capo > 0
+        ? (ChordTransposer.TransposeKey(Transcription.KeySignature, -_capo) ?? Transcription.KeySignature ?? "")
+        : (Transcription.KeySignature ?? "");
+
     protected override void OnParametersSet()
     {
         if (!string.IsNullOrEmpty(Transcription.TimeSignature))
@@ -168,6 +280,94 @@
             var slash = Transcription.TimeSignature.IndexOf('/');
             if (slash > 0 && int.TryParse(Transcription.TimeSignature[..slash], out var n) && n is >= 2 and <= 8)
                 _timeSigNumerator = n;
+        }
+
+        // Rebuild the unique-chord list (and refetch diagrams) only when the
+        // underlying transcription changes — not on every beat tick.
+        if (!ReferenceEquals(_builtChordsRef, Transcription.SyncedChords))
+        {
+            _builtChordsRef = Transcription.SyncedChords;
+            BuildUniqueChords();
+            _ = RefetchChordCardsAsync();
+        }
+    }
+
+    private void BuildUniqueChords()
+    {
+        _uniqueRawChords.Clear();
+        _preferFlat = ChordLabel.PrefersFlat(Transcription.SyncedChords.Select(s => s.Chord));
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var sc in Transcription.SyncedChords)
+        {
+            var name = ChordLabel.PlainName(sc.Chord);   // null for N/X rests
+            if (name is null) continue;
+            if (seen.Add(name)) _uniqueRawChords.Add(sc.Chord);
+        }
+    }
+
+    private void IncreaseCapo() { if (_capo < MaxCapo) { _capo++; _ = RefetchChordCardsAsync(); } }
+    private void DecreaseCapo() { if (_capo > 0) { _capo--; _ = RefetchChordCardsAsync(); } }
+    private void ResetCapo()    { if (_capo != 0) { _capo = 0; _ = RefetchChordCardsAsync(); } }
+
+    // Resolves each unique chord (at the current capo) to a ChordDto so the
+    // ChordCarousel can show the matching fingering diagram. Debounced so rapid
+    // capo taps only fire one batch of lookups.
+    private async Task RefetchChordCardsAsync()
+    {
+        if (_uniqueRawChords.Count == 0) return;
+
+        _chordRefetchCts?.Cancel();
+        _chordRefetchCts = new CancellationTokenSource();
+        var token = _chordRefetchCts.Token;
+
+        _chordsLoading = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await Task.Delay(300, token);
+
+            var resolved = new List<ChordDto>(_uniqueRawChords.Count);
+            foreach (var raw in _uniqueRawChords)
+            {
+                if (token.IsCancellationRequested) return;
+
+                var name = ChordLabel.PlainName(ChordLabel.TransposeRaw(raw, -_capo, _preferFlat));
+                if (string.IsNullOrEmpty(name)) continue;
+
+                try
+                {
+                    var resp = await ChordsApi.SearchChords(name, 0, 5);
+                    if (resp.IsSuccessStatusCode && resp.Content?.Data?.Any() == true)
+                    {
+                        var match = resp.Content.Data
+                            .FirstOrDefault(c => c.ChordName.Equals(name, StringComparison.OrdinalIgnoreCase))
+                            ?? resp.Content.Data.First();
+                        resolved.Add(match);
+                    }
+                    else
+                    {
+                        resolved.Add(new ChordDto { ChordName = name });
+                    }
+                }
+                catch
+                {
+                    resolved.Add(new ChordDto { ChordName = name });
+                }
+            }
+
+            if (token.IsCancellationRequested) return;
+            _chordCards = resolved;
+        }
+        catch (TaskCanceledException) { return; }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _chordsLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 
@@ -326,6 +526,7 @@
     public async ValueTask DisposeAsync()
     {
         StopSyncLoop();
+        try { _chordRefetchCts?.Cancel(); _chordRefetchCts?.Dispose(); } catch { }
         try { await JS.InvokeVoidAsync($"{PlayerApi}.destroy"); } catch { }
         try { if (_dragModule is not null) { await _dragModule.InvokeVoidAsync("dispose", _floatEl); await _dragModule.DisposeAsync(); } } catch { }
         _dotNetRef?.Dispose();

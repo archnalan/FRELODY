@@ -1,0 +1,86 @@
+@implements IDisposable
+
+@* Friendly, staged waiting screen shared by the YouTube and TikTok analysis pages.
+   The host page advances StageIndex on a timer; this component owns the soundwave,
+   the stage checklist, an indeterminate bar, and a rotating reassurance tip. *@
+<div class="ap">
+    <div class="ap-wave" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+    </div>
+
+    <p class="ap-heading">Analyzing the music…</p>
+
+    <ol class="ap-stages">
+        @for (int i = 0; i < _stages.Length; i++)
+        {
+            var state = i < StageIndex ? "done" : (i == StageIndex ? "active" : "pending");
+            <li class="ap-stage ap-stage--@state">
+                <span class="ap-stage-marker">
+                    @if (i < StageIndex)
+                    {
+                        <i class="bi bi-check-lg"></i>
+                    }
+                    else
+                    {
+                        <span class="ap-stage-dot"></span>
+                    }
+                </span>
+                <span class="ap-stage-label">@_stages[i]</span>
+            </li>
+        }
+    </ol>
+
+    <div class="ap-bar" role="progressbar" aria-label="Analysis in progress">
+        <div class="ap-bar-fill"></div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Subtitle))
+    {
+        <p class="ap-sub">@Subtitle</p>
+    }
+
+    <p class="ap-tip">
+        <i class="bi bi-lightbulb" aria-hidden="true"></i>
+        @_tips[_tipIndex]
+    </p>
+</div>
+
+@code {
+    [Parameter] public int StageIndex { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Optional override of the stage labels. Defaults to the audio→beats→chords→finalize flow.</summary>
+    [Parameter] public string[]? Stages { get; set; }
+
+    private string[] _stages => Stages ?? DefaultStages;
+
+    private static readonly string[] DefaultStages =
+    [
+        "Extracting audio…",
+        "Detecting beats…",
+        "Recognizing chords…",
+        "Finalizing…"
+    ];
+
+    private static readonly string[] _tips =
+    [
+        "Longer or more detailed songs take a little more time.",
+        "We map the beat grid first so every chord lands in the right place.",
+        "You'll be able to save this to your library when it's ready.",
+        "Quality analysis beats a quick guess — hang tight."
+    ];
+
+    private int _tipIndex;
+    private System.Threading.Timer? _tipTimer;
+
+    protected override void OnInitialized()
+    {
+        _tipTimer = new System.Threading.Timer(_ =>
+        {
+            _tipIndex = (_tipIndex + 1) % _tips.Length;
+            InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(6));
+    }
+
+    public void Dispose() => _tipTimer?.Dispose();
+}

@@ -81,13 +81,8 @@
         else
         {
             <!-- Processing state -->
-            <div class="dv-progress">
-                <div class="dv-bounce-dots">
-                    <span></span><span></span><span></span>
-                </div>
-                <p class="dv-progress-stage">@StageLabel</p>
-                <p class="dv-progress-sub">This may take a minute for longer videos.</p>
-            </div>
+            <AnalysisProgress StageIndex="_stageIndex"
+                              Subtitle="This may take a minute for longer videos." />
         }
 
     </div>
@@ -112,8 +107,6 @@
         "Recognizing chords…",
         "Finalizing…"
     ];
-
-    private string StageLabel => Stages[Math.Clamp(_stageIndex, 0, Stages.Length - 1)];
 
     protected override async Task OnInitializedAsync()
     {

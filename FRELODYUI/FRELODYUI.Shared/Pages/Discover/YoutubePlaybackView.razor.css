@@ -12,11 +12,204 @@
     padding-bottom: 13rem;
 }
 
+/* ── Toolbar: meta chips on the left, capo control on the right ── */
+.pv-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--k-space-3);
+}
+
 /* ── Metadata chips ── */
 .pv-meta {
     display: flex;
     flex-wrap: wrap;
     gap: var(--k-space-2);
+}
+
+.pv-chip-sub {
+    font-weight: 500;
+    opacity: 0.75;
+    font-size: 0.65rem;
+    padding-left: 0.15rem;
+    border-left: 1px solid currentColor;
+    margin-left: 0.1rem;
+}
+
+/* ── Capo stepper ── */
+.pv-capo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--k-space-2);
+}
+
+.pv-capo-label {
+    font-size: var(--k-font-size-xs);
+    font-weight: 600;
+    color: var(--k-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.pv-capo-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-pill);
+    background: var(--k-bg-surface);
+    overflow: hidden;
+}
+
+.pv-capo-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border: none;
+    background: transparent;
+    color: var(--k-text-muted);
+    cursor: pointer;
+    transition: background var(--k-transition-fast), color var(--k-transition-fast);
+}
+
+.pv-capo-btn:hover:not(:disabled) {
+    background: var(--k-accent-soft);
+    color: var(--k-accent);
+}
+
+.pv-capo-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.pv-capo-value {
+    min-width: 2.4rem;
+    text-align: center;
+    font-size: var(--k-font-size-sm);
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.pv-capo-reset {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border: 1px solid var(--k-border);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--k-text-muted);
+    cursor: pointer;
+    transition: border-color var(--k-transition-fast), color var(--k-transition-fast);
+}
+
+.pv-capo-reset:hover {
+    border-color: var(--k-accent);
+    color: var(--k-accent);
+}
+
+.pv-capo-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--k-radius-sm);
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+    font-size: var(--k-font-size-xs);
+    line-height: 1.4;
+}
+
+/* ── Chord shapes section ── */
+.pv-chords {
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-3);
+}
+
+.pv-chords-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--k-space-2);
+}
+
+.pv-chords-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    font-size: var(--k-font-size-sm);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.pv-chords-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.3rem;
+    height: 1.3rem;
+    padding: 0 0.35rem;
+    border-radius: var(--k-radius-pill);
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.pv-chords-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-sm);
+    background: transparent;
+    color: var(--k-text-muted);
+    cursor: pointer;
+    transition: background var(--k-transition-fast), color var(--k-transition-fast);
+}
+
+.pv-chords-toggle:hover {
+    background: var(--k-bg-hover);
+    color: var(--k-accent);
+}
+
+.pv-chords-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+    gap: var(--k-space-3);
+}
+
+.pv-chord-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--k-space-2);
+    padding: var(--k-space-3);
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-md);
+    background: var(--k-bg-surface);
+}
+
+.pv-chord-name {
+    font-size: var(--k-font-size-sm);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.pv-chord-name-ghost {
+    width: 2.5rem;
+    height: 0.9rem;
+    border-radius: var(--k-radius-xs);
+    background: var(--k-bg-surface-2);
 }
 
 .pv-chip {

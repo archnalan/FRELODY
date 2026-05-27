@@ -40,6 +40,11 @@ else
     [Parameter] public string? TimeSignature { get; set; }
     [Parameter] public EventCallback<float> OnSeekTo { get; set; }
 
+    // Semitone shift applied to the *displayed* chord shapes (capo → negative).
+    // The audio is untouched; this only changes which shapes the player fingers.
+    [Parameter] public int CapoShift { get; set; }
+    [Parameter] public bool PreferFlat { get; set; }
+
     private record BeatCell(int Index, string Display, bool IsRest, bool ShowLabel, bool IsDownbeat, float Time);
     private record Measure(int StartIndex, List<BeatCell> Cells);
 
@@ -55,12 +60,16 @@ else
     private object? _builtChordsRef;
     private object? _builtBeatsRef;
     private string? _builtTimeSignature;
+    private int _builtCapoShift;
+    private bool _builtPreferFlat;
 
     protected override void OnParametersSet()
     {
         if (ReferenceEquals(_builtChordsRef, SyncedChords)
             && ReferenceEquals(_builtBeatsRef, Beats)
-            && _builtTimeSignature == TimeSignature)
+            && _builtTimeSignature == TimeSignature
+            && _builtCapoShift == CapoShift
+            && _builtPreferFlat == PreferFlat)
             return;
 
         _beatsPerMeasure = 4;
@@ -76,7 +85,13 @@ else
         _builtChordsRef = SyncedChords;
         _builtBeatsRef = Beats;
         _builtTimeSignature = TimeSignature;
+        _builtCapoShift = CapoShift;
+        _builtPreferFlat = PreferFlat;
     }
+
+    // Capo-shifted display label for a raw chord; rest detection stays on the original.
+    private string DisplayFor(string? raw)
+        => ChordLabel.Display(ChordLabel.TransposeRaw(raw, CapoShift, PreferFlat));
 
     // Lay the whole song out beat-by-beat so every position is its own cell.
     // The chord label is printed only when the chord *changes*; intervening
@@ -100,7 +115,7 @@ else
                 while (ptr < ordered.Count && ordered[ptr].BeatIndex <= i)
                     current = ordered[ptr++].Chord;
 
-                var display = ChordLabel.Display(current);
+                var display = DisplayFor(current);
                 var isRest = ChordLabel.IsNoChord(current);
                 var showLabel = current is not null && display != prevDisplay;
                 cells.Add(new BeatCell(i, display, isRest, showLabel, i % _beatsPerMeasure == 0, Beats[i]));
@@ -114,7 +129,7 @@ else
             for (int i = 0; i < SyncedChords.Count; i++)
             {
                 var sc = SyncedChords[i];
-                var display = ChordLabel.Display(sc.Chord);
+                var display = DisplayFor(sc.Chord);
                 var isRest = ChordLabel.IsNoChord(sc.Chord);
                 cells.Add(new BeatCell(i, display, isRest, display != prevDisplay, i % _beatsPerMeasure == 0, sc.Time));
                 prevDisplay = display;
