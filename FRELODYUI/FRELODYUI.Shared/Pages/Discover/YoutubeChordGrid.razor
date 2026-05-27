@@ -18,8 +18,9 @@ else
                             class="@CellClass(cell)"
                             @onclick="(e) => OnCellClick(cell, e)"
                             @onmouseenter="(e) => OnCellEnter(cell, e)"
-                            @onmouseleave="OnCellLeave"
-                            title="@CellTitle(cell)">
+                            @onmouseleave="OnCellLeave">
+                            @* No title/tooltip: it competes with the chord label, which is what
+                               we want the eye drawn to. Chord identity lives in the cell itself. *@
                         @if (cell.ShowLabel)
                         {
                             <span class="ycg-beat-label">@cell.Display</span>
@@ -168,9 +169,6 @@ else
         if (cell.Index == ActiveBeatIndex) sb.Append(" ycg-beat--active");
         return sb.ToString();
     }
-
-    private static string CellTitle(BeatCell cell)
-        => $"{(cell.IsRest ? "Rest" : cell.Display)} · {cell.Time.ToString("F1")}s";
 
     // A cell that currently sounds a real chord (not a pre-intro gap or a rest).
     private static bool HasChord(BeatCell cell) => cell.Raw is not null && !cell.IsRest;

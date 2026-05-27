@@ -321,10 +321,9 @@
     border-radius: var(--k-radius-md);
     background: var(--k-bg-surface);
     box-shadow: var(--k-shadow-lg);
-    pointer-events: none; /* hover variant must not steal the mouseleave */
-}
-
-.pv-chord-pop--pinned {
+    /* Interactive so the pointer can travel onto it and explore the carousel
+       (next/prev voicings). A grace timer in the component keeps it open while
+       the pointer is in transit between the grid cell and here. */
     pointer-events: auto;
 }
 

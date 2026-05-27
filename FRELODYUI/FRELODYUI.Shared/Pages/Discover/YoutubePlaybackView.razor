@@ -254,6 +254,8 @@
                     @onclick="HideChordPopover"></button>
         }
         <div class="pv-chord-pop @(_popoverPinned ? "pv-chord-pop--pinned" : "")"
+             @onmouseenter="() => _isMouseOverPopover = true"
+             @onmouseleave="HandlePopoverMouseLeave"
              style="top:@(_popoverTop.ToString(System.Globalization.CultureInfo.InvariantCulture))px; left:@(_popoverLeft.ToString(System.Globalization.CultureInfo.InvariantCulture))px;">
             <span class="pv-chord-pop-name">@(_popoverChord?.ChordName ?? _popoverName)</span>
             @if (_popoverChord is not null)
@@ -355,6 +357,12 @@
     private float _popoverTime;
     private double _popoverTop;
     private double _popoverLeft;
+    // Hover-persistence: leaving a grid cell starts a short grace timer instead of
+    // closing immediately, so the pointer can travel onto the popover and explore
+    // the carousel (next/prev voicings). The popover only closes once the pointer
+    // is off both the cell and the popover — mirrors the Song player's behaviour.
+    private bool _isMouseOverPopover;
+    private System.Threading.Timer? _popoverTimer;
 
     private int _timeSigNumerator = 4;
     private int _beatInMeasure => _activeBeatIndex >= 0 ? _activeBeatIndex % _timeSigNumerator : 0;
@@ -572,6 +580,11 @@
     // matches exactly and tracks capo changes.
     private void HandleChordPreview(YoutubeChordGrid.ChordPreview p)
     {
+        // Re-entering a cell cancels any pending close from the previous hover.
+        _popoverTimer?.Dispose();
+        _popoverTimer = null;
+        _isMouseOverPopover = false;
+
         _popoverChord = FindCard(p.Raw);
         _popoverName = ChordLabel.Display(ChordLabel.TransposeRaw(p.Raw, -_capo, _preferFlat));
         _popoverTime = p.Time;
@@ -589,7 +602,25 @@
 
     private void HandleChordPreviewEnd()
     {
-        // Pinned (touch) popovers stay until dismissed; hover ones close on leave.
+        // Pinned (touch) popovers stay until dismissed. For hover, don't close
+        // straight away — give the pointer a grace window to reach the popover so
+        // the carousel stays explorable. The timer only hides if the pointer never
+        // landed on the popover.
+        if (_popoverPinned) return;
+        _popoverTimer?.Dispose();
+        _popoverTimer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                if (!_isMouseOverPopover) HideChordPopover();
+            });
+        }, null, 300, System.Threading.Timeout.Infinite);
+    }
+
+    // Pointer left the popover itself → close (hover) or keep (pinned, dismissed via backdrop).
+    private void HandlePopoverMouseLeave()
+    {
+        _isMouseOverPopover = false;
         if (_popoverPinned) return;
         HideChordPopover();
     }
@@ -597,6 +628,9 @@
     private void HideChordPopover()
     {
         if (!_showChordPopover) return;
+        _popoverTimer?.Dispose();
+        _popoverTimer = null;
+        _isMouseOverPopover = false;
         _showChordPopover = false;
         _popoverPinned = false;
         _popoverChord = null;
@@ -622,6 +656,10 @@
     private async Task ToggleMaximize()
     {
         _isMaximized = !_isMaximized;
+        // While maximized the chords own the screen, so shrink the floating player
+        // down to just its title bar to claim as little space as possible. Restore
+        // it to full size when the user drops back to the normal view.
+        _playerCollapsed = _isMaximized;
         HideChordPopover();
         StateHasChanged();
         try
@@ -642,6 +680,7 @@
     {
         if (!_isMaximized) return;
         _isMaximized = false;
+        _playerCollapsed = false;   // restore the player when leaving full view
         InvokeAsync(StateHasChanged);
     }
 
@@ -704,6 +743,7 @@
     public async ValueTask DisposeAsync()
     {
         StopSyncLoop();
+        try { _popoverTimer?.Dispose(); } catch { }
         try { _chordRefetchCts?.Cancel(); _chordRefetchCts?.Dispose(); } catch { }
         try { await JS.InvokeVoidAsync($"{PlayerApi}.destroy"); } catch { }
         try { if (_dragModule is not null) { await _dragModule.InvokeVoidAsync("unwatchEscape"); await _dragModule.InvokeVoidAsync("dispose", _floatEl); await _dragModule.DisposeAsync(); } } catch { }
