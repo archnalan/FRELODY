@@ -3,15 +3,10 @@
 @inject IYouTubeApi YoutubeApi
 @implements IAsyncDisposable
 
-<div class="pv-wrap">
+<div class="pv">
 
-    <!-- Player — replaced by YT iframe after init -->
-    <div class="pv-player-wrap">
-        <YoutubePlayerMount Id="@_playerId" />
-    </div>
-
-    <!-- Right column: meta + beat + chords -->
-    <div class="pv-side">
+    <!-- Main column: meta + beat + chord grid. Full width — the player floats. -->
+    <div class="pv-main">
 
         @if (!string.IsNullOrEmpty(Transcription.KeySignature) ||
              Transcription.Bpm is not null ||
@@ -57,15 +52,14 @@
         {
             <YoutubeChordGrid
                 SyncedChords="Transcription.SyncedChords"
-                ActiveChord="@_activeChordName"
+                Beats="Transcription.Beats"
+                ActiveBeatIndex="_activeBeatIndex"
                 TimeSignature="Transcription.TimeSignature"
                 OnSeekTo="SeekToAsync" />
         }
 
-    </div>
-
-    <!-- Actions — full width below both columns -->
-    <div class="pv-actions">
+        <!-- Actions -->
+        <div class="pv-actions">
         @if (AllowSaveToLibrary && Transcription.SyncedChords.Count > 0)
         {
             <button type="button" class="pv-btn pv-btn--primary"
@@ -104,6 +98,26 @@
                 Open on @SourceName
             </a>
         }
+        </div>
+    </div>
+
+    <!-- Floating, draggable player window. position:fixed → takes no layout space. -->
+    <div class="pv-float@(_playerCollapsed ? " pv-float--collapsed" : "")" @ref="_floatEl">
+        <div class="pv-float-bar" data-pv-drag>
+            <span class="pv-float-title">
+                <i class="bi bi-grip-vertical pv-float-grip" aria-hidden="true"></i>
+                <i class="bi @SourceIcon"></i>
+                <span class="pv-float-name">@(_isPlaying ? "Now playing" : "Player")</span>
+            </span>
+            <button type="button" class="pv-float-toggle"
+                    @onclick="() => _playerCollapsed = !_playerCollapsed"
+                    title="@(_playerCollapsed ? "Show player" : "Minimise player")">
+                <i class="bi @(_playerCollapsed ? "bi-chevron-up" : "bi-chevron-down")"></i>
+            </button>
+        </div>
+        <div class="pv-float-stage">
+            <YoutubePlayerMount Id="@_playerId" />
+        </div>
     </div>
 
 </div>
@@ -140,10 +154,9 @@
     private bool _saved;
     private string? _savedSongRef;
 
-    private string? _activeChordName =>
-        _activeSyncedIndex >= 0 && _activeSyncedIndex < Transcription.SyncedChords.Count
-            ? Transcription.SyncedChords[_activeSyncedIndex].Chord
-            : null;
+    private ElementReference _floatEl;
+    private IJSObjectReference? _dragModule;
+    private bool _playerCollapsed;
 
     private int _timeSigNumerator = 4;
     private int _beatInMeasure => _activeBeatIndex >= 0 ? _activeBeatIndex % _timeSigNumerator : 0;
@@ -163,6 +176,14 @@
         if (!firstRender) return;
         _dotNetRef = DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync($"{PlayerApi}.initialize", Transcription.VideoId, _playerId, _dotNetRef);
+
+        try
+        {
+            _dragModule = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/FRELODYUI.Shared/Pages/Discover/YoutubePlaybackView.razor.js");
+            await _dragModule.InvokeVoidAsync("makeDraggable", _floatEl, "[data-pv-drag]");
+        }
+        catch { /* drag is a progressive enhancement */ }
     }
 
     [JSInvokable]
@@ -306,6 +327,7 @@
     {
         StopSyncLoop();
         try { await JS.InvokeVoidAsync($"{PlayerApi}.destroy"); } catch { }
+        try { if (_dragModule is not null) { await _dragModule.InvokeVoidAsync("dispose", _floatEl); await _dragModule.DisposeAsync(); } } catch { }
         _dotNetRef?.Dispose();
     }
 }

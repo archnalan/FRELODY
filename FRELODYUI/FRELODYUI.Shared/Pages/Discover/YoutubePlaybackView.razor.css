@@ -1,34 +1,15 @@
-/* ── Wrapper: mobile stacked, desktop grid ── */
-.pv-wrap {
-    display: flex;
-    flex-direction: column;
+/* ── Layout: main content flows full width; the player floats over it ── */
+.pv {
+    position: relative;
 }
 
-/* ── Player ── */
-.pv-player-wrap {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-    overflow: hidden;
-    border-radius: var(--k-radius-md) var(--k-radius-md) 0 0;
-    flex-shrink: 0;
-}
-
-/* The mount div and the YT iframe it becomes */
-.pv-player-wrap > div,
-.pv-player-wrap iframe {
-    width: 100%;
-    height: 100%;
-    display: block;
-    border: 0;
-}
-
-/* ── Right column ── */
-.pv-side {
+.pv-main {
     display: flex;
     flex-direction: column;
     gap: var(--k-space-4);
     padding: var(--k-space-4);
+    /* Leave room so the floating player never hides the last rows of chords. */
+    padding-bottom: 13rem;
 }
 
 /* ── Metadata chips ── */
@@ -83,7 +64,7 @@
     display: flex;
     gap: var(--k-space-2);
     flex-wrap: wrap;
-    padding: 0 var(--k-space-4) var(--k-space-4);
+    margin-top: var(--k-space-2);
 }
 
 .pv-btn {
@@ -147,32 +128,116 @@
     to { transform: rotate(360deg); }
 }
 
-/* ── Desktop: player left, side column right ── */
-@media (min-width: 720px) {
-    .pv-wrap {
-        display: grid;
-        grid-template-columns: 3fr 2fr;
-        grid-template-rows: auto auto;
-        grid-template-areas:
-            "player side"
-            "actions actions";
-        gap: var(--k-space-4);
-        align-items: start;
+/* ── Floating, draggable player window ─────────────────────────────────── */
+.pv-float {
+    position: fixed;
+    left: var(--k-space-4);
+    bottom: var(--k-space-4);
+    z-index: 1040;
+    width: min(20rem, calc(100vw - 2 * var(--k-space-4)));
+    border-radius: var(--k-radius-md);
+    overflow: hidden;
+    background: var(--k-bg-surface);
+    border: 1px solid var(--k-border);
+    box-shadow: var(--k-shadow-lg);
+}
+
+.pv-float--dragging {
+    user-select: none;
+    box-shadow: var(--k-shadow-lg), 0 0 0 2px var(--k-accent);
+}
+
+/* While dragging, stop the iframe from swallowing pointer moves. */
+.pv-float--dragging .pv-float-stage {
+    pointer-events: none;
+}
+
+/* Drag handle / title bar */
+.pv-float-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--k-space-2);
+    padding: 0.35rem 0.5rem 0.35rem 0.4rem;
+    background: var(--k-bg-surface-2);
+    border-bottom: 1px solid var(--k-border);
+    cursor: grab;
+}
+
+.pv-float--dragging .pv-float-bar {
+    cursor: grabbing;
+}
+
+.pv-float-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    font-size: var(--k-font-size-xs);
+    font-weight: 600;
+    color: var(--k-text-muted);
+}
+
+.pv-float-grip {
+    color: var(--k-text-subtle);
+    font-size: 0.9rem;
+}
+
+.pv-float-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pv-float-toggle {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: none;
+    border-radius: var(--k-radius-sm);
+    background: transparent;
+    color: var(--k-text-muted);
+    cursor: pointer;
+    transition: background var(--k-transition-fast), color var(--k-transition-fast);
+}
+
+.pv-float-toggle:hover {
+    background: var(--k-bg-hover);
+    color: var(--k-accent);
+}
+
+/* Video stage — the YT iframe replaces the mount div inside here. */
+.pv-float-stage {
+    aspect-ratio: 16 / 9;
+    background: #000;
+}
+
+.pv-float-stage > div,
+.pv-float-stage iframe {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+}
+
+/* Collapsed → just the title bar remains. */
+.pv-float--collapsed .pv-float-stage {
+    display: none;
+}
+
+/* ── Small screens: a touch narrower, still bottom-left and movable ── */
+@media (max-width: 600px) {
+    .pv-main {
+        padding: var(--k-space-3);
+        padding-bottom: 11rem;
     }
 
-    .pv-player-wrap {
-        grid-area: player;
-        border-radius: var(--k-radius-md);
-        aspect-ratio: 16 / 9;
-    }
-
-    .pv-side {
-        grid-area: side;
-        padding: 0;
-    }
-
-    .pv-actions {
-        grid-area: actions;
-        padding: 0 0 var(--k-space-4);
+    .pv-float {
+        left: var(--k-space-3);
+        bottom: var(--k-space-3);
+        width: min(13.5rem, calc(100vw - 2 * var(--k-space-3)));
     }
 }

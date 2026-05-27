@@ -1,59 +1,114 @@
-.ycg-grid {
+/* ── Lead-sheet grid: rows of measures, each measure a run of beat cells ──
+   Measures-per-row is handled purely in CSS so the layout reflows with the
+   viewport: 2 measures on phones, up to 4 on wide screens. */
+.ycg {
     display: grid;
-    grid-template-columns: repeat(var(--ycg-cols, 4), 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--k-space-2);
+    align-content: start;
 }
 
-.ycg-cell {
+@media (min-width: 480px) {
+    .ycg { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 760px) {
+    .ycg {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--k-space-3);
+    }
+}
+
+/* ── Measure: a left bar + an even row of beat cells ── */
+.ycg-measure {
+    display: grid;
+    grid-template-columns: repeat(var(--ycg-bpm, 4), 1fr);
+    gap: 2px;
+    padding-left: var(--k-space-2);
+    border-left: 3px solid var(--k-border-strong);
+    min-width: 0;
+}
+
+/* ── Beat cell ── */
+.ycg-beat {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.65rem var(--k-space-2);
-    border-radius: var(--k-radius-sm);
-    border: 1.5px solid var(--k-border);
-    background: var(--k-bg-surface);
+    aspect-ratio: 1 / 1;
+    min-height: 2.25rem;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--k-radius-xs);
+    background: var(--k-bg-surface-2);
     color: var(--k-text);
-    font-size: var(--k-font-size-sm);
-    font-weight: 700;
-    cursor: pointer;
     font-family: inherit;
-    min-height: 2.75rem;
+    cursor: pointer;
     transition:
-        border-color var(--k-transition-beat),
         background var(--k-transition-beat),
+        border-color var(--k-transition-beat),
         color var(--k-transition-beat),
         box-shadow var(--k-transition-beat),
         transform var(--k-transition-fast);
 }
 
-.ycg-cell:hover:not(.ycg-cell--active) {
+/* First beat of the measure reads a touch stronger. */
+.ycg-beat--downbeat {
+    background: var(--k-bg-surface);
+    border-color: var(--k-border);
+}
+
+.ycg-beat:hover:not(.ycg-beat--active) {
     border-color: var(--k-accent);
     background: var(--k-accent-soft);
     color: var(--k-accent-soft-text);
-    transform: translateY(-1px);
 }
 
-.ycg-cell--active {
+/* Printed chord label (only where the chord changes). */
+.ycg-beat-label {
+    font-size: var(--k-font-size-sm);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.01em;
+}
+
+/* Continuation beat — a quiet centred tick that carries the rhythm. */
+.ycg-beat-tick {
+    width: 0.28rem;
+    height: 0.28rem;
+    border-radius: 50%;
+    background: var(--k-text-subtle);
+    opacity: 0.35;
+}
+
+/* No-chord / rest span. */
+.ycg-beat--rest.ycg-beat--label {
+    color: var(--k-text-muted);
+    font-weight: 500;
+    background: transparent;
+    border-style: dashed;
+    border-color: var(--k-border);
+}
+
+/* ── Active beat — the single cell currently sounding ── */
+.ycg-beat--active {
     background: var(--k-chord-active-bg);
     border-color: var(--k-chord-active-border);
     color: var(--k-chord-active-border);
     box-shadow: 0 0 0 2px var(--k-chord-active-border);
-    transform: scale(1.04);
+    transform: scale(1.08);
+    z-index: 1;
 }
 
-/* No-chord / rest span — kept as a quiet spacer so the rhythm stays legible. */
-.ycg-cell--rest {
-    border-style: dashed;
-    border-color: var(--k-border);
-    background: transparent;
-    color: var(--k-text-muted);
-    font-weight: 500;
-    opacity: 0.7;
+.ycg-beat--active .ycg-beat-tick {
+    background: var(--k-chord-active-border);
+    opacity: 1;
 }
 
-.ycg-cell--rest:hover:not(.ycg-cell--active) {
-    transform: none;
-    border-color: var(--k-border);
-    background: var(--k-bg-surface);
+.ycg-empty {
+    text-align: center;
     color: var(--k-text-muted);
+    font-size: var(--k-font-size-sm);
+    padding: var(--k-space-5) var(--k-space-4);
+    margin: 0;
 }

@@ -1,50 +1,164 @@
-<div class="ycg-grid" style="--ycg-cols: @_cols">
-    @{
-        var activeDisplay = ChordLabel.Display(ActiveChord);
-    }
-    @foreach (var chord in _uniqueChords)
-    {
-        <button type="button"
-                class="ycg-cell @(chord.IsRest ? "ycg-cell--rest" : "") @(chord.Display == activeDisplay ? "ycg-cell--active" : "")"
-                @onclick="() => OnSeekTo.InvokeAsync(chord.FirstTime)"
-                title="@(chord.IsRest ? "Rest" : $"Jump to {chord.Display}") at @(chord.FirstTime.ToString("F1"))s">
-            @chord.Display
-        </button>
-    }
-</div>
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@if (_measures.Count == 0)
+{
+    <p class="ycg-empty">No chord data available for this song yet.</p>
+}
+else
+{
+    <div class="ycg" style="--ycg-bpm: @_beatsPerMeasure" @ref="_gridEl">
+        @foreach (var measure in _measures)
+        {
+            <div class="ycg-measure" @key="measure.StartIndex">
+                @foreach (var cell in measure.Cells)
+                {
+                    <button type="button"
+                            @key="cell.Index"
+                            class="@CellClass(cell)"
+                            @onclick="() => OnSeekTo.InvokeAsync(cell.Time)"
+                            title="@CellTitle(cell)">
+                        @if (cell.ShowLabel)
+                        {
+                            <span class="ycg-beat-label">@cell.Display</span>
+                        }
+                        else
+                        {
+                            <span class="ycg-beat-tick" aria-hidden="true"></span>
+                        }
+                    </button>
+                }
+            </div>
+        }
+    </div>
+}
 
 @code {
     [Parameter, EditorRequired] public List<SyncedChordDto> SyncedChords { get; set; } = [];
-    [Parameter] public string? ActiveChord { get; set; }
+    [Parameter] public List<float> Beats { get; set; } = [];
+    [Parameter] public int ActiveBeatIndex { get; set; } = -1;
     [Parameter] public string? TimeSignature { get; set; }
     [Parameter] public EventCallback<float> OnSeekTo { get; set; }
 
-    private record UniqueChord(string Display, float FirstTime, bool IsRest);
-    private List<UniqueChord> _uniqueChords = [];
-    private int _cols = 4;
+    private record BeatCell(int Index, string Display, bool IsRest, bool ShowLabel, bool IsDownbeat, float Time);
+    private record Measure(int StartIndex, List<BeatCell> Cells);
+
+    private List<Measure> _measures = [];
+    private int _beatsPerMeasure = 4;
+
+    private ElementReference _gridEl;
+    private IJSObjectReference? _module;
+    private int _lastScrolledIndex = -1;
+
+    // Inputs the grid layout depends on. ActiveBeatIndex changes every beat, so
+    // we deliberately exclude it — only a change to the underlying data rebuilds.
+    private object? _builtChordsRef;
+    private object? _builtBeatsRef;
+    private string? _builtTimeSignature;
 
     protected override void OnParametersSet()
     {
-        _cols = 4;
+        if (ReferenceEquals(_builtChordsRef, SyncedChords)
+            && ReferenceEquals(_builtBeatsRef, Beats)
+            && _builtTimeSignature == TimeSignature)
+            return;
+
+        _beatsPerMeasure = 4;
         if (!string.IsNullOrEmpty(TimeSignature))
         {
             var slash = TimeSignature.IndexOf('/');
-            if (slash > 0 && int.TryParse(TimeSignature[..slash], out var n) && n is >= 2 and <= 8)
-                _cols = n;
+            if (slash > 0 && int.TryParse(TimeSignature[..slash], out var n) && n is >= 2 and <= 12)
+                _beatsPerMeasure = n;
         }
 
-        // Build the sequence in time order, collapsing only *consecutive* repeats
-        // of the same label. No-chord ("N"/"X") spans are kept as rests — they
-        // carry the rhythm and the visual spacing between chords.
-        _uniqueChords = [];
-        string? prev = null;
-        foreach (var sc in SyncedChords)
+        BuildGrid();
+
+        _builtChordsRef = SyncedChords;
+        _builtBeatsRef = Beats;
+        _builtTimeSignature = TimeSignature;
+    }
+
+    // Lay the whole song out beat-by-beat so every position is its own cell.
+    // The chord label is printed only when the chord *changes*; intervening
+    // beats are quiet continuation ticks — the classic lead-sheet look. Each
+    // cell keeps its absolute beat index, so highlighting is position-accurate:
+    // an E in the intro and an E in the chorus are distinct cells.
+    private void BuildGrid()
+    {
+        var cells = new List<BeatCell>();
+
+        if (Beats.Count > 0)
         {
-            var isRest = ChordLabel.IsNoChord(sc.Chord);
-            var display = ChordLabel.Display(sc.Chord);
-            if (display == prev) continue;          // merge runs of the same cell
-            _uniqueChords.Add(new UniqueChord(display, sc.Time, isRest));
-            prev = display;
+            // Forward-fill the active chord across the full beat axis.
+            var ordered = SyncedChords.OrderBy(s => s.BeatIndex).ToList();
+            int ptr = 0;
+            string? current = null;
+            string? prevDisplay = null;
+
+            for (int i = 0; i < Beats.Count; i++)
+            {
+                while (ptr < ordered.Count && ordered[ptr].BeatIndex <= i)
+                    current = ordered[ptr++].Chord;
+
+                var display = ChordLabel.Display(current);
+                var isRest = ChordLabel.IsNoChord(current);
+                var showLabel = current is not null && display != prevDisplay;
+                cells.Add(new BeatCell(i, display, isRest, showLabel, i % _beatsPerMeasure == 0, Beats[i]));
+                prevDisplay = display;
+            }
         }
+        else
+        {
+            // No beat grid available — fall back to one cell per chord event.
+            string? prevDisplay = null;
+            for (int i = 0; i < SyncedChords.Count; i++)
+            {
+                var sc = SyncedChords[i];
+                var display = ChordLabel.Display(sc.Chord);
+                var isRest = ChordLabel.IsNoChord(sc.Chord);
+                cells.Add(new BeatCell(i, display, isRest, display != prevDisplay, i % _beatsPerMeasure == 0, sc.Time));
+                prevDisplay = display;
+            }
+        }
+
+        var measures = new List<Measure>();
+        for (int i = 0; i < cells.Count; i += _beatsPerMeasure)
+        {
+            var slice = cells.GetRange(i, Math.Min(_beatsPerMeasure, cells.Count - i));
+            measures.Add(new Measure(i, slice));
+        }
+        _measures = measures;
+    }
+
+    private string CellClass(BeatCell cell)
+    {
+        var sb = new System.Text.StringBuilder("ycg-beat");
+        if (cell.IsRest) sb.Append(" ycg-beat--rest");
+        if (cell.IsDownbeat) sb.Append(" ycg-beat--downbeat");
+        if (cell.ShowLabel) sb.Append(" ycg-beat--label");
+        if (cell.Index == ActiveBeatIndex) sb.Append(" ycg-beat--active");
+        return sb.ToString();
+    }
+
+    private static string CellTitle(BeatCell cell)
+        => $"{(cell.IsRest ? "Rest" : cell.Display)} · {cell.Time.ToString("F1")}s";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Keep the playing measure in view while the audio advances.
+        if (ActiveBeatIndex < 0 || ActiveBeatIndex == _lastScrolledIndex) return;
+        _lastScrolledIndex = ActiveBeatIndex;
+        try
+        {
+            _module ??= await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/FRELODYUI.Shared/Pages/Discover/YoutubeChordGrid.razor.js");
+            await _module.InvokeVoidAsync("scrollActiveIntoView", _gridEl);
+        }
+        catch { /* JS not ready / disposed */ }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { if (_module is not null) await _module.DisposeAsync(); } catch { }
     }
 }
