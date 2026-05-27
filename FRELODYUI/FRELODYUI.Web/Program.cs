@@ -170,6 +170,14 @@ builder.Services.AddRefitClient<IYouTubeApi>()
                 })
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddRefitClient<ITikTokApi>()
+                .ConfigureHttpClient(c =>
+                {
+                    c.BaseAddress = baseAddressApi;
+                    c.Timeout = TimeSpan.FromMinutes(10);
+                })
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

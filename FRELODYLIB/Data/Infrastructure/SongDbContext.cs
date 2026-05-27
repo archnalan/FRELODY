@@ -62,6 +62,8 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<SeedVersion> SeedVersions { get; set; }
         public DbSet<YouTubeVideo> YouTubeVideos { get; set; } = default!;
         public DbSet<YouTubeTranscription> YouTubeTranscriptions { get; set; } = default!;
+        public DbSet<TikTokVideo> TikTokVideos { get; set; } = default!;
+        public DbSet<TikTokTranscription> TikTokTranscriptions { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -484,6 +486,21 @@ namespace FRELODYAPP.Data.Infrastructure
             });
 
             builder.Entity<YouTubeTranscription>(b =>
+            {
+                b.HasIndex(t => new { t.VideoId, t.BeatModel, t.ChordModel, t.ChordDict }).IsUnique();
+            });
+
+            builder.Entity<TikTokVideo>(b =>
+            {
+                b.HasIndex(v => v.VideoId).IsUnique();
+                b.HasMany(v => v.Transcriptions)
+                 .WithOne(t => t.Video)
+                 .HasForeignKey(t => t.VideoId)
+                 .HasPrincipalKey(v => v.VideoId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<TikTokTranscription>(b =>
             {
                 b.HasIndex(t => new { t.VideoId, t.BeatModel, t.ChordModel, t.ChordDict }).IsUnique();
             });

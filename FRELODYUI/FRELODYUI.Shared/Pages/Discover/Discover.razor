@@ -15,16 +15,32 @@
         <div class="dc-hero-glow" aria-hidden="true"></div>
 
         <div class="dc-hero-inner">
+
+            @* ── Source toggle (YouTube ⇆ TikTok) ──────────────────── *@
+            <div class="dc-mode-toggle" role="tablist" aria-label="Choose a source">
+                <button type="button" role="tab"
+                        class="dc-mode @(_mode == SearchMode.YouTube ? "dc-mode--active" : "")"
+                        aria-selected="@(_mode == SearchMode.YouTube)"
+                        @onclick="() => SetMode(SearchMode.YouTube)">
+                    <i class="bi bi-youtube" aria-hidden="true"></i> YouTube
+                </button>
+                <button type="button" role="tab"
+                        class="dc-mode @(_mode == SearchMode.TikTok ? "dc-mode--active" : "")"
+                        aria-selected="@(_mode == SearchMode.TikTok)"
+                        @onclick="() => SetMode(SearchMode.TikTok)">
+                    <i class="bi bi-tiktok" aria-hidden="true"></i> TikTok
+                </button>
+            </div>
+
             @if (!_hasSearched)
             {
-                <span class="dc-badge">
-                    <i class="bi bi-youtube" aria-hidden="true"></i> YouTube
-                </span>
                 <h1 class="dc-heading">
                     Discover &amp; Play Along
                 </h1>
                 <p class="dc-subheading">
-                    Search any song on YouTube and get synchronized chords and beat analysis.
+                    @(_mode == SearchMode.YouTube
+                        ? "Search any song on YouTube and get synchronized chords and beat analysis."
+                        : "Paste a TikTok video link to get synchronized chords and beat analysis.")
                 </p>
             }
 
@@ -34,7 +50,7 @@
                     <i class="bi bi-search dc-search-icon" aria-hidden="true"></i>
                     <input type="search"
                            class="dc-search-input"
-                           placeholder="Song title, artist, or YouTube URL…"
+                           placeholder="@(_mode == SearchMode.YouTube ? "Song title, artist, or YouTube URL…" : "Paste a TikTok video link…")"
                            @bind="_query"
                            @bind:event="oninput"
                            @onfocus="() => _focused = true"
@@ -61,8 +77,8 @@
                 </div>
             </form>
 
-            @* ── Suggestion chips (only on landing) ───────────────── *@
-            @if (!_hasSearched)
+            @* ── Suggestion chips (YouTube landing only) ───────────── *@
+            @if (!_hasSearched && _mode == SearchMode.YouTube)
             {
                 <div class="dc-chips" role="group" aria-label="Suggested searches">
                     @foreach (var suggestion in _suggestions)
@@ -72,6 +88,14 @@
                         </button>
                     }
                 </div>
+            }
+            else if (!_hasSearched && _mode == SearchMode.TikTok)
+            {
+                <p class="dc-tiktok-hint">
+                    <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    TikTok has no public search — paste a link like
+                    <code>tiktok.com/@@user/video/…</code>
+                </p>
             }
         </div>
     </section>
@@ -128,6 +152,9 @@
     [SupplyParameterFromQuery] public string? q { get; set; }
     [SupplyParameterFromQuery] public string? v { get; set; }
 
+    private enum SearchMode { YouTube, TikTok }
+    private SearchMode _mode = SearchMode.YouTube;
+
     private string _query = string.Empty;
     private string _searchedQuery = string.Empty;
     private List<YouTubeVideoDto>? _results;
@@ -153,9 +180,35 @@
         }
     }
 
+    private void SetMode(SearchMode mode)
+    {
+        if (_mode == mode) return;
+        _mode = mode;
+        _error = null;
+        _results = null;
+        _hasSearched = false;
+        _query = string.Empty;
+    }
+
     private async Task HandleSearch()
     {
         if (_loading || string.IsNullOrWhiteSpace(_query)) return;
+
+        var q = _query.Trim();
+
+        // TikTok mode (or any pasted TikTok link) → hand off to the TikTok lane.
+        if (_mode == SearchMode.TikTok || q.Contains("tiktok.com", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!q.Contains("tiktok.com", StringComparison.OrdinalIgnoreCase))
+            {
+                _error = "Please paste a valid TikTok video link.";
+                _hasSearched = true;
+                return;
+            }
+            _nav.NavigateTo($"/discover/tiktok?url={Uri.EscapeDataString(q)}");
+            return;
+        }
+
         await SearchAsync();
     }
 

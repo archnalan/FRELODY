@@ -23,33 +23,50 @@ namespace FRELODYAPIs.Services.ChordMini
             _ytdlp = factory.CreateClient("ChordMiniYtdlp");
         }
 
-        public async Task<YouTubeTranscriptionDto> AnalyzeAsync(YouTubeAnalyzeRequest request, CancellationToken ct = default)
+        public Task<YouTubeTranscriptionDto> AnalyzeAsync(YouTubeAnalyzeRequest request, CancellationToken ct = default)
+            => RunPipelineAsync(
+                new { videoId = request.VideoId }, request.VideoId,
+                request.BeatModel, request.ChordModel, request.ChordDict, ct);
+
+        public Task<YouTubeTranscriptionDto> AnalyzeUrlAsync(
+            string url, string idForResult,
+            string beatModel, string chordModel, string chordDict,
+            CancellationToken ct = default)
+            => RunPipelineAsync(
+                new { url }, idForResult, beatModel, chordModel, chordDict, ct);
+
+        public async Task<MediaInfo> GetInfoAsync(string url, CancellationToken ct = default)
+        {
+            var resp = await _ytdlp.PostAsync("/api/ytdlp/info", JsonContent(new { url }), ct);
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            if (!resp.IsSuccessStatusCode)
+                throw new InvalidOperationException(ExtractError(body));
+
+            var info = JsonSerializer.Deserialize<YtInfo>(body, _json)
+                ?? throw new InvalidOperationException("Empty metadata response.");
+            return new MediaInfo(
+                info.Id, info.Title, info.Uploader,
+                info.Thumbnail, info.DurationSeconds, info.WebpageUrl ?? url);
+        }
+
+        private async Task<YouTubeTranscriptionDto> RunPipelineAsync(
+            object extractBody, string idForResult,
+            string beatModel, string chordModel, string chordDict,
+            CancellationToken ct)
         {
             var sw = Stopwatch.StartNew();
 
             // 1. Download audio via yt-dlp sidecar running inside chordmini container
-            var extractResp = await _ytdlp.PostAsync(
-                "/api/ytdlp/extract",
-                JsonContent(new { videoId = request.VideoId }),
-                ct);
+            var extractResp = await _ytdlp.PostAsync("/api/ytdlp/extract", JsonContent(extractBody), ct);
 
             if (!extractResp.IsSuccessStatusCode)
             {
                 var raw = await extractResp.Content.ReadAsStringAsync(ct);
-                string msg;
-                try
-                {
-                    using var errDoc = JsonDocument.Parse(raw);
-                    msg = errDoc.RootElement.TryGetProperty("error", out var ep)
-                        ? ep.GetString() ?? raw
-                        : raw;
-                }
-                catch { msg = raw; }
-                throw new InvalidOperationException(msg);
+                throw new InvalidOperationException(ExtractError(raw));
             }
 
-            var extractBody = await extractResp.Content.ReadAsStringAsync(ct);
-            using var extractDoc = JsonDocument.Parse(extractBody);
+            var extractJson = await extractResp.Content.ReadAsStringAsync(ct);
+            using var extractDoc = JsonDocument.Parse(extractJson);
             var filePath = extractDoc.RootElement.GetProperty("filePath").GetString()
                 ?? throw new InvalidOperationException("yt-dlp extract returned no filePath");
 
@@ -58,7 +75,7 @@ namespace FRELODYAPIs.Services.ChordMini
                 // 2. Detect beats — pass file path directly (same container filesystem)
                 var beatsResult = await PostAudioPathAsync<BeatsResult>(
                     "/api/detect-beats", filePath,
-                    new Dictionary<string, string> { ["detector"] = request.BeatModel },
+                    new Dictionary<string, string> { ["detector"] = beatModel },
                     ct);
 
                 // 3. Recognize chords — same file path
@@ -66,8 +83,8 @@ namespace FRELODYAPIs.Services.ChordMini
                     "/api/recognize-chords", filePath,
                     new Dictionary<string, string>
                     {
-                        ["detector"] = request.ChordModel,
-                        ["chord_dict"] = request.ChordDict
+                        ["detector"] = chordModel,
+                        ["chord_dict"] = chordDict
                     },
                     ct);
 
@@ -78,10 +95,10 @@ namespace FRELODYAPIs.Services.ChordMini
 
                 return new YouTubeTranscriptionDto
                 {
-                    VideoId = request.VideoId,
-                    BeatModel = request.BeatModel,
-                    ChordModel = request.ChordModel,
-                    ChordDict = request.ChordDict,
+                    VideoId = idForResult,
+                    BeatModel = beatModel,
+                    ChordModel = chordModel,
+                    ChordDict = chordDict,
                     Beats = beats,
                     Chords = chords.Select(c => new ChordEventDto
                     {
@@ -133,6 +150,29 @@ namespace FRELODYAPIs.Services.ChordMini
         private static System.Net.Http.StringContent JsonContent(object obj) =>
             new(JsonSerializer.Serialize(obj), System.Text.Encoding.UTF8, "application/json");
 
+        // Pull the sidecar's friendly {"error": "..."} message out of a failed body.
+        private static string ExtractError(string raw)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                if (doc.RootElement.TryGetProperty("error", out var ep))
+                    return ep.GetString() ?? raw;
+            }
+            catch { }
+            return raw;
+        }
+
+        private sealed class YtInfo
+        {
+            [JsonPropertyName("id")] public string Id { get; set; } = default!;
+            [JsonPropertyName("title")] public string Title { get; set; } = "Untitled";
+            [JsonPropertyName("uploader")] public string? Uploader { get; set; }
+            [JsonPropertyName("thumbnail")] public string? Thumbnail { get; set; }
+            [JsonPropertyName("durationSeconds")] public int DurationSeconds { get; set; }
+            [JsonPropertyName("webpageUrl")] public string? WebpageUrl { get; set; }
+        }
+
         private static List<SyncedChordDto> ComputeSyncedChords(List<float> beats, List<RawChordEvent> chords)
         {
             if (beats.Count == 0)
@@ -178,7 +218,12 @@ namespace FRELODYAPIs.Services.ChordMini
 
         private sealed class RawChordEvent
         {
-            [JsonPropertyName("time")] public float Time { get; set; }
+            // ChordMini's /api/recognize-chords returns each chord as a
+            // {chord, confidence, start, end} span — the onset is "start"
+            // (there is no "time" field). Mapping the wrong key here parks
+            // every chord at 0s and breaks playback sync.
+            [JsonPropertyName("start")] public float Time { get; set; }
+            [JsonPropertyName("end")] public float End { get; set; }
             [JsonPropertyName("chord")] public string Chord { get; set; } = default!;
             [JsonPropertyName("confidence")] public float Confidence { get; set; }
         }

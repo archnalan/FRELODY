@@ -88,6 +88,68 @@
     font-size: 0.85rem;
 }
 
+/* ── Source toggle (YouTube ⇆ TikTok) ───────────────────────── */
+.dc-mode-toggle {
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: var(--k-radius-pill);
+    background: var(--k-bg-hover);
+    border: 1px solid var(--k-border);
+}
+
+.dc-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 1rem;
+    border: none;
+    background: transparent;
+    border-radius: var(--k-radius-pill);
+    font-size: var(--k-font-size-sm);
+    font-weight: 600;
+    color: var(--k-text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    transition:
+        background var(--k-transition-fast),
+        color var(--k-transition-fast),
+        box-shadow var(--k-transition-fast);
+}
+
+.dc-mode:hover:not(.dc-mode--active) {
+    color: var(--text-primary);
+}
+
+.dc-mode--active {
+    background: var(--k-bg-surface);
+    color: var(--text-primary);
+    box-shadow: var(--k-shadow-sm);
+}
+
+.dc-mode .bi-youtube { color: #ff0000; }
+.dc-mode .bi-tiktok { color: var(--text-primary); }
+
+/* TikTok helper hint (replaces suggestion chips in TikTok mode) */
+.dc-tiktok-hint {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    font-size: var(--k-font-size-xs);
+    color: var(--k-text-subtle);
+    margin: calc(-1 * var(--k-space-1)) 0 0;
+    max-width: 440px;
+}
+
+.dc-tiktok-hint code {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--k-radius-xs);
+    background: var(--k-bg-hover);
+    color: var(--k-text-muted);
+}
+
 /* Heading */
 .dc-heading {
     font-size: clamp(1.8rem, 5vw, 2.75rem);

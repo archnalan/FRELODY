@@ -72,11 +72,14 @@
                 Re-analyze
             </button>
         }
-        @if (Video is not null)
+        @{
+            var extUrl = !string.IsNullOrEmpty(SourceUrl) ? SourceUrl : Video?.YouTubeUrl;
+        }
+        @if (!string.IsNullOrEmpty(extUrl))
         {
-            <a class="pv-btn pv-btn--ghost" href="@Video.YouTubeUrl" target="_blank" rel="noopener noreferrer">
-                <i class="bi bi-youtube"></i>
-                Open on YouTube
+            <a class="pv-btn pv-btn--ghost" href="@extUrl" target="_blank" rel="noopener noreferrer">
+                <i class="bi @SourceIcon"></i>
+                Open on @SourceName
             </a>
         }
     </div>
@@ -88,7 +91,16 @@
     [Parameter] public YouTubeVideoDto? Video { get; set; }
     [Parameter] public EventCallback OnReanalyze { get; set; }
 
-    private string _playerId => $"yt-player-{Transcription.VideoId}";
+    // JS player object to drive: "ytPlayer" (default) or "tiktokPlayer".
+    // Both expose the same initialize/getCurrentTime/seekTo/destroy interface.
+    [Parameter] public string PlayerApi { get; set; } = "ytPlayer";
+
+    // Optional external "open on …" link. When unset, falls back to the YouTube video.
+    [Parameter] public string? SourceUrl { get; set; }
+    [Parameter] public string SourceName { get; set; } = "YouTube";
+    [Parameter] public string SourceIcon { get; set; } = "bi-youtube";
+
+    private string _playerId => $"media-player-{Transcription.VideoId}";
 
     private DotNetObjectReference<YoutubePlaybackView>? _dotNetRef;
     private PeriodicTimer? _syncTimer;
@@ -120,7 +132,7 @@
     {
         if (!firstRender) return;
         _dotNetRef = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("ytPlayer.initialize", Transcription.VideoId, _playerId, _dotNetRef);
+        await JS.InvokeVoidAsync($"{PlayerApi}.initialize", Transcription.VideoId, _playerId, _dotNetRef);
     }
 
     [JSInvokable]
@@ -159,7 +171,7 @@
         {
             while (await _syncTimer!.WaitForNextTickAsync(ct))
             {
-                var t = (float)await JS.InvokeAsync<double>("ytPlayer.getCurrentTime");
+                var t = (float)await JS.InvokeAsync<double>($"{PlayerApi}.getCurrentTime");
                 var si = FindActiveSynced(t);
                 var bi = FindActiveBeat(t);
                 if (si != _activeSyncedIndex || bi != _activeBeatIndex)
@@ -202,12 +214,12 @@
     }
 
     private async Task SeekToAsync(float seconds)
-        => await JS.InvokeVoidAsync("ytPlayer.seekTo", seconds);
+        => await JS.InvokeVoidAsync($"{PlayerApi}.seekTo", seconds);
 
     public async ValueTask DisposeAsync()
     {
         StopSyncLoop();
-        try { await JS.InvokeVoidAsync("ytPlayer.destroy"); } catch { }
+        try { await JS.InvokeVoidAsync($"{PlayerApi}.destroy"); } catch { }
         _dotNetRef?.Dispose();
     }
 }

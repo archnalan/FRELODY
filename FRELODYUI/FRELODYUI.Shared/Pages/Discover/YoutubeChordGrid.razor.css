@@ -40,3 +40,20 @@
     box-shadow: 0 0 0 2px var(--k-chord-active-border);
     transform: scale(1.04);
 }
+
+/* No-chord / rest span — kept as a quiet spacer so the rhythm stays legible. */
+.ycg-cell--rest {
+    border-style: dashed;
+    border-color: var(--k-border);
+    background: transparent;
+    color: var(--k-text-muted);
+    font-weight: 500;
+    opacity: 0.7;
+}
+
+.ycg-cell--rest:hover:not(.ycg-cell--active) {
+    transform: none;
+    border-color: var(--k-border);
+    background: var(--k-bg-surface);
+    color: var(--k-text-muted);
+}

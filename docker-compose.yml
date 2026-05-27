@@ -180,22 +180,42 @@ services:
     networks:
       - frelody-net
 
+  # ── bgutil PO-token provider ─────────────────────────────────
+  # Mints YouTube Proof-of-Origin tokens so server-side yt-dlp clears the
+  # "confirm you're not a bot" wall without a logged-in cookie or end-user auth.
+  # Consumed only internally by the yt-dlp sidecar at http://bgutil-provider:4416.
+  bgutil-provider:
+    image: brainicism/bgutil-ytdlp-pot-provider:latest
+    container_name: frelody-bgutil
+    restart: unless-stopped
+    networks:
+      - frelody-net
+
   # ── ChordMini Python ML backend ─────────────────────────────
   chordmini-backend:
     image: ptnghia/chordminiapp-backend:latest
     platform: linux/amd64
     container_name: frelody-chordmini
-    # Run gunicorn (main app, port 8080) + yt-dlp sidecar (port 8081) together
+    # Startup: the prebuilt image's venv is root-owned and read-only to the app
+    # user, so install the bgutil PO-token plugin into a writable dir and expose it
+    # via PYTHONPATH (yt-dlp's external-plugin mechanism). Then run gunicorn (main
+    # app, port 8080) + the yt-dlp sidecar (port 8081) together. ($$ = literal $.)
     command:
       - "sh"
       - "-c"
-      - "gunicorn --bind 0.0.0.0:8080 --workers 2 --timeout 600 --worker-class sync --max-requests 1000 --max-requests-jitter 100 --preload app:app & python /app/ytdlp_server.py"
+      - "PLUGDIR=/tmp/ytdlp-plugins; /opt/venv/bin/pip install -q --no-cache-dir --target=$$PLUGDIR yt-dlp bgutil-ytdlp-pot-provider || true; export PYTHONPATH=$$PLUGDIR:$${PYTHONPATH}; gunicorn --bind 0.0.0.0:8080 --workers 2 --timeout 600 --worker-class sync --max-requests 1000 --max-requests-jitter 100 --preload app:app & python /app/ytdlp_server.py"
     ports:
       - "5001:8080"
       - "5002:8081"
     environment:
       FLASK_ENV: production
       MAX_CONTENT_LENGTH_MB: "150"
+      # yt-dlp bot-wall bypass tunables (see docker/ytdlp_server.py)
+      YTDLP_PLAYER_CLIENT: "default,tv"
+      YTDLP_POT_BASE_URL: "http://bgutil-provider:4416"
+      # YTDLP_COOKIES_FILE: "/app/cookies/youtube.txt"   # optional escalation only
+    depends_on:
+      - bgutil-provider
     volumes:
       - frelody_media:/app/media
       - chordmini_models:/app/models

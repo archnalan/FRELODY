@@ -1,11 +1,14 @@
 <div class="ycg-grid" style="--ycg-cols: @_cols">
+    @{
+        var activeDisplay = ChordLabel.Display(ActiveChord);
+    }
     @foreach (var chord in _uniqueChords)
     {
         <button type="button"
-                class="ycg-cell @(chord.Name == ActiveChord ? "ycg-cell--active" : "")"
+                class="ycg-cell @(chord.IsRest ? "ycg-cell--rest" : "") @(chord.Display == activeDisplay ? "ycg-cell--active" : "")"
                 @onclick="() => OnSeekTo.InvokeAsync(chord.FirstTime)"
-                title="Jump to @(chord.Name) at @(chord.FirstTime.ToString("F1"))s">
-            @chord.Name
+                title="@(chord.IsRest ? "Rest" : $"Jump to {chord.Display}") at @(chord.FirstTime.ToString("F1"))s">
+            @chord.Display
         </button>
     }
 </div>
@@ -16,7 +19,7 @@
     [Parameter] public string? TimeSignature { get; set; }
     [Parameter] public EventCallback<float> OnSeekTo { get; set; }
 
-    private record UniqueChord(string Name, float FirstTime);
+    private record UniqueChord(string Display, float FirstTime, bool IsRest);
     private List<UniqueChord> _uniqueChords = [];
     private int _cols = 4;
 
@@ -30,12 +33,18 @@
                 _cols = n;
         }
 
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        // Build the sequence in time order, collapsing only *consecutive* repeats
+        // of the same label. No-chord ("N"/"X") spans are kept as rests — they
+        // carry the rhythm and the visual spacing between chords.
         _uniqueChords = [];
+        string? prev = null;
         foreach (var sc in SyncedChords)
         {
-            if (seen.Add(sc.Chord))
-                _uniqueChords.Add(new UniqueChord(sc.Chord, sc.Time));
+            var isRest = ChordLabel.IsNoChord(sc.Chord);
+            var display = ChordLabel.Display(sc.Chord);
+            if (display == prev) continue;          // merge runs of the same cell
+            _uniqueChords.Add(new UniqueChord(display, sc.Time, isRest));
+            prev = display;
         }
     }
 }
