@@ -130,6 +130,19 @@ Mapster handles DTO ↔ Entity transformations; global rules registered in `Mapp
 - **Refit multipart endpoints** — only call a `[Multipart]` Refit method when you actually have at least one `StreamPart`. Passing all-null parts produces an invalid `Content-Disposition` and ASP.NET Core's form parser will reject the request. Have a JSON-body fallback endpoint for the no-file case.
 - **Razor and SVG `<text>`** — Razor reserves the `<text>` tag as a code/markup-mode escape, so it can't carry attributes inside Razor templates. To emit an SVG `<text>` element, use `@((MarkupString)$"<text …>{content}</text>")` and HTML-encode the content. Wrap a `<g @onclick="…">` around it for click handlers.
 
+## Docker Maintenance & Troubleshooting
+
+- **502 Bad Gateway after container changes** — Adding new services or modifying the network can cause Docker to reassign internal IP addresses. Nginx resolves these hostnames at startup/reload and may hold stale IPs, leading to 502 errors. Fix by reloading Nginx:
+  ```bash
+  docker exec frelody-gateway nginx -s reload
+  ```
+- **IP Address Shifts** — Nginx (open source) does not automatically re-resolve upstream hostnames unless variables are used in `proxy_pass`. Since `frelody-gateway` is often long-running, always reload it after any `docker-compose.yml` modifications that might shift the IP pool.
+- **AI Analysis Timeouts** — AI processing (chord recognition, YouTube extraction) can take several minutes. Ensure timeouts are aligned across the stack:
+    - **Nginx**: `proxy_read_timeout 600s` in `location /api/`.
+    - **ASP.NET Core**: `HttpClient` timeout set to `TimeSpan.FromMinutes(10)`.
+    - **Python (Gunicorn)**: `--timeout 600`.
+- **Application Error Mapping** — Do not use 502/503 for expected application-level failures (e.g., YouTube "bot wall"). Use **422 Unprocessable Entity** with a JSON error body. This prevents Nginx/Cloudflare from intercepting the response with a generic "Bad Gateway" HTML page, allowing the Blazor UI to show the friendly error message to the user.
+
 ## Notable Behaviors
 
 - **Data Protection keys** — persisted to `/app/dp-keys` Docker volume; without this, auth cookies break on container restart

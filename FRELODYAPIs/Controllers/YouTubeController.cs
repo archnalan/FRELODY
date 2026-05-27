@@ -135,7 +135,9 @@ namespace FRELODYAPIs.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(502, new { message = ex.Message });
+                // Return 422 (Unprocessable Entity) for known analysis failures
+                // to avoid triggering the generic Cloudflare/Nginx 502 error page.
+                return StatusCode(422, new { message = ex.Message });
             }
 
             // Ensure the parent YouTubeVideo row exists (FK requirement)
