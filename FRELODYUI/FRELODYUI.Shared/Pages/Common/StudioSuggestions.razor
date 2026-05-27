@@ -86,10 +86,22 @@
                         </div>
                     }
                 </div>
+
+                <button type="button" class="ss-footer-link" @onclick="OnSearchYouTube">
+                    <i class="bi bi-youtube ss-footer-link-icon" aria-hidden="true"></i>
+                    <span class="ss-footer-link-text">Search &ldquo;@Query&rdquo; on YouTube</span>
+                    <i class="bi bi-arrow-right ss-footer-link-arrow" aria-hidden="true"></i>
+                </button>
             }
             else
             {
                 <div class="ss-empty">No songs found for &ldquo;@Query&rdquo;</div>
+
+                <button type="button" class="ss-footer-link" @onclick="OnSearchYouTube">
+                    <i class="bi bi-youtube ss-footer-link-icon" aria-hidden="true"></i>
+                    <span class="ss-footer-link-text">Search &ldquo;@Query&rdquo; on YouTube</span>
+                    <i class="bi bi-arrow-right ss-footer-link-arrow" aria-hidden="true"></i>
+                </button>
             }
         </div>
     }
@@ -113,5 +125,11 @@
     private async Task OnRecentSelected(string term)
     {
         await OnRecentSearchSelected.InvokeAsync(term);
+    }
+
+    private void OnSearchYouTube()
+    {
+        if (string.IsNullOrWhiteSpace(Query)) return;
+        _navManager.NavigateTo($"/discover?q={Uri.EscapeDataString(Query)}");
     }
 }

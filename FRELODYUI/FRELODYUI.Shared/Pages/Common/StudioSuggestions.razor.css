@@ -121,6 +121,53 @@
     font-size: 0.875rem;
 }
 
+.ss-footer-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    margin-top: 0.25rem;
+    border: none;
+    border-top: 1px solid var(--border-light);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.ss-footer-link:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.ss-footer-link-icon {
+    color: var(--badge-youtube-text);
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.ss-footer-link-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ss-footer-link-arrow {
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+}
+
+.ss-footer-link:hover .ss-footer-link-arrow {
+    transform: translateX(2px);
+}
+
 .ss-skeleton {
     height: 0.8rem;
     border-radius: 0.25rem;

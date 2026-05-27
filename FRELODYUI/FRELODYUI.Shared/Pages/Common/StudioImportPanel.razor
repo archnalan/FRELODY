@@ -488,8 +488,78 @@
         _detectedMidContentHost = null;
     }
 
+    private static readonly System.Text.RegularExpressions.Regex _videoIdRegex =
+        new(@"^[A-Za-z0-9_-]{11}",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// True when the URL points at a YouTube video; outputs the 11-char video id.
+    /// Covers youtube.com/watch?v=, youtu.be/, music/m.youtube.com, /shorts/ and /embed/.
+    /// </summary>
+    private static bool IsYouTubeUrl(string url, out string videoId)
+    {
+        videoId = string.Empty;
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var u)) return false;
+        if (u.Scheme != Uri.UriSchemeHttp && u.Scheme != Uri.UriSchemeHttps) return false;
+
+        var host = u.Host.StartsWith("www.", StringComparison.OrdinalIgnoreCase)
+            ? u.Host.Substring(4)
+            : u.Host;
+
+        if (host.Equals("youtu.be", StringComparison.OrdinalIgnoreCase))
+            return TryMatchVideoId(u.AbsolutePath.Trim('/'), out videoId);
+
+        if (host.Equals("youtube.com", StringComparison.OrdinalIgnoreCase) ||
+            host.Equals("music.youtube.com", StringComparison.OrdinalIgnoreCase) ||
+            host.Equals("m.youtube.com", StringComparison.OrdinalIgnoreCase))
+        {
+            var v = GetQueryParam(u.Query, "v");
+            if (!string.IsNullOrEmpty(v)) return TryMatchVideoId(v, out videoId);
+
+            var segments = u.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 2 &&
+                (segments[0].Equals("shorts", StringComparison.OrdinalIgnoreCase) ||
+                 segments[0].Equals("embed", StringComparison.OrdinalIgnoreCase)))
+            {
+                return TryMatchVideoId(segments[1], out videoId);
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryMatchVideoId(string candidate, out string videoId)
+    {
+        videoId = string.Empty;
+        if (string.IsNullOrEmpty(candidate)) return false;
+        var match = _videoIdRegex.Match(candidate);
+        if (!match.Success) return false;
+        videoId = match.Value;
+        return true;
+    }
+
+    private static string? GetQueryParam(string query, string key)
+    {
+        foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var idx = pair.IndexOf('=');
+            if (idx <= 0) continue;
+            if (pair.Substring(0, idx).Equals(key, StringComparison.OrdinalIgnoreCase))
+                return Uri.UnescapeDataString(pair.Substring(idx + 1));
+        }
+        return null;
+    }
+
     private async Task ProcessUrl(string url, CancellationToken ct)
     {
+        // YouTube links never scrape — hand off to the Discover playback lane.
+        if (IsYouTubeUrl(url, out var videoId))
+        {
+            _navManager.NavigateTo($"/discover?v={videoId}");
+            return;
+        }
+
         await SetProcessing(true);
         StateHasChanged();
 
