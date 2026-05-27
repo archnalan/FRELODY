@@ -1,5 +1,6 @@
 @using FRELODYUI.Shared.Pages.Discover
 @inject IJSRuntime JS
+@inject IYouTubeApi YoutubeApi
 @implements IAsyncDisposable
 
 <div class="pv-wrap">
@@ -65,6 +66,27 @@
 
     <!-- Actions — full width below both columns -->
     <div class="pv-actions">
+        @if (AllowSaveToLibrary && Transcription.SyncedChords.Count > 0)
+        {
+            <button type="button" class="pv-btn pv-btn--primary"
+                    @onclick="SaveToLibraryAsync" disabled="@_isSaving">
+                @if (_isSaving)
+                {
+                    <span class="pv-spinner" aria-hidden="true"></span>
+                    <span>Saving…</span>
+                }
+                else if (_saved)
+                {
+                    <i class="bi bi-check-lg"></i>
+                    <span>Open in Library</span>
+                }
+                else
+                {
+                    <i class="bi bi-bookmark-plus"></i>
+                    <span>Save to Library</span>
+                }
+            </button>
+        }
         @if (OnReanalyze.HasDelegate)
         {
             <button type="button" class="pv-btn pv-btn--ghost" @onclick="() => OnReanalyze.InvokeAsync()">
@@ -91,6 +113,10 @@
     [Parameter] public YouTubeVideoDto? Video { get; set; }
     [Parameter] public EventCallback OnReanalyze { get; set; }
 
+    // Opt-in: only the YouTube journey persists transcriptions in the YouTubeTranscriptions
+    // table, so the save bridge is enabled there. TikTok leaves this off.
+    [Parameter] public bool AllowSaveToLibrary { get; set; }
+
     // JS player object to drive: "ytPlayer" (default) or "tiktokPlayer".
     // Both expose the same initialize/getCurrentTime/seekTo/destroy interface.
     [Parameter] public string PlayerApi { get; set; } = "ytPlayer";
@@ -109,6 +135,10 @@
     private int _activeSyncedIndex = -1;
     private int _activeBeatIndex = -1;
     private bool _isPlaying;
+
+    private bool _isSaving;
+    private bool _saved;
+    private string? _savedSongRef;
 
     private string? _activeChordName =>
         _activeSyncedIndex >= 0 && _activeSyncedIndex < Transcription.SyncedChords.Count
@@ -215,6 +245,62 @@
 
     private async Task SeekToAsync(float seconds)
         => await JS.InvokeVoidAsync($"{PlayerApi}.seekTo", seconds);
+
+    private async Task SaveToLibraryAsync()
+    {
+        if (_isSaving) return;
+
+        // Already saved this session — just go to the chart.
+        if (_saved && !string.IsNullOrEmpty(_savedSongRef))
+        {
+            _navManager.NavigateTo($"/songs/{_savedSongRef}");
+            return;
+        }
+
+        var authState = await _globalAuth.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated != true)
+        {
+            var returnUrl = Uri.EscapeDataString($"/discover/{Transcription.VideoId}");
+            _navManager.NavigateTo($"/login?returnUrl={returnUrl}");
+            return;
+        }
+
+        _isSaving = true;
+        StateHasChanged();
+        try
+        {
+            var resp = await YoutubeApi.SaveToLibrary(new YouTubeSaveRequest
+            {
+                VideoId = Transcription.VideoId,
+                BeatModel = Transcription.BeatModel,
+                ChordModel = Transcription.ChordModel,
+                ChordDict = Transcription.ChordDict,
+                Title = Video?.Title
+            });
+
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            {
+                _saved = true;
+                _savedSongRef = resp.Content.Slug ?? resp.Content.Id;
+                _toastService.Show("Saved to your library.", ToastType.Success);
+                if (!string.IsNullOrEmpty(_savedSongRef))
+                    _navManager.NavigateTo($"/songs/{_savedSongRef}");
+            }
+            else
+            {
+                _toastService.Show("Couldn't save this song. Please try again.", ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show($"Save failed: {ex.Message}", ToastType.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+            StateHasChanged();
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {

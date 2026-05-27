@@ -1,3 +1,4 @@
+using FRELODYAPP.Dtos;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using Refit;
@@ -21,5 +22,8 @@ namespace FRELODYUI.Shared.RefitApis
             [Query] string beatModel = "beat-transformer",
             [Query] string chordModel = "chord-cnn-lstm",
             [Query] string chordDict = "full");
+
+        [Post("/api/you-tube/save-to-library")]
+        Task<IApiResponse<SongDto>> SaveToLibrary([Body] YouTubeSaveRequest request);
     }
 }

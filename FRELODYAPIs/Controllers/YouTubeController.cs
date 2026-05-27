@@ -1,8 +1,12 @@
 using FRELODYAPP.Data.Infrastructure;
+using FRELODYAPP.Dtos;
 using FRELODYAPP.Models;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYAPIs.Areas.Admin.Interfaces;
+using FRELODYAPIs.Services;
 using FRELODYAPIs.Services.ChordMini;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -19,12 +23,14 @@ namespace FRELODYAPIs.Controllers
         private readonly SongDbContext _db;
         private readonly YoutubeClient _youtube;
         private readonly IChordMiniService _chordMini;
+        private readonly ISongService _songService;
 
-        public YouTubeController(SongDbContext db, IChordMiniService chordMini)
+        public YouTubeController(SongDbContext db, IChordMiniService chordMini, ISongService songService)
         {
             _db = db;
             _youtube = new YoutubeClient();
             _chordMini = chordMini;
+            _songService = songService;
         }
 
         [HttpGet]
@@ -203,6 +209,49 @@ namespace FRELODYAPIs.Controllers
                 return NotFound(new { message = $"No transcription found for '{videoId}'." });
 
             return Ok(MapTranscriptionToDto(t));
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ProducesResponseType(typeof(SongDto), 200)]
+        public async Task<ActionResult<SongDto>> SaveToLibrary(
+            [FromBody] YouTubeSaveRequest request,
+            CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(request.VideoId))
+                return BadRequest(new { message = "videoId is required." });
+
+            var transcription = await _db.YouTubeTranscriptions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t =>
+                    t.VideoId == request.VideoId &&
+                    t.BeatModel == request.BeatModel &&
+                    t.ChordModel == request.ChordModel &&
+                    t.ChordDict == request.ChordDict,
+                    ct);
+
+            if (transcription is null)
+                return NotFound(new { message = "No analysis found for this video. Analyze it first." });
+
+            var dto = MapTranscriptionToDto(transcription);
+            if (dto.SyncedChords.Count == 0)
+                return BadRequest(new { message = "This analysis has no chords to save." });
+
+            var video = await _db.YouTubeVideos
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.VideoId == request.VideoId, ct);
+
+            var title = !string.IsNullOrWhiteSpace(request.Title)
+                ? request.Title!.Trim()
+                : video?.Title ?? request.VideoId;
+
+            var songDto = YouTubeSongMapper.Map(dto, title);
+
+            var result = await _songService.CreateSong(songDto);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+
+            return Ok(result.Data);
         }
 
         private async Task<YouTubeVideoDto> UpsertAndMapAsync(
