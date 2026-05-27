@@ -156,7 +156,7 @@ class Handler(BaseHTTPRequestHandler):
             # Surface raw stderr to container logs for diagnosis; only the
             # friendly message reaches the user.
             print(f"[ytdlp] extract failed for {url}: {raw_err}", file=sys.stderr, flush=True)
-            self._send(502, {"error": _friendly_error(raw_err)})
+            self._send(422, {"error": _friendly_error(raw_err)})
             return
 
         # Locate the output file
@@ -192,7 +192,7 @@ class Handler(BaseHTTPRequestHandler):
         if result.returncode != 0:
             raw_err = result.stderr.strip() or "yt-dlp failed"
             print(f"[ytdlp] info failed for {url}: {raw_err}", file=sys.stderr, flush=True)
-            self._send(502, {"error": _friendly_error(raw_err)})
+            self._send(422, {"error": _friendly_error(raw_err)})
             return
 
         try:
