@@ -54,8 +54,14 @@ else
     [Parameter] public bool PreferFlat { get; set; }
 
     // Carries the *raw* (pre-capo) chord up so the parent resolves the same
-    // capo-aware diagram it shows in the "Chord shapes" section.
-    public record ChordPreview(string? Raw, float Time, double X, double Y, bool Pinned);
+    // capo-aware diagram it shows in the "Chord shapes" section. CellTop/CellBottom
+    // are the hovered button's viewport edges so the parent can anchor the popover
+    // to the button (stable) instead of the cursor; X is kept for horizontal centring.
+    // CursorY is the viewport Y at the moment of entry so the parent can decide
+    // whether to place the popover above or below the button.
+    public record ChordPreview(string? Raw, float Time, double X, double CellTop, double CellBottom, bool Pinned, double CursorY = 0);
+
+    private record BeatRect(double Top, double Bottom, double Left, double Right);
 
     private record BeatCell(int Index, string Display, bool IsRest, bool ShowLabel, bool IsDownbeat, float Time, string? Raw);
 
@@ -178,7 +184,7 @@ else
     {
         if (!_hoverCapable && HasChord(cell))
         {
-            await OnChordPreview.InvokeAsync(new ChordPreview(cell.Raw, cell.Time, e.ClientX, e.ClientY, true));
+            await RaiseChordPreview(cell, e, pinned: true);
             return;
         }
         await OnSeekTo.InvokeAsync(cell.Time);
@@ -186,8 +192,30 @@ else
 
     private async Task OnCellEnter(BeatCell cell, MouseEventArgs e)
     {
-        if (!_hoverCapable || !HasChord(cell)) return;
-        await OnChordPreview.InvokeAsync(new ChordPreview(cell.Raw, cell.Time, e.ClientX, e.ClientY, false));
+        // Only chord-change cells (ShowLabel=true) trigger the hover preview.
+        // Continuation ticks and rests are kept silent to reduce popover noise
+        // as the cursor moves across the grid.
+        if (!_hoverCapable || !HasChord(cell) || !cell.ShowLabel) return;
+        await RaiseChordPreview(cell, e, pinned: false);
+    }
+
+    // Resolve the hovered button's viewport rect so the parent can anchor the
+    // popover to the cell edges (entering from the bottom no longer covers the
+    // top half of the button). Falls back to cursor Y if JS isn't available yet.
+    private async Task RaiseChordPreview(BeatCell cell, MouseEventArgs e, bool pinned)
+    {
+        double top = e.ClientY;
+        double bottom = e.ClientY;
+        try
+        {
+            _module ??= await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/FRELODYUI.Shared/Pages/Discover/YoutubeChordGrid.razor.js");
+            var rect = await _module.InvokeAsync<BeatRect?>("beatRectAt", e.ClientX, e.ClientY);
+            if (rect is not null) { top = rect.Top; bottom = rect.Bottom; }
+        }
+        catch { /* JS not ready / disposed → cursor-based fallback */ }
+
+        await OnChordPreview.InvokeAsync(new ChordPreview(cell.Raw, cell.Time, e.ClientX, top, bottom, pinned, e.ClientY));
     }
 
     private async Task OnCellLeave()

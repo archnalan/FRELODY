@@ -58,7 +58,10 @@
     border-color: var(--k-border);
 }
 
-.ycg-beat:hover:not(.ycg-beat--active) {
+/* Accent hover only on cells that display a chord label (chord-change beats).
+   Continuation ticks and rests stay visually quiet so moving the cursor across
+   the grid doesn't flood the screen with popover triggers. */
+.ycg-beat--label:not(.ycg-beat--rest):hover:not(.ycg-beat--active) {
     border-color: var(--k-accent);
     background: var(--k-accent-soft);
     color: var(--k-accent-soft-text);

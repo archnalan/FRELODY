@@ -327,6 +327,14 @@
     pointer-events: auto;
 }
 
+/* Default placement: above the button. `top` is set to CellTop − gap, so
+   translateY(-100%) pulls the popover's *bottom* up to that position — the
+   popover always clears the button regardless of its actual rendered height. */
+.pv-chord-pop:not(.pv-chord-pop--below) {
+    transform: translateY(-100%);
+    transform-origin: bottom center;
+}
+
 .pv-chord-pop-name {
     font-size: var(--k-font-size-sm);
     font-weight: 700;
@@ -447,7 +455,7 @@
 /* ── Floating, draggable player window ─────────────────────────────────── */
 .pv-float {
     position: fixed;
-    left: var(--k-space-4);
+    right: var(--k-space-4);
     bottom: var(--k-space-4);
     z-index: 1040;
     width: min(20rem, calc(100vw - 2 * var(--k-space-4)));

@@ -1,0 +1,9 @@
+@page "/discover/landing/{VideoId}"
+@layout LandingLayout
+@rendermode InteractiveWebAssembly
+
+<DiscoverVideoContent VideoId="@VideoId" BackUrl="/discover/landing" />
+
+@code {
+    [Parameter] public string VideoId { get; set; } = default!;
+}

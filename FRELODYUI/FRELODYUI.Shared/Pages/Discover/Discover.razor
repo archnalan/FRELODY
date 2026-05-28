@@ -222,7 +222,10 @@
                 _hasSearched = true;
                 return;
             }
-            _nav.NavigateTo($"/discover/tiktok?url={Uri.EscapeDataString(q)}");
+            var tiktokRoute = IsLanding
+                ? $"/discover/landing/tiktok?url={Uri.EscapeDataString(q)}"
+                : $"/discover/tiktok?url={Uri.EscapeDataString(q)}";
+            _nav.NavigateTo(tiktokRoute);
             return;
         }
 
@@ -260,5 +263,7 @@
     }
 
     private void OnVideoSelected(YouTubeVideoDto video) =>
-        _nav.NavigateTo($"/discover/{video.VideoId}");
+        _nav.NavigateTo(IsLanding
+            ? $"/discover/landing/{video.VideoId}"
+            : $"/discover/{video.VideoId}");
 }

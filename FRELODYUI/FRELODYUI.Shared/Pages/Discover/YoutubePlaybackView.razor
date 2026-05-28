@@ -72,7 +72,7 @@
         {
             <p class="pv-capo-hint">
                 <i class="bi bi-info-circle" aria-hidden="true"></i>
-                Showing shapes to finger with a capo on fret @_capo — the recording still sounds in @Transcription.KeySignature.
+                Showing shapes to finger with a capo on fret @_capo — the recording still sounds in @(string.IsNullOrEmpty(Transcription.KeySignature) ? "the original key" : Transcription.KeySignature).
             </p>
         }
 
@@ -220,6 +220,13 @@
                 Open on @SourceName
             </a>
         }
+        @if (!string.IsNullOrEmpty(ShareUrl))
+        {
+            <button type="button" class="pv-btn pv-btn--ghost" @onclick="ShareAsync">
+                <i class="bi bi-link-45deg"></i>
+                Share
+            </button>
+        }
         </div>
     </div>
 
@@ -253,7 +260,7 @@
             <button class="pv-pop-backdrop" type="button" aria-label="Close chord preview"
                     @onclick="HideChordPopover"></button>
         }
-        <div class="pv-chord-pop @(_popoverPinned ? "pv-chord-pop--pinned" : "")"
+        <div class="pv-chord-pop @(_popoverPinned ? "pv-chord-pop--pinned" : "") @(_popoverFromBelow ? "pv-chord-pop--below" : "")"
              @onmouseenter="() => _isMouseOverPopover = true"
              @onmouseleave="HandlePopoverMouseLeave"
              style="top:@(_popoverTop.ToString(System.Globalization.CultureInfo.InvariantCulture))px; left:@(_popoverLeft.ToString(System.Globalization.CultureInfo.InvariantCulture))px;">
@@ -309,6 +316,9 @@
     [Parameter] public string SourceName { get; set; } = "YouTube";
     [Parameter] public string SourceIcon { get; set; } = "bi-youtube";
 
+    // When set, shows a Share button that copies this URL to the clipboard.
+    [Parameter] public string? ShareUrl { get; set; }
+
     private string _playerId => $"media-player-{Transcription.VideoId}";
 
     // Portrait → narrow window; landscape → standard. Driven by real dimensions
@@ -348,6 +358,7 @@
     // ── Maximize (CSS overlay so the floating player stays visible over it) ──
     private ElementReference _stageEl;
     private bool _isMaximized;
+    private bool _preMaximizePlayerCollapsed;  // player state before entering full view
 
     // ── Chord-chart preview popover ──────────────────────────────────────────
     private bool _showChordPopover;
@@ -362,6 +373,7 @@
     // the carousel (next/prev voicings). The popover only closes once the pointer
     // is off both the cell and the popover — mirrors the Song player's behaviour.
     private bool _isMouseOverPopover;
+    private bool _popoverFromBelow;       // true → popover anchored below button, false → above
     private System.Threading.Timer? _popoverTimer;
 
     private int _timeSigNumerator = 4;
@@ -590,10 +602,14 @@
         _popoverTime = p.Time;
         _popoverPinned = p.Pinned;
 
-        // Anchor above the cell, nudging back on-screen near the edges.
-        const double w = 120, h = 160;
-        _popoverTop = p.Y - h - 12;
-        if (_popoverTop < 8) _popoverTop = p.Y + 16;
+        // Default above; only flip below when there's no room at the top.
+        // CSS translateY(-100%) anchors the popover's bottom to `top` — the
+        // actual top edge of the rendered popover is (top − popover height).
+        const double w = 120, gap = 10, estimatedHeight = 160;
+        _popoverTop = p.CellTop - gap;
+        _popoverFromBelow = (_popoverTop - estimatedHeight) < 8;
+        if (_popoverFromBelow)
+            _popoverTop = p.CellBottom + gap;
         _popoverLeft = Math.Max(8, p.X - w / 2);
 
         _showChordPopover = true;
@@ -656,10 +672,17 @@
     private async Task ToggleMaximize()
     {
         _isMaximized = !_isMaximized;
-        // While maximized the chords own the screen, so shrink the floating player
-        // down to just its title bar to claim as little space as possible. Restore
-        // it to full size when the user drops back to the normal view.
-        _playerCollapsed = _isMaximized;
+        if (_isMaximized)
+        {
+            // Save the current player state before collapsing it for full view.
+            _preMaximizePlayerCollapsed = _playerCollapsed;
+            _playerCollapsed = true;
+        }
+        else
+        {
+            // Return to whatever state the player was in before entering full view.
+            _playerCollapsed = _preMaximizePlayerCollapsed;
+        }
         HideChordPopover();
         StateHasChanged();
         try
@@ -680,7 +703,7 @@
     {
         if (!_isMaximized) return;
         _isMaximized = false;
-        _playerCollapsed = false;   // restore the player when leaving full view
+        _playerCollapsed = _preMaximizePlayerCollapsed;  // restore pre-maximize state
         InvokeAsync(StateHasChanged);
     }
 
@@ -738,6 +761,13 @@
             _isSaving = false;
             StateHasChanged();
         }
+    }
+
+    private async Task ShareAsync()
+    {
+        if (string.IsNullOrEmpty(ShareUrl)) return;
+        await _clipboardService.CopyToClipboardAsync(ShareUrl);
+        _toastService.Show("Share link copied to clipboard!", ToastType.Success);
     }
 
     public async ValueTask DisposeAsync()

@@ -11,6 +11,18 @@ export function hoverCapable() {
     }
 }
 
+// Bounding rect of the .ycg-beat cell under the given viewport point. Lets the
+// chord popover anchor to the button's *edges* (top/bottom) rather than to the
+// cursor — so it sits just above the button no matter where the pointer entered
+// (from above or from underneath). Returns null if the point isn't over a cell.
+export function beatRectAt(x, y) {
+    const hit = document.elementFromPoint(x, y);
+    const beat = hit && hit.closest ? hit.closest('.ycg-beat') : null;
+    if (!beat) return null;
+    const r = beat.getBoundingClientRect();
+    return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+}
+
 export function scrollActiveIntoView(grid) {
     if (!grid) return;
     const active = grid.querySelector('.ycg-beat--active');
@@ -23,7 +35,7 @@ export function scrollActiveIntoView(grid) {
     const h = active.offsetHeight || 0;
     if (h > 0) {
         active.style.scrollMarginTop = `${h}px`;
-        active.style.scrollMarginBottom = `${h}px`;
+        active.style.scrollMarginBottom = `${2 * h}px`;
     }
     try {
         active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
