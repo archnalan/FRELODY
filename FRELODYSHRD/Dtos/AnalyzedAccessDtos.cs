@@ -28,6 +28,10 @@ namespace FRELODYSHRD.Dtos
         /// <summary>True when this song was already unlocked within the availability window (free re-play).</summary>
         public bool AlreadyUnlocked { get; set; }
 
+        /// <summary>True when this evaluation consumed and recorded a fresh unlock slot
+        /// (so a downstream analysis failure can refund it via ReleaseUnlock).</summary>
+        public bool Recorded { get; set; }
+
         /// <summary>True when the user has premium billing and bypasses the quota.</summary>
         public bool IsPremium { get; set; }
 

@@ -37,9 +37,11 @@ namespace FRELODYAPIs.Controllers
         }
 
         // Authoritative daily-quota / 24h-availability gate for analyzed playback.
-        // Returns a non-null IActionResult (402 + paywall payload, or an error) when
+        // Denied is a non-null IActionResult (402 + paywall payload, or an error) when
         // the caller must NOT receive the transcription; null when access is granted.
-        private async Task<ActionResult<YouTubeTranscriptionDto>?> GateAnalyzedAccessAsync(string videoId)
+        // Access carries the evaluation so a downstream failure can refund a consumed
+        // slot (see ReleaseUnlockIfRecorded).
+        private async Task<(ActionResult<YouTubeTranscriptionDto>? Denied, AnalyzedAccessResultDto? Access)> GateAnalyzedAccessAsync(string videoId)
         {
             var meta = await _db.YouTubeVideos.AsNoTracking()
                 .Where(v => v.VideoId == videoId)
@@ -51,13 +53,21 @@ namespace FRELODYAPIs.Controllers
                 sourceUrl: null, durationSeconds: meta?.DurationSeconds);
 
             if (!access.IsSuccess)
-                return StatusCode(access.StatusCode, new { message = access.Error.Message });
+                return (StatusCode(access.StatusCode, new { message = access.Error.Message }), null);
 
             // 402 Payment Required: in-context paywall (or sign-in) signal for the UI.
             if (!access.Data.Allowed)
-                return StatusCode(StatusCodes.Status402PaymentRequired, access.Data);
+                return (StatusCode(StatusCodes.Status402PaymentRequired, access.Data), access.Data);
 
-            return null;
+            return (null, access.Data);
+        }
+
+        // Refund a freshly-consumed slot when we ultimately can't hand back chords,
+        // so a failed analysis (bot-wall, timeout) doesn't burn the user's daily song.
+        private async Task ReleaseUnlockIfRecorded(AnalyzedAccessResultDto? access, string videoId)
+        {
+            if (access?.Recorded == true)
+                await _access.ReleaseUnlock(AnalyzedPlatform.YouTube, videoId);
         }
 
         [HttpGet]
@@ -139,9 +149,9 @@ namespace FRELODYAPIs.Controllers
                 return BadRequest(new { message = "videoId is required." });
 
             // Meter the analyzed play before returning any chord data (cached or fresh).
-            var gate = await GateAnalyzedAccessAsync(request.VideoId);
-            if (gate is not null)
-                return gate;
+            var (denied, access) = await GateAnalyzedAccessAsync(request.VideoId);
+            if (denied is not null)
+                return denied;
 
             // Return cached result when not forcing a refresh
             if (!request.ForceRefresh)
@@ -167,6 +177,9 @@ namespace FRELODYAPIs.Controllers
             }
             catch (Exception ex)
             {
+                // Analysis failed (bot-wall, timeout, …) — refund the slot we just
+                // consumed so the user keeps their daily song for another try.
+                await ReleaseUnlockIfRecorded(access, request.VideoId);
                 // Return 422 (Unprocessable Entity) for known analysis failures
                 // to avoid triggering the generic Cloudflare/Nginx 502 error page.
                 return StatusCode(422, new { message = ex.Message });
@@ -231,9 +244,9 @@ namespace FRELODYAPIs.Controllers
             [FromQuery] string chordModel = "chord-cnn-lstm",
             [FromQuery] string chordDict = "full")
         {
-            var gate = await GateAnalyzedAccessAsync(videoId);
-            if (gate is not null)
-                return gate;
+            var (denied, access) = await GateAnalyzedAccessAsync(videoId);
+            if (denied is not null)
+                return denied;
 
             var t = await _db.YouTubeTranscriptions
                 .AsNoTracking()
@@ -244,7 +257,11 @@ namespace FRELODYAPIs.Controllers
                     t.ChordDict == chordDict);
 
             if (t is null)
+            {
+                // Nothing to hand back — don't let the gate's slot stick.
+                await ReleaseUnlockIfRecorded(access, videoId);
                 return NotFound(new { message = $"No transcription found for '{videoId}'." });
+            }
 
             return Ok(MapTranscriptionToDto(t));
         }

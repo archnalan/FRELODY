@@ -22,6 +22,14 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
             AnalyzedPlatform platform, string videoId, string? title = null,
             string? thumbnailUrl = null, string? sourceUrl = null, int? durationSeconds = null);
 
+        /// <summary>
+        /// Refunds a slot consumed by <see cref="EvaluateAndRecord"/> when the
+        /// downstream analysis fails (e.g. a YouTube bot-wall). Removes today's
+        /// unlock for the current user + (platform, videoId) so the song no longer
+        /// counts against the daily quota. Safe no-op when nothing was recorded.
+        /// </summary>
+        Task<ServiceResult<bool>> ReleaseUnlock(AnalyzedPlatform platform, string videoId);
+
         /// <summary>Read-only quota snapshot for the current user (no slot consumed).</summary>
         Task<ServiceResult<AnalyzedAccessResultDto>> GetQuotaStatus();
 

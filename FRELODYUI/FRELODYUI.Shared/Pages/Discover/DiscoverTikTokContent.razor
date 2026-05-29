@@ -257,12 +257,15 @@
                 _errorMessage = AnalysisErrorMessage.FromResponse(
                     resp.Error?.StatusCode, resp.Error?.Content, AnalysisErrorMessage.SourceKind.TikTok);
                 _state = AnalysisState.Error;
+                // Server refunds the metered slot on failure — resync the badge.
+                if (_quotaBadge is not null) await _quotaBadge.RefreshAsync();
             }
         }
         catch (Exception ex)
         {
             _errorMessage = AnalysisErrorMessage.FromException(ex, AnalysisErrorMessage.SourceKind.TikTok);
             _state = AnalysisState.Error;
+            if (_quotaBadge is not null) await _quotaBadge.RefreshAsync();
         }
         finally
         {

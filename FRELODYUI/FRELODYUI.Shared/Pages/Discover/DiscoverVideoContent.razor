@@ -235,12 +235,16 @@
                 _errorMessage = AnalysisErrorMessage.FromResponse(
                     resp.Error?.StatusCode, resp.Error?.Content, AnalysisErrorMessage.SourceKind.YouTube);
                 _state = AnalysisState.Error;
+                // The server refunds the slot it metered when analysis fails, so
+                // resync the badge — the user keeps their song to retry another.
+                if (_quotaBadge is not null) await _quotaBadge.RefreshAsync();
             }
         }
         catch (Exception ex)
         {
             _errorMessage = AnalysisErrorMessage.FromException(ex, AnalysisErrorMessage.SourceKind.YouTube);
             _state = AnalysisState.Error;
+            if (_quotaBadge is not null) await _quotaBadge.RefreshAsync();
         }
         finally
         {

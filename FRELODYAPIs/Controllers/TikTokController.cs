@@ -27,20 +27,28 @@ namespace FRELODYAPIs.Controllers
         }
 
         // Authoritative daily-quota / 24h-availability gate for analyzed playback.
-        // Returns a non-null IActionResult (402 + paywall payload, or an error) when
+        // Denied is a non-null IActionResult (402 + paywall payload, or an error) when
         // the caller must NOT receive the transcription; null when access is granted.
-        private async Task<ActionResult<YouTubeTranscriptionDto>?> GateAnalyzedAccessAsync(string videoId, string? title, string? thumbnailUrl, string? sourceUrl, int? durationSeconds)
+        // Access carries the evaluation so a downstream failure can refund a consumed slot.
+        private async Task<(ActionResult<YouTubeTranscriptionDto>? Denied, AnalyzedAccessResultDto? Access)> GateAnalyzedAccessAsync(string videoId, string? title, string? thumbnailUrl, string? sourceUrl, int? durationSeconds)
         {
             var access = await _access.EvaluateAndRecord(
                 AnalyzedPlatform.TikTok, videoId, title, thumbnailUrl, sourceUrl, durationSeconds);
 
             if (!access.IsSuccess)
-                return StatusCode(access.StatusCode, new { message = access.Error.Message });
+                return (StatusCode(access.StatusCode, new { message = access.Error.Message }), null);
 
             if (!access.Data.Allowed)
-                return StatusCode(StatusCodes.Status402PaymentRequired, access.Data);
+                return (StatusCode(StatusCodes.Status402PaymentRequired, access.Data), access.Data);
 
-            return null;
+            return (null, access.Data);
+        }
+
+        // Refund a freshly-consumed slot when we ultimately can't hand back chords.
+        private async Task ReleaseUnlockIfRecorded(AnalyzedAccessResultDto? access, string videoId)
+        {
+            if (access?.Recorded == true)
+                await _access.ReleaseUnlock(AnalyzedPlatform.TikTok, videoId);
         }
 
         // Resolve a pasted TikTok URL into cached video metadata (id, title, thumb).
@@ -101,9 +109,9 @@ namespace FRELODYAPIs.Controllers
             }
 
             // Meter the analyzed play before returning any chord data (cached or fresh).
-            var gate = await GateAnalyzedAccessAsync(info.Id, Truncate(info.Title, 500), Truncate(info.Thumbnail, 1000), info.WebpageUrl, info.DurationSeconds);
-            if (gate is not null)
-                return gate;
+            var (denied, access) = await GateAnalyzedAccessAsync(info.Id, Truncate(info.Title, 500), Truncate(info.Thumbnail, 1000), info.WebpageUrl, info.DurationSeconds);
+            if (denied is not null)
+                return denied;
 
             if (!request.ForceRefresh)
             {
@@ -126,6 +134,8 @@ namespace FRELODYAPIs.Controllers
             }
             catch (Exception ex)
             {
+                // Analysis failed — refund the slot so the user keeps their daily song.
+                await ReleaseUnlockIfRecorded(access, info.Id);
                 return StatusCode(502, new { message = ex.Message });
             }
 
@@ -173,9 +183,9 @@ namespace FRELODYAPIs.Controllers
                 .Select(v => new { v.Title, v.ThumbnailUrl, v.Url, v.DurationSeconds })
                 .FirstOrDefaultAsync();
 
-            var gate = await GateAnalyzedAccessAsync(videoId, meta?.Title, meta?.ThumbnailUrl, meta?.Url, meta?.DurationSeconds);
-            if (gate is not null)
-                return gate;
+            var (denied, access) = await GateAnalyzedAccessAsync(videoId, meta?.Title, meta?.ThumbnailUrl, meta?.Url, meta?.DurationSeconds);
+            if (denied is not null)
+                return denied;
 
             var t = await _db.TikTokTranscriptions.AsNoTracking()
                 .FirstOrDefaultAsync(t =>
@@ -184,9 +194,13 @@ namespace FRELODYAPIs.Controllers
                     t.ChordModel == chordModel &&
                     t.ChordDict == chordDict);
 
-            return t is null
-                ? NotFound(new { message = $"No transcription found for '{videoId}'." })
-                : Ok(MapTranscriptionToDto(t));
+            if (t is null)
+            {
+                await ReleaseUnlockIfRecorded(access, videoId);
+                return NotFound(new { message = $"No transcription found for '{videoId}'." });
+            }
+
+            return Ok(MapTranscriptionToDto(t));
         }
 
         private async Task<TikTokVideoDto> UpsertAndMapAsync(MediaInfo info, CancellationToken ct)

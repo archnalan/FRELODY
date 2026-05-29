@@ -29,7 +29,7 @@
 }
 
 /* Desktop/tablet: centered card. */
-@@media (min-width: 540px) {
+@media (min-width: 540px) {
     .as-overlay {
         align-items: center;
         padding: var(--k-space-4);
@@ -111,17 +111,17 @@
 
 .as-link:hover { color: var(--text-primary); }
 
-@@keyframes as-fade {
+@keyframes as-fade {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
-@@keyframes as-rise-up {
+@keyframes as-rise-up {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
 }
 
-@@keyframes as-rise-center {
+@keyframes as-rise-center {
     from { transform: translateY(12px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }

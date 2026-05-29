@@ -115,6 +115,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 {
                     await RecordUnlockAsync(userId, platform, videoId, title, thumbnailUrl, sourceUrl, now);
                     result.Allowed = true;
+                    result.Recorded = true;
                     result.UsedToday = usedToday + 1;
                     result.Remaining = 0;
                     return ServiceResult<AnalyzedAccessResultDto>.Success(result);
@@ -135,6 +136,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 await RecordUnlockAsync(userId, platform, videoId, title, thumbnailUrl, sourceUrl, now);
                 result.Allowed = true;
+                result.Recorded = true;
                 result.UsedToday = usedToday + 1;
                 result.Remaining = Math.Max(0, limit - (usedToday + 1));
                 return ServiceResult<AnalyzedAccessResultDto>.Success(result);
@@ -193,6 +195,39 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
+        public async Task<ServiceResult<bool>> ReleaseUnlock(AnalyzedPlatform platform, string videoId)
+        {
+            try
+            {
+                var userId = _tenantProvider.GetUserId();
+                if (string.IsNullOrEmpty(userId) || string.IsNullOrWhiteSpace(videoId))
+                    return ServiceResult<bool>.Success(false);
+
+                // Only today's slot is refundable. Callers gate this on Recorded==true,
+                // which implies no prior unlock existed in the window — so the rows we
+                // remove here are exactly the one just consumed, never an earned re-play.
+                var todayStart = DateTime.UtcNow.Date;
+                var rows = await _db.AnalyzedSongUnlocks
+                    .Where(u => u.UserId == userId &&
+                                u.Platform == platform &&
+                                u.VideoId == videoId &&
+                                u.UnlockedAt >= todayStart)
+                    .ToListAsync();
+
+                if (rows.Count == 0)
+                    return ServiceResult<bool>.Success(false);
+
+                _db.AnalyzedSongUnlocks.RemoveRange(rows);
+                await _db.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error releasing analyzed unlock for {Platform}/{VideoId}", platform, videoId);
+                return ServiceResult<bool>.Failure(ex);
+            }
+        }
+
         public AnalyzedLimitsDto GetLimits() => new()
         {
             FreeAnalyzedSongsPerDay = _options.FreeAnalyzedSongsPerDay,
@@ -247,6 +282,10 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
         private async Task<bool> IsPremiumAsync(string userId)
         {
+            // SuperAdmins always have full premium privileges, regardless of billing.
+            if (_tenantProvider.IsSuperAdmin(userId))
+                return true;
+
             // Authoritative read of billing status by primary key — ignore the
             // tenant/active query filters so a self-lookup never returns null.
             var row = await _db.Users
