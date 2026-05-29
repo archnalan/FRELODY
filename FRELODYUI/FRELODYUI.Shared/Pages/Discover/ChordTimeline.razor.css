@@ -1,0 +1,174 @@
+/* ChordTimeline — quiet beat-grid on top, sliding chord-carousel strip below.
+
+   Layout:
+     1. .ct-grid       — YoutubeChordGrid at half the previous full-grid height.
+                         The grid's --active pulse is silenced (via SilentActive
+                         → .ycg--silent in the grid's scoped CSS), so this row
+                         only conveys "where in the song" while the carousel
+                         below handles "what's playing".
+     2. .ct-stage-area — slides one slot per chord change; focused carousel pops
+                         to scale(1.05) with an accent ring; past slots fade to
+                         the left, upcoming slots queue to the right with
+                         progressive scale/blur falloff.
+
+   The two surfaces are intentionally different rhythms: the grid moves slowly
+   (only when the playhead leaves the visible window), the strip moves on every
+   chord change. Together they give the user position + identity without the
+   per-beat strobe of the Grid view. */
+
+.ct {
+    --ct-slot-width: 9rem;
+    --ct-slot-gap: var(--k-space-3);
+    --ct-slot-step: calc(var(--ct-slot-width) + var(--ct-slot-gap));
+    --ct-focus-offset: 30%;
+
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-3);
+    padding: var(--k-space-2) 0 var(--k-space-3);
+}
+
+/* ── Compact grid: half the height of the standalone Grid view. The inner
+   grid's scrollActiveIntoView keeps the active measure in frame on its own. */
+.ct-grid {
+    max-height: 9rem;
+    overflow-y: auto;
+    padding-right: var(--k-space-2);
+    scroll-behavior: smooth;
+}
+
+/* ── Stage area: chord-diagram strip with focus-zoom + bilateral falloff. ──
+   Horizontally clips the sliding track; min-height holds the focused slot's
+   stage + label + nav row at scale 1.05 so the chevron row never clips. */
+.ct-stage-area {
+    width: 100%;
+    overflow: hidden;
+    min-height: 16rem;
+}
+
+.ct-track {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ct-slot-gap);
+    padding-left: calc(var(--ct-focus-offset) - var(--ct-slot-width) / 2);
+    padding-right: var(--ct-focus-offset);
+    transform: translateX(calc(var(--ct-slot-step) * var(--ct-active-index, 0) * -1));
+    transition: transform var(--k-transition-slow) ease;
+    will-change: transform;
+}
+
+.ct-slot {
+    flex: 0 0 var(--ct-slot-width);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transform-origin: center top;
+    transition:
+        transform var(--k-transition-slow) ease,
+        opacity var(--k-transition-slow) ease,
+        filter var(--k-transition-slow) ease;
+}
+
+/* ── Focus falloff ─────────────────────────────────────────────────────────
+   Active pops slightly; symmetric distance buckets handle the rest, then a
+   more-specific selector overrides the +1 (upcoming-near) bucket to read
+   clearer than its -1 (past-near) twin — the user needs to preview the chord
+   that's about to play, but the chord that just played can fade away. */
+
+.ct-slot--active {
+    transform: scale(1.05);
+    opacity: 1;
+    filter: none;
+    z-index: 3;
+}
+
+.ct-slot--near {
+    transform: scale(0.78);
+    opacity: 0.7;
+    filter: blur(1px);
+    z-index: 2;
+}
+
+/* Higher-specificity override: the *next* chord is barely blurred so the user
+   can read it before it slides into focus. (.--upcoming.--near beats .--near.) */
+.ct-slot--upcoming.ct-slot--near {
+    transform: scale(0.92);
+    opacity: 0.88;
+    filter: blur(0.3px);
+}
+
+.ct-slot--far {
+    transform: scale(0.6);
+    opacity: 0.4;
+    filter: blur(2px);
+    z-index: 1;
+}
+
+.ct-slot--distant {
+    transform: scale(0.5);
+    opacity: 0.22;
+    filter: blur(2.5px);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Accent ring + glow on the focused slot — reuses the capo-stepper hover overlay. */
+.ct-slot--active ::deep .cct-stage {
+    box-shadow:
+        0 0 0 2px var(--k-accent-soft, rgba(58, 110, 255, 0.35)),
+        var(--k-shadow-hover, 0 4px 16px rgba(0, 0, 0, 0.08));
+    border-color: var(--k-accent, var(--bs-primary, #3a6eff));
+}
+
+.ct-slot--active ::deep .cct-name {
+    color: var(--k-accent, var(--bs-primary, #3a6eff));
+}
+
+.ct-empty {
+    text-align: center;
+    color: var(--k-text-muted, var(--text-secondary, #6b7280));
+    font-size: var(--k-font-size-sm);
+    padding: var(--k-space-4);
+}
+
+/* ── Mobile tuning ────────────────────────────────────────────────────────
+   Tighter slot allocation so three carousels still fit in the row. Active
+   scale-up compensates so the focused slot stays readable. */
+@media (max-width: 520px) {
+    .ct {
+        --ct-slot-width: 6.5rem;
+        --ct-slot-gap: var(--k-space-2);
+        --ct-focus-offset: 32%;
+    }
+
+    .ct-grid {
+        max-height: 7.5rem;
+    }
+
+    .ct-stage-area {
+        min-height: 13.5rem;
+    }
+
+    .ct-slot--active { transform: scale(1.12); }
+    .ct-slot--upcoming.ct-slot--near { transform: scale(0.94); }
+    .ct-slot--near { transform: scale(0.72); }
+    .ct-slot--far { transform: scale(0.55); }
+    .ct-slot--distant { transform: scale(0.45); }
+}
+
+/* Maximised stage: let the grid breathe. .pv-stage--max is applied by
+   YoutubePlaybackView on an ancestor; Blazor's scope attribute is on the
+   trailing .ct-grid so the descendant selector still resolves. */
+.pv-stage--max .ct-grid {
+    max-height: 14rem;
+}
+
+/* Respect reduced-motion: keep the focus shift but skip the slide animation. */
+@media (prefers-reduced-motion: reduce) {
+    .ct-track,
+    .ct-slot {
+        transition: none;
+    }
+}

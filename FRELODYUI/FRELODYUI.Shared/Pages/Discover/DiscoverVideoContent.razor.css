@@ -88,6 +88,54 @@
     text-overflow: ellipsis;
 }
 
+/* ── Share affordance at the header end ─────────────────────────────────
+   Pushed to the right via margin-left:auto so it sits opposite the back
+   button regardless of how wide the meta block ends up. Mirrors .dv-back's
+   pill-icon language so the row reads as a single control bar. */
+.dv-share {
+    flex-shrink: 0;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0 0.8rem;
+    height: 2.25rem;
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-pill);
+    background: var(--k-bg-surface);
+    color: var(--k-text-muted);
+    font-size: var(--k-font-size-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        border-color var(--k-transition-fast),
+        color var(--k-transition-fast),
+        background var(--k-transition-fast);
+}
+
+.dv-share:hover {
+    border-color: var(--k-accent);
+    color: var(--k-accent);
+    background: var(--k-accent-soft);
+}
+
+.dv-share i {
+    font-size: 1rem;
+}
+
+/* Narrow screens — collapse to an icon button so the title still has room. */
+@media (max-width: 480px) {
+    .dv-share {
+        padding: 0;
+        width: 2.25rem;
+        justify-content: center;
+    }
+
+    .dv-share-label {
+        display: none;
+    }
+}
+
 /* ── Analysis card ──────────────────────────────────────────── */
 .dv-card {
     border-radius: var(--k-radius-md);

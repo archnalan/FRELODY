@@ -1,0 +1,207 @@
+@using FRELODYUI.Shared.Pages.Chord
+@implements IDisposable
+
+@* Timeline view: a quiet beat-grid on top, a sliding chord-carousel strip below.
+   The grid here is the same surface the Grid view uses, but with its active-beat
+   pulse silenced — the eye doesn't need it because the strip below is already
+   animating chord-by-chord. The grid auto-scrolls (its own JS) so the active
+   measure stays in frame; the strip slides one carousel-width per chord change,
+   with past slots fading out left and upcoming slots queueing on the right
+   with progressive scale/blur falloff. *@
+
+<div class="ct">
+
+    @if (Beats.Count > 0)
+    {
+        @* Half-height grid — half of the previous full-grid wrapper. Plays the
+           role of "where am I" without competing visually with the carousel. *@
+        <div class="ct-grid">
+            <YoutubeChordGrid
+                SyncedChords="SyncedChords"
+                Beats="Beats"
+                ActiveBeatIndex="ActiveBeatIndex"
+                TimeSignature="TimeSignature"
+                CapoShift="CapoShift"
+                PreferFlat="PreferFlat"
+                OnSeekTo="OnSeekTo"
+                OnChordPreview="OnChordPreview"
+                OnChordPreviewEnd="OnChordPreviewEnd"
+                LoopBeatA="LoopBeatA"
+                LoopBeatB="LoopBeatB"
+                IsLoopPicking="IsLoopPicking"
+                OnLoopPick="OnLoopPick"
+                SeekSupported="SeekSupported"
+                SilentActive="true" />
+        </div>
+    }
+
+    @if (_slots.Count == 0)
+    {
+        <p class="ct-empty">No chord changes to show yet.</p>
+    }
+    else
+    {
+        <div class="ct-stage-area" style="--ct-active-index:@_activeSlotIndex">
+            <div class="ct-track">
+                @for (int i = 0; i < _slots.Count; i++)
+                {
+                    var slot = _slots[i];
+                    var distance = i - _activeSlotIndex;
+                    var absDistance = Math.Abs(distance);
+                    @* Snapshot for the click closure so each handler binds to its
+                       own slot, not the loop's final iteration. *@
+                    var capturedSlot = slot;
+                    <div class="@SlotClass(distance, absDistance)"
+                         @key="slot.Key"
+                         @onclick="() => OnSlotClick(capturedSlot)">
+                        <ChordCarouselTimeline
+                            Chord="@slot.ChordDto"
+                            DisplayName="@slot.DisplayName"
+                            Size="CarouselSize.Medium"
+                            ShowNavigation="@(distance == 0)"
+                            CarouselId="@($"ct-{slot.Key}")" />
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public List<SyncedChordDto> SyncedChords { get; set; } = [];
+
+    // Beat times in seconds — drives the lead-sheet grid above the carousel strip.
+    [Parameter] public List<float> Beats { get; set; } = [];
+
+    // Resolved diagrams keyed by chord-name. Parent (YoutubePlaybackView) already
+    // resolves these for the "Chord shapes" section — we share that list rather
+    // than re-resolving per slot.
+    [Parameter] public List<ChordDto> ChordCards { get; set; } = [];
+
+    [Parameter] public int ActiveBeatIndex { get; set; } = -1;
+
+    // Drives barline placement in the inner grid. Same parse rules as the Grid
+    // view; defaults to 4/4 when null/unparseable.
+    [Parameter] public string? TimeSignature { get; set; }
+
+    // Capo transposition applied to displayed chord names. Same sign convention
+    // as YoutubeChordGrid: capo-2 → CapoShift = -2.
+    [Parameter] public int CapoShift { get; set; }
+    [Parameter] public bool PreferFlat { get; set; }
+
+    [Parameter] public EventCallback<float> OnSeekTo { get; set; }
+
+    // Popover + loop wiring — threaded through to the inner grid so loop A→B
+    // and the chord-preview popover work identically across both views.
+    [Parameter] public EventCallback<YoutubeChordGrid.ChordPreview> OnChordPreview { get; set; }
+    [Parameter] public EventCallback OnChordPreviewEnd { get; set; }
+    [Parameter] public int LoopBeatA { get; set; } = -1;
+    [Parameter] public int LoopBeatB { get; set; } = -1;
+    [Parameter] public bool IsLoopPicking { get; set; }
+    [Parameter] public EventCallback<YoutubeChordGrid.LoopPick> OnLoopPick { get; set; }
+
+    // False when the host player doesn't expose a seek API (TikTok). Threaded
+    // through to the inner grid so cell clicks pin the popover instead of
+    // firing a dead seek.
+    [Parameter] public bool SeekSupported { get; set; } = true;
+
+    // One slot per chord change. N/X rests are intentionally skipped: this strip
+    // conveys chord *shapes* in change-order, not beat rhythm — the grid above is
+    // the rhythm-bearing surface.
+    private record Slot(int Key, int StartBeatIndex, float StartTime, string DisplayName, ChordDto? ChordDto);
+
+    private List<Slot> _slots = new();
+    private int _activeSlotIndex;
+
+    // Layout rebuilds when chord-data identity, capo, or flat-preference changes
+    // — not when ActiveBeatIndex ticks (the active-index re-derives off _slots).
+    private object? _builtChordsRef;
+    private object? _builtChordCardsRef;
+    private int _builtCapoShift = int.MinValue;
+    private bool _builtPreferFlat;
+
+    protected override void OnParametersSet()
+    {
+        var needsRebuild =
+            !ReferenceEquals(_builtChordsRef, SyncedChords) ||
+            !ReferenceEquals(_builtChordCardsRef, ChordCards) ||
+            _builtCapoShift != CapoShift ||
+            _builtPreferFlat != PreferFlat;
+
+        if (needsRebuild)
+        {
+            BuildSlots();
+            _builtChordsRef = SyncedChords;
+            _builtChordCardsRef = ChordCards;
+            _builtCapoShift = CapoShift;
+            _builtPreferFlat = PreferFlat;
+        }
+
+        _activeSlotIndex = ComputeActiveSlotIndex();
+    }
+
+    private void BuildSlots()
+    {
+        var slots = new List<Slot>(SyncedChords.Count);
+        string? prevDisplay = null;
+        var ordered = SyncedChords.OrderBy(s => s.BeatIndex).ToList();
+
+        for (int i = 0; i < ordered.Count; i++)
+        {
+            var sc = ordered[i];
+            if (ChordLabel.IsNoChord(sc.Chord)) continue;
+
+            var display = ChordLabel.Display(ChordLabel.TransposeRaw(sc.Chord, CapoShift, PreferFlat));
+            // Collapse adjacent repeats of the same chord-after-transpose into one slot.
+            if (display == prevDisplay) continue;
+
+            var card = FindCard(sc.Chord);
+            slots.Add(new Slot(sc.BeatIndex, sc.BeatIndex, sc.Time, display, card));
+            prevDisplay = display;
+        }
+
+        _slots = slots;
+    }
+
+    private ChordDto? FindCard(string? raw)
+    {
+        var name = ChordLabel.PlainName(ChordLabel.TransposeRaw(raw, CapoShift, PreferFlat));
+        if (string.IsNullOrEmpty(name)) return null;
+        return ChordCards.FirstOrDefault(c =>
+            string.Equals(c.ChordName, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // Linear scan suffices: typical songs have under ~100 chord changes, and
+    // ActiveBeatIndex advances monotonically during playback.
+    private int ComputeActiveSlotIndex()
+    {
+        if (_slots.Count == 0 || ActiveBeatIndex < 0) return 0;
+        int found = 0;
+        for (int i = 0; i < _slots.Count; i++)
+        {
+            if (_slots[i].StartBeatIndex <= ActiveBeatIndex) found = i;
+            else break;
+        }
+        return found;
+    }
+
+    private string SlotClass(int distance, int absDistance)
+    {
+        var sb = new System.Text.StringBuilder("ct-slot");
+        if (distance == 0) sb.Append(" ct-slot--active");
+        else if (distance < 0) sb.Append(" ct-slot--past");
+        else sb.Append(" ct-slot--upcoming");
+
+        // Distance buckets drive the scale/blur/opacity falloff — kept symmetric
+        // around the focused slot so both directions read the same.
+        if (absDistance == 1) sb.Append(" ct-slot--near");
+        else if (absDistance == 2) sb.Append(" ct-slot--far");
+        else if (absDistance >= 3) sb.Append(" ct-slot--distant");
+
+        return sb.ToString();
+    }
+
+    private Task OnSlotClick(Slot slot) => OnSeekTo.InvokeAsync(slot.StartTime);
+
+    public void Dispose() { }
+}

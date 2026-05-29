@@ -34,6 +34,12 @@
                     }
                 </div>
             </div>
+
+            <button type="button" class="dv-share" @onclick="ShareAsync"
+                    title="Copy share link" aria-label="Copy share link">
+                <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                <span class="dv-share-label">Share</span>
+            </button>
         </div>
     }
 
@@ -46,7 +52,6 @@
                 Transcription="_result"
                 Video="_video"
                 AllowSaveToLibrary="true"
-                ShareUrl="@Nav.ToAbsoluteUri($"/discover/landing/{VideoId}").ToString()"
                 OnReanalyze="ReanalyzeAsync" />
         }
         else if (_state == AnalysisState.Error)
@@ -130,6 +135,13 @@
 
     private Task AnalyzeAsync() => RunAnalysisAsync(forceRefresh: false);
     private Task ReanalyzeAsync() => RunAnalysisAsync(forceRefresh: true);
+
+    private async Task ShareAsync()
+    {
+        var url = Nav.ToAbsoluteUri($"/discover/landing/{VideoId}").ToString();
+        await _clipboardService.CopyToClipboardAsync(url);
+        _toastService.Show("Share link copied to clipboard!", ToastType.Success);
+    }
 
     private async Task RunAnalysisAsync(bool forceRefresh)
     {

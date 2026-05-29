@@ -1,0 +1,122 @@
+/* ChordCarouselTimeline — diagram + label + below-chevrons layout.
+   Sister component to ChordCarousel; lives inside ChordTimeline slots. */
+
+.cct {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--k-space-1);
+}
+
+.cct-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: var(--k-aspect-chord);
+    border-radius: var(--k-radius-md);
+    overflow: hidden;
+    background: var(--k-bg-surface, var(--modal-content-bg, #ffffff));
+    border: 1px solid var(--k-border, var(--border-light, rgba(0, 0, 0, 0.06)));
+    transition: box-shadow var(--k-transition-fast), border-color var(--k-transition-fast);
+}
+
+.cct-stage--ghost {
+    background: var(--k-bg-hover, var(--bg-hover, #d1d5db));
+    animation: k-shimmer 1.4s ease-in-out infinite;
+}
+
+.cct-frame {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--k-space-2);
+    color: var(--k-text, var(--text-primary, #1f2937));
+}
+
+.cct-frame ::deep svg {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.cct-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--k-text-muted, var(--text-secondary, #6b7280));
+}
+
+.cct-placeholder i {
+    font-size: 1.6rem;
+    opacity: 0.5;
+}
+
+.cct-name {
+    font-family: var(--bs-font-sans-serif);
+    font-weight: 600;
+    font-size: var(--k-font-size-sm);
+    color: var(--text-primary);
+    text-align: center;
+    line-height: 1.1;
+    margin-top: var(--k-space-1);
+}
+
+.cct-name-ghost {
+    width: 2.4rem;
+    height: 0.9rem;
+    border-radius: var(--k-radius-xs);
+    margin-top: var(--k-space-1);
+}
+
+/* Below-stage chord-position navigation: sits *under* the label so the focused
+   slot reads as { diagram, label, ‹ 1/4 › } top-to-bottom. */
+.cct-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--k-space-2);
+    padding: 0.15rem 0.35rem;
+    border-radius: var(--k-radius-pill);
+    background: var(--k-bg-surface);
+    border: 1px solid var(--k-border);
+}
+
+.cct-nav-btn {
+    width: 1.4rem;
+    height: 1.4rem;
+    border: 0;
+    background: transparent;
+    color: var(--k-text-muted);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: background var(--k-transition-fast), color var(--k-transition-fast);
+}
+
+.cct-nav-btn:hover {
+    background: var(--k-accent-soft);
+    color: var(--k-accent);
+}
+
+.cct-counter {
+    font-size: var(--k-font-size-xs);
+    font-weight: 600;
+    color: var(--k-text-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 2rem;
+    text-align: center;
+}
+
+/* Per-size stage caps. Tuned so the focused (Medium at scale 1.05) timeline
+   slot fits inside ChordTimeline's stage-area min-height without clipping
+   the chevron-nav row that sits below the label. */
+.cct-sm .cct-stage { max-width: 5rem; }
+.cct-md .cct-stage { max-width: 7.5rem; }
+.cct-lg .cct-stage { max-width: 9.5rem; }

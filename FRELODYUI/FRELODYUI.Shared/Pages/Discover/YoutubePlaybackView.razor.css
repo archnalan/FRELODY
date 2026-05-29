@@ -239,8 +239,61 @@
 .pv-stage-bar {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: var(--k-space-2);
+    flex-wrap: wrap;
+}
+
+/* ── View-mode pill: swaps between the lead-sheet grid and the sliding diagram
+   timeline. Mirrors the capo-stepper idiom (pill outline, two flush buttons)
+   so the toolbar reads as a family of related controls. */
+.pv-view-pill {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-pill);
+    background: var(--k-bg-surface);
+    overflow: hidden;
+}
+
+.pv-view-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--k-space-1);
+    padding: 0.3rem 0.7rem;
+    height: 1.9rem;
+    border: 0;
+    background: transparent;
+    color: var(--k-text-muted);
+    font-size: var(--k-font-size-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--k-transition-fast), color var(--k-transition-fast);
+}
+
+.pv-view-pill-btn:hover:not(.is-active) {
+    background: var(--k-bg-hover);
+    color: var(--text-primary);
+}
+
+.pv-view-pill-btn.is-active {
+    background: var(--k-accent-soft);
+    color: var(--k-accent);
+}
+
+.pv-view-pill-btn i {
+    font-size: 0.95rem;
+}
+
+/* Hide labels on narrow screens; the icons carry the meaning. */
+@media (max-width: 420px) {
+    .pv-view-pill-label {
+        display: none;
+    }
+
+    .pv-view-pill-btn {
+        padding: 0.3rem 0.55rem;
+    }
 }
 
 .pv-stage-max-btn {
@@ -260,6 +313,209 @@
 .pv-stage-max-btn:hover {
     background: var(--k-bg-hover);
     color: var(--k-accent);
+}
+
+/* ── Playback control cluster in the stage bar (loop + speed) ──
+   Wraps as a group so small screens push them onto their own row instead of
+   breaking the cluster across the toolbar. */
+.pv-play-ctrl {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--k-space-2);
+    flex-wrap: wrap;
+}
+
+/* ── Loop button ─────────────────────────────────────────────────────
+   Three visual states cycle from the same control: idle (ghost), picking
+   (pulsing amber), armed (filled amber). Mirrors the pill-button idiom
+   already used by the view pill so the stage bar reads as a family. */
+.pv-loop {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--k-space-1);
+    padding: 0.3rem 0.7rem;
+    height: 1.9rem;
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-pill);
+    background: var(--k-bg-surface);
+    color: var(--k-text-muted);
+    font-size: var(--k-font-size-xs);
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background var(--k-transition-fast),
+        color var(--k-transition-fast),
+        border-color var(--k-transition-fast);
+}
+
+.pv-loop:hover:not(.pv-loop--armed):not(.pv-loop--picking):not(:disabled) {
+    background: var(--k-bg-hover);
+    color: var(--text-primary);
+    border-color: var(--k-warning-soft-text);
+}
+
+/* TikTok fallback — render the affordance but inert so the user sees that
+   loop exists yet isn't usable for this source. */
+.pv-loop:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    animation: none;
+}
+
+.pv-loop--picking {
+    background: var(--k-warning-soft);
+    color: var(--k-warning-soft-text);
+    border-color: var(--k-warning-soft-text);
+    animation: pv-loop-pulse 1.4s ease-in-out infinite;
+}
+
+.pv-loop--armed {
+    background: var(--k-warning-soft-text);
+    color: var(--k-bg-surface);
+    border-color: var(--k-warning-soft-text);
+}
+
+.pv-loop--armed:hover {
+    filter: brightness(1.08);
+}
+
+.pv-loop i {
+    font-size: 0.95rem;
+}
+
+@keyframes pv-loop-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--k-warning-soft); }
+    50%       { box-shadow: 0 0 0 6px transparent; }
+}
+
+/* Narrow screens — drop the label, the icon + colour carry meaning. */
+@media (max-width: 420px) {
+    .pv-loop-label { display: none; }
+    .pv-loop { padding: 0.3rem 0.55rem; }
+}
+
+/* ── Loop hint banner ────────────────────────────────────────────────
+   Mirrors .pv-capo-hint so the page reads as a single "guidance" family.
+   Amber when picking or armed, so it stands apart from capo's indigo. */
+.pv-loop-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--k-radius-sm);
+    background: var(--k-warning-soft);
+    color: var(--k-warning-soft-text);
+    font-size: var(--k-font-size-xs);
+    line-height: 1.4;
+}
+
+.pv-loop-hint--armed {
+    background: var(--k-warning-soft);
+}
+
+/* ── Speed slider ────────────────────────────────────────────────────
+   Discrete YT-supported rates (0.25× – 2×) so the range snaps to whole
+   indices. Compact pill matches the view-pill / capo-stepper family. */
+.pv-speed {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--k-space-2);
+    padding: 0 0.6rem;
+    height: 1.9rem;
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-pill);
+    background: var(--k-bg-surface);
+    color: var(--k-text-muted);
+}
+
+.pv-speed > i {
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.pv-speed-value {
+    min-width: 2.6rem;
+    text-align: right;
+    font-size: var(--k-font-size-xs);
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.pv-speed-slider {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 7.5rem;
+    height: 1rem;
+    background: transparent;
+    cursor: pointer;
+    margin: 0;
+}
+
+/* Track — WebKit can't show progress without JS, so the thumb position alone
+   conveys current value. Firefox does it natively via ::-moz-range-progress. */
+.pv-speed-slider::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--k-border);
+}
+
+.pv-speed-slider::-moz-range-track {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--k-border);
+}
+
+.pv-speed-slider::-moz-range-progress {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--k-accent);
+}
+
+/* Thumb */
+.pv-speed-slider::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 0.95rem;
+    height: 0.95rem;
+    border-radius: 50%;
+    background: var(--k-accent);
+    border: 2px solid var(--k-bg-surface);
+    box-shadow: 0 0 0 1px var(--k-accent);
+    margin-top: -0.3rem;
+    cursor: grab;
+}
+
+.pv-speed-slider::-moz-range-thumb {
+    width: 0.95rem;
+    height: 0.95rem;
+    border-radius: 50%;
+    background: var(--k-accent);
+    border: 2px solid var(--k-bg-surface);
+    box-shadow: 0 0 0 1px var(--k-accent);
+    cursor: grab;
+}
+
+.pv-speed-slider:active::-webkit-slider-thumb { cursor: grabbing; }
+.pv-speed-slider:active::-moz-range-thumb     { cursor: grabbing; }
+
+/* TikTok fallback — slider visible but inert. */
+.pv-speed--disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.pv-speed--disabled .pv-speed-slider { cursor: not-allowed; }
+.pv-speed--disabled .pv-speed-slider::-webkit-slider-thumb { cursor: not-allowed; }
+.pv-speed--disabled .pv-speed-slider::-moz-range-thumb     { cursor: not-allowed; }
+
+/* Narrow screens — narrower track + drop the leading icon, slider+value still
+   read clearly. */
+@media (max-width: 420px) {
+    .pv-speed { padding: 0 0.5rem; gap: var(--k-space-1); }
+    .pv-speed > i { display: none; }
+    .pv-speed-slider { width: 6rem; }
 }
 
 /* Maximized: CSS overlay (not native fullscreen) so the floating player stays
@@ -358,6 +614,18 @@
     font-size: var(--k-font-size-xs);
     font-weight: 600;
     cursor: pointer;
+}
+
+.pv-chord-pop-unavailable {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--k-radius-pill);
+    background: var(--k-bg-surface-2);
+    color: var(--k-text-muted);
+    font-size: var(--k-font-size-xs);
+    font-weight: 500;
 }
 
 /* ── Beat measure strip ── */

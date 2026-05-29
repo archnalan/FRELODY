@@ -7,7 +7,7 @@
 }
 else
 {
-    <div class="ycg" style="--ycg-bpm: @_beatsPerMeasure" @ref="_gridEl">
+    <div class="ycg @(SilentActive ? "ycg--silent" : "")" style="--ycg-bpm: @_beatsPerMeasure" @ref="_gridEl">
         @foreach (var measure in _measures)
         {
             <div class="ycg-measure" @key="measure.StartIndex">
@@ -29,6 +29,11 @@ else
                         {
                             <span class="ycg-beat-tick" aria-hidden="true"></span>
                         }
+                        @{ var tag = LoopTagFor(cell.Index); }
+                        @if (tag is not null)
+                        {
+                            <span class="ycg-beat-loop-tag" aria-hidden="true">@tag</span>
+                        }
                     </button>
                 }
             </div>
@@ -47,6 +52,29 @@ else
     // touch (Pinned=true → parent shows a "Play here" seek button).
     [Parameter] public EventCallback<ChordPreview> OnChordPreview { get; set; }
     [Parameter] public EventCallback OnChordPreviewEnd { get; set; }
+
+    // Loop A→B: the parent owns the picking state machine and the armed range.
+    // Cells inside [A, B] render with a loop band; A and B carry chip labels.
+    // While picking, clicks are diverted to OnLoopPick (no seek, no popover).
+    [Parameter] public int LoopBeatA { get; set; } = -1;
+    [Parameter] public int LoopBeatB { get; set; } = -1;
+    [Parameter] public bool IsLoopPicking { get; set; }
+    [Parameter] public EventCallback<LoopPick> OnLoopPick { get; set; }
+
+    // False when the host player (e.g. TikTok) doesn't expose a seek API. In that
+    // mode a pointer click pins the chord popover instead of firing a dead seek,
+    // so the cell still does *something* useful.
+    [Parameter] public bool SeekSupported { get; set; } = true;
+
+    // Timeline view drives a parallel chord-carousel animation, so the per-beat
+    // pop on the grid becomes visual noise. When true, the .ycg-beat--active
+    // class still gets emitted (scrollActiveIntoView relies on it to find the
+    // playhead) but a sibling .ycg--silent wrapper class neutralises the
+    // active-cell styling in scoped CSS — the grid scrolls quietly without
+    // pulsing on every beat.
+    [Parameter] public bool SilentActive { get; set; }
+
+    public record LoopPick(int BeatIndex, float Time);
 
     // Semitone shift applied to the *displayed* chord shapes (capo → negative).
     // The audio is untouched; this only changes which shapes the player fingers.
@@ -173,25 +201,68 @@ else
         if (cell.IsDownbeat) sb.Append(" ycg-beat--downbeat");
         if (cell.ShowLabel) sb.Append(" ycg-beat--label");
         if (cell.Index == ActiveBeatIndex) sb.Append(" ycg-beat--active");
+
+        // Loop band: A and B endpoints + every cell in between.
+        if (LoopBeatA >= 0 && LoopBeatB >= 0)
+        {
+            int lo = Math.Min(LoopBeatA, LoopBeatB);
+            int hi = Math.Max(LoopBeatA, LoopBeatB);
+            if (cell.Index >= lo && cell.Index <= hi) sb.Append(" ycg-beat--loop-in");
+            if (cell.Index == lo) sb.Append(" ycg-beat--loop-a");
+            if (cell.Index == hi) sb.Append(" ycg-beat--loop-b");
+        }
+        else if (LoopBeatA >= 0 && cell.Index == LoopBeatA)
+        {
+            // A picked, waiting for B → highlight A so the user sees it landed.
+            sb.Append(" ycg-beat--loop-a");
+        }
+
+        if (IsLoopPicking) sb.Append(" ycg-beat--loop-pick");
+
         return sb.ToString();
     }
 
     // A cell that currently sounds a real chord (not a pre-intro gap or a rest).
     private static bool HasChord(BeatCell cell) => cell.Raw is not null && !cell.IsRest;
 
+    // Chip text for A/B endpoints — null on every other cell so we skip the span.
+    // Order-agnostic: whichever picked index is lower in time gets "A".
+    private string? LoopTagFor(int index)
+    {
+        if (LoopBeatA < 0) return null;
+        if (LoopBeatB < 0) return index == LoopBeatA ? "A" : null;
+        var lo = Math.Min(LoopBeatA, LoopBeatB);
+        var hi = Math.Max(LoopBeatA, LoopBeatB);
+        if (index == lo) return "A";
+        if (index == hi) return "B";
+        return null;
+    }
+
     // Pointer click → seek (two-way grid). Touch tap on a chord → pinned preview.
+    // Loop-pick mode hijacks every click: place an A or B marker, never seek.
+    // When seek is unsupported (TikTok), a pointer click also pins the popover
+    // — the cell still does something useful even though there's no seek API.
     private async Task OnCellClick(BeatCell cell, MouseEventArgs e)
     {
-        if (!_hoverCapable && HasChord(cell))
+        if (IsLoopPicking)
+        {
+            await OnLoopPick.InvokeAsync(new LoopPick(cell.Index, cell.Time));
+            return;
+        }
+        if ((!_hoverCapable || !SeekSupported) && HasChord(cell))
         {
             await RaiseChordPreview(cell, e, pinned: true);
             return;
         }
+        if (!SeekSupported) return;
         await OnSeekTo.InvokeAsync(cell.Time);
     }
 
     private async Task OnCellEnter(BeatCell cell, MouseEventArgs e)
     {
+        // Suppress the chord popover while picking — the user is choosing a cell,
+        // not exploring chords; a popover under the cursor would mask the band.
+        if (IsLoopPicking) return;
         // Only chord-change cells (ShowLabel=true) trigger the hover preview.
         // Continuation ticks and rests are kept silent to reduce popover noise
         // as the cursor moves across the grid.

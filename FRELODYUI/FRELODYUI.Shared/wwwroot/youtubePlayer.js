@@ -60,6 +60,9 @@ window.ytPlayer = (function () {
         seekTo: function (seconds) {
             try { if (_player) _player.seekTo(seconds, true); } catch (_) {}
         },
+        setPlaybackRate: function (rate) {
+            try { if (_player) _player.setPlaybackRate(rate); } catch (_) {}
+        },
         destroy: function () {
             try { if (_player) _player.destroy(); } catch (_) {}
             _player = null;

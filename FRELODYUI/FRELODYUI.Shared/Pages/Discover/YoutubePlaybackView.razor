@@ -81,6 +81,60 @@
             <div class="pv-stage @(_isMaximized ? "pv-stage--max" : "")" @ref="_stageEl">
 
                 <div class="pv-stage-bar">
+                    <div class="pv-view-pill" role="tablist" aria-label="Chord display mode">
+                        <button type="button"
+                                class="pv-view-pill-btn @(_chartView == ChartView.Grid ? "is-active" : "")"
+                                role="tab" aria-selected="@(_chartView == ChartView.Grid)"
+                                @onclick="() => SetChartView(ChartView.Grid)"
+                                title="Show chord grid">
+                            <i class="bi bi-grid-3x3-gap"></i>
+                            <span class="pv-view-pill-label">Grid</span>
+                        </button>
+                        <button type="button"
+                                class="pv-view-pill-btn @(_chartView == ChartView.Timeline ? "is-active" : "")"
+                                role="tab" aria-selected="@(_chartView == ChartView.Timeline)"
+                                @onclick="() => SetChartView(ChartView.Timeline)"
+                                title="Show chord timeline">
+                            <i class="bi bi-soundwave"></i>
+                            <span class="pv-view-pill-label">Timeline</span>
+                        </button>
+                    </div>
+
+                    <div class="pv-play-ctrl">
+                        @if (Transcription.Beats.Count > 0)
+                        {
+                            @* Loop A→B: cycles idle → PickA → PickB → Armed → idle.
+                               On TikTok the seek API isn't exposed by the player
+                               iframe, so the button renders disabled with an
+                               explanatory tooltip rather than vanishing — keeps the
+                               affordance discoverable but inert. *@
+                            <button type="button"
+                                    class="pv-loop @LoopButtonClass"
+                                    @onclick="ToggleLoopButton"
+                                    disabled="@(!_seekSupported)"
+                                    title="@(_seekSupported ? LoopButtonTitle : TiktokNoCtrlTitle)"
+                                    aria-label="@(_seekSupported ? LoopButtonTitle : TiktokNoCtrlTitle)">
+                                <i class="bi @LoopButtonIcon" aria-hidden="true"></i>
+                                <span class="pv-loop-label">@LoopButtonLabel</span>
+                            </button>
+                        }
+                        @* Speed: same "show as unavailable" pattern as the loop
+                           button. 8 snap points span YT's supported range
+                           (0.25× – 2×); centre stop is 1×. *@
+                        <label class="pv-speed @(_seekSupported ? "" : "pv-speed--disabled")"
+                               title="@(_seekSupported ? $"Playback speed {SpeedLabel}" : TiktokNoCtrlTitle)">
+                            <i class="bi bi-speedometer2" aria-hidden="true"></i>
+                            <input type="range" class="pv-speed-slider"
+                                   min="0" max="@(SpeedSteps.Length - 1)" step="1"
+                                   value="@_speedIndex"
+                                   @oninput="OnSpeedInput"
+                                   disabled="@(!_seekSupported)"
+                                   aria-label="Playback speed"
+                                   aria-valuetext="@SpeedLabel" />
+                            <span class="pv-speed-value">@SpeedLabel</span>
+                        </label>
+                    </div>
+
                     @if (_isMaximized)
                     {
                         <div class="pv-capo pv-stage-capo">
@@ -105,6 +159,28 @@
                     </button>
                 </div>
 
+                @if (_loopMode is LoopMode.PickA)
+                {
+                    <p class="pv-loop-hint">
+                        <i class="bi bi-cursor" aria-hidden="true"></i>
+                        Tap any beat in the chord grid to set <strong>point A</strong> (loop start).
+                    </p>
+                }
+                else if (_loopMode is LoopMode.PickB)
+                {
+                    <p class="pv-loop-hint">
+                        <i class="bi bi-cursor" aria-hidden="true"></i>
+                        Now tap another beat to set <strong>point B</strong> (loop end).
+                    </p>
+                }
+                else if (_loopMode is LoopMode.Armed)
+                {
+                    <p class="pv-loop-hint pv-loop-hint--armed">
+                        <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+                        Looping between A and B — press the loop button again to clear.
+                    </p>
+                }
+
                 @if (Transcription.Beats.Count > 0)
                 {
                     <div class="pv-beat-strip" aria-hidden="true">
@@ -116,16 +192,44 @@
                     </div>
                 }
 
-                <YoutubeChordGrid
-                    SyncedChords="Transcription.SyncedChords"
-                    Beats="Transcription.Beats"
-                    ActiveBeatIndex="_activeBeatIndex"
-                    TimeSignature="Transcription.TimeSignature"
-                    CapoShift="-_capo"
-                    PreferFlat="_preferFlat"
-                    OnSeekTo="SeekToAsync"
-                    OnChordPreview="HandleChordPreview"
-                    OnChordPreviewEnd="HandleChordPreviewEnd" />
+                @switch (_chartView)
+                {
+                    case ChartView.Grid:
+                        <YoutubeChordGrid
+                            SyncedChords="Transcription.SyncedChords"
+                            Beats="Transcription.Beats"
+                            ActiveBeatIndex="_activeBeatIndex"
+                            TimeSignature="Transcription.TimeSignature"
+                            CapoShift="-_capo"
+                            PreferFlat="_preferFlat"
+                            OnSeekTo="SeekToAsync"
+                            OnChordPreview="HandleChordPreview"
+                            OnChordPreviewEnd="HandleChordPreviewEnd"
+                            LoopBeatA="_loopBeatA"
+                            LoopBeatB="_loopBeatB"
+                            IsLoopPicking="@(_loopMode is LoopMode.PickA or LoopMode.PickB)"
+                            OnLoopPick="HandleLoopPick"
+                            SeekSupported="_seekSupported" />
+                        break;
+                    case ChartView.Timeline:
+                        <ChordTimeline
+                            SyncedChords="Transcription.SyncedChords"
+                            Beats="Transcription.Beats"
+                            ChordCards="_chordCards"
+                            ActiveBeatIndex="_activeBeatIndex"
+                            TimeSignature="Transcription.TimeSignature"
+                            CapoShift="-_capo"
+                            PreferFlat="_preferFlat"
+                            OnSeekTo="SeekToAsync"
+                            OnChordPreview="HandleChordPreview"
+                            OnChordPreviewEnd="HandleChordPreviewEnd"
+                            LoopBeatA="_loopBeatA"
+                            LoopBeatB="_loopBeatB"
+                            IsLoopPicking="@(_loopMode is LoopMode.PickA or LoopMode.PickB)"
+                            OnLoopPick="HandleLoopPick"
+                            SeekSupported="_seekSupported" />
+                        break;
+                }
             </div>
         }
 
@@ -220,13 +324,6 @@
                 Open on @SourceName
             </a>
         }
-        @if (!string.IsNullOrEmpty(ShareUrl))
-        {
-            <button type="button" class="pv-btn pv-btn--ghost" @onclick="ShareAsync">
-                <i class="bi bi-link-45deg"></i>
-                Share
-            </button>
-        }
         </div>
     </div>
 
@@ -276,12 +373,19 @@
             {
                 <span class="pv-chord-pop-empty">No chart yet</span>
             }
-            @if (_popoverPinned)
+            @if (_popoverPinned && _seekSupported)
             {
                 <button class="pv-chord-pop-play" type="button" @onclick="PlayFromPopoverAsync">
                     <i class="bi bi-play-fill" aria-hidden="true"></i>
                     Play here
                 </button>
+            }
+            else if (_popoverPinned)
+            {
+                <span class="pv-chord-pop-unavailable" title="@TiktokNoCtrlTitle">
+                    <i class="bi bi-lock" aria-hidden="true"></i>
+                    Seek unavailable
+                </span>
             }
         </div>
     }
@@ -316,10 +420,14 @@
     [Parameter] public string SourceName { get; set; } = "YouTube";
     [Parameter] public string SourceIcon { get; set; } = "bi-youtube";
 
-    // When set, shows a Share button that copies this URL to the clipboard.
-    [Parameter] public string? ShareUrl { get; set; }
-
     private string _playerId => $"media-player-{Transcription.VideoId}";
+
+    // TikTok's Player v1 has no public seek/rate API — their tracking SDK
+    // throws when it receives unknown message types. Gate every feature that
+    // relies on programmatic playback control on this single flag so we don't
+    // poke the iframe and the UI surfaces a clean "Not available" state.
+    private bool _seekSupported => PlayerApi == "ytPlayer";
+    private const string TiktokNoCtrlTitle = "Not available for TikTok playback";
 
     // Portrait → narrow window; landscape → standard. Driven by real dimensions
     // when known, else the PlayerVertical hint.
@@ -360,6 +468,122 @@
     private bool _isMaximized;
     private bool _preMaximizePlayerCollapsed;  // player state before entering full view
 
+    // ── Chart view: grid (lead-sheet beats) vs timeline (sliding diagram strip) ──
+    private enum ChartView { Grid, Timeline }
+    private ChartView _chartView = ChartView.Grid;
+
+    private void SetChartView(ChartView next)
+    {
+        if (_chartView == next) return;
+        _chartView = next;
+        // The hover popover is anchored to grid cells; killing it on view-swap
+        // avoids a stale popover floating over the timeline.
+        HideChordPopover();
+
+        // Timeline already shows the active chord-shape in its sliding strip,
+        // so the standalone "Chord shapes" section underneath duplicates that
+        // surface — collapse it on entry. User can still expand manually; we
+        // only force-collapse on the switch, not on every render.
+        if (_chartView == ChartView.Timeline) _chordsCollapsed = true;
+    }
+
+    // ── Loop button: drives the state machine via one cycling button. ────
+    private string LoopButtonClass => _loopMode switch
+    {
+        LoopMode.PickA or LoopMode.PickB => "pv-loop--picking",
+        LoopMode.Armed => "pv-loop--armed",
+        _ => ""
+    };
+    private string LoopButtonIcon => _loopMode switch
+    {
+        LoopMode.PickA or LoopMode.PickB => "bi-cursor-fill",
+        LoopMode.Armed => "bi-arrow-repeat",
+        _ => "bi-arrow-repeat"
+    };
+    private string LoopButtonLabel => _loopMode switch
+    {
+        LoopMode.PickA => "Pick A",
+        LoopMode.PickB => "Pick B",
+        LoopMode.Armed => "Loop on",
+        _ => "Loop"
+    };
+    private string LoopButtonTitle => _loopMode switch
+    {
+        LoopMode.PickA => "Tap a beat to set A (or click again to cancel)",
+        LoopMode.PickB => "Tap a beat to set B (or click again to cancel)",
+        LoopMode.Armed => "Clear loop",
+        _ => "Loop a section A→B"
+    };
+
+    private void ToggleLoopButton()
+    {
+        switch (_loopMode)
+        {
+            case LoopMode.None:
+                // Picking happens on the grid — auto-switch if the user's on Timeline
+                // so the next tap actually lands a marker on something visible.
+                if (_chartView != ChartView.Grid) SetChartView(ChartView.Grid);
+                _loopBeatA = -1;
+                _loopBeatB = -1;
+                _loopMode = LoopMode.PickA;
+                HideChordPopover();
+                break;
+            case LoopMode.PickA:
+            case LoopMode.PickB:
+            case LoopMode.Armed:
+                // Any non-idle click clears: cancel mid-pick or clear an armed loop.
+                _loopMode = LoopMode.None;
+                _loopBeatA = -1;
+                _loopBeatB = -1;
+                _justLooped = false;
+                HideChordPopover();
+                break;
+        }
+        StateHasChanged();
+    }
+
+    private void HandleLoopPick(YoutubeChordGrid.LoopPick p)
+    {
+        switch (_loopMode)
+        {
+            case LoopMode.PickA:
+                _loopBeatA = p.BeatIndex;
+                _loopTimeA = p.Time;
+                _loopMode = LoopMode.PickB;
+                break;
+            case LoopMode.PickB:
+                // Same cell as A → not a usable range; keep waiting on B.
+                if (p.BeatIndex == _loopBeatA) return;
+                _loopBeatB = p.BeatIndex;
+                _loopTimeB = p.Time;
+                // Order-agnostic: whichever is earlier in time becomes A.
+                if (_loopBeatA > _loopBeatB)
+                {
+                    (_loopBeatA, _loopBeatB) = (_loopBeatB, _loopBeatA);
+                    (_loopTimeA, _loopTimeB) = (_loopTimeB, _loopTimeA);
+                }
+                _loopMode = LoopMode.Armed;
+                _justLooped = false;
+                // If the playhead is already past B, snap back so the loop kicks
+                // in immediately instead of waiting for a future pass.
+                if (_activeBeatIndex > _loopBeatB) _ = SeekToAsync(_loopTimeA);
+                break;
+        }
+        StateHasChanged();
+    }
+
+    // ── Speed slider: maps slider index → YT-supported rate, pushes to player. ─
+    private async Task OnSpeedInput(ChangeEventArgs e)
+    {
+        if (!_seekSupported) return;
+        if (!int.TryParse(e.Value?.ToString(), out var idx)) return;
+        if (idx < 0) idx = 0;
+        if (idx >= SpeedSteps.Length) idx = SpeedSteps.Length - 1;
+        if (idx == _speedIndex) return;
+        _speedIndex = idx;
+        try { await JS.InvokeVoidAsync($"{PlayerApi}.setPlaybackRate", _playbackRate); } catch { }
+    }
+
     // ── Chord-chart preview popover ──────────────────────────────────────────
     private bool _showChordPopover;
     private bool _popoverPinned;          // touch tap → pinned with a Play-here button
@@ -378,6 +602,28 @@
 
     private int _timeSigNumerator = 4;
     private int _beatInMeasure => _activeBeatIndex >= 0 ? _activeBeatIndex % _timeSigNumerator : 0;
+
+    // ── Loop A→B ─────────────────────────────────────────────────────────
+    // Toolbar drives a small state machine: idle → PickA → PickB → Armed.
+    // Picking diverts grid clicks to set markers; armed enforces the loop
+    // in the sync tick (when t crosses B, seek back to A).
+    private enum LoopMode { None, PickA, PickB, Armed }
+    private LoopMode _loopMode = LoopMode.None;
+    private int _loopBeatA = -1;
+    private int _loopBeatB = -1;
+    private float _loopTimeA;
+    private float _loopTimeB;
+    // Anti-bounce: after a snap-to-A the player needs a tick or two for
+    // getCurrentTime to reflect the new position. Until we see time well
+    // before B again, we hold off on re-triggering.
+    private bool _justLooped;
+
+    // ── Playback speed (YouTube only) ────────────────────────────────────
+    // YT's IFrame API supports rates from 0.25× to 2×; 1× is index 3.
+    private static readonly double[] SpeedSteps = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+    private int _speedIndex = 3;
+    private double _playbackRate => SpeedSteps[_speedIndex];
+    private string SpeedLabel => _playbackRate == 1.0 ? "1×" : $"{_playbackRate:0.##}×";
 
     // ── Capo + chord shapes ──────────────────────────────────────────────
     private const int MaxCapo = 11;
@@ -542,6 +788,23 @@
             while (await _syncTimer!.WaitForNextTickAsync(ct))
             {
                 var t = (float)await JS.InvokeAsync<double>($"{PlayerApi}.getCurrentTime");
+
+                // Loop A→B: when the playhead reaches (or just barely overshoots)
+                // B, snap back to A. The 50 ms lead is shorter than the tick
+                // interval — it just keeps the snap from landing slightly past B
+                // and clipping a beat. _justLooped suppresses retriggers while
+                // the player catches up to the new position after seekTo(A).
+                if (_loopMode is LoopMode.Armed)
+                {
+                    if (!_justLooped && t >= _loopTimeB - 0.05f)
+                    {
+                        _justLooped = true;
+                        try { await JS.InvokeVoidAsync($"{PlayerApi}.seekTo", _loopTimeA); } catch { }
+                        continue;
+                    }
+                    if (_justLooped && t < _loopTimeB - 0.2f) _justLooped = false;
+                }
+
                 var si = FindActiveSynced(t);
                 var bi = FindActiveBeat(t);
                 if (si != _activeSyncedIndex || bi != _activeBeatIndex)
@@ -584,7 +847,10 @@
     }
 
     private async Task SeekToAsync(float seconds)
-        => await JS.InvokeVoidAsync($"{PlayerApi}.seekTo", seconds);
+    {
+        if (!_seekSupported) return;
+        await JS.InvokeVoidAsync($"{PlayerApi}.seekTo", seconds);
+    }
 
     // ── Chord preview popover (raised by the grid) ───────────────────────────
     // The grid hands us the raw chord; we resolve it to the same capo-aware
@@ -761,13 +1027,6 @@
             _isSaving = false;
             StateHasChanged();
         }
-    }
-
-    private async Task ShareAsync()
-    {
-        if (string.IsNullOrEmpty(ShareUrl)) return;
-        await _clipboardService.CopyToClipboardAsync(ShareUrl);
-        _toastService.Show("Share link copied to clipboard!", ToastType.Success);
     }
 
     public async ValueTask DisposeAsync()

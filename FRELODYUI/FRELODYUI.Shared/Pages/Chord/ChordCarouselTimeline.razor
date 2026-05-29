@@ -1,0 +1,161 @@
+@* Timeline variant of ChordCarousel: diagram on top, label + chevrons + position
+   counter stacked vertically below. Used as the slot content in ChordTimeline,
+   where left/right space is owned by the timeline's own scrolling motion — so
+   chord-position navigation has to live somewhere other than the diagram's flanks. *@
+@inject ILogger<ChordCarouselTimeline> _logger
+
+@if (IsLoading || _isLoading)
+{
+    <div class="cct @SizeClass cct--ghost">
+        <div class="cct-stage cct-stage--ghost"></div>
+        <div class="cct-name-ghost k-shimmer"></div>
+    </div>
+}
+else if (_charts.Count > 0)
+{
+    <div id="@CarouselId" class="cct @SizeClass">
+        <div class="cct-stage">
+            @RenderChart(_charts[_currentChartIndex])
+        </div>
+
+        <span class="cct-name">@(DisplayName ?? Chord?.ChordName)</span>
+
+        @if (ShowNavigation && _charts.Count > 1)
+        {
+            <div class="cct-nav" @onclick:stopPropagation>
+                <button type="button" class="cct-nav-btn"
+                        aria-label="Previous chord position"
+                        @onclick="PreviousChart"
+                        @onclick:stopPropagation>
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <span class="cct-counter">@(_currentChartIndex + 1)/@_charts.Count</span>
+                <button type="button" class="cct-nav-btn"
+                        aria-label="Next chord position"
+                        @onclick="NextChart"
+                        @onclick:stopPropagation>
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="cct @SizeClass">
+        <div class="cct-stage">
+            <div class="cct-placeholder">
+                <i class="bi bi-music-note-list"></i>
+            </div>
+        </div>
+        <span class="cct-name">@(DisplayName ?? Chord?.ChordName ?? "?")</span>
+    </div>
+}
+
+@code {
+    [Parameter] public ChordDto? Chord { get; set; }
+
+    // When the parent has already fetched charts (timeline can batch by unique chord),
+    // pass them in to skip the per-instance API call.
+    [Parameter] public List<ChordChartEditDto>? PreloadedCharts { get; set; }
+
+    // Capo-shifted display label. Falls back to Chord.ChordName when null.
+    [Parameter] public string? DisplayName { get; set; }
+
+    [Parameter] public CarouselSize Size { get; set; } = CarouselSize.Medium;
+    [Parameter] public bool IsLoading { get; set; }
+
+    // Hide chevrons + counter on non-focused timeline slots so only the active
+    // slot is interactive for chord-position browsing.
+    [Parameter] public bool ShowNavigation { get; set; } = true;
+
+    [Parameter] public string CarouselId { get; set; } = "cct";
+
+    private List<ChordChartEditDto> _charts = new();
+    private int _currentChartIndex;
+    private bool _isLoading = true;
+    private string? _loadedChordId;
+
+    private string SizeClass => Size switch
+    {
+        CarouselSize.Small => "cct-sm",
+        CarouselSize.Medium => "cct-md",
+        CarouselSize.Large => "cct-lg",
+        _ => "cct-md"
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (PreloadedCharts is not null)
+        {
+            _charts = PreloadedCharts;
+            if (_currentChartIndex >= _charts.Count) _currentChartIndex = 0;
+            _isLoading = false;
+            return;
+        }
+
+        // Only refetch when the chord identity actually changes — re-renders driven
+        // by ActiveBeatIndex upstream would otherwise issue a network call per tick.
+        if (Chord?.Id is null || string.Equals(Chord.Id, _loadedChordId, StringComparison.Ordinal))
+        {
+            _isLoading = false;
+            return;
+        }
+
+        _loadedChordId = Chord.Id;
+        _isLoading = true;
+
+        try
+        {
+            var response = await _chordChartsApi.GetChartsByChordId(Chord.Id);
+            if (response.IsSuccessStatusCode && response.Content is not null)
+                _charts = response.Content;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "ChordCarouselTimeline: failed to load charts for {ChordId}", Chord.Id);
+        }
+        finally
+        {
+            _currentChartIndex = 0;
+            _isLoading = false;
+        }
+    }
+
+    private RenderFragment RenderChart(ChordChartEditDto chart) => __builder =>
+    {
+        var hasSvgData = chart.Source == ChordSource.Drawing || chart.Source == ChordSource.Standard;
+
+        if (hasSvgData && !string.IsNullOrEmpty(chart.RenderedSvg))
+        {
+            <div class="cct-frame">@((MarkupString)chart.RenderedSvg!)</div>
+        }
+        else if (hasSvgData && chart.ChordData is not null)
+        {
+            <div class="cct-frame"><ChordPreview Chart="chart.ChordData" /></div>
+        }
+        else
+        {
+            @RenderPlaceholder()
+        }
+    };
+
+    private RenderFragment RenderPlaceholder() => __builder =>
+    {
+        <div class="cct-placeholder">
+            <i class="bi bi-music-note-list"></i>
+        </div>
+    };
+
+    private void NextChart()
+    {
+        if (_charts.Count > 1)
+            _currentChartIndex = (_currentChartIndex + 1) % _charts.Count;
+    }
+
+    private void PreviousChart()
+    {
+        if (_charts.Count > 1)
+            _currentChartIndex = _currentChartIndex == 0 ? _charts.Count - 1 : _currentChartIndex - 1;
+    }
+}

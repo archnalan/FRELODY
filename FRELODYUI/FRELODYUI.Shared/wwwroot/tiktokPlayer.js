@@ -103,6 +103,11 @@ window.tiktokPlayer = (function () {
         seekTo: function (seconds) {
             _post('seekTo', seconds);
         },
+        setPlaybackRate: function (_rate) {
+            // TikTok's Player v1 doesn't expose a public playback-rate API; the
+            // speed slider is gated to ytPlayer in the UI, so this is a no-op
+            // kept only to mirror the ytPlayer interface.
+        },
         destroy: function () {
             if (_listening) {
                 window.removeEventListener('message', _onMessage);

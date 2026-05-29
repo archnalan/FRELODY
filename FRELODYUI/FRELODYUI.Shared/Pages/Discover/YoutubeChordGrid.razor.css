@@ -108,10 +108,80 @@
     opacity: 1;
 }
 
+/* Silent variant — Timeline view runs a parallel chord-carousel animation,
+   so the per-beat pop here becomes noise. We keep the .ycg-beat--active class
+   on the DOM (the scroll-into-view JS needs it to find the playhead) but
+   neutralise every visual signal it carries: same surface as a downbeat,
+   no scale, no glow, no colour shift. */
+.ycg--silent .ycg-beat--active {
+    background: var(--k-bg-surface);
+    border-color: var(--k-border);
+    color: var(--k-text);
+    box-shadow: none;
+    transform: none;
+    z-index: auto;
+}
+
+.ycg--silent .ycg-beat--active .ycg-beat-tick {
+    background: var(--k-text-subtle);
+    opacity: 0.35;
+}
+
 .ycg-empty {
     text-align: center;
     color: var(--k-text-muted);
     font-size: var(--k-font-size-sm);
     padding: var(--k-space-5) var(--k-space-4);
     margin: 0;
+}
+
+/* ── Loop band: cells from A to B share an amber tint — the DAW-loop idiom —
+   so the loop reads as a continuous selection across measure boundaries.
+   Amber stays clear of the indigo active-beat colour, so the playhead
+   remains visible inside the band. A and B carry chip labels. */
+.ycg-beat--loop-in {
+    background: var(--k-warning-soft);
+    border-color: var(--k-warning-soft-text);
+}
+
+.ycg-beat--loop-in.ycg-beat--active {
+    background: var(--k-chord-active-bg);
+    border-color: var(--k-chord-active-border);
+    color: var(--k-chord-active-border);
+}
+
+/* Endpoint emphasis — heavier inset outline behind the chip. */
+.ycg-beat--loop-a,
+.ycg-beat--loop-b {
+    box-shadow: inset 0 0 0 2px var(--k-warning-soft-text);
+}
+
+.ycg-beat-loop-tag {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 0.95rem;
+    height: 0.95rem;
+    padding: 0 0.2rem;
+    border-radius: var(--k-radius-pill);
+    background: var(--k-warning-soft-text);
+    color: var(--k-bg-surface);
+    font-size: 0.55rem;
+    font-weight: 800;
+    line-height: 0.95rem;
+    text-align: center;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+}
+
+/* While the parent is in pick mode, every cell reads as a target — crosshair
+   cursor + amber hover preview so it's obvious clicks land on the loop, not
+   the player. */
+.ycg-beat--loop-pick {
+    cursor: crosshair;
+}
+
+.ycg-beat--loop-pick:not(.ycg-beat--active):hover {
+    border-color: var(--k-warning-soft-text);
+    background: var(--k-warning-soft);
 }
