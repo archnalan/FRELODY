@@ -1,0 +1,72 @@
+@using FRELODYSHRD.Dtos
+@inject NavigationManager Nav
+
+@* In-context sheet shown when the analyzed-play gate denies access: either a
+   sign-in nudge (anonymous) or the daily-limit paywall (signed-in free user). *@
+<div class="as-overlay" @onclick="Dismiss">
+    <div class="as-sheet" @onclick:stopPropagation role="dialog" aria-modal="true">
+
+        @if (IsSignIn)
+        {
+            <div class="as-icon as-icon--accent" aria-hidden="true">
+                <i class="bi bi-music-note-beamed"></i>
+            </div>
+            <h2 class="as-title">Sign in to play your first free song</h2>
+            <p class="as-sub">
+                Get <strong>2 free song analyses every day</strong> — auto chords, slow-down,
+                and section looping. No card required.
+            </p>
+            <button class="as-btn as-btn--primary" @onclick="GoToLogin">
+                <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                Sign in to play
+            </button>
+            <button class="as-btn as-btn--ghost" @onclick="BrowseFree">
+                Browse free songs
+            </button>
+        }
+        else
+        {
+            <div class="as-icon as-icon--accent" aria-hidden="true">
+                <i class="bi bi-stars"></i>
+            </div>
+            <h2 class="as-title">You've used today's @Result.DailyLimit free songs</h2>
+            <p class="as-sub">
+                Keep the momentum going — upgrade for <strong>unlimited analyses</strong>,
+                or come back tomorrow. Songs you unlocked today stay available for 24 hours.
+            </p>
+            <button class="as-btn as-btn--primary" @onclick="GoToPricing">
+                <i class="bi bi-unlock" aria-hidden="true"></i>
+                Upgrade to keep playing
+            </button>
+            <button class="as-btn as-btn--ghost" @onclick="GoToTodaysSongs">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                View today's songs
+            </button>
+            <button class="as-link" @onclick="Dismiss">Maybe later</button>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>The gate result that triggered the sheet.</summary>
+    [Parameter, EditorRequired] public AnalyzedAccessResultDto Result { get; set; } = default!;
+
+    /// <summary>Relative URL to return to after signing in.</summary>
+    [Parameter] public string ReturnUrl { get; set; } = "/discover";
+
+    /// <summary>Raised when the user dismisses the sheet.</summary>
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    private bool IsSignIn => string.Equals(Result?.Reason, "unauthenticated", StringComparison.OrdinalIgnoreCase);
+
+    private void GoToLogin() =>
+        Nav.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(ReturnUrl)}");
+
+    private void GoToPricing() => Nav.NavigateTo("/pricing");
+
+    private void GoToTodaysSongs() => Nav.NavigateTo("/discover/today");
+
+    private void BrowseFree() => Nav.NavigateTo("/");
+
+    private async Task Dismiss() => await OnDismiss.InvokeAsync();
+}

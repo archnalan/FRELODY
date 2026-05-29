@@ -1,0 +1,117 @@
+@page "/discover/today"
+@rendermode InteractiveWebAssembly
+@using FRELODYSHRD.Constants
+@using FRELODYSHRD.Dtos
+@using FRELODYUI.Shared.RefitApis
+@using FRELODYUI.Shared.Pages.Discover
+@inject IAnalyzedAccessApi AccessApi
+@inject NavigationManager Nav
+
+<PageTitle>Today's songs · FRELODY</PageTitle>
+
+<div class="ts-page">
+    <header class="ts-header">
+        <h1 class="ts-title">Today's songs</h1>
+        <p class="ts-sub">Songs you unlocked today — available for 24 hours.</p>
+    </header>
+
+    @if (_loading)
+    {
+        <div class="ts-grid">
+            @for (var i = 0; i < 4; i++)
+            {
+                <div class="ts-card ts-card--skeleton">
+                    <div class="ts-thumb k-shimmer"></div>
+                    <div class="ts-meta">
+                        <span class="ts-line k-shimmer"></span>
+                        <span class="ts-line ts-line--short k-shimmer"></span>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (_songs is { Count: > 0 })
+    {
+        <div class="ts-grid">
+            @foreach (var song in _songs)
+            {
+                <button type="button" class="ts-card" @onclick="() => Play(song)">
+                    <div class="ts-thumb">
+                        @if (!string.IsNullOrEmpty(song.ThumbnailUrl))
+                        {
+                            <img src="@song.ThumbnailUrl" alt="@song.Title" loading="lazy" />
+                        }
+                        else
+                        {
+                            <div class="ts-thumb-fallback"><i class="bi bi-music-note-beamed"></i></div>
+                        }
+                        <span class="ts-platform" title="@song.Platform">
+                            <i class="bi @(song.Platform == AnalyzedPlatform.TikTok ? "bi-tiktok" : "bi-youtube")"></i>
+                        </span>
+                    </div>
+                    <div class="ts-meta">
+                        <span class="ts-name">@(string.IsNullOrWhiteSpace(song.Title) ? song.VideoId : song.Title)</span>
+                        <span class="ts-expiry">
+                            <i class="bi bi-clock-history" aria-hidden="true"></i>
+                            @ExpiresInLabel(song.ExpiresAt)
+                        </span>
+                    </div>
+                </button>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="ts-empty">
+            <div class="ts-empty-icon"><i class="bi bi-music-note-list"></i></div>
+            <p class="ts-empty-heading">No songs yet today</p>
+            <p class="ts-empty-sub">Paste a YouTube or TikTok link to get chords, then it shows up here.</p>
+            <button class="ts-empty-btn" @onclick='() => Nav.NavigateTo("/discover")'>
+                <i class="bi bi-search" aria-hidden="true"></i>
+                Discover a song
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private List<AnalyzedSongDto>? _songs;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await _globalAuth.GetAuthenticationStateAsync();
+        if (auth.User.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo($"/login?returnUrl={Uri.EscapeDataString("/discover/today")}", replace: true);
+            return;
+        }
+
+        var resp = await AccessApi.TodaysSongs();
+        if (resp.IsSuccessStatusCode && resp.Content is not null)
+            _songs = resp.Content;
+
+        _loading = false;
+    }
+
+    private void Play(AnalyzedSongDto song)
+    {
+        if (song.Platform == AnalyzedPlatform.TikTok)
+        {
+            if (!string.IsNullOrWhiteSpace(song.SourceUrl))
+                Nav.NavigateTo($"/discover/tiktok?url={Uri.EscapeDataString(song.SourceUrl)}");
+        }
+        else
+        {
+            Nav.NavigateTo($"/discover/{song.VideoId}");
+        }
+    }
+
+    private static string ExpiresInLabel(DateTimeOffset expiresAt)
+    {
+        var remaining = expiresAt - DateTimeOffset.UtcNow;
+        if (remaining <= TimeSpan.Zero) return "Expired";
+        if (remaining.TotalHours >= 1) return $"{(int)remaining.TotalHours}h left";
+        return $"{(int)remaining.TotalMinutes}m left";
+    }
+}

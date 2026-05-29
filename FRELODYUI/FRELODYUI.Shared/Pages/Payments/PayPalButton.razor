@@ -1,0 +1,198 @@
+@namespace FRELODYUI.Shared.Pages.Payments
+@using FRELODYSHRD.Dtos
+@inject IPayPalApi _payPalApi
+@implements IAsyncDisposable
+
+@if (_state == State.Unavailable)
+{
+    <div class="ppb-note ppb-note--muted">
+        <i class="bi bi-info-circle"></i>
+        <span>PayPal isn't available right now. Please choose another method.</span>
+    </div>
+}
+else
+{
+    <div class="ppb">
+        @if (_state == State.Loading)
+        {
+            <div class="ppb-loading" aria-live="polite">
+                <span class="ppb-spinner" aria-hidden="true"></span>
+                <span class="ppb-loading-text">Loading PayPal…</span>
+            </div>
+        }
+        else if (_state == State.Capturing)
+        {
+            <div class="ppb-loading" aria-live="polite">
+                <span class="ppb-spinner" aria-hidden="true"></span>
+                <span class="ppb-loading-text">Confirming your payment…</span>
+            </div>
+        }
+
+        @* The SDK renders its buttons here. Hidden (not removed) while capturing
+           so the element ref stays valid for disposal. *@
+        <div class="ppb-buttons @(_state == State.Ready ? "" : "ppb-buttons--hidden")"
+             @ref="_container"></div>
+
+        @if (_state == State.Error)
+        {
+            <div class="ppb-note ppb-note--danger">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>@_errorMessage</span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The plan/product being purchased.</summary>
+    [Parameter, EditorRequired] public string ProductId { get; set; } = default!;
+
+    /// <summary>Raised after the order is captured and premium is granted.</summary>
+    [Parameter] public EventCallback OnSuccess { get; set; }
+
+    /// <summary>Raised with a user-facing message when checkout fails.</summary>
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    /// <summary>Raised when the buyer dismisses the PayPal window.</summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private enum State { Loading, Ready, Capturing, Error, Unavailable }
+
+    private State _state = State.Loading;
+    private string _errorMessage = "Something went wrong. Please try again.";
+    private string _clientId = string.Empty;
+    private string _currency = "USD";
+    private bool _rendered;
+
+    private ElementReference _container;
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<PayPalButton>? _ref;
+
+    private const string ModulePath =
+        "./_content/FRELODYUI.Shared/Pages/Payments/PayPalButton.razor.js";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var resp = await _payPalApi.GetConfig();
+            if (resp.IsSuccessStatusCode && resp.Content is { Enabled: true } cfg
+                && !string.IsNullOrWhiteSpace(cfg.ClientId))
+            {
+                _clientId = cfg.ClientId;
+                _currency = string.IsNullOrWhiteSpace(cfg.Currency) ? "USD" : cfg.Currency;
+                _state = State.Loading;
+            }
+            else
+            {
+                _state = State.Unavailable;
+            }
+        }
+        catch
+        {
+            _state = State.Unavailable;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_rendered || _state == State.Unavailable) return;
+        _rendered = true;
+        _ref = DotNetObjectReference.Create(this);
+
+        try
+        {
+            _module = await JsRt.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            await _module.InvokeVoidAsync("render", _container, _clientId, _currency, _ref);
+            _state = State.Ready;
+        }
+        catch
+        {
+            _state = State.Error;
+            _errorMessage = "PayPal could not be loaded. Please try another method.";
+        }
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task<string?> CreateOrderAsync()
+    {
+        try
+        {
+            var resp = await _payPalApi.CreateOrder(new PayPalCreateOrderRequest { ProductId = ProductId });
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+                return resp.Content.OrderId;
+        }
+        catch { /* fall through to error */ }
+
+        await SetErrorAsync("We couldn't start the PayPal payment. Please try again.");
+        return null;
+    }
+
+    [JSInvokable]
+    public async Task OnApproveAsync(string orderId)
+    {
+        _state = State.Capturing;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var resp = await _payPalApi.CaptureOrder(new PayPalCaptureRequest
+            {
+                OrderId = orderId,
+                ProductId = ProductId
+            });
+
+            if (resp.IsSuccessStatusCode && resp.Content?.Success == true)
+            {
+                await OnSuccess.InvokeAsync();
+                return;
+            }
+
+            var msg = resp.Content?.Message ?? "Your payment could not be confirmed.";
+            await SetErrorAsync(msg);
+        }
+        catch
+        {
+            await SetErrorAsync("Your payment could not be confirmed. If you were charged, contact support.");
+        }
+    }
+
+    [JSInvokable]
+    public Task OnCancelAsync()
+    {
+        // Buyer backed out — keep the buttons available for a retry.
+        _state = State.Ready;
+        return InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            await OnCancel.InvokeAsync();
+        });
+    }
+
+    [JSInvokable]
+    public Task OnErrorAsync(string message) =>
+        SetErrorAsync("PayPal reported a problem. Please try again or use another method.");
+
+    private async Task SetErrorAsync(string message)
+    {
+        _state = State.Error;
+        _errorMessage = message;
+        await InvokeAsync(StateHasChanged);
+        await OnError.InvokeAsync(message);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("dispose", _container);
+                await _module.DisposeAsync();
+            }
+        }
+        catch { /* circuit already gone */ }
+        _ref?.Dispose();
+    }
+}

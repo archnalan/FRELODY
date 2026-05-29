@@ -42,7 +42,13 @@ namespace FRELODYAPP.Models.SubModels
 
         public string? TenantId { get; set; }
 
-        public BillingStatus? BillingStatus { get; set; } 
+        public BillingStatus? BillingStatus { get; set; }
+
+        /// <summary>
+        /// When the current premium grant lapses. Null = no expiry (lifetime or
+        /// non-premium). Premium is only active while now &lt; this value.
+        /// </summary>
+        public DateTimeOffset? BillingExpiresAt { get; set; }
 
         public DateTimeOffset? LastLoginDate { get; set; }
 

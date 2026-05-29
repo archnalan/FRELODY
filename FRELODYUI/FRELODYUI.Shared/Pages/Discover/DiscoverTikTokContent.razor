@@ -1,9 +1,11 @@
+@using System.Net
 @using FRELODYSHRD.Dtos
 @using FRELODYSHRD.Dtos.CreateDtos
 @using FRELODYUI.Shared.RefitApis
 @using FRELODYUI.Shared.Pages.Discover
 @implements IDisposable
 @inject ITikTokApi TikTokApi
+@inject IAnalyzedAccessApi AccessApi
 @inject NavigationManager Nav
 
 <PageTitle>@(_video?.Title ?? "Analyzing…") · FRELODY</PageTitle>
@@ -34,11 +36,14 @@
                 </div>
             </div>
 
-            <button type="button" class="dv-share" @onclick="ShareAsync"
-                    title="Copy share link" aria-label="Copy share link">
-                <i class="bi bi-link-45deg" aria-hidden="true"></i>
-                <span class="dv-share-label">Share</span>
-            </button>
+            <div class="dv-header-actions">
+                <AnalyzedQuotaBadge @ref="_quotaBadge" />
+                <button type="button" class="dv-share" @onclick="ShareAsync"
+                        title="Copy share link" aria-label="Copy share link">
+                    <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                    <span class="dv-share-label">Share</span>
+                </button>
+            </div>
         </div>
     }
 
@@ -88,6 +93,35 @@
                 </button>
             </div>
         }
+        else if (_state == AnalysisState.Paywall && _access is not null)
+        {
+            <div class="dv-state">
+                <div class="dv-state-icon-wrap">
+                    <i class="bi bi-lock"></i>
+                </div>
+                <p class="dv-state-heading">@(_access.IsPremium ? "Locked" : "Daily limit reached")</p>
+                <p class="dv-state-sub">@(_access.Reason == "unauthenticated"
+                    ? "Sign in to play your first free song."
+                    : "You've used today's free songs. Upgrade to keep playing.")</p>
+            </div>
+        }
+        else if (_state == AnalysisState.TooLong)
+        {
+            <div class="dv-state">
+                <div class="dv-state-icon-wrap">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <p class="dv-state-heading">Too long to analyze</p>
+                <p class="dv-state-sub">@_tooLongMessage</p>
+                @if (_tooLongUpgradeable)
+                {
+                    <button class="dv-btn dv-btn--primary" @onclick='() => Nav.NavigateTo("/pricing")'>
+                        <i class="bi bi-unlock"></i>
+                        Upgrade
+                    </button>
+                }
+            </div>
+        }
         else
         {
             <AnalysisProgress StageIndex="_stageIndex"
@@ -97,18 +131,32 @@
     </div>
 </div>
 
+@if (_state == AnalysisState.Paywall && _access is not null)
+{
+    <AnalyzedAccessSheet Result="_access"
+                         ReturnUrl="@CurrentRelativeUrl"
+                         OnDismiss="DismissPaywall" />
+}
+
 @code {
     [Parameter, EditorRequired] public string? Url { get; set; }
     [Parameter] public string BackUrl { get; set; } = "/discover";
 
-    private enum AnalysisState { Idle, Extracting, Beats, Chords, Complete, Error }
+    private enum AnalysisState { Idle, Extracting, Beats, Chords, Complete, Error, Paywall, TooLong }
 
     private TikTokVideoDto? _video;
     private YouTubeTranscriptionDto? _result;
     private AnalysisState _state = AnalysisState.Idle;
     private string? _errorMessage;
+    private AnalyzedAccessResultDto? _access;
+    private AnalyzedQuotaBadge? _quotaBadge;
+    private string? _tooLongMessage;
+    private bool _tooLongUpgradeable;
     private System.Threading.Timer? _stageTimer;
     private int _stageIndex;
+
+    private string CurrentRelativeUrl =>
+        "/" + Nav.ToBaseRelativePath(Nav.Uri);
 
     private static readonly string[] Stages =
     [
@@ -132,11 +180,19 @@
         {
             _video = resolved.Content;
 
+            // Pre-gate over-long clips before any sign-in/analysis prompt.
+            if (_video.DurationSeconds > 0 && await CheckTooLongAsync(_video.DurationSeconds))
+                return;
+
             var cached = await TikTokApi.GetTranscription(_video.VideoId);
             if (cached.IsSuccessStatusCode && cached.Content is not null)
             {
                 _result = cached.Content;
                 _state = AnalysisState.Complete;
+            }
+            else if (cached.Error?.StatusCode == HttpStatusCode.PaymentRequired)
+            {
+                ShowPaywall(cached.Error.Content);
             }
         }
         else
@@ -190,6 +246,11 @@
             {
                 _result = resp.Content;
                 _state = AnalysisState.Complete;
+                if (_quotaBadge is not null) await _quotaBadge.RefreshAsync();
+            }
+            else if (resp.Error?.StatusCode == HttpStatusCode.PaymentRequired)
+            {
+                ShowPaywall(resp.Error.Content);
             }
             else
             {
@@ -210,6 +271,33 @@
             StateHasChanged();
         }
     }
+
+    private void ShowPaywall(string? body)
+    {
+        _access = AnalyzedAccessParser.Parse(body)
+            ?? new AnalyzedAccessResultDto { LimitReached = true };
+        _state = AnalysisState.Paywall;
+    }
+
+    private async Task<bool> CheckTooLongAsync(int durationSeconds)
+    {
+        var limitsResp = await AccessApi.Limits();
+        var limits = limitsResp.IsSuccessStatusCode ? limitsResp.Content : null;
+        var premium = await _globalAuth.IsPremiumUser();
+        var isPremium = premium.IsSuccess && premium.Data;
+
+        var decision = AnalyzedDurationGate.Evaluate(limits, isPremium, durationSeconds);
+        if (decision.Blocked)
+        {
+            _tooLongMessage = decision.Message;
+            _tooLongUpgradeable = decision.Upgradeable;
+            _state = AnalysisState.TooLong;
+            return true;
+        }
+        return false;
+    }
+
+    private void DismissPaywall() => Nav.NavigateTo("/discover");
 
     public void Dispose() => _stageTimer?.Dispose();
 }

@@ -92,6 +92,16 @@ else
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<ISongPlayHistoryService, SongPlayHistoryService>();
+builder.Services.Configure<FRELODYAPIs.Options.MonetizationOptions>(
+    builder.Configuration.GetSection(FRELODYAPIs.Options.MonetizationOptions.SectionName));
+builder.Services.AddScoped<IAnalyzedAccessService, AnalyzedAccessService>();
+
+// PayPal one-time checkout (Orders v2) + premium activation.
+builder.Services.Configure<FRELODYAPIs.Options.PayPalOptions>(
+    builder.Configuration.GetSection(FRELODYAPIs.Options.PayPalOptions.SectionName));
+builder.Services.AddHttpClient<FRELODYAPIs.Services.PayPal.PayPalClient>();
+builder.Services.AddScoped<IBillingActivationService, BillingActivationService>();
+builder.Services.AddScoped<IPayPalService, PayPalService>();
 builder.Services.AddScoped<IAuthService, AuthorizationService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITenantService, TenantService>();

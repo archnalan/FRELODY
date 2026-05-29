@@ -1,0 +1,46 @@
+@using FRELODYSHRD.Dtos
+@using FRELODYUI.Shared.RefitApis
+@inject IAnalyzedAccessApi AccessApi
+
+@* Small "N of M free today" pill for signed-in free users. Hidden for
+   anonymous and premium users. *@
+@if (_show)
+{
+    <span class="qb @(_remaining == 0 ? "qb--empty" : "")" title="Free analyzed songs remaining today">
+        <i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>
+        <span class="qb-text">@_remaining of @_limit free today</span>
+    </span>
+}
+
+@code {
+    private bool _show;
+    private int _remaining;
+    private int _limit;
+
+    protected override async Task OnInitializedAsync() => await RefreshAsync();
+
+    /// <summary>Re-fetch the quota (call after a play consumes a slot).</summary>
+    public async Task RefreshAsync()
+    {
+        var auth = await _globalAuth.GetAuthenticationStateAsync();
+        if (auth.User.Identity?.IsAuthenticated != true)
+        {
+            _show = false;
+            StateHasChanged();
+            return;
+        }
+
+        var resp = await AccessApi.QuotaStatus();
+        if (resp.IsSuccessStatusCode && resp.Content is not null && !resp.Content.IsPremium)
+        {
+            _limit = resp.Content.DailyLimit;
+            _remaining = resp.Content.Remaining;
+            _show = true;
+        }
+        else
+        {
+            _show = false;
+        }
+        StateHasChanged();
+    }
+}

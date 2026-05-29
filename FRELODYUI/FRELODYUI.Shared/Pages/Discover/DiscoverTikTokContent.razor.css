@@ -92,6 +92,14 @@
    Pushed to the right via margin-left:auto so it sits opposite the back
    button regardless of how wide the meta block ends up. Mirrors .dv-back's
    pill-icon language so the row reads as a single control bar. */
+.dv-header-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-2);
+    flex-shrink: 0;
+}
+
 .dv-share {
     flex-shrink: 0;
     margin-left: auto;

@@ -218,7 +218,6 @@ namespace FRELODYUI.Shared.Services
 
         public async Task<ServiceResult<bool>> IsPremiumUser()
         {
-            return ServiceResult<bool>.Success(true); //For testing 
             try
             {
                 var user = await GetAuthenticatedUserAsync();

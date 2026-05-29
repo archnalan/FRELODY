@@ -4,6 +4,7 @@ using FRELODYAPP.Data.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FRELODYLIB.Migrations
 {
     [DbContext(typeof(SongDbContext))]
-    partial class SongDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260529093113_AddAnalyzedSongUnlock")]
+    partial class AddAnalyzedSongUnlock
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1122,9 +1125,6 @@ namespace FRELODYLIB.Migrations
 
                     b.Property<string>("Address")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTimeOffset?>("BillingExpiresAt")
-                        .HasColumnType("datetimeoffset");
 
                     b.Property<int?>("BillingStatus")
                         .HasColumnType("int");

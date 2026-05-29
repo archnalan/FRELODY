@@ -5,8 +5,10 @@
 @using FRELODYSHRD.Models.PesaPal
 @inject ILogger<Pricing> _logger
 @inject IPesaPalApi _pesaPalApi
+@inject IPayPalApi _payPalApi
 @inject IApiResponseHandler _apiResponseHandler
 @inject IProductsApi _productsApi
+@using FRELODYUI.Shared.Pages.Payments
 
 <PageTitle>Pricing - FRELODY</PageTitle>
 
@@ -162,8 +164,8 @@
                                             <span>Buy Now - Lifetime Access</span>
                                         }
                                         else
-                                        {                                            
-                                            <span>Start 14-day Trial</span>
+                                        {
+                                            <span>Subscribe</span>
                                         }
                                     </button>
                                 </div>
@@ -340,12 +342,12 @@
                             <div class="accordion-item">
                                 <h3 class="accordion-header">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                        Is there a free trial?
+                                        Is there a free plan?
                                     </button>
                                 </h3>
                                 <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                                     <div class="accordion-body">
-                                        Yes! Creator and Studio plans come with a 14-day free trial. No credit card required to start. The Starter plan is free forever.
+                                        Yes — the free tier is your trial. Play 2 analyzed songs every day, forever, with no credit card required. Upgrade anytime for unlimited analyses.
                                     </div>
                                 </div>
                             </div>
@@ -445,6 +447,75 @@
         </div>
     </div>
 }
+<!-- Checkout (gateway selector) Modal -->
+@if (showCheckoutModal && selectedProduct != null)
+{
+    <div class="modal fade show d-block co-modal" tabindex="-1" @onclick="CloseCheckoutModal">
+        <div class="modal-dialog modal-dialog-centered" @onclick:stopPropagation="true">
+            <div class="modal-content co-content">
+                <div class="modal-header co-header">
+                    <div class="co-heading">
+                        <h5 class="modal-title co-title">Complete your upgrade</h5>
+                        <p class="co-subtitle">@GetProductDisplayName(selectedProduct)</p>
+                    </div>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseCheckoutModal"></button>
+                </div>
+                <div class="modal-body co-body">
+                    <div class="co-summary">
+                        <span class="co-summary-label">@GetBillingLabel(selectedProduct.Period) plan</span>
+                        <span class="co-summary-price">@GetDisplayPrice(selectedProduct).FormattedAmount</span>
+                    </div>
+
+                    @if (payPalEnabled)
+                    {
+                        <div class="co-tabs" role="tablist">
+                            <button type="button"
+                                    class="co-tab @(checkoutGateway == "paypal" ? "co-tab--active" : "")"
+                                    @onclick='() => SetGateway("paypal")'>
+                                <i class="bi bi-paypal"></i><span>PayPal</span>
+                            </button>
+                            <button type="button"
+                                    class="co-tab @(checkoutGateway == "pesapal" ? "co-tab--active" : "")"
+                                    @onclick='() => SetGateway("pesapal")'>
+                                <i class="bi bi-phone"></i><span>Mobile / Card</span>
+                            </button>
+                        </div>
+                    }
+
+                    <div class="co-panel">
+                        @if (payPalEnabled && checkoutGateway == "paypal")
+                        {
+                            <PayPalButton ProductId="@selectedProduct.Id"
+                                          OnSuccess="HandlePayPalSuccess"
+                                          OnError="HandlePayPalError" />
+                            <p class="co-fineprint">
+                                <i class="bi bi-shield-lock"></i>
+                                <span>Charged in USD. You'll confirm securely in PayPal.</span>
+                            </p>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-primary w-100 py-3 co-pesapal-btn"
+                                    @onclick="ContinueWithPesaPal" disabled="@isProcessing">
+                                @if (isProcessing)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                }
+                                <i class="bi bi-credit-card-2-front me-2"></i>
+                                Continue with Mobile Money / Card
+                            </button>
+                            <p class="co-fineprint">
+                                <i class="bi bi-shield-lock"></i>
+                                <span>Secured by PesaPal — mobile money, cards &amp; bank transfer.</span>
+                            </p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <!-- PesaPal Payment Modal -->
 @if (showPaymentModal)
 {
@@ -490,7 +561,10 @@
     private bool isProcessing = false;
     private bool showPaymentModal = false;
     private bool showLoginModal = false;
+    private bool showCheckoutModal = false;
     private bool showAllPlans = false;
+    private bool payPalEnabled = false;
+    private string checkoutGateway = "pesapal";
     private string paymentRedirectUrl = string.Empty;
     private ProductDto? selectedProduct;
 
@@ -505,6 +579,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadPricingPlans();
+        await LoadPayPalAvailability();
 
         // Check authentication status
         var authState = await _globalAuth.GetAuthenticationStateAsync();
@@ -695,8 +770,85 @@
             return;
         }
 
-        // Initiate payment flow
-        await InitiatePayment(product);
+        // Paid plan → let the buyer pick a payment method.
+        OpenCheckout(product);
+    }
+
+    private async Task LoadPayPalAvailability()
+    {
+        try
+        {
+            var resp = await _payPalApi.GetConfig();
+            payPalEnabled = resp.IsSuccessStatusCode && resp.Content?.Enabled == true;
+        }
+        catch
+        {
+            payPalEnabled = false;
+        }
+    }
+
+    private void OpenCheckout(ProductDto product)
+    {
+        selectedProduct = product;
+        checkoutGateway = payPalEnabled ? "paypal" : "pesapal";
+        showCheckoutModal = true;
+        StateHasChanged();
+    }
+
+    private void SetGateway(string gateway)
+    {
+        checkoutGateway = gateway;
+        StateHasChanged();
+    }
+
+    private void CloseCheckoutModal()
+    {
+        showCheckoutModal = false;
+        StateHasChanged();
+    }
+
+    private async Task ContinueWithPesaPal()
+    {
+        showCheckoutModal = false;
+        StateHasChanged();
+        if (selectedProduct != null)
+            await InitiatePayment(selectedProduct);
+    }
+
+    private async Task HandlePayPalSuccess()
+    {
+        showCheckoutModal = false;
+        StateHasChanged();
+
+        // Premium is granted server-side at capture; a full reload re-reads the
+        // fresh billing state so the whole app reflects the upgrade immediately.
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "You're Premium! 🎉",
+            Message = "Your payment was successful. Enjoy unlimited song analyses.",
+            ButtonText = "Start exploring",
+            OptionType = OptionType.Success,
+            OnConfirmCallback = () =>
+            {
+                _navManager.NavigateTo("/discover", forceLoad: true);
+                return Task.CompletedTask;
+            }
+        });
+        await Task.CompletedTask;
+    }
+
+    private Task HandlePayPalError(string message)
+    {
+        _modalService.Show(new ModalOptionDto
+        {
+            Title = "Payment Issue",
+            Message = string.IsNullOrWhiteSpace(message)
+                ? "Your PayPal payment could not be completed. Please try again."
+                : message,
+            ButtonText = "Close",
+            OptionType = OptionType.Error
+        });
+        return Task.CompletedTask;
     }
 
     private async Task HandleLoginSuccess()
@@ -705,11 +857,12 @@
         showLoginModal = false;
         StateHasChanged();
 
-        // Proceed with payment if a product was selected
+        // Proceed to checkout if a product was selected
         if (selectedProduct != null)
         {
-            await InitiatePayment(selectedProduct);
+            OpenCheckout(selectedProduct);
         }
+        await Task.CompletedTask;
     }
 
     private void CloseLoginModal()

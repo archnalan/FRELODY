@@ -6,6 +6,7 @@ using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPIs.Services;
 using FRELODYAPIs.Services.ChordMini;
+using FRELODYSHRD.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,13 +25,39 @@ namespace FRELODYAPIs.Controllers
         private readonly YoutubeClient _youtube;
         private readonly IChordMiniService _chordMini;
         private readonly ISongService _songService;
+        private readonly IAnalyzedAccessService _access;
 
-        public YouTubeController(SongDbContext db, IChordMiniService chordMini, ISongService songService)
+        public YouTubeController(SongDbContext db, IChordMiniService chordMini, ISongService songService, IAnalyzedAccessService access)
         {
             _db = db;
             _youtube = new YoutubeClient();
             _chordMini = chordMini;
             _songService = songService;
+            _access = access;
+        }
+
+        // Authoritative daily-quota / 24h-availability gate for analyzed playback.
+        // Returns a non-null IActionResult (402 + paywall payload, or an error) when
+        // the caller must NOT receive the transcription; null when access is granted.
+        private async Task<ActionResult<YouTubeTranscriptionDto>?> GateAnalyzedAccessAsync(string videoId)
+        {
+            var meta = await _db.YouTubeVideos.AsNoTracking()
+                .Where(v => v.VideoId == videoId)
+                .Select(v => new { v.Title, v.ThumbnailUrl, v.DurationSeconds })
+                .FirstOrDefaultAsync();
+
+            var access = await _access.EvaluateAndRecord(
+                AnalyzedPlatform.YouTube, videoId, meta?.Title, meta?.ThumbnailUrl,
+                sourceUrl: null, durationSeconds: meta?.DurationSeconds);
+
+            if (!access.IsSuccess)
+                return StatusCode(access.StatusCode, new { message = access.Error.Message });
+
+            // 402 Payment Required: in-context paywall (or sign-in) signal for the UI.
+            if (!access.Data.Allowed)
+                return StatusCode(StatusCodes.Status402PaymentRequired, access.Data);
+
+            return null;
         }
 
         [HttpGet]
@@ -110,6 +137,11 @@ namespace FRELODYAPIs.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.VideoId))
                 return BadRequest(new { message = "videoId is required." });
+
+            // Meter the analyzed play before returning any chord data (cached or fresh).
+            var gate = await GateAnalyzedAccessAsync(request.VideoId);
+            if (gate is not null)
+                return gate;
 
             // Return cached result when not forcing a refresh
             if (!request.ForceRefresh)
@@ -199,6 +231,10 @@ namespace FRELODYAPIs.Controllers
             [FromQuery] string chordModel = "chord-cnn-lstm",
             [FromQuery] string chordDict = "full")
         {
+            var gate = await GateAnalyzedAccessAsync(videoId);
+            if (gate is not null)
+                return gate;
+
             var t = await _db.YouTubeTranscriptions
                 .AsNoTracking()
                 .FirstOrDefaultAsync(t =>

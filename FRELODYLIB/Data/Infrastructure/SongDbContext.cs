@@ -64,6 +64,7 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<YouTubeTranscription> YouTubeTranscriptions { get; set; } = default!;
         public DbSet<TikTokVideo> TikTokVideos { get; set; } = default!;
         public DbSet<TikTokTranscription> TikTokTranscriptions { get; set; } = default!;
+        public DbSet<AnalyzedSongUnlock> AnalyzedSongUnlocks { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -503,6 +504,23 @@ namespace FRELODYAPP.Data.Infrastructure
             builder.Entity<TikTokTranscription>(b =>
             {
                 b.HasIndex(t => new { t.VideoId, t.BeatModel, t.ChordModel, t.ChordDict }).IsUnique();
+            });
+
+            builder.Entity<AnalyzedSongUnlock>(b =>
+            {
+                b.HasQueryFilter(u => u.IsDeleted == false || u.IsDeleted == null);
+
+                b.Property(u => u.Platform).HasConversion<string>().HasMaxLength(20);
+
+                b.HasOne(u => u.User)
+                 .WithMany()
+                 .HasForeignKey(u => u.UserId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                // Lookups: "is this song already unlocked for this user (recently)?"
+                b.HasIndex(u => new { u.UserId, u.Platform, u.VideoId, u.UnlockedAt });
+                // Daily-quota count: unlocks for a user within a time window.
+                b.HasIndex(u => new { u.UserId, u.UnlockedAt });
             });
 
             OnModelCreatingPartial(builder);

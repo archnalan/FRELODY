@@ -1,7 +1,9 @@
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYAPP.Models;
+using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
+using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPIs.Services.ChordMini;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,11 +17,30 @@ namespace FRELODYAPIs.Controllers
     {
         private readonly SongDbContext _db;
         private readonly IChordMiniService _chordMini;
+        private readonly IAnalyzedAccessService _access;
 
-        public TikTokController(SongDbContext db, IChordMiniService chordMini)
+        public TikTokController(SongDbContext db, IChordMiniService chordMini, IAnalyzedAccessService access)
         {
             _db = db;
             _chordMini = chordMini;
+            _access = access;
+        }
+
+        // Authoritative daily-quota / 24h-availability gate for analyzed playback.
+        // Returns a non-null IActionResult (402 + paywall payload, or an error) when
+        // the caller must NOT receive the transcription; null when access is granted.
+        private async Task<ActionResult<YouTubeTranscriptionDto>?> GateAnalyzedAccessAsync(string videoId, string? title, string? thumbnailUrl, string? sourceUrl, int? durationSeconds)
+        {
+            var access = await _access.EvaluateAndRecord(
+                AnalyzedPlatform.TikTok, videoId, title, thumbnailUrl, sourceUrl, durationSeconds);
+
+            if (!access.IsSuccess)
+                return StatusCode(access.StatusCode, new { message = access.Error.Message });
+
+            if (!access.Data.Allowed)
+                return StatusCode(StatusCodes.Status402PaymentRequired, access.Data);
+
+            return null;
         }
 
         // Resolve a pasted TikTok URL into cached video metadata (id, title, thumb).
@@ -78,6 +99,11 @@ namespace FRELODYAPIs.Controllers
             {
                 return StatusCode(502, new { message = ex.Message });
             }
+
+            // Meter the analyzed play before returning any chord data (cached or fresh).
+            var gate = await GateAnalyzedAccessAsync(info.Id, Truncate(info.Title, 500), Truncate(info.Thumbnail, 1000), info.WebpageUrl, info.DurationSeconds);
+            if (gate is not null)
+                return gate;
 
             if (!request.ForceRefresh)
             {
@@ -142,6 +168,15 @@ namespace FRELODYAPIs.Controllers
             [FromQuery] string chordModel = "chord-cnn-lstm",
             [FromQuery] string chordDict = "full")
         {
+            var meta = await _db.TikTokVideos.AsNoTracking()
+                .Where(v => v.VideoId == videoId)
+                .Select(v => new { v.Title, v.ThumbnailUrl, v.Url, v.DurationSeconds })
+                .FirstOrDefaultAsync();
+
+            var gate = await GateAnalyzedAccessAsync(videoId, meta?.Title, meta?.ThumbnailUrl, meta?.Url, meta?.DurationSeconds);
+            if (gate is not null)
+                return gate;
+
             var t = await _db.TikTokTranscriptions.AsNoTracking()
                 .FirstOrDefaultAsync(t =>
                     t.VideoId == videoId &&

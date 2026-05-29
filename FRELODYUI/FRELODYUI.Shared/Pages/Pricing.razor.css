@@ -45,6 +45,133 @@
     transition: all 0.3s ease-in-out;
 }
 
+/* ── Checkout (gateway selector) modal ───────────────────────────── */
+.co-modal {
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1055;
+}
+
+.co-content {
+    border: none;
+    border-radius: var(--k-radius-lg, 1rem);
+    background: var(--modal-content-bg);
+    box-shadow: var(--k-shadow-lg, 0 16px 48px rgba(0, 0, 0, 0.24));
+    overflow: hidden;
+}
+
+.co-header {
+    border-bottom: 1px solid var(--input-border);
+    padding: var(--k-space-4, 1rem) var(--k-space-5, 1.25rem);
+    align-items: flex-start;
+}
+
+.co-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.co-title {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.co-subtitle {
+    margin: 0;
+    font-size: var(--k-font-size-sm, 0.875rem);
+    color: var(--text-secondary);
+}
+
+.co-body {
+    padding: var(--k-space-5, 1.25rem);
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-4, 1rem);
+}
+
+.co-summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--k-space-3, 0.75rem);
+    padding: var(--k-space-3, 0.75rem) var(--k-space-4, 1rem);
+    background: var(--bg-hover);
+    border-radius: var(--k-radius-md, 0.5rem);
+}
+
+.co-summary-label {
+    font-size: var(--k-font-size-sm, 0.875rem);
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.co-summary-price {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.co-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--k-space-2, 0.5rem);
+    padding: 0.25rem;
+    background: var(--bg-hover);
+    border-radius: var(--k-radius-pill, 999px);
+}
+
+.co-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: var(--k-font-size-sm, 0.875rem);
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--k-radius-pill, 999px);
+    cursor: pointer;
+    transition: background var(--k-transition-fast, 0.15s) ease,
+                color var(--k-transition-fast, 0.15s) ease,
+                box-shadow var(--k-transition-fast, 0.15s) ease;
+}
+
+.co-tab:hover {
+    color: var(--text-primary);
+}
+
+.co-tab--active {
+    background: var(--modal-content-bg);
+    color: var(--bs-primary);
+    box-shadow: var(--k-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12));
+}
+
+.co-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-3, 0.75rem);
+    min-height: 3.5rem;
+}
+
+.co-pesapal-btn {
+    border-radius: var(--k-radius-md, 0.5rem);
+    font-weight: 600;
+}
+
+.co-fineprint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin: 0;
+    font-size: var(--k-font-size-xs, 0.75rem);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
 @media (max-width: 768px) {
     .pricing-cards .col-12 {
         margin-bottom: 1.5rem;
