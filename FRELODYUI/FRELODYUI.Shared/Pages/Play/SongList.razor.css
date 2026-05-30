@@ -1,5 +1,9 @@
 /* ══════════════════════════════════════
-   SongList — card wrapper (table view)
+   SongList — paged table (Expanded view)
+   Server-side pagination: only the current
+   page is in the DOM, so this scales to
+   millions of rows with no virtualization
+   flicker. Our own markup → no ::deep.
    ══════════════════════════════════════ */
 .song-table-card {
     position: relative;
@@ -9,122 +13,106 @@
     overflow: clip;
 }
 
-/* Scroll container that bounds QuickGrid's height
-   so virtualization works against a fixed viewport
-   instead of the entire page. */
-.song-quickgrid-scroll {
+/* Scroll container bounds large page sizes (50/100)
+   while keeping the header sticky. */
+.song-table-scroll {
     width: 100%;
     max-height: clamp(20rem, 70vh, 50rem);
     overflow-y: auto;
-    /* Smoother scroll on touch */
     -webkit-overflow-scrolling: touch;
+    transition: opacity var(--k-transition-fast, 0.15s ease);
+}
+
+/* Page-change loading: dim the current page in place
+   instead of swapping to a skeleton → no flash. */
+.song-table-scroll.is-loading {
+    opacity: 0.55;
+    pointer-events: none;
 }
 
 @media (max-width: 575.98px) {
-    .song-quickgrid-scroll {
+    .song-table-scroll {
         max-height: calc(100dvh - 13rem);
     }
 }
 
-/* ══════════════════════════════════════
-   Loading placeholder overlay — sits on
-   top of an always-rendered QuickGrid so
-   QuickGrid can size + fetch normally.
-   ══════════════════════════════════════ */
-.song-loading-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 10;
-    background: var(--modal-content-bg);
-    border-radius: inherit;
-    overflow: hidden;
-}
-
-/* ══════════════════════════════════════
-   QuickGrid theme override (::deep so
-   QuickGrid's own elements inherit).
-   ══════════════════════════════════════ */
-::deep .song-quickgrid {
+/* ─────────── Table ─────────── */
+.song-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     table-layout: fixed;
-    font-size: 0.88rem;
+    font-size: var(--k-font-size-sm, 0.88rem);
     color: var(--text-primary);
     background: transparent;
 }
 
-/* Sticky header: stays visible while body rows scroll */
-::deep .song-quickgrid thead th {
+/* Sticky header */
+.song-table thead th {
     position: sticky;
     top: 0;
     z-index: 2;
     padding: 8px 12px;
     text-align: left;
-    font-size: 0.7rem;
+    background: var(--modal-content-bg);
+    border-bottom: 2px solid var(--border-light);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.song-table thead th:hover .st-th {
+    color: var(--text-primary);
+}
+
+.st-th {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: var(--k-font-size-xs, 0.7rem);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--text-secondary, #6b7280);
-    background: var(--modal-content-bg);
-    border-bottom: 2px solid var(--border-light);
-    white-space: nowrap;
+    transition: color var(--k-transition-fast, 0.15s);
 }
 
-::deep .song-quickgrid thead th button {
-    color: inherit;
-    background: none;
-    border: none;
-    padding: 0;
-    font: inherit;
-    text-transform: inherit;
-    letter-spacing: inherit;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
+.st-th--center {
+    justify-content: center;
 }
 
-::deep .song-quickgrid thead th button:hover {
-    color: var(--text-primary);
-}
-
-/* ─── Sort indicators: modern up/down arrows ─── */
-::deep .song-quickgrid thead th[aria-sort] button::after,
-::deep .song-quickgrid thead th.col-sort-asc button::after,
-::deep .song-quickgrid thead th.col-sort-desc button::after {
+/* Sort arrows — only the active column shows one */
+.st-th--asc::after,
+.st-th--desc::after {
     font-family: "bootstrap-icons";
     font-size: 0.85em;
     line-height: 1;
-    opacity: 0.7;
+    color: var(--bs-primary);
+    opacity: 0.85;
 }
 
-::deep .song-quickgrid thead th[aria-sort="ascending"] button::after,
-::deep .song-quickgrid thead th.col-sort-asc button::after {
+.st-th--asc::after {
     content: "\F148"; /* bi-arrow-up */
 }
 
-::deep .song-quickgrid thead th[aria-sort="descending"] button::after,
-::deep .song-quickgrid thead th.col-sort-desc button::after {
+.st-th--desc::after {
     content: "\F128"; /* bi-arrow-down */
 }
 
-/* Neutralise any built-in QuickGrid sort glyph */
-::deep .song-quickgrid thead th .sort-indicator,
-::deep .song-quickgrid thead th .col-sort-asc-indicator,
-::deep .song-quickgrid thead th .col-sort-desc-indicator {
-    display: none !important;
+/* ─────────── Body rows ─────────── */
+.song-table tbody tr {
+    transition: background-color var(--k-transition-fast, 0.12s);
 }
 
-::deep .song-quickgrid tbody tr {
-    transition: background-color 0.12s;
-}
-
-::deep .song-quickgrid tbody tr:hover {
+.song-table tbody tr:hover {
     background: var(--bg-hover, rgba(0, 0, 0, 0.04));
 }
 
-::deep .song-quickgrid tbody td {
+.song-table tbody tr.st-row--selected {
+    background: var(--k-accent-soft, rgba(13, 110, 253, 0.08));
+}
+
+.song-table tbody td {
     padding: 8px 12px;
     vertical-align: middle;
     overflow: hidden;
@@ -133,44 +121,50 @@
     border-bottom: 1px solid var(--border-light);
 }
 
-/* ─── Column sizing ─── */
-::deep .qg-col-check {
-    width: 3rem;
+.st-muted {
+    color: var(--text-secondary, #6b7280);
 }
 
-::deep .qg-col-meta {
+/* ─────────── Column sizing ─────────── */
+.st-col-check {
+    width: 3rem;
+    text-align: center;
+}
+
+.st-col-meta {
     width: 9rem;
 }
 
-::deep .qg-col-rating {
-    width: 4.5rem;
+.st-col-rating {
+    width: 5rem;
+    text-align: center;
 }
 
-::deep .qg-col-actions {
+.st-col-actions {
     width: 8rem;
 }
 
-/* ─── Responsive hiding via Bootstrap-style breakpoints ─── */
+/* Responsive hiding */
 @media (max-width: 575.98px) {
-    ::deep .qg-col-sm {
+    .st-col-sm {
         display: none;
     }
 }
 
 @media (max-width: 767.98px) {
-    ::deep .qg-col-md {
+    .st-col-md {
         display: none;
     }
 }
 
 @media (max-width: 991.98px) {
-    ::deep .qg-col-lg {
+    .st-col-lg {
         display: none;
     }
 }
 
-/* ─── Cell contents ─── */
-::deep .qg-check {
+/* ─────────── Cell contents ─────────── */
+.st-check {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -183,64 +177,105 @@
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.12s, color 0.12s;
+    transition: background-color var(--k-transition-fast, 0.12s), color var(--k-transition-fast, 0.12s);
 }
 
-::deep .qg-check:hover {
+.st-check:hover {
     background: var(--bg-hover, rgba(0, 0, 0, 0.06));
     color: var(--text-primary);
 }
 
-::deep .qg-check--on {
+.st-check--on {
     color: var(--bs-success);
     font-size: 1.1rem;
 }
 
-::deep .qg-check--on:hover {
-    background: rgba(25, 135, 84, 0.1);
+.st-check--on:hover {
+    background: var(--k-success-soft, rgba(25, 135, 84, 0.1));
 }
 
-::deep .qg-check__num {
+.st-check__num {
     line-height: 1;
 }
 
-::deep .qg-title-cell {
-    display: block;
+.st-title-cell {
+    display: flex;
+    flex-direction: column;
     color: var(--text-primary);
     font-weight: 500;
     text-decoration: none;
     overflow: hidden;
-    text-overflow: ellipsis;
     cursor: pointer;
 }
 
-::deep .qg-title-cell:hover {
+.st-title-cell:hover .st-title-text {
     color: var(--bs-primary);
 }
 
-::deep .qg-rating {
+.st-title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color var(--k-transition-fast, 0.12s);
+}
+
+/* Artist shown under title on small screens (artist column hidden) */
+.st-title-sub {
+    font-size: var(--k-font-size-xs, 0.72rem);
+    font-weight: 400;
+    color: var(--text-secondary, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.st-artist {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+}
+
+/* Category badge */
+.st-badge {
+    display: inline-block;
+    max-width: 100%;
+    padding: 0.15rem 0.55rem;
+    border-radius: var(--k-radius-pill, 999px);
+    background: var(--k-accent-soft, rgba(13, 110, 253, 0.1));
+    color: var(--bs-primary);
+    font-size: var(--k-font-size-xs, 0.72rem);
+    font-weight: 600;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* Rating chip */
+.st-rating {
     display: inline-flex;
     align-items: center;
     gap: 3px;
     color: var(--bs-warning, #f59e0b);
     font-size: 0.78rem;
+    font-weight: 600;
 }
 
-::deep .qg-actions {
+/* Row actions — reveal on hover (desktop), always on touch */
+.st-actions {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: 2px;
     opacity: 0;
-    transition: opacity 0.15s;
+    transition: opacity var(--k-transition-fast, 0.15s);
 }
 
-::deep tr:hover .qg-actions {
+tr:hover .st-actions {
     opacity: 1;
 }
 
 @media (hover: none) {
-    ::deep .qg-actions {
+    .st-actions {
         opacity: 1;
     }
 }
@@ -257,7 +292,7 @@
     color: var(--text-secondary, #6b7280);
     font-size: 0.9rem;
     cursor: pointer;
-    transition: background-color 0.12s, color 0.12s;
+    transition: background-color var(--k-transition-fast, 0.12s), color var(--k-transition-fast, 0.12s);
 }
 
 .row-action-btn:hover {
@@ -266,22 +301,140 @@
 }
 
 .row-action-btn--danger:hover {
+    /* Not using --k-danger-soft: it is defined with --bs-success in app.css (green). */
     background: rgba(220, 53, 69, 0.1);
     color: var(--bs-danger);
 }
 
+/* ─────────── Empty state ─────────── */
+.song-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 3rem 1rem;
+    color: var(--text-secondary, #6b7280);
+    text-align: center;
+}
+
+.song-empty i {
+    font-size: 2rem;
+    opacity: 0.6;
+}
+
+/* ─────────── Pager ─────────── */
+.song-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    border-top: 1px solid var(--border-light);
+    background: var(--modal-content-bg);
+}
+
+.song-pager__info {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--k-font-size-sm, 0.82rem);
+    color: var(--text-secondary, #6b7280);
+}
+
+.song-pager__info strong {
+    color: var(--text-primary);
+}
+
+.song-pager__nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    order: 3;
+    flex: 1 1 100%;
+    justify-content: center;
+}
+
+.song-pager__size {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--k-font-size-sm, 0.82rem);
+    color: var(--text-secondary, #6b7280);
+}
+
+.song-pager__size select {
+    padding: 0.2rem 1.4rem 0.2rem 0.5rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--k-radius-sm, 6px);
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    font-size: var(--k-font-size-sm, 0.82rem);
+    cursor: pointer;
+}
+
+.pager-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.45rem;
+    border: 1px solid transparent;
+    border-radius: var(--k-radius-sm, 6px);
+    background: none;
+    color: var(--text-secondary, #6b7280);
+    font-size: var(--k-font-size-sm, 0.82rem);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--k-transition-fast, 0.12s), color var(--k-transition-fast, 0.12s);
+}
+
+.pager-btn:hover:not(:disabled) {
+    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+    color: var(--text-primary);
+}
+
+.pager-btn--active {
+    background: var(--bs-primary);
+    color: #fff;
+}
+
+.pager-btn--active:hover:not(:disabled) {
+    background: var(--bs-primary);
+    color: #fff;
+}
+
+.pager-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.pager-ellipsis {
+    padding: 0 0.25rem;
+    color: var(--text-secondary, #6b7280);
+}
+
+/* Desktop: pager nav sits inline between info and size */
+@media (min-width: 576px) {
+    .song-pager__nav {
+        order: 0;
+        flex: 0 1 auto;
+    }
+}
+
 /* ── Mobile tweaks ── */
 @media (max-width: 575.98px) {
-    ::deep .song-quickgrid thead th,
-    ::deep .song-quickgrid tbody td {
+    .song-table thead th,
+    .song-table tbody td {
         padding: 6px 8px;
     }
 
-    ::deep .qg-col-check {
+    .st-col-check {
         width: 2.25rem;
     }
 
-    ::deep .qg-col-actions {
+    .st-col-actions {
         width: 6rem;
     }
 

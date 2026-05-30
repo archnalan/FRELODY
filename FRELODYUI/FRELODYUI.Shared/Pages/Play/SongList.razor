@@ -1,4 +1,3 @@
-@using Microsoft.AspNetCore.Components.QuickGrid
 @using SortDirection = FRELODYAPP.Dtos.SubDtos.SortDirection
 @inject ILogger<SongList> _logger
 @implements IDisposable
@@ -6,96 +5,208 @@
 @if (ViewStyle == ActiveView.Expanded)
 {
     <div class="song-table-card">
-        <div class="song-quickgrid-scroll">
-            <QuickGrid @ref="_grid"
-                           TGridItem="SongListItemDto"
-                           ItemsProvider="ProvideSongsAsync"
-                           Virtualize="true"
-                           ItemSize="48"
-                           Class="song-quickgrid"
-                           Theme="frelody">
-                    <TemplateColumn Title="#" Class="qg-col-check" Align="Align.Center">
-                        @{
-                            var rowSelected = IsSelected(context.Id ?? "");
+        @if (_isInitialLoading)
+        {
+            <FRELODYUI.Shared.Pages.PlaceHolders.SongListPlaceholder ActiveView="ActiveView.Expanded" ShowHeader="true" Count="8" />
+        }
+        else if (_pageItems.Count == 0)
+        {
+            <div class="song-empty">
+                <i class="bi bi-music-note-list"></i>
+                <p class="mb-0">
+                    @(string.IsNullOrWhiteSpace(_searchTerm)
+                        ? "No songs yet."
+                        : $"No songs match “{_searchTerm}”.")
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="song-table-scroll @(_isPageLoading ? "is-loading" : "")">
+                <table class="song-table">
+                    <thead>
+                        <tr>
+                            <th class="st-col-check" @onclick="() => ToggleSort(SongListSortField.SongNumber)">
+                                <span class="st-th st-th--center @(SortClass(SongListSortField.SongNumber))">#</span>
+                            </th>
+                            <th class="st-col-title" @onclick="() => ToggleSort(SongListSortField.Title)">
+                                <span class="st-th @(SortClass(SongListSortField.Title))">Title</span>
+                            </th>
+                            <th class="st-col-meta st-col-md" @onclick="() => ToggleSort(SongListSortField.Category)">
+                                <span class="st-th @(SortClass(SongListSortField.Category))">Category</span>
+                            </th>
+                            <th class="st-col-meta st-col-lg" @onclick="() => ToggleSort(SongListSortField.Artist)">
+                                <span class="st-th @(SortClass(SongListSortField.Artist))">Artist</span>
+                            </th>
+                            <th class="st-col-rating st-col-sm" @onclick="() => ToggleSort(SongListSortField.Rating)">
+                                <span class="st-th st-th--center @(SortClass(SongListSortField.Rating))">Rating</span>
+                            </th>
+                            <th class="st-col-actions"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var song in _pageItems)
+                        {
+                            var songId = song.Id ?? string.Empty;
+                            var rowSelected = IsSelected(songId);
+                            <tr @key="song.Id" class="@(rowSelected ? "st-row--selected" : "")">
+                                <td class="st-col-check">
+                                    <button type="button"
+                                            class="st-check @(rowSelected ? "st-check--on" : "")"
+                                            title="@(rowSelected ? "Deselect" : "Select")"
+                                            @onclick="() => ToggleSongSelection(songId)">
+                                        @if (rowSelected)
+                                        {
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        }
+                                        else
+                                        {
+                                            <span class="st-check__num">@(song.SongNumber > 0 ? song.SongNumber.ToString() : "–")</span>
+                                        }
+                                    </button>
+                                </td>
+
+                                <td class="st-col-title">
+                                    <a class="st-title-cell"
+                                       href="javascript:void(0)"
+                                       title="@song.Title"
+                                       @onclick="() => HandleSongClick(songId)"
+                                       @onclick:preventDefault>
+                                        <span class="st-title-text">@song.Title</span>
+                                        @{
+                                            var subArtist = song.WrittenBy ?? song.ArtistName;
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(subArtist))
+                                        {
+                                            <span class="st-title-sub d-lg-none">@subArtist</span>
+                                        }
+                                    </a>
+                                </td>
+
+                                <td class="st-col-meta st-col-md">
+                                    @{
+                                        var category = song.CategoryName ?? song.AlbumTitle;
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(category))
+                                    {
+                                        <span class="st-badge">@category</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="st-muted">–</span>
+                                    }
+                                </td>
+
+                                <td class="st-col-meta st-col-lg">
+                                    <span class="st-artist">@(song.WrittenBy ?? song.ArtistName ?? "—")</span>
+                                </td>
+
+                                <td class="st-col-rating st-col-sm">
+                                    @if (song.Rating.HasValue && song.Rating > 0)
+                                    {
+                                        <span class="st-rating">
+                                            <i class="bi bi-star-fill"></i>
+                                            <span>@song.Rating.Value.ToString("0.#")</span>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="st-muted">–</span>
+                                    }
+                                </td>
+
+                                <td class="st-col-actions">
+                                    @if (!IsInSelectionMode)
+                                    {
+                                        <span class="st-actions" @onclick:stopPropagation>
+                                            <button class="row-action-btn" title="Play" @onclick="() => OnSongDisplay(songId)">
+                                                <i class="bi bi-play-fill"></i>
+                                            </button>
+                                            <button class="row-action-btn" title="Details" @onclick="() => NavigateToDetails(songId)">
+                                                <i class="bi bi-info-circle"></i>
+                                            </button>
+                                            <button class="row-action-btn" title="Share" disabled="@isGeneratingLink" @onclick="() => ShareLink(songId)">
+                                                <i class="bi bi-upload"></i>
+                                            </button>
+                                            @if (!string.IsNullOrEmpty(currentUserId) && song.CreatedBy == currentUserId)
+                                            {
+                                                <button class="row-action-btn row-action-btn--danger" title="Delete" @onclick="() => RemoveSong(songId)">
+                                                    <i class="bi bi-trash3"></i>
+                                                </button>
+                                            }
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
                         }
-                        <button type="button"
-                                class="qg-check @(rowSelected ? "qg-check--on" : "")"
-                                title="@(rowSelected ? "Deselect" : "Select")"
-                                @onclick="() => ToggleSongSelection(context.Id ?? string.Empty)">
-                            @if (rowSelected)
+                    </tbody>
+                </table>
+            </div>
+
+            @* ─────────── Pager ─────────── *@
+            <div class="song-pager">
+                <div class="song-pager__info">
+                    @if (_isPageLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                    }
+                    <span>
+                        <strong>@RangeStart.ToString("N0")</strong>–<strong>@RangeEnd.ToString("N0")</strong>
+                        of <strong>@_totalItems.ToString("N0")</strong>
+                    </span>
+                </div>
+
+                @if (_totalPages > 1)
+                {
+                    <div class="song-pager__nav" role="navigation" aria-label="Pagination">
+                        <button class="pager-btn" title="First page"
+                                disabled="@(_currentPage <= 1 || _isPageLoading)"
+                                @onclick="() => GoToPage(1)">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </button>
+                        <button class="pager-btn" title="Previous page"
+                                disabled="@(_currentPage <= 1 || _isPageLoading)"
+                                @onclick="() => GoToPage(_currentPage - 1)">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+
+                        @foreach (var p in GetPageWindow())
+                        {
+                            @if (p < 0)
                             {
-                                <i class="bi bi-check-circle-fill"></i>
+                                <span class="pager-ellipsis">…</span>
                             }
                             else
                             {
-                                <span class="qg-check__num">@(context.SongNumber > 0 ? context.SongNumber.ToString() : "–")</span>
+                                <button class="pager-btn @(p == _currentPage ? "pager-btn--active" : "")"
+                                        disabled="@_isPageLoading"
+                                        @onclick="() => GoToPage(p)">
+                                    @p
+                                </button>
                             }
+                        }
+
+                        <button class="pager-btn" title="Next page"
+                                disabled="@(_currentPage >= _totalPages || _isPageLoading)"
+                                @onclick="() => GoToPage(_currentPage + 1)">
+                            <i class="bi bi-chevron-right"></i>
                         </button>
-                    </TemplateColumn>
+                        <button class="pager-btn" title="Last page"
+                                disabled="@(_currentPage >= _totalPages || _isPageLoading)"
+                                @onclick="() => GoToPage(_totalPages)">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </button>
+                    </div>
+                }
 
-                    <TemplateColumn Title="Title" Sortable="true" Class="qg-col-title">
-                        <a class="qg-title-cell"
-                           href="javascript:void(0)"
-                           title="@context.Title"
-                           @onclick="() => HandleSongClick(context.Id ?? string.Empty)"
-                           @onclick:preventDefault>
-                            @context.Title
-                        </a>
-                    </TemplateColumn>
-
-                    <PropertyColumn Property="@(s => s.CategoryName ?? s.AlbumTitle)"
-                                    Title="Category"
-                                    Sortable="true"
-                                    Class="qg-col-meta qg-col-md" />
-
-                    <PropertyColumn Property="@(s => s.WrittenBy ?? s.ArtistName)"
-                                    Title="Artist"
-                                    Sortable="true"
-                                    Class="qg-col-meta qg-col-lg" />
-
-                    <TemplateColumn Title="Rating" Sortable="true" Class="qg-col-rating qg-col-sm" Align="Align.Center">
-                        @if (context.Rating.HasValue && context.Rating > 0)
-                        {
-                            <span class="qg-rating">
-                                <i class="bi bi-star-fill"></i>
-                                <span>@context.Rating.Value.ToString("0.#")</span>
-                            </span>
-                        }
-                        else
-                        {
-                            <span class="text-muted">–</span>
-                        }
-                    </TemplateColumn>
-
-                    <TemplateColumn Title="" Class="qg-col-actions" Align="Align.Right">
-                        @if (!IsInSelectionMode)
-                        {
-                            <span class="qg-actions" @onclick:stopPropagation>
-                                <button class="row-action-btn" title="Play" @onclick="() => OnSongDisplay(context.Id)">
-                                    <i class="bi bi-play-fill"></i>
-                                </button>
-                                <button class="row-action-btn" title="Details" @onclick="() => NavigateToDetails(context.Id)">
-                                    <i class="bi bi-info-circle"></i>
-                                </button>
-                                <button class="row-action-btn" title="Share" disabled="@isGeneratingLink" @onclick="() => ShareLink(context.Id)">
-                                    <i class="bi bi-upload"></i>
-                                </button>
-                                @if (!string.IsNullOrEmpty(currentUserId) && context.CreatedBy == currentUserId)
-                                {
-                                    <button class="row-action-btn row-action-btn--danger" title="Delete" @onclick="() => RemoveSong(context.Id)">
-                                        <i class="bi bi-trash3"></i>
-                                    </button>
-                                }
-                            </span>
-                        }
-                    </TemplateColumn>
-                </QuickGrid>
-        </div>
-
-        @if (_isInitialLoading)
-        {
-            <div class="song-loading-overlay" aria-hidden="true">
-                <FRELODYUI.Shared.Pages.PlaceHolders.SongListPlaceholder ActiveView="ActiveView.Expanded" ShowHeader="true" Count="8" />
+                <div class="song-pager__size">
+                    <label for="st-page-size">Rows</label>
+                    <select id="st-page-size" @bind="PageSize" disabled="@_isPageLoading">
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
             </div>
         }
     </div>
@@ -232,7 +343,6 @@ else
     [Parameter] public EventCallback OnAuthenticationRequired { get; set; }
     [Parameter] public HashSet<string> SelectedSongIds { get; set; } = new();
 
-    private QuickGrid<SongListItemDto>? _grid;
     private string? currentUserId;
     private bool IsFromLanding = false;
     private string error = string.Empty;
@@ -242,6 +352,32 @@ else
     private bool isGeneratingLink = false;
     private bool showSuccessMessage = false;
     private string successMessage = string.Empty;
+
+    // ─────────── Table (Expanded) view state — server-side pagination ───────────
+    // Only the current page is ever materialised in the DOM, so the list scales
+    // to millions of songs without virtualization (and without its flicker).
+    private List<SongListItemDto> _pageItems = new();
+    private int _currentPage = 1;
+    private int _pageSize = 25;
+    private int _totalItems = 0;
+    private bool _isPageLoading = false;
+    private SongListSortField? _sortField = null;
+    private bool _sortAsc = true;
+
+    private int _totalPages => _totalItems <= 0 ? 0 : (int)Math.Ceiling(_totalItems / (double)_pageSize);
+    private int RangeStart => _totalItems == 0 ? 0 : ((_currentPage - 1) * _pageSize) + 1;
+    private int RangeEnd => Math.Min(_currentPage * _pageSize, _totalItems);
+
+    private int PageSize
+    {
+        get => _pageSize;
+        set
+        {
+            if (value == _pageSize) return;
+            _pageSize = value <= 0 ? 25 : value;
+            _ = LoadPageAsync(1);
+        }
+    }
 
     // Card view state
     private List<SongListItemDto> _cardItems = new();
@@ -271,6 +407,10 @@ else
         {
             await LoadInitialCardsAsync();
         }
+        else
+        {
+            await LoadPageAsync(1);
+        }
     }
 
     public async Task SetActiveView(ActiveView changeStyle)
@@ -285,7 +425,10 @@ else
         {
             await LoadInitialCardsAsync();
         }
-        // Expanded view: QuickGrid mounts and its ItemsProvider flips _isInitialLoading off.
+        else
+        {
+            await LoadPageAsync(1);
+        }
     }
 
     public async Task SearchTermChanged(string searchTerm)
@@ -294,8 +437,7 @@ else
 
         if (ViewStyle == ActiveView.Expanded)
         {
-            if (_grid is not null)
-                await _grid.RefreshDataAsync();
+            await LoadPageAsync(1);
         }
         else
         {
@@ -309,8 +451,7 @@ else
 
         if (ViewStyle == ActiveView.Expanded)
         {
-            if (_grid is not null)
-                await _grid.RefreshDataAsync();
+            await LoadPageAsync(_currentPage);
         }
         else
         {
@@ -325,36 +466,93 @@ else
         StateHasChanged();
     }
 
-    // ─────────────────────── Data fetching ───────────────────────
+    // ─────────────────────── Table data + paging ───────────────────────
 
-    private async ValueTask<GridItemsProviderResult<SongListItemDto>> ProvideSongsAsync(GridItemsProviderRequest<SongListItemDto> request)
+    private async Task LoadPageAsync(int page)
     {
+        if (page < 1) page = 1;
+
+        _isPageLoading = true;
+        if (_pageItems.Count == 0) _isInitialLoading = true;
+        StateHasChanged();
+
         try
         {
-            var sortBy = MapColumnToSortField(request.SortByColumn?.Title);
-            var sortDir = request.SortByAscending ? SortDirection.Asc : SortDirection.Desc;
-            var limit = request.Count ?? 50;
+            var offset = (page - 1) * _pageSize;
+            var sortDir = _sortAsc ? SortDirection.Asc : SortDirection.Desc;
+            var (items, total) = await FetchPageAsync(offset, _pageSize, _sortField, sortDir);
 
-            var (items, total) = await FetchPageAsync(request.StartIndex, limit, sortBy, sortDir, request.CancellationToken);
-
-            if (request.StartIndex == 0 && _isInitialLoading)
+            // If the requested page fell off the end (e.g. after deletes), snap to the last page.
+            if (items.Count == 0 && total > 0 && page > 1)
             {
-                _isInitialLoading = false;
-                _ = InvokeAsync(StateHasChanged);
+                var lastPage = (int)Math.Ceiling(total / (double)_pageSize);
+                if (page > lastPage)
+                {
+                    await LoadPageAsync(lastPage);
+                    return;
+                }
             }
 
-            return GridItemsProviderResult.From(items: items, totalItemCount: total);
-        }
-        catch (OperationCanceledException)
-        {
-            return GridItemsProviderResult.From<SongListItemDto>(new List<SongListItemDto>(), 0);
+            _pageItems = items;
+            _totalItems = total;
+            _currentPage = page;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching songs for QuickGrid.");
+            _logger.LogError(ex, "Error fetching song page.");
             error = $"Error fetching songs: {ex.Message}";
+        }
+        finally
+        {
             _isInitialLoading = false;
-            return GridItemsProviderResult.From<SongListItemDto>(new List<SongListItemDto>(), 0);
+            _isPageLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page < 1) page = 1;
+        if (_totalPages > 0 && page > _totalPages) page = _totalPages;
+        if (page == _currentPage || _isPageLoading) return;
+        await LoadPageAsync(page);
+    }
+
+    private async Task ToggleSort(SongListSortField field)
+    {
+        if (_isPageLoading) return;
+
+        if (_sortField == field)
+            _sortAsc = !_sortAsc;
+        else
+        {
+            _sortField = field;
+            _sortAsc = true;
+        }
+
+        await LoadPageAsync(1);
+    }
+
+    private string SortClass(SongListSortField field)
+        => _sortField == field ? (_sortAsc ? "st-th--asc" : "st-th--desc") : string.Empty;
+
+    private IEnumerable<int> GetPageWindow()
+    {
+        var total = _totalPages;
+        if (total <= 0) yield break;
+
+        var shown = new SortedSet<int> { 1, total };
+        for (var p = _currentPage - 1; p <= _currentPage + 1; p++)
+        {
+            if (p >= 1 && p <= total) shown.Add(p);
+        }
+
+        var prev = 0;
+        foreach (var p in shown)
+        {
+            if (prev != 0 && p - prev > 1) yield return -1; // ellipsis marker
+            yield return p;
+            prev = p;
         }
     }
 
@@ -374,6 +572,8 @@ else
         var page = response?.Content;
         return (page?.Data ?? new List<SongListItemDto>(), page?.TotalSize ?? 0);
     }
+
+    // ─────────────────────── Card data fetching ───────────────────────
 
     private async Task LoadInitialCardsAsync()
     {
@@ -423,16 +623,6 @@ else
             _isCardLoadingMore = false;
         }
     }
-
-    private static SongListSortField? MapColumnToSortField(string? title) => title switch
-    {
-        "Title" => SongListSortField.Title,
-        "Category" => SongListSortField.Category,
-        "Artist" => SongListSortField.Artist,
-        "Rating" => SongListSortField.Rating,
-        "#" => SongListSortField.SongNumber,
-        _ => null,
-    };
 
     // ─────────────────────── Selection / long press ───────────────────────
 
