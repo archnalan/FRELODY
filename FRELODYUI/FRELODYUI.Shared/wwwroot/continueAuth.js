@@ -3,6 +3,12 @@
 // back to .NET, which verifies it server-side via /api/authorization/google-one-tap.
 
 let _dotNet = null;
+// google.accounts.id.initialize() must run at most once per client_id. Across
+// enhanced-navigation re-mounts this bridge can be re-invoked, and Google warns
+// that repeated initialize() calls cause unexpected behavior (only the last
+// instance survives). Track init state so we re-prompt without re-initializing.
+let _initialized = false;
+let _initializedClientId = null;
 
 function loadGis() {
     return new Promise((resolve, reject) => {
@@ -33,19 +39,27 @@ export async function initOneTap(clientId, dotNetRef, loginHint) {
     _dotNet = dotNetRef;
     try {
         await loadGis();
-        const config = {
-            client_id: clientId,
-            auto_select: false,
-            cancel_on_tap_outside: true,
-            callback: (resp) => {
-                if (_dotNet && resp && resp.credential) {
-                    _dotNet.invokeMethodAsync('OnGoogleCredential', resp.credential);
+        // Initialize once per client_id; the callback reads the module-level
+        // _dotNet (reassigned above) so it always targets the live component.
+        if (!_initialized || _initializedClientId !== clientId) {
+            const config = {
+                client_id: clientId,
+                auto_select: false,
+                cancel_on_tap_outside: true,
+                // Opt in to FedCM — Google is making it mandatory for One Tap.
+                use_fedcm_for_prompt: true,
+                callback: (resp) => {
+                    if (_dotNet && resp && resp.credential) {
+                        _dotNet.invokeMethodAsync('OnGoogleCredential', resp.credential);
+                    }
                 }
-            }
-        };
-        if (loginHint) config.login_hint = loginHint;
+            };
+            if (loginHint) config.login_hint = loginHint;
 
-        window.google.accounts.id.initialize(config);
+            window.google.accounts.id.initialize(config);
+            _initialized = true;
+            _initializedClientId = clientId;
+        }
         window.google.accounts.id.prompt();
     } catch (_) {
         /* prompt is a progressive enhancement */

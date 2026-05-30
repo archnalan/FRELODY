@@ -65,25 +65,37 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender || _dismissedThisLoad) return;
-        if (!await _localStorage.IsStorageAvailableAsync()) return;
 
-        // Already signed in → nothing to offer.
-        var state = await _globalAuth.GetAuthenticationStateAsync();
-        if (state.User.Identity?.IsAuthenticated == true) return;
-
-        _ref ??= DotNetObjectReference.Create(this);
-
-        _remembered = await _globalAuth.GetRememberedUserAsync();
-        if (_remembered is not null && !string.IsNullOrWhiteSpace(DisplayName))
+        // The prompt is a progressive enhancement — it must never take down the
+        // circuit. On the very first render the circuit may not be fully warm,
+        // so any JS-interop call here (localStorage, auth state) can throw, and a
+        // throw from a lifecycle method is fatal to the circuit (it gets
+        // terminated, and the page stops responding until the user retries).
+        // Swallow everything so a transient interop failure degrades silently.
+        try
         {
-            _visible = true;
-            StateHasChanged();
+            if (!await _localStorage.IsStorageAvailableAsync()) return;
+
+            // Already signed in → nothing to offer.
+            var state = await _globalAuth.GetAuthenticationStateAsync();
+            if (state.User.Identity?.IsAuthenticated == true) return;
+
+            _ref ??= DotNetObjectReference.Create(this);
+
+            _remembered = await _globalAuth.GetRememberedUserAsync();
+            if (_remembered is not null && !string.IsNullOrWhiteSpace(DisplayName))
+            {
+                _visible = true;
+                StateHasChanged();
+            }
+            else
+            {
+                // No local memory → let Google One Tap offer "Continue as <Google account>".
+                await StartGoogleOneTapAsync(null);
+            }
         }
-        else
-        {
-            // No local memory → let Google One Tap offer "Continue as <Google account>".
-            await StartGoogleOneTapAsync(null);
-        }
+        catch (JSDisconnectedException) { /* circuit went away mid-interop — nothing to do */ }
+        catch { /* best-effort: the prompt must never block the page */ }
     }
 
     private async Task ContinueAsync()
