@@ -422,8 +422,12 @@ namespace FRELODYAPP.Data.Infrastructure
             IsPopular = false,
             Features = new List<Feature>
             {
-                Feature.UnlimitedSongAcccess,
-                Feature.SongManagement
+                Feature.AutoChordDetection,
+                Feature.SlowDownPractice,
+                Feature.SectionLooping,
+                Feature.ChordTimeline,
+                Feature.PlaylistSaving,
+                Feature.SongSharing
             },
             TenantId = tenantId,
             CreatedBy = userId,
@@ -442,12 +446,15 @@ namespace FRELODYAPP.Data.Infrastructure
             IsPopular = false,
             Features = new List<Feature>
             {
-                Feature.UnlimitedSongCreations,
-                Feature.UnlimitedSongAcccess,
-                Feature.SongManagement,
-                Feature.ChordManagement,
+                Feature.AutoChordDetection,
+                Feature.SlowDownPractice,
+                Feature.SectionLooping,
+                Feature.ChordTimeline,
+                Feature.PlaylistSaving,
+                Feature.SongSharing,
                 Feature.PdfExport,
-                Feature.AiAssistedComposition
+                Feature.UnlimitedAnalyses,
+                Feature.ExtendedSongLength
             },
             TenantId = tenantId,
             CreatedBy = userId,
@@ -466,11 +473,15 @@ namespace FRELODYAPP.Data.Infrastructure
             IsPopular = true, // Most popular
             Features = new List<Feature>
             {
-                Feature.UnlimitedSongCreations,
-                Feature.UnlimitedSongAcccess,
-                Feature.SongManagement,
-                Feature.ChordManagement,
+                Feature.AutoChordDetection,
+                Feature.SlowDownPractice,
+                Feature.SectionLooping,
+                Feature.ChordTimeline,
+                Feature.PlaylistSaving,
+                Feature.SongSharing,
                 Feature.PdfExport,
+                Feature.UnlimitedAnalyses,
+                Feature.ExtendedSongLength
             },
             TenantId = tenantId,
             CreatedBy = userId,
@@ -489,12 +500,15 @@ namespace FRELODYAPP.Data.Infrastructure
             IsPopular = false,
             Features = new List<Feature>
             {
-                Feature.UnlimitedSongCreations,
-                Feature.UnlimitedSongAcccess,
-                Feature.SongManagement,
-                Feature.ChordManagement,
+                Feature.AutoChordDetection,
+                Feature.SlowDownPractice,
+                Feature.SectionLooping,
+                Feature.ChordTimeline,
+                Feature.PlaylistSaving,
+                Feature.SongSharing,
                 Feature.PdfExport,
-                Feature.AiAssistedComposition
+                Feature.UnlimitedAnalyses,
+                Feature.ExtendedSongLength
             },
             TenantId = tenantId,
             CreatedBy = userId,
@@ -513,16 +527,17 @@ namespace FRELODYAPP.Data.Infrastructure
             IsPopular = false,
             Features = new List<Feature>
             {
-                Feature.UnlimitedSongCreations,
-                Feature.UnlimitedSongAcccess,
-                Feature.DedicatedSupport,
-                Feature.SongManagement,
-                Feature.ChordManagement,
-                Feature.UserManagement,
+                Feature.AutoChordDetection,
+                Feature.SlowDownPractice,
+                Feature.SectionLooping,
+                Feature.ChordTimeline,
+                Feature.PlaylistSaving,
+                Feature.SongSharing,
                 Feature.PdfExport,
-                Feature.BulkPdfImport,
-                Feature.AiAssistedComposition,
-                Feature.Refunds
+                Feature.UnlimitedAnalyses,
+                Feature.ExtendedSongLength,
+                Feature.PrioritySupport,
+                Feature.SharedTeamLibrary
             },
             TenantId = tenantId,
             CreatedBy = userId,

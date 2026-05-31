@@ -176,7 +176,7 @@
                             <input type="checkbox"
                                    checked="@_selectedFeatures.Contains(feat)"
                                    @onchange="e => ToggleFeature(feat, e)" />
-                            <span>@FeatureLabel(feat)</span>
+                            <span>@feat.ToFriendlyString()</span>
                         </label>
                     }
                 </div>
@@ -365,18 +365,6 @@
         }
     }
 
-    private static string FeatureLabel(Feature feature) => feature switch
-    {
-        Feature.UnlimitedSongCreations => "Unlimited song creations",
-        Feature.UnlimitedSongAcccess => "Unlimited song access",
-        Feature.DedicatedSupport => "Dedicated support",
-        Feature.SongManagement => "Song management",
-        Feature.ChordManagement => "Chord management",
-        Feature.UserManagement => "Team & user management",
-        Feature.PdfExport => "PDF export",
-        Feature.BulkPdfImport => "Bulk PDF import",
-        Feature.AiAssistedComposition => "AI-assisted composition",
-        Feature.Refunds => "30-day money back",
-        _ => feature.ToString()
-    };
+    // Feature labels come from the shared FRELODYSHRD catalog (Feature.ToFriendlyString)
+    // so this admin editor and the public /pricing cards never drift.
 }

@@ -78,10 +78,13 @@
                         <span class="pr-price-note">forever, no card</span>
                     </div>
                     <ul class="pr-feats">
+                        @* Curated tier limits stay as copy; capability bullets come from the plan's Features. *@
                         <li><i class="bi bi-check-lg"></i> <strong>2</strong> song analyses every day</li>
                         <li><i class="bi bi-check-lg"></i> Songs up to <strong>8 minutes</strong></li>
-                        <li><i class="bi bi-check-lg"></i> Auto chords, slow-down &amp; section loop</li>
-                        <li><i class="bi bi-check-lg"></i> Unlocked songs stay playable for 24 hours</li>
+                        @foreach (var f in CardFeatures(Starter))
+                        {
+                            <li><i class="bi bi-check-lg"></i> @f.ToSalesCopy()</li>
+                        }
                     </ul>
                     <button class="pr-cta pr-cta--ghost"
                             @onclick="() => SelectPlan(Starter)"
@@ -116,11 +119,11 @@
                         }
                     </div>
                     <ul class="pr-feats">
-                        <li><i class="bi bi-check-lg"></i> <strong>Unlimited</strong> song analyses</li>
-                        <li><i class="bi bi-check-lg"></i> Longer songs — up to <strong>20 minutes</strong></li>
-                        <li><i class="bi bi-check-lg"></i> Auto chords, slow-down &amp; section loop</li>
-                        <li><i class="bi bi-check-lg"></i> Save &amp; organise into playlists</li>
-                        <li><i class="bi bi-check-lg"></i> PDF export &amp; sharing</li>
+                        @* Data-driven from the plan's Features, premium-only benefits first. *@
+                        @foreach (var f in PremiumCardFeatures(premium))
+                        {
+                            <li><i class="bi bi-check-lg"></i> @f.ToSalesCopy()</li>
+                        }
                     </ul>
                     <button class="pr-cta pr-cta--primary"
                             @onclick="() => SelectPlan(premium)"
@@ -187,6 +190,7 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @* Quantitative tiers stay as curated copy… *@
                     <tr>
                         <td>Song analyses per day</td>
                         <td class="pr-compare-col">2</td>
@@ -198,30 +202,37 @@
                         <td class="pr-compare-col pr-compare-col--hl">20 min</td>
                     </tr>
                     <tr>
-                        <td>Auto chord detection</td>
-                        <td class="pr-compare-col"><i class="bi bi-check-lg pr-yes"></i></td>
-                        <td class="pr-compare-col pr-compare-col--hl"><i class="bi bi-check-lg pr-yes"></i></td>
-                    </tr>
-                    <tr>
-                        <td>Slow-down &amp; section loop</td>
-                        <td class="pr-compare-col"><i class="bi bi-check-lg pr-yes"></i></td>
-                        <td class="pr-compare-col pr-compare-col--hl"><i class="bi bi-check-lg pr-yes"></i></td>
-                    </tr>
-                    <tr>
-                        <td>Save songs to playlists</td>
-                        <td class="pr-compare-col"><i class="bi bi-check-lg pr-yes"></i></td>
-                        <td class="pr-compare-col pr-compare-col--hl"><i class="bi bi-check-lg pr-yes"></i></td>
-                    </tr>
-                    <tr>
                         <td>Replay your songs</td>
                         <td class="pr-compare-col">For 24 hours</td>
                         <td class="pr-compare-col pr-compare-col--hl">Anytime</td>
                     </tr>
-                    <tr>
-                        <td>PDF export &amp; sharing</td>
-                        <td class="pr-compare-col"><i class="bi bi-dash-lg pr-no"></i></td>
-                        <td class="pr-compare-col pr-compare-col--hl"><i class="bi bi-check-lg pr-yes"></i></td>
-                    </tr>
+                    @* …capability rows are driven by each plan's Features (same source as the cards & admin). *@
+                    @foreach (var f in ComparisonFeatures())
+                    {
+                        <tr>
+                            <td>@f.ToFriendlyString()</td>
+                            <td class="pr-compare-col">
+                                @if (HasFeature(Starter, f))
+                                {
+                                    <i class="bi bi-check-lg pr-yes"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-dash-lg pr-no"></i>
+                                }
+                            </td>
+                            <td class="pr-compare-col pr-compare-col--hl">
+                                @if (HasFeature(Premium, f))
+                                {
+                                    <i class="bi bi-check-lg pr-yes"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-dash-lg pr-no"></i>
+                                }
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
@@ -583,6 +594,40 @@
         "yearly" => "Billed yearly · cancel anytime",
         _ => "Billed monthly · cancel anytime"
     };
+
+    // ── Feature rendering (single source: Product.Features + FRELODYSHRD Feature catalog) ──
+
+    // These map to the quantitative compare-table rows (analyses/day, song length),
+    // so they're excluded from the data-driven capability rows to avoid duplication.
+    private static readonly Feature[] TierMeteredFeatures =
+        { Feature.UnlimitedAnalyses, Feature.ExtendedSongLength };
+
+    // Bullets for a plan card, in catalog order.
+    private IEnumerable<Feature> CardFeatures(ProductDto? p) =>
+        (p?.Features ?? new List<Feature>()).OrderBy(f => (int)f);
+
+    // Premium card leads with the benefits the free plan doesn't have, then the shared ones.
+    private IEnumerable<Feature> PremiumCardFeatures(ProductDto? premium)
+    {
+        if (premium?.Features is null) return Enumerable.Empty<Feature>();
+        var free = Starter?.Features?.ToHashSet() ?? new HashSet<Feature>();
+        return premium.Features
+            .OrderBy(f => free.Contains(f) ? 1 : 0)
+            .ThenBy(f => (int)f);
+    }
+
+    // Free-vs-Premium capability rows = union of both plans' features, minus the tier-metered ones.
+    private IEnumerable<Feature> ComparisonFeatures()
+    {
+        var free = Starter?.Features ?? new List<Feature>();
+        var prem = Premium?.Features ?? new List<Feature>();
+        return free.Concat(prem)
+            .Distinct()
+            .Where(f => !TierMeteredFeatures.Contains(f))
+            .OrderBy(f => (int)f);
+    }
+
+    private bool HasFeature(ProductDto? p, Feature f) => p?.Features?.Contains(f) == true;
 
     protected override async Task OnInitializedAsync()
     {

@@ -108,6 +108,17 @@
                     </ChildContent>
                 </OrgRoleAuthorizeView>
 
+                @* Platform-only: plan & pricing management. Gated to the SuperAdmin platform
+                   role (not an org role), matching the /admin/products endpoint gate. *@
+                @if (_isSuperAdmin)
+                {
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="/admin/products" Match="NavLinkMatch.Prefix">
+                            <span class="bi bi-tag-nav-menu" aria-hidden="true"></span> <span class="nav-label">Pricing</span>
+                        </NavLink>
+                    </div>
+                }
+
                 @* ── Your Songs (collapsible, expanded mode only) ── *@
                 @if (hasUserSongs)
                 {
@@ -306,6 +317,7 @@
     private bool isDarkTheme = false;
     private bool isPremiumUser;
     private bool _hasOrganization;
+    private bool _isSuperAdmin;
 
     // Your Songs state
     private bool isYourSongsExpanded;
@@ -427,6 +439,9 @@
     {
         var resp = await _globalAuth.IsPremiumUser();
         isPremiumUser = resp.IsSuccess && resp.Data;
+
+        var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+        _isSuperAdmin = userResult.IsSuccess && userResult.Data?.UserType == UserType.SuperAdmin;
 
         await RefreshHasOrganizationAsync();
 
