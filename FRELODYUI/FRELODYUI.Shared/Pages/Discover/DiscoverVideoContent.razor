@@ -279,7 +279,7 @@
         return false;
     }
 
-    private void DismissPaywall() => Nav.NavigateTo("/discover");
+    private void DismissPaywall() => Nav.NavigateTo(BackUrl);
 
     public void Dispose() => _stageTimer?.Dispose();
 }
