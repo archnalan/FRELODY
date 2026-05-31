@@ -1,0 +1,25 @@
+.cmp-row {
+    display: flex;
+    gap: 1.25rem;
+    padding: 1rem 0;
+}
+
+.cmp-card {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.cmp-fretboard {
+    width: 4.25rem;
+    height: 6rem;
+    border-radius: var(--k-radius-sm);
+}
+
+.cmp-label {
+    width: 1.5rem;
+    height: 0.6rem;
+    border-radius: var(--k-radius-xs);
+}

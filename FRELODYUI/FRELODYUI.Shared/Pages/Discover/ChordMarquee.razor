@@ -1,0 +1,88 @@
+@using FRELODYSHRD.Dtos.HybridDtos
+@using FRELODYUI.Shared.Pages.PlaceHolders
+@inject IChordsApi _chordsApi
+
+<div class="cm-track" aria-hidden="true">
+    @if (_loading)
+    {
+        <ChordMarqueePlaceholder />
+    }
+    else if (_cards.Length > 0)
+    {
+        <div class="cm-scroll">
+            @foreach (var card in _cards)
+            {
+                <div class="cm-card">
+                    <div class="cm-diagram">@card.Svg</div>
+                    <span class="cm-name">@card.Name</span>
+                </div>
+            }
+            @foreach (var card in _cards)
+            {
+                <div class="cm-card">
+                    <div class="cm-diagram">@card.Svg</div>
+                    <span class="cm-name">@card.Name</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly string[] ChordNames = ["C", "Am", "F", "G", "Em", "Dm", "A", "E", "Bm", "D"];
+
+    private record ChordCard(MarkupString Svg, string Name);
+    private ChordCard[] _cards = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var response = await _chordsApi.ResolveChordsWithCharts(ChordNames.ToList());
+            if (response.IsSuccessStatusCode && response.Content is { Count: > 0 })
+                BuildCards(response.Content);
+        }
+        catch
+        {
+            // Decorative — fail silently
+        }
+
+        _loading = false;
+    }
+
+    private void BuildCards(List<ChordWithChartsDto> chords)
+    {
+        var cards = new List<ChordCard>();
+
+        foreach (var name in ChordNames)
+        {
+            var chord = chords.FirstOrDefault(c =>
+                string.Equals(c.ChordName, name, StringComparison.OrdinalIgnoreCase));
+            var chart = chord?.Charts?
+                .Where(c => !string.IsNullOrEmpty(c.RenderedSvg))
+                .OrderBy(c => c.FretPosition ?? 0)
+                .FirstOrDefault();
+            if (chart != null)
+                cards.Add(new ChordCard((MarkupString)chart.RenderedSvg!, name));
+        }
+
+        foreach (var name in ChordNames)
+        {
+            var chord = chords.FirstOrDefault(c =>
+                string.Equals(c.ChordName, name, StringComparison.OrdinalIgnoreCase));
+            var charts = chord?.Charts?
+                .Where(c => !string.IsNullOrEmpty(c.RenderedSvg))
+                .OrderBy(c => c.FretPosition ?? 0)
+                .ToList();
+            if (charts is not { Count: > 0 }) continue;
+
+            var alt = charts.Count > 1
+                ? (charts.FirstOrDefault(c => (c.FretPosition ?? 1) > 1) ?? charts[^1])
+                : charts[0];
+            cards.Add(new ChordCard((MarkupString)alt.RenderedSvg!, name));
+        }
+
+        _cards = cards.ToArray();
+    }
+}

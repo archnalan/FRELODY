@@ -34,12 +34,14 @@
             @if (!_hasSearched)
             {
                 <h1 class="dc-heading">
-                    Discover &amp; Play Along
+                    @(_mode == SearchMode.YouTube
+                        ? "Find songs. Start playing."
+                        : "Hear a sound. Learn the chords.")
                 </h1>
                 <p class="dc-subheading">
                     @(_mode == SearchMode.YouTube
-                        ? "Search any song on YouTube and get synchronized chords and beat analysis."
-                        : "Paste a TikTok video link to get synchronized chords and beat analysis.")
+                        ? "Search any song or drop a YouTube URL — chords appear in seconds, synced to every beat."
+                        : "Paste a TikTok video link and get auto-detected chords, synced to every beat.")
                 </p>
             }
 
@@ -134,13 +136,7 @@
         }
         else
         {
-            <div class="dc-state dc-state--prompt">
-                <div class="dc-state-icon-wrap">
-                    <i class="bi bi-music-note-beamed" aria-hidden="true"></i>
-                </div>
-                <p class="dc-state-heading">Ready to discover</p>
-                <p class="dc-state-sub">Your search results will appear here.</p>
-            </div>
+            <ChordMarquee />
         }
 
     </section>
