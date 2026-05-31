@@ -6,6 +6,8 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
 {
     public interface IPesaPalService
     {
+        /// <summary>Public availability flag — true when PesaPal credentials are configured.</summary>
+        PesaPalConfigDto GetConfig();
         Task<ServiceResult<PesaAuthResponse>> AuthenticateAsync();
         Task<ServiceResult<(OrderDto order, PesaOrderRequest request)>> CreateOrderAsync(string customerId, List<OrderDetailDto> orderDetails, BillingAddress billingAddress, string callbackUrl, string notificationId, SubscriptionDetails? subscriptionDetails = null);
         Task<ServiceResult<List<PesaIPNResponse>>> GetRegisteredIPNsAsync();

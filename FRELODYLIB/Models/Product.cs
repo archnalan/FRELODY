@@ -13,6 +13,8 @@ namespace FRELODYLIB.Models
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public decimal? Price { get; set; }
+        /// <summary>USD amount charged via PayPal (which cannot settle UGX). Single source for the PayPal charge.</summary>
+        public decimal? PriceUsd { get; set; }
         public string? Currency { get; set; }
         public BillingPeriod? Period { get; set; }
         public List<Feature>? Features { get; set; }

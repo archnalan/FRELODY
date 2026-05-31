@@ -8,7 +8,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace FRELODYAPIs.Controllers
 {
     [Route("api/[controller]/[action]")]
-    [Authorize(Roles = $"{UserRoles.Admin},{UserRoles.Owner}")]
+    // Plans are platform-global pricing, not tenant-scoped — only the platform
+    // SuperAdmin may mutate them (matches the /admin/products page gate). GetProducts
+    // stays [AllowAnonymous] so the public pricing page can read the catalog.
+    [Authorize(Roles = UserRoles.SuperAdmin)]
     [ApiController]
     public class ProductsController : ControllerBase
     {

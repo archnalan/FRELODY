@@ -1,10 +1,14 @@
 using Refit;
 using FRELODYSHRD.Models.PesaPal;
+using FRELODYSHRD.Dtos.PesaPalDtos;
 
 namespace FRELODYUI.Shared.RefitApis
 {
     public interface IPesaPalApi
     {
+        [Get("/api/pesa-pal/config")]
+        Task<IApiResponse<PesaPalConfigDto>> GetConfig();
+
         [Post("/api/pesa-pal/authenticate")]
         Task<IApiResponse<PesaAuthResponse>> Authenticate();
 

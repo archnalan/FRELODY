@@ -140,12 +140,47 @@ namespace FRELODYAPP.Data.Infrastructure
                 _logger.LogWarning("Power user email or password is not configured.");
                 return null;
             }
+            // The platform superadmin must always carry the full role set (incl. SuperAdmin)
+            // so platform-gated endpoints like /admin/products authorize correctly. We
+            // reconcile on every startup — accounts seeded under an older role taxonomy
+            // (e.g. only the deprecated Moderator) self-heal instead of staying stale.
+            async Task EnsurePowerUserAsync(User u)
+            {
+                if (u.UserType != UserType.SuperAdmin)
+                {
+                    u.UserType = UserType.SuperAdmin;
+                    await userManager.UpdateAsync(u);
+                }
+                var current = await userManager.GetRolesAsync(u);
+                foreach (var roleName in UserRoles.AllRoles)
+                {
+                    if (current.Contains(roleName, StringComparer.OrdinalIgnoreCase))
+                        continue;
+                    if (await roleManager.RoleExistsAsync(roleName))
+                        await userManager.AddToRoleAsync(u, roleName);
+                    else
+                        _logger.LogWarning($"Role {roleName} does not exist. Cannot assign to power user.");
+                }
+            }
+
             var existingUser = await userManager.FindByEmailAsync(powerUserEmail);
-            if (existingUser != null)
-            {              
-                _logger.LogInformation("Power user already exists.");
+            if (existingUser is null && !string.IsNullOrWhiteSpace(powerUserName))
+                existingUser = await userManager.FindByNameAsync(powerUserName);
+            if (existingUser is null)
+            {
+                // Fallback for tenant/soft-delete query filters hiding the row from UserManager.
+                var dbUser = await dbContext.Users.IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(x => x.Email == powerUserEmail || x.UserName == powerUserName);
+                if (dbUser is not null)
+                    existingUser = await userManager.FindByIdAsync(dbUser.Id);
+            }
+            if (existingUser is not null)
+            {
+                _logger.LogInformation("Power user already exists — reconciling roles.");
+                await EnsurePowerUserAsync(existingUser);
                 return existingUser.Id;
             }
+
             var powerUser = new User
             {
                 FirstName = "Super",
@@ -155,28 +190,11 @@ namespace FRELODYAPP.Data.Infrastructure
                 EmailConfirmed = true,
                 UserType= UserType.SuperAdmin,
             };
-            var user = await dbContext.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == powerUser.Email);
-            if (user is null) user = await dbContext.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.UserName == powerUser.UserName);
-            if (user is not null)
-            {
-                _logger.LogInformation("Power user already exists in the database.");
-                return user.Id;
-            }
             var result = await userManager.CreateAsync(powerUser, powerUserPassword);
             if (result.Succeeded)
             {
                 _logger.LogInformation("Power user created successfully.");
-                foreach (var roleName in UserRoles.AllRoles)
-                {
-                    if (await roleManager.RoleExistsAsync(roleName))
-                    {
-                        await userManager.AddToRoleAsync(powerUser, roleName);
-                    }
-                    else
-                    {
-                        _logger.LogWarning($"Role {roleName} does not exist. Cannot assign to power user.");
-                    }
-                }
+                await EnsurePowerUserAsync(powerUser);
             }
             else
             {
@@ -375,11 +393,20 @@ namespace FRELODYAPP.Data.Infrastructure
 
             _logger.LogInformation("Seeding products...");
 
+            // UGX prices — shown on /pricing (converted to local currency) and charged via PesaPal.
             decimal FREE_FOREVER = 0; // Free
             decimal CREATOR_MONTHLY = 30000; // Monthly subscription
-            decimal CREATOR_ONE_TIME = 250000; // One-time payment
+            decimal CREATOR_ONE_TIME = 500000; // One-time payment (lifetime)
             decimal CREATOR_YEARLY = CREATOR_MONTHLY*12*0.8m; // Yearly subscription with 20% discount
-            decimal STUDIO_MONTHLY = 100000; // Monthly subscription for studios    
+            decimal STUDIO_MONTHLY = 100000; // Monthly subscription for studios
+
+            // USD prices — charged via PayPal (which cannot settle UGX). The Product row is the
+            // single source of truth for both currencies; PayPal reads PriceUsd directly.
+            decimal FREE_FOREVER_USD = 0;
+            decimal CREATOR_MONTHLY_USD = 10;
+            decimal CREATOR_ONE_TIME_USD = 299;
+            decimal CREATOR_YEARLY_USD = 99;
+            decimal STUDIO_MONTHLY_USD = 29;
 
             var products = new List<Product>
     {
@@ -389,6 +416,7 @@ namespace FRELODYAPP.Data.Infrastructure
             Name = "Starter",
             Description = "2 song analyses every day — auto chords, slow-down & section loops. Free forever, no card.",
             Price = FREE_FOREVER,
+            PriceUsd = FREE_FOREVER_USD,
             Currency = "UGX",
             Period = BillingPeriod.forever,
             IsPopular = false,
@@ -408,6 +436,7 @@ namespace FRELODYAPP.Data.Infrastructure
             Name = "Creator Monthly",
             Description = "Unlimited song analyses and longer songs (up to 20 min). Billed monthly, cancel anytime.",
             Price = CREATOR_MONTHLY,
+            PriceUsd = CREATOR_MONTHLY_USD,
             Currency = "UGX",
             Period = BillingPeriod.monthly,
             IsPopular = false,
@@ -431,6 +460,7 @@ namespace FRELODYAPP.Data.Infrastructure
             Name = "Creator One-Time",
             Description = "Unlimited song analyses forever. One payment, lifetime access — no subscription.",
             Price = CREATOR_ONE_TIME,
+            PriceUsd = CREATOR_ONE_TIME_USD,
             Currency = "UGX",
             Period = BillingPeriod.forever,
             IsPopular = true, // Most popular
@@ -453,6 +483,7 @@ namespace FRELODYAPP.Data.Infrastructure
             Name = "Creator Yearly",
             Description = "Unlimited analyses and longer songs (up to 20 min). Billed yearly — save 20%.",
             Price = CREATOR_YEARLY,
+            PriceUsd = CREATOR_YEARLY_USD,
             Currency = "UGX",
             Period = BillingPeriod.yearly,
             IsPopular = false,
@@ -476,6 +507,7 @@ namespace FRELODYAPP.Data.Infrastructure
             Name = "Studio",
             Description = "For bands, churches & teams — shared library, member controls, bulk import and priority support.",
             Price = STUDIO_MONTHLY,
+            PriceUsd = STUDIO_MONTHLY_USD,
             Currency = "UGX",
             Period = BillingPeriod.monthly,
             IsPopular = false,

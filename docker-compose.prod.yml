@@ -46,6 +46,10 @@ services:
       PesaPal__ConsumerKey: "${PESAPAL_CONSUMER_KEY}"
       PesaPal__ConsumerSecret: "${PESAPAL_CONSUMER_SECRET}"
       PesaPal__UseSandbox: "false"
+      # PayPal one-time checkout (Orders v2). Blank credentials ⇒ disabled in the UI.
+      PayPal__Mode: "${PAYPAL_MODE:-live}"
+      PayPal__ClientId: "${PAYPAL_CLIENT_ID}"
+      PayPal__ClientSecret: "${PAYPAL_CLIENT_SECRET}"
       API_KEYS__nvidiaApiKey: "${NVIDIA_API_KEY}"
       API_KEYS__deepSeekApiKey: "${DEEPSEEK_API_KEY}"
       SmtpCredentials__Default__Host: "${SMTP_HOST}"

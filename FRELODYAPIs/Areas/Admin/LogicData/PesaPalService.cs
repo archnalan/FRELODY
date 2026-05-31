@@ -45,6 +45,19 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
         private string ApiBaseUrl => _useSandbox ? _sandboxUrl : _baseUrl;
 
+        public PesaPalConfigDto GetConfig()
+        {
+            // Mirrors the keys AuthenticateAsync actually reads, so the flag reflects
+            // whether a PesaPal charge would really succeed.
+            var consumerKey = _configuration["UgandanMerchant:consumer_key"];
+            var consumerSecret = _configuration["UgandanMerchant:consumer_secret"];
+            return new PesaPalConfigDto
+            {
+                Enabled = !string.IsNullOrWhiteSpace(consumerKey)
+                          && !string.IsNullOrWhiteSpace(consumerSecret)
+            };
+        }
+
         public async Task<ServiceResult<PesaAuthResponse>> AuthenticateAsync()
         {
             try

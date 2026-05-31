@@ -5,16 +5,19 @@
 
 <PageTitle>Plans &amp; pricing - FRELODY</PageTitle>
 
-<AuthGuard RequireOrganization="true">
-<OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin })">
-    <NotAuthorizedContent>
+@* Plans are a platform-level concern (global pricing), so this page does NOT
+   require an organization/tenant — it gates on the SuperAdmin platform role only. *@
+<AuthGuard RequirePremium="false">
+    @if (!_isSuperAdmin)
+    {
         <div class="admin-card admin-card-pad">
             <h2 class="admin-title">Not authorized</h2>
-            <p class="text-muted mb-3">Only Owners and Admins can manage plans and pricing.</p>
+            <p class="text-muted mb-3">Only platform administrators can manage plans and pricing.</p>
             <a class="admin-btn primary" href="/dashboard">Back to dashboard</a>
         </div>
-    </NotAuthorizedContent>
-    <ChildContent>
+    }
+    else
+    {
         <div class="admin-header">
             <div>
                 <h1 class="admin-title">Plans &amp; pricing</h1>
@@ -80,6 +83,7 @@
                                     else
                                     {
                                         <span>@(p.Currency ?? "UGX") @((p.Price ?? 0).ToString("N0"))</span>
+                                        <span class="ap-price-usd">PayPal: $@((p.PriceUsd ?? 0).ToString("N0"))</span>
                                     }
                                 </td>
                                 <td>@(p.Period?.ToFriendlyString() ?? "—")</td>
@@ -105,8 +109,7 @@
         {
             <div class="admin-alert danger mt-3">@_error</div>
         }
-    </ChildContent>
-</OrgRoleAuthorizeView>
+    }
 </AuthGuard>
 
 @* ── Add / edit modal ── *@
@@ -131,16 +134,21 @@
             </div>
             <div class="ap-grid-2">
                 <div class="admin-field">
-                    <label class="admin-field-label">Price</label>
+                    <label class="admin-field-label">Local price</label>
                     <input type="number" min="0" step="any" @bind="_price" />
-                    <div class="admin-field-help">0 = free plan</div>
+                    <div class="admin-field-help">0 = free · shown on /pricing &amp; charged via PesaPal</div>
                 </div>
+                <div class="admin-field">
+                    <label class="admin-field-label">USD price (PayPal)</label>
+                    <input type="number" min="0" step="any" @bind="_priceUsd" />
+                    <div class="admin-field-help">Amount PayPal charges in USD</div>
+                </div>
+            </div>
+            <div class="ap-grid-2">
                 <div class="admin-field">
                     <label class="admin-field-label">Currency</label>
                     <input @bind="_form.Currency" placeholder="UGX" />
                 </div>
-            </div>
-            <div class="ap-grid-2">
                 <div class="admin-field">
                     <label class="admin-field-label">Billing period</label>
                     <select @bind="_period">
@@ -150,13 +158,13 @@
                         }
                     </select>
                 </div>
-                <div class="admin-field">
-                    <label class="admin-field-label">Highlight</label>
-                    <label class="ap-switch">
-                        <input type="checkbox" @bind="_form.IsPopular" />
-                        <span>Mark as "Most popular"</span>
-                    </label>
-                </div>
+            </div>
+            <div class="admin-field">
+                <label class="admin-field-label">Highlight</label>
+                <label class="ap-switch">
+                    <input type="checkbox" @bind="_form.IsPopular" />
+                    <span>Mark as "Most popular"</span>
+                </label>
             </div>
             <div class="admin-field mb-0">
                 <label class="admin-field-label">Features</label>
@@ -197,6 +205,7 @@
 @code {
     private List<ProductDto> _products = new();
     private bool _loading = true;
+    private bool _isSuperAdmin;
     private string? _error;
 
     // edit/add modal state
@@ -205,6 +214,7 @@
     private bool _saving;
     private ProductDto? _form;
     private decimal _price;
+    private decimal _priceUsd;
     private BillingPeriod _period = BillingPeriod.monthly;
     private HashSet<Feature> _selectedFeatures = new();
 
@@ -212,7 +222,13 @@
     private bool _showDelete;
     private ProductDto? _target;
 
-    protected override async Task OnInitializedAsync() => await Load();
+    protected override async Task OnInitializedAsync()
+    {
+        var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+        _isSuperAdmin = userResult.IsSuccess && userResult.Data?.UserType == UserType.SuperAdmin;
+        if (_isSuperAdmin)
+            await Load();
+    }
 
     private async Task Load()
     {
@@ -241,6 +257,7 @@
         _isNew = true;
         _form = new ProductDto { Name = "", Currency = "UGX" };
         _price = 0;
+        _priceUsd = 0;
         _period = BillingPeriod.monthly;
         _selectedFeatures = new();
         _showEdit = true;
@@ -259,6 +276,7 @@
             IsPopular = p.IsPopular
         };
         _price = p.Price ?? 0;
+        _priceUsd = p.PriceUsd ?? 0;
         _period = p.Period ?? BillingPeriod.monthly;
         _selectedFeatures = p.Features is null ? new() : new HashSet<Feature>(p.Features);
         _showEdit = true;
@@ -283,6 +301,7 @@
         try
         {
             _form.Price = _price;
+            _form.PriceUsd = _priceUsd;
             _form.Period = _period;
             _form.Currency = string.IsNullOrWhiteSpace(_form.Currency) ? "UGX" : _form.Currency.Trim().ToUpperInvariant();
             _form.Features = _selectedFeatures.ToList();

@@ -648,6 +648,28 @@
     box-shadow: var(--k-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12));
 }
 
+/* Unconfigured gateway: visible but not selectable, with a "Soon" badge. */
+.co-tab--soon {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.co-tab--soon:hover {
+    color: var(--text-secondary);
+}
+
+.co-tab-soon-badge {
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.35rem;
+    border-radius: var(--k-radius-xs, 0.25rem);
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+}
+
 .co-panel {
     display: flex;
     flex-direction: column;

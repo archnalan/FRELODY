@@ -25,6 +25,13 @@
     white-space: nowrap;
 }
 
+.ap-price-usd {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: var(--k-font-size-xs, 0.75rem);
+    color: var(--text-secondary);
+}
+
 /* ── Modal form layout ── */
 .ap-grid-2 {
     display: grid;

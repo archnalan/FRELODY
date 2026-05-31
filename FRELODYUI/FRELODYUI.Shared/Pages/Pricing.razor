@@ -391,48 +391,89 @@
                         <span class="co-summary-price">@GetDisplayPrice(selectedProduct).FormattedAmount</span>
                     </div>
 
-                    @if (payPalEnabled)
-                    {
-                        <div class="co-tabs" role="tablist">
-                            <button type="button"
-                                    class="co-tab @(checkoutGateway == "paypal" ? "co-tab--active" : "")"
-                                    @onclick='() => SetGateway("paypal")'>
-                                <i class="bi bi-paypal"></i><span>PayPal</span>
-                            </button>
-                            <button type="button"
-                                    class="co-tab @(checkoutGateway == "pesapal" ? "co-tab--active" : "")"
-                                    @onclick='() => SetGateway("pesapal")'>
-                                <i class="bi bi-phone"></i><span>Mobile / Card</span>
-                            </button>
-                        </div>
-                    }
+                    @* Both gateways are always shown. An unconfigured gateway renders
+                       disabled with a "coming soon" tooltip rather than disappearing. *@
+                    <div class="co-tabs" role="tablist">
+                        <button type="button"
+                                class="co-tab @(checkoutGateway == "paypal" ? "co-tab--active" : "") @(payPalEnabled ? "" : "co-tab--soon")"
+                                disabled="@(!payPalEnabled)"
+                                title="@(payPalEnabled ? null : "Coming soon")"
+                                @onclick='() => SetGateway("paypal")'>
+                            <i class="bi bi-paypal"></i><span>PayPal</span>
+                            @if (!payPalEnabled)
+                            {
+                                <span class="co-tab-soon-badge">Soon</span>
+                            }
+                        </button>
+                        <button type="button"
+                                class="co-tab @(checkoutGateway == "pesapal" ? "co-tab--active" : "") @(pesaPalEnabled ? "" : "co-tab--soon")"
+                                disabled="@(!pesaPalEnabled)"
+                                title="@(pesaPalEnabled ? null : "Coming soon")"
+                                @onclick='() => SetGateway("pesapal")'>
+                            <i class="bi bi-phone"></i><span>Mobile / Card</span>
+                            @if (!pesaPalEnabled)
+                            {
+                                <span class="co-tab-soon-badge">Soon</span>
+                            }
+                        </button>
+                    </div>
 
                     <div class="co-panel">
-                        @if (payPalEnabled && checkoutGateway == "paypal")
+                        @if (checkoutGateway == "paypal")
                         {
-                            <PayPalButton ProductId="@selectedProduct.Id"
-                                          OnSuccess="HandlePayPalSuccess"
-                                          OnError="HandlePayPalError" />
-                            <p class="co-fineprint">
-                                <i class="bi bi-shield-lock"></i>
-                                <span>Charged in USD. You'll confirm securely in PayPal.</span>
-                            </p>
+                            @if (payPalEnabled)
+                            {
+                                <PayPalButton ProductId="@selectedProduct.Id"
+                                              OnSuccess="HandlePayPalSuccess"
+                                              OnError="HandlePayPalError" />
+                                <p class="co-fineprint">
+                                    <i class="bi bi-shield-lock"></i>
+                                    <span>Charged in USD. You'll confirm securely in PayPal.</span>
+                                </p>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-primary w-100 py-3 co-pesapal-btn"
+                                        disabled title="Coming soon">
+                                    <i class="bi bi-paypal me-2"></i>
+                                    PayPal — coming soon
+                                </button>
+                                <p class="co-fineprint">
+                                    <i class="bi bi-hourglass-split"></i>
+                                    <span>PayPal checkout isn't available yet. Use Mobile / Card for now.</span>
+                                </p>
+                            }
                         }
                         else
                         {
-                            <button type="button" class="btn btn-primary w-100 py-3 co-pesapal-btn"
-                                    @onclick="ContinueWithPesaPal" disabled="@isProcessing">
-                                @if (isProcessing)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                }
-                                <i class="bi bi-credit-card-2-front me-2"></i>
-                                Continue with Mobile Money / Card
-                            </button>
-                            <p class="co-fineprint">
-                                <i class="bi bi-shield-lock"></i>
-                                <span>Secured by PesaPal — mobile money, cards &amp; bank transfer.</span>
-                            </p>
+                            @if (pesaPalEnabled)
+                            {
+                                <button type="button" class="btn btn-primary w-100 py-3 co-pesapal-btn"
+                                        @onclick="ContinueWithPesaPal" disabled="@isProcessing">
+                                    @if (isProcessing)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    }
+                                    <i class="bi bi-credit-card-2-front me-2"></i>
+                                    Continue with Mobile Money / Card
+                                </button>
+                                <p class="co-fineprint">
+                                    <i class="bi bi-shield-lock"></i>
+                                    <span>Secured by PesaPal — mobile money, cards &amp; bank transfer.</span>
+                                </p>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-primary w-100 py-3 co-pesapal-btn"
+                                        disabled title="Coming soon">
+                                    <i class="bi bi-credit-card-2-front me-2"></i>
+                                    Mobile / Card — coming soon
+                                </button>
+                                <p class="co-fineprint">
+                                    <i class="bi bi-hourglass-split"></i>
+                                    <span>Mobile money &amp; card checkout isn't available yet. Try PayPal.</span>
+                                </p>
+                            }
                         }
                     </div>
                 </div>
@@ -487,6 +528,7 @@
     private bool showLoginModal = false;
     private bool showCheckoutModal = false;
     private bool payPalEnabled = false;
+    private bool pesaPalEnabled = true;
     private string checkoutGateway = "pesapal";
     private string billing = "monthly";
     private string paymentRedirectUrl = string.Empty;
@@ -726,11 +768,22 @@
         {
             payPalEnabled = false;
         }
+
+        try
+        {
+            var resp = await _pesaPalApi.GetConfig();
+            pesaPalEnabled = resp.IsSuccessStatusCode && resp.Content?.Enabled == true;
+        }
+        catch
+        {
+            pesaPalEnabled = false;
+        }
     }
 
     private void OpenCheckout(ProductDto product)
     {
         selectedProduct = product;
+        // Open on a gateway that's actually usable so the buyer lands on an enabled tab.
         checkoutGateway = payPalEnabled ? "paypal" : "pesapal";
         showCheckoutModal = true;
         StateHasChanged();

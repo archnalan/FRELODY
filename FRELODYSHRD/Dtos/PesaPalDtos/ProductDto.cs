@@ -13,6 +13,8 @@ namespace FRELODYSHRD.Dtos.PesaPalDtos
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public decimal? Price { get; set; }
+        /// <summary>USD amount charged via PayPal. UGX <see cref="Price"/> is for display + PesaPal.</summary>
+        public decimal? PriceUsd { get; set; }
         public string? Currency { get; set; }
         public BillingPeriod? Period { get; set; }
         public List<Feature>? Features { get; set; }

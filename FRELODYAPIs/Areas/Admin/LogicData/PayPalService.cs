@@ -170,12 +170,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
-        private decimal ResolveUsdAmount(Product product) => product.Period switch
-        {
-            BillingPeriod.yearly => _options.YearlyPriceUsd,
-            BillingPeriod.biennially => _options.YearlyPriceUsd,
-            BillingPeriod.forever => _options.LifetimePriceUsd,
-            _ => _options.MonthlyPriceUsd
-        };
+        // The product row is the single source of truth for pricing; PayPal charges its USD price.
+        private static decimal ResolveUsdAmount(Product product) => product.PriceUsd ?? 0m;
     }
 }

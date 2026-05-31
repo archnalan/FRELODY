@@ -1,5 +1,6 @@
 ﻿using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYSHRD.Models.PesaPal;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,6 +19,12 @@ namespace FRELODYAPIs.Controllers
             _pesaPalService = pesaPalService;
             _logger = logger;
         }
+
+        /// <summary>Public availability flag for the checkout UI. Empty credentials ⇒ show disabled.</summary>
+        [HttpGet("config")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(FRELODYSHRD.Dtos.PesaPalDtos.PesaPalConfigDto), StatusCodes.Status200OK)]
+        public IActionResult Config() => Ok(_pesaPalService.GetConfig());
 
         /// <summary>
         /// Authenticate with PesaPal and get bearer token

@@ -95,7 +95,11 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 existingProduct.Name = product.Name;
                 existingProduct.Description = product.Description;
                 existingProduct.Price = product.Price;
+                existingProduct.PriceUsd = product.PriceUsd;
                 existingProduct.Currency = product.Currency;
+                existingProduct.Period = product.Period;
+                existingProduct.Features = product.Features;
+                existingProduct.IsPopular = product.IsPopular;
 
                 await _context.SaveChangesAsync();
                 var productDto = existingProduct.Adapt<ProductDto>();

@@ -17,10 +17,7 @@ namespace FRELODYAPIs.Options
         /// <summary>Settlement currency. PayPal does not support UGX, so charges are USD.</summary>
         public string Currency { get; set; } = "USD";
 
-        // Canonical USD prices per billing period (localized display is a later workstream).
-        public decimal MonthlyPriceUsd { get; set; } = 10m;
-        public decimal YearlyPriceUsd { get; set; } = 99m;
-        public decimal LifetimePriceUsd { get; set; } = 199m;
+        // Prices live on the Product (Product.PriceUsd) — the single source of truth — not here.
 
         public bool IsConfigured =>
             !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret);
