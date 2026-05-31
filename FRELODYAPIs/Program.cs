@@ -427,7 +427,7 @@ using (var scope = app.Services.CreateScope())
 		var chordSeeder = services.GetRequiredService<FRELODYAPP.Services.Seed.IStandardChordSeedService>();
 		var result = await chordSeeder.SeedIfNeededAsync();
 		if (result.Ran)
-			logger.LogInformation("Standard chord catalog seeded: +{Chords} chords, {Voicings} voicings.", result.ChordsInserted, result.VoicingsSeeded);
+			logger.LogInformation("Standard chord catalog seeded: +{Chords} chords, {Voicings} voicings, {Merged} duplicates merged.", result.ChordsInserted, result.VoicingsSeeded, result.DuplicatesMerged);
 	}
 	catch (Exception ex)
 	{

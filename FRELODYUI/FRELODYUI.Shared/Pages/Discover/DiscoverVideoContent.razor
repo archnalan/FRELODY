@@ -194,7 +194,7 @@
 
     private async Task ShareAsync()
     {
-        var url = Nav.ToAbsoluteUri($"/discover/landing/{VideoId}").ToString();
+        var url = Nav.ToAbsoluteUri($"/play/{VideoId}").ToString();
         await _clipboardService.CopyToClipboardAsync(url);
         _toastService.Show("Share link copied to clipboard!", ToastType.Success);
     }

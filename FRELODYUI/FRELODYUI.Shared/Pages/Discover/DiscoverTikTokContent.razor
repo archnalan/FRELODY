@@ -214,7 +214,7 @@
 
     private async Task ShareAsync()
     {
-        var url = Nav.ToAbsoluteUri($"/discover/landing/tiktok?Url={Uri.EscapeDataString(Url ?? string.Empty)}").ToString();
+        var url = Nav.ToAbsoluteUri($"/play/tiktok?Url={Uri.EscapeDataString(Url ?? string.Empty)}").ToString();
         await _clipboardService.CopyToClipboardAsync(url);
         _toastService.Show("Share link copied to clipboard!", ToastType.Success);
     }

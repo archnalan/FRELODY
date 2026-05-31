@@ -222,7 +222,7 @@
                 return;
             }
             var tiktokRoute = IsLanding
-                ? $"/discover/landing/tiktok?url={Uri.EscapeDataString(q)}"
+                ? $"/play/tiktok?url={Uri.EscapeDataString(q)}"
                 : $"/discover/tiktok?url={Uri.EscapeDataString(q)}";
             _nav.NavigateTo(tiktokRoute);
             return;
@@ -263,6 +263,6 @@
 
     private void OnVideoSelected(YouTubeVideoDto video) =>
         _nav.NavigateTo(IsLanding
-            ? $"/discover/landing/{video.VideoId}"
+            ? $"/play/{video.VideoId}"
             : $"/discover/{video.VideoId}");
 }

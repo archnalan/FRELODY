@@ -12,385 +12,317 @@
 
 <PageTitle>Pricing - FRELODY</PageTitle>
 
-<!-- Hero Section -->
-<section class="pricing-hero text-white py-5">
-    <div class="container-fluid">
-        <div class="content-wrapper" style="max-width:@MAX_WIDTH; margin: 0 auto;">
-            <div class="text-center px-3">
-                <h1 class="display-4 fw-bold mb-3">Choose Your Plan</h1>
-                <p class="lead mb-4">Select the perfect plan for your music creation journey</p>
-                
-                <!-- Trust Badges -->
-                <div class="d-flex justify-content-center gap-4 flex-wrap mb-4">
-                    <div class="badge bg-white text-primary px-3 py-2">
-                        <i class="bi bi-shield-check me-2"></i>Secure Payments
-                    </div>
-                    <div class="badge bg-white text-primary px-3 py-2">
-                        <i class="bi bi-arrow-repeat me-2"></i>Cancel Anytime
-                    </div>
-                    <div class="badge bg-white text-primary px-3 py-2">
-                        <i class="bi bi-credit-card me-2"></i>All Payment Methods
-                    </div>
-                </div>
-            </div>
+<!-- Hero -->
+<section class="pr-hero">
+    <div class="pr-shell">
+        <span class="pr-eyebrow">Pricing</span>
+        <h1 class="pr-hero-title">Stop searching for tabs. Start playing.</h1>
+        <p class="pr-hero-sub">
+            Paste any YouTube or TikTok link and get the chords instantly — then slow the song
+            down and loop the tricky bar until your fingers catch up. Start free, upgrade when
+            you're hooked.
+        </p>
+        <div class="pr-trust">
+            <span class="pr-trust-item"><i class="bi bi-x-circle"></i> No card to start</span>
+            <span class="pr-trust-item"><i class="bi bi-music-note-beamed"></i> 2 free songs every day</span>
+            <span class="pr-trust-item"><i class="bi bi-arrow-repeat"></i> Cancel anytime</span>
         </div>
     </div>
 </section>
 
-<!-- Pricing Cards -->
-<section class="pricing-cards py-5">
-    <div class="container-fluid">
-        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
-            @if (isLoading)
-            {
-                <div class="row g-4 justify-content-center px-3">
-                    @for (int i = 0; i < 3; i++)
-                    {
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <div class="card h-100 placeholder-wave">
-                                <div class="card-body">
-                                    <span class="placeholder col-6 mb-3"></span>
-                                    <span class="placeholder col-8 mb-4"></span>
-                                    <span class="placeholder col-12 mb-2"></span>
-                                    <span class="placeholder col-12 mb-2"></span>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="row g-4 justify-content-center px-3">
-                    @foreach (var product in GetDisplayedProducts())
-                    {
-                        var isPopular = product.IsPopular ?? false;
-                        var displayPrice = GetDisplayPrice(product);
-                        
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <div class="card h-100 @(isPopular ? "border-primary shadow-lg position-relative" : "border shadow-sm")" 
-                                 style="border-radius: 1rem;">
-                                
-                                @if (isPopular)
-                                {
-                                    <div class="position-absolute top-0 start-50 translate-middle">
-                                        <span class="badge bg-primary px-3 py-2">
-                                            <i class="bi bi-star-fill me-1"></i>Most Popular
-                                        </span>
-                                    </div>
-                                }
-                                
-                                <div class="card-body p-4 d-flex flex-column">
-                                    <div class="mb-4">
-                                        <h3 class="card-title fw-bold mb-2">@GetProductDisplayName(product)</h3>
-                                        <p class="text-muted small mb-3">@product.Description</p>
-                                        
-                                        <div class="pricing-amount mb-3">
-                                            @if (displayPrice.Amount == 0)
-                                            {
-                                                <span class="display-6 fw-bold">Free</span>
-                                            }
-                                            else
-                                            {
-                                                <div>
-                                                    <span class="display-6 fw-bold">@displayPrice.FormattedAmount</span>
-                                                    @if (product.Period != BillingPeriod.forever)
-                                                    {
-                                                        <span class="text-muted">/@GetBillingLabel(product.Period)</span>
-                                                    }
-                                                </div>
-                                                
-                                                @if (displayPrice.IsConverted)
-                                                {
-                                                    <small class="text-muted d-block mt-2">
-                                                        <i class="bi bi-info-circle me-1"></i>
-                                                        Original: @displayPrice.OriginalCurrency @displayPrice.OriginalAmount?.ToString("N0")
-                                                    </small>
-                                                }
-                                                
-                                                @if (product.Period == BillingPeriod.forever)
-                                                {
-                                                    <div class="mt-2">
-                                                        <span class="badge bg-success">One-Time Payment</span>
-                                                    </div>
-                                                }
-                                                else if (product.Period == BillingPeriod.yearly)
-                                                {
-                                                    <p class="text-success small mb-0 mt-2">
-                                                        <i class="bi bi-check-circle-fill me-1"></i>
-                                                        Save 20% annually
-                                                    </p>
-                                                }
-                                            }
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Features List -->
-                                    <div class="mb-4 flex-grow-1">
-                                        <ul class="list-unstyled">
-                                            @if (product.Features != null)
-                                            {
-                                                @foreach (var feature in product.Features)
-                                                {
-                                                    <li class="mb-2">
-                                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                                        @GetFeatureDescription(feature)
-                                                    </li>
-                                                }
-                                            }
-                                        </ul>
-                                    </div>
-                                    
-                                    <!-- CTA Button -->
-                                    <button class="btn @(isPopular ? "btn-primary" : "btn-outline-primary") w-100 py-3" 
-                                            @onclick="() => SelectPlan(product)"
-                                            disabled="@isProcessing"
-                                            data-analytics="pricing-cta"
-                                            data-plan="@product.Name">
-                                        @if (isProcessing && selectedProduct?.Id == product.Id)
-                                        {
-                                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                        }
-                                        @if (displayPrice.Amount == 0)
-                                        {
-                                            <span>Start Free</span>
-                                        }
-                                        else if (product.Name.Contains("Studio", StringComparison.OrdinalIgnoreCase))
-                                        {                                           
-                                            <span>Contact Sales</span>
-                                        }
-                                        else if (product.Period == BillingPeriod.forever)
-                                        {                                            
-                                            <span>Buy Now - Lifetime Access</span>
-                                        }
-                                        else
-                                        {
-                                            <span>Subscribe</span>
-                                        }
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-                
-                <!-- Show More/Less Toggle -->
-                @if (pricingPlans.Count > 3)
+<!-- Plans -->
+<section class="pr-plans pricing-cards">
+    <div class="pr-shell">
+        @if (isLoading)
+        {
+            <div class="pr-grid">
+                @for (int i = 0; i < 2; i++)
                 {
-                    <div class="text-center mt-4 px-3">
-                        <button class="btn btn-outline-primary px-5 py-2 rounded-pill" 
-                                @onclick="ToggleShowAllPlans">
-                            @if (showAllPlans)
-                            {
-                                <span><i class="bi bi-chevron-up me-2"></i>Show Less Options</span>
-                            }
-                            else
-                            {
-                                <span><i class="bi bi-chevron-down me-2"></i>View More Plans</span>
-                            }
-                        </button>
+                    <div class="pr-card pr-card--skeleton">
+                        <span class="pr-skeleton pr-skeleton--title"></span>
+                        <span class="pr-skeleton pr-skeleton--price"></span>
+                        <span class="pr-skeleton pr-skeleton--line"></span>
+                        <span class="pr-skeleton pr-skeleton--line"></span>
+                        <span class="pr-skeleton pr-skeleton--line"></span>
+                        <span class="pr-skeleton pr-skeleton--cta"></span>
                     </div>
                 }
+            </div>
+        }
+        else
+        {
+            <!-- Billing toggle -->
+            <div class="pr-billing" role="tablist" aria-label="Billing period">
+                <button type="button" role="tab"
+                        class="pr-billing-opt @(billing == "monthly" ? "is-active" : "")"
+                        @onclick='() => SetBilling("monthly")'>Monthly</button>
+                <button type="button" role="tab"
+                        class="pr-billing-opt @(billing == "yearly" ? "is-active" : "")"
+                        @onclick='() => SetBilling("yearly")'>
+                    Yearly <span class="pr-billing-save">−20%</span>
+                </button>
+                <button type="button" role="tab"
+                        class="pr-billing-opt @(billing == "lifetime" ? "is-active" : "")"
+                        @onclick='() => SetBilling("lifetime")'>Lifetime</button>
+            </div>
+
+            <div class="pr-grid">
+                <!-- Free -->
+                <article class="pr-card">
+                    <header class="pr-card-head">
+                        <h2 class="pr-card-name">Free</h2>
+                        <p class="pr-card-tag">Perfect for casual practice</p>
+                    </header>
+                    <div class="pr-price">
+                        <span class="pr-price-amt">Free</span>
+                        <span class="pr-price-note">forever, no card</span>
+                    </div>
+                    <ul class="pr-feats">
+                        <li><i class="bi bi-check-lg"></i> <strong>2</strong> song analyses every day</li>
+                        <li><i class="bi bi-check-lg"></i> Songs up to <strong>8 minutes</strong></li>
+                        <li><i class="bi bi-check-lg"></i> Auto chords, slow-down &amp; section loop</li>
+                        <li><i class="bi bi-check-lg"></i> Unlocked songs stay playable for 24 hours</li>
+                    </ul>
+                    <button class="pr-cta pr-cta--ghost"
+                            @onclick="() => SelectPlan(Starter)"
+                            disabled="@(isProcessing || Starter is null)">
+                        Start free
+                    </button>
+                </article>
+
+                <!-- Premium -->
+                @{ var premium = Premium; var premiumPrice = premium is null ? null : GetDisplayPrice(premium); }
+                <article class="pr-card pr-card--popular">
+                    <span class="pr-badge"><i class="bi bi-star-fill"></i> Most popular</span>
+                    <header class="pr-card-head">
+                        <h2 class="pr-card-name">Premium</h2>
+                        <p class="pr-card-tag">@PremiumTag</p>
+                    </header>
+                    <div class="pr-price">
+                        @if (premium is null)
+                        {
+                            <span class="pr-price-amt">—</span>
+                        }
+                        else
+                        {
+                            <span class="pr-price-amt">@premiumPrice!.FormattedAmount</span>
+                            <span class="pr-price-per">@PremiumPriceSuffix</span>
+                            @if (premiumPrice.IsConverted)
+                            {
+                                <span class="pr-price-note">
+                                    ≈ @premiumPrice.OriginalCurrency @premiumPrice.OriginalAmount?.ToString("N0")
+                                </span>
+                            }
+                        }
+                    </div>
+                    <ul class="pr-feats">
+                        <li><i class="bi bi-check-lg"></i> <strong>Unlimited</strong> song analyses</li>
+                        <li><i class="bi bi-check-lg"></i> Longer songs — up to <strong>20 minutes</strong></li>
+                        <li><i class="bi bi-check-lg"></i> Auto chords, slow-down &amp; section loop</li>
+                        <li><i class="bi bi-check-lg"></i> Save &amp; organise into playlists</li>
+                        <li><i class="bi bi-check-lg"></i> PDF export &amp; sharing</li>
+                    </ul>
+                    <button class="pr-cta pr-cta--primary"
+                            @onclick="() => SelectPlan(premium)"
+                            disabled="@(isProcessing || premium is null)">
+                        @if (isProcessing && selectedProduct?.Id == premium?.Id)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        @PremiumCtaLabel
+                    </button>
+                    <p class="pr-card-foot">@PremiumFootNote</p>
+                </article>
+            </div>
+
+            @if (Studio is not null)
+            {
+                <p class="pr-studio-line">
+                    Running a band, church or team?
+                    <button class="pr-link" @onclick="() => SelectPlan(Studio)">See the Studio plan →</button>
+                </p>
             }
-        </div>
+        }
     </div>
 </section>
 
-<!-- Feature Comparison -->
-<section class="feature-comparison py-5 bg-light">
-    <div class="container-fluid">
-        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
-            <div class="px-3">
-                <h2 class="text-center mb-5">Compare Features</h2>
-                
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Feature</th>
-                                <th class="text-center">Starter</th>
-                                <th class="text-center">Creator</th>
-                                <th class="text-center">Studio</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Song Creations</td>
-                                <td class="text-center">10/month</td>
-                                <td class="text-center"><i class="bi bi-infinity text-primary fs-5"></i></td>
-                                <td class="text-center"><i class="bi bi-infinity text-primary fs-5"></i></td>
-                            </tr>
-                            <tr>
-                                <td>Song Access</td>
-                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                            </tr>
-                            <tr>
-                                <td>PDF Export</td>
-                                <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
-                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                            </tr>
-                            <tr>
-                                <td>Bulk PDF Import</td>
-                                <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
-                                <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
-                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                            </tr>
-                            <tr>
-                                <td>AI-Assisted Composition</td>
-                                <td class="text-center"><i class="bi bi-dash-circle text-muted"></i></td>
-                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
-                            </tr>
-                            <tr>
-                                <td>Support</td>
-                                <td class="text-center">Email</td>
-                                <td class="text-center">Priority</td>
-                                <td class="text-center">Dedicated</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+<!-- How it works -->
+<section class="pr-how">
+    <div class="pr-shell">
+        <h2 class="pr-section-title">From link to learning in three steps</h2>
+        <div class="pr-steps">
+            <div class="pr-step">
+                <span class="pr-step-num">1</span>
+                <i class="bi bi-link-45deg pr-step-icon"></i>
+                <h3 class="pr-step-title">Paste a link</h3>
+                <p class="pr-step-text">Drop in any YouTube or TikTok song you want to learn.</p>
+            </div>
+            <div class="pr-step">
+                <span class="pr-step-num">2</span>
+                <i class="bi bi-music-note-list pr-step-icon"></i>
+                <h3 class="pr-step-title">Get the chords</h3>
+                <p class="pr-step-text">FRELODY detects the chords and lines them up with the audio.</p>
+            </div>
+            <div class="pr-step">
+                <span class="pr-step-num">3</span>
+                <i class="bi bi-arrow-repeat pr-step-icon"></i>
+                <h3 class="pr-step-title">Slow it down &amp; loop</h3>
+                <p class="pr-step-text">Drop the tempo, loop the hard bar, and play along until it sticks.</p>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Social Proof -->
-<section class="social-proof py-5">
-    <div class="container-fluid">
-        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
-            <div class="px-3">
-                <h2 class="text-center mb-4">Trusted by Musicians Worldwide</h2>
-                <div class="row g-4">
-                    <div class="col-12 col-md-4">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body text-center">
-                                <div class="mb-3">
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                </div>
-                                <p class="mb-2">"FRELODY has transformed how I create and manage my worship music."</p>
-                                <small class="text-muted">- Worship Leader</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body text-center">
-                                <div class="mb-3">
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                </div>
-                                <p class="mb-2">"The chord management features are incredibly powerful and intuitive."</p>
-                                <small class="text-muted">- Music Director</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body text-center">
-                                <div class="mb-3">
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                    <i class="bi bi-star-fill text-warning"></i>
-                                </div>
-                                <p class="mb-2">"Perfect for our church choir. Easy collaboration and sharing."</p>
-                                <small class="text-muted">- Choir Director</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<!-- Compare -->
+<section class="pr-compare-wrap">
+    <div class="pr-shell">
+        <h2 class="pr-section-title">Free vs Premium</h2>
+        <div class="pr-compare-scroll">
+            <table class="pr-compare">
+                <thead>
+                    <tr>
+                        <th>What you get</th>
+                        <th class="pr-compare-col">Free</th>
+                        <th class="pr-compare-col pr-compare-col--hl">Premium</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Song analyses per day</td>
+                        <td class="pr-compare-col">2</td>
+                        <td class="pr-compare-col pr-compare-col--hl"><i class="bi bi-infinity"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Maximum song length</td>
+                        <td class="pr-compare-col">8 min</td>
+                        <td class="pr-compare-col pr-compare-col--hl">20 min</td>
+                    </tr>
+                    <tr>
+                        <td>Auto chord detection</td>
+                        <td class="pr-compare-col"><i class="bi bi-check-lg pr-yes"></i></td>
+                        <td class="pr-compare-col pr-compare-col--hl"><i class="bi bi-check-lg pr-yes"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Slow-down &amp; section loop</td>
+                        <td class="pr-compare-col"><i class="bi bi-check-lg pr-yes"></i></td>
+                        <td class="pr-compare-col pr-compare-col--hl"><i class="bi bi-check-lg pr-yes"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Save songs to playlists</td>
+                        <td class="pr-compare-col"><i class="bi bi-check-lg pr-yes"></i></td>
+                        <td class="pr-compare-col pr-compare-col--hl"><i class="bi bi-check-lg pr-yes"></i></td>
+                    </tr>
+                    <tr>
+                        <td>Replay your songs</td>
+                        <td class="pr-compare-col">For 24 hours</td>
+                        <td class="pr-compare-col pr-compare-col--hl">Anytime</td>
+                    </tr>
+                    <tr>
+                        <td>PDF export &amp; sharing</td>
+                        <td class="pr-compare-col"><i class="bi bi-dash-lg pr-no"></i></td>
+                        <td class="pr-compare-col pr-compare-col--hl"><i class="bi bi-check-lg pr-yes"></i></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </section>
 
-<!-- FAQs -->
-<section class="faqs py-5 bg-light">
-    <div class="container-fluid">
-        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
-            <div class="px-3">
-                <h2 class="text-center mb-5">Frequently Asked Questions</h2>
-                
-                <div class="row">
-                    <div class="col-12 col-lg-10 mx-auto">
-                        <div class="accordion" id="faqAccordion">
-                            <div class="accordion-item">
-                                <h3 class="accordion-header">
-                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                        Can I switch plans later?
-                                    </button>
-                                </h3>
-                                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body">
-                                        Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate the charges accordingly.
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="accordion-item">
-                                <h3 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                        Is there a free plan?
-                                    </button>
-                                </h3>
-                                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body">
-                                        Yes — the free tier is your trial. Play 2 analyzed songs every day, forever, with no credit card required. Upgrade anytime for unlimited analyses.
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="accordion-item">
-                                <h3 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                                        How does cancellation work?
-                                    </button>
-                                </h3>
-                                <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body">
-                                        You can cancel anytime from your account settings. You'll retain access until the end of your billing period. No hidden fees or penalties.
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="accordion-item">
-                                <h3 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
-                                        What payment methods do you accept?
-                                    </button>
-                                </h3>
-                                <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body">
-                                        We accept all major payment methods through PesaPal including mobile money, credit cards, and bank transfers.
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="accordion-item">
-                                <h3 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
-                                        Do you offer refunds?
-                                    </button>
-                                </h3>
-                                <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                    <div class="accordion-body">
-                                        Studio plan includes refunds within 30 days of purchase. For other plans, contact our support team for assistance.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+<!-- FAQ -->
+<section class="pr-faq-wrap">
+    <div class="pr-shell">
+        <h2 class="pr-section-title">Questions, answered</h2>
+        <div class="accordion pr-faq" id="faqAccordion">
+            <div class="accordion-item">
+                <h3 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                        Can I switch plans later?
+                    </button>
+                </h3>
+                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Yes. You can move between Free, Monthly, Yearly and the one-time Lifetime plan
+                        anytime from your account. Upgrades take effect immediately.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h3 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                        Is there really a free plan?
+                    </button>
+                </h3>
+                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Yes — the free tier is your trial. Play <strong>2 analyzed songs every day, forever</strong>,
+                        with no credit card required. Upgrade anytime for unlimited analyses.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h3 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                        How does cancellation work?
+                    </button>
+                </h3>
+                <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Monthly and Yearly subscriptions can be cancelled anytime — you keep access until the
+                        end of the period you've paid for. The one-time <strong>Lifetime</strong> plan never
+                        expires, so there's nothing to cancel.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h3 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                        What payment methods do you accept?
+                    </button>
+                </h3>
+                <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        <strong>PayPal</strong> (cards, worldwide) and <strong>PesaPal</strong> — mobile money,
+                        cards and bank transfer across Africa. You pick at checkout.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h3 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                        Why only 2 free songs a day?
+                    </button>
+                </h3>
+                <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Analysing a song takes real processing to detect the chords and line them up with
+                        the audio. Two a day lets you experience the full workflow before deciding whether
+                        Premium is worth it — no card, no pressure.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h3 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6">
+                        Do songs already in FRELODY count toward my daily limit?
+                    </button>
+                </h3>
+                <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        No. Only songs you analyse from a YouTube or TikTok link count toward the daily limit.
+                        Browsing and playing songs already in the public library is always free.
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h3 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq7">
+                        Do you offer refunds?
+                    </button>
+                </h3>
+                <div id="faq7" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        The Studio plan includes a 30-day money-back guarantee. For other plans, reach out to
+                        our support team and we'll help you out.
                     </div>
                 </div>
             </div>
@@ -399,35 +331,28 @@
 </section>
 
 <!-- Final CTA -->
-<section class="final-cta py-5 bg-primary text-white">
-    <div class="container-fluid">
-        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
-            <div class="text-center px-3">
-                <h2 class="display-5 fw-bold mb-3">Ready to Start Creating?</h2>
-                <p class="lead mb-4">Join thousands of musicians using FRELODY</p>
-                <button class="btn btn-light btn-lg px-5 py-3" @onclick="ScrollToPlans">
-                    View Pricing Plans
-                </button>
-            </div>
-        </div>
+<section class="pr-final">
+    <div class="pr-shell pr-final-inner">
+        <h2 class="pr-final-title">Got a song stuck in your head?</h2>
+        <p class="pr-final-sub">Paste a link. Get the chords. Start playing — your first two are free, every day.</p>
+        <button class="pr-cta pr-cta--invert"
+                @onclick="() => SelectPlan(Starter)"
+                disabled="@(isProcessing || Starter is null)">
+            Start free
+        </button>
     </div>
 </section>
 
-<!-- Legal Footer -->
-<section class="legal-footer py-3 border-top">
-    <div class="container-fluid">
-        <div class="content-wrapper" style="max-width: @MAX_WIDTH; margin: 0 auto;">
-            <div class="px-3">
-                <p class="text-muted small text-center mb-0">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Prices are in Ugandan Shillings (UGX) and include applicable VAT. 
-                    By subscribing, you agree to our 
-                    <a href="/terms" class="text-decoration-none">Terms of Service</a> and 
-                    <a href="/privacy" class="text-decoration-none">Privacy Policy</a>.
-                    <a href="/sla" class="text-decoration-none">SLA</a>
-                </p>
-            </div>
-        </div>
+<!-- Legal -->
+<section class="pr-legal">
+    <div class="pr-shell">
+        <p class="pr-legal-text">
+            <i class="bi bi-info-circle"></i>
+            Prices are shown in your local currency (converted from UGX); PayPal payments are settled in
+            USD. By subscribing you agree to our
+            <a href="/terms">Terms of Service</a>, <a href="/privacy">Privacy Policy</a> and
+            <a href="/sla">SLA</a>.
+        </p>
     </div>
 </section>
 
@@ -554,7 +479,6 @@
 
 
 @code {
-    private const string MAX_WIDTH = "70rem";
     private List<ProductDto> pricingPlans = new();
     private Dictionary<string, CurrencyDisplayInfo> displayPrices = new();
     private bool isLoading = true;
@@ -562,18 +486,60 @@
     private bool showPaymentModal = false;
     private bool showLoginModal = false;
     private bool showCheckoutModal = false;
-    private bool showAllPlans = false;
     private bool payPalEnabled = false;
     private string checkoutGateway = "pesapal";
+    private string billing = "monthly";
     private string paymentRedirectUrl = string.Empty;
     private ProductDto? selectedProduct;
 
-    // Default 3 products to show
-    private readonly string[] defaultProductNames = new[]
+    // ── Plan resolution ───────────────────────────────────────────────
+    private ProductDto? Starter =>
+        pricingPlans.FirstOrDefault(p => string.Equals(p.Name, "Starter", StringComparison.OrdinalIgnoreCase))
+        ?? pricingPlans.FirstOrDefault(p => (p.Price ?? 0) == 0);
+
+    private ProductDto? Studio =>
+        pricingPlans.FirstOrDefault(p => p.Name.Contains("Studio", StringComparison.OrdinalIgnoreCase));
+
+    // The premium card maps to a "Creator" product based on the billing toggle,
+    // falling back to any paid non-Studio plan if the expected name is missing.
+    private ProductDto? Premium
     {
-        "Starter",
-        "Creator One-Time",
-        "Creator Monthly"
+        get
+        {
+            var name = billing switch
+            {
+                "monthly" => "Creator Monthly",
+                "yearly" => "Creator Yearly",
+                "lifetime" => "Creator One-Time",
+                _ => "Creator Monthly"
+            };
+            return pricingPlans.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase))
+                ?? pricingPlans.FirstOrDefault(p =>
+                    (p.Price ?? 0) > 0 && !p.Name.Contains("Studio", StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private string PremiumTag => billing switch
+    {
+        "lifetime" => "Pay once, yours forever",
+        "yearly" => "Best value — save 20%",
+        _ => "Unlimited, cancel anytime"
+    };
+
+    private string PremiumPriceSuffix => billing switch
+    {
+        "lifetime" => "one-time",
+        "yearly" => "/year",
+        _ => "/month"
+    };
+
+    private string PremiumCtaLabel => billing == "lifetime" ? "Get lifetime access" : "Go Premium";
+
+    private string PremiumFootNote => billing switch
+    {
+        "lifetime" => "One payment · lifetime access · no subscription",
+        "yearly" => "Billed yearly · cancel anytime",
+        _ => "Billed monthly · cancel anytime"
     };
 
     protected override async Task OnInitializedAsync()
@@ -593,6 +559,12 @@
         }
     }
 
+    private void SetBilling(string period)
+    {
+        billing = period;
+        StateHasChanged();
+    }
+
     private async Task LoadPricingPlans()
     {
         isLoading = true;
@@ -600,7 +572,6 @@
 
         try
         {
-            // Load products from API
             var response = await _productsApi.GetProducts();
 
             if (response.IsSuccessStatusCode && response.Content != null)
@@ -663,45 +634,13 @@
         }
     }
 
-    private List<ProductDto> GetDisplayedProducts()
-    {
-        if (showAllPlans || pricingPlans.Count <= 3)
-        {
-            // Show all products, sorted by priority
-            return pricingPlans
-                .OrderBy(p => GetProductPriority(p.Name))
-                .ToList();
-        }
-
-        // Show only default 3 products
-        return pricingPlans
-            .Where(p => defaultProductNames.Contains(p.Name))
-            .OrderBy(p => Array.IndexOf(defaultProductNames, p.Name))
-            .ToList();
-    }
-
-    private int GetProductPriority(string productName)
-    {
-        var index = Array.IndexOf(defaultProductNames, productName);
-        return index >= 0 ? index : 999;
-    }
-
-    private async void ToggleShowAllPlans()
-    {
-        showAllPlans = !showAllPlans; 
-
-        if (!showAllPlans) await ScrollToPlans(); 
-
-        StateHasChanged();
-    }
-
     private string GetProductDisplayName(ProductDto product)
     {
         return product.Name switch
         {
-            "Creator Monthly" => "Creator (Monthly)",
-            "Creator Yearly" => "Creator (Yearly -20%)",
-            "Creator One-Time" => "Creator",
+            "Creator Monthly" => "Premium (Monthly)",
+            "Creator Yearly" => "Premium (Yearly −20%)",
+            "Creator One-Time" => "Premium (Lifetime)",
             _ => product.Name
         };
     }
@@ -710,17 +649,19 @@
     {
         return displayPrices.ContainsKey(product.Id)
             ? displayPrices[product.Id]
-            : new CurrencyDisplayInfo 
-            { 
-                Amount = product.Price ?? 0, 
+            : new CurrencyDisplayInfo
+            {
+                Amount = product.Price ?? 0,
                 FormattedAmount = product.Price.HasValue ? $"UGX {product.Price.Value:N0}" : "Free",
                 CurrencyCode = "UGX",
                 IsConverted = false
             };
     }
 
-    private async Task SelectPlan(ProductDto product)
+    private async Task SelectPlan(ProductDto? product)
     {
+        if (product is null) return;
+
         // Check authentication
         var authState = await _globalAuth.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated != true)
@@ -738,12 +679,12 @@
         {
             _modalService.Show(new ModalOptionDto
             {
-                Title = "Starter Plan",
-                Message = "The Starter plan is free! You're already using it. Enjoy exploring FRELODY!",
-                ButtonText = "Close",
+                Title = "You're on Free",
+                Message = "The Free plan is yours — 2 song analyses every day. Paste a link and start playing!",
+                ButtonText = "Explore songs",
                 OptionType = OptionType.Success
             });
-            _navManager.NavigateTo("/");
+            _navManager.NavigateTo("/discover");
             return;
         }
 
@@ -753,7 +694,7 @@
             _modalService.Show(new ModalOptionDto
             {
                 Title = "Contact Sales",
-                Message = "Our sales team will help you get started with the Studio plan. We'll reach out within 24 hours.",
+                Message = "Our team will help you get your band, church or team set up on Studio. We'll reach out within 24 hours.",
                 ButtonText = "Continue",
                 OptionType = OptionType.Confirmation,
                 Context = new ModalContext
@@ -860,7 +801,7 @@
         // Proceed to checkout if a product was selected
         if (selectedProduct != null)
         {
-            OpenCheckout(selectedProduct);
+            await SelectPlan(selectedProduct);
         }
         await Task.CompletedTask;
     }
@@ -900,7 +841,7 @@
                     OptionType = OptionType.Error
                 });
                 return;
-            } 
+            }
             var amount = product.Price ?? 0;
             var description = GetPaymentDescription(product);
             var countryCode = _currencyDisplay.GetCountryCode();
@@ -975,24 +916,6 @@
             BillingPeriod.biennially => "2 years",
             BillingPeriod.forever => "lifetime",
             _ => "month"
-        };
-    }
-
-    private string GetFeatureDescription(Feature feature)
-    {
-        return feature switch
-        {
-            Feature.UnlimitedSongCreations => "Unlimited Song Creations",
-            Feature.UnlimitedSongAcccess => "Unlimited Song Access",
-            Feature.DedicatedSupport => "Dedicated Priority Support",
-            Feature.SongManagement => "Advanced Song Management",
-            Feature.ChordManagement => "Chord Chart Management",
-            Feature.UserManagement => "Team & User Management",
-            Feature.PdfExport => "PDF Export & Sharing",
-            Feature.BulkPdfImport => "Bulk PDF Import",
-            Feature.AiAssistedComposition => "AI-Assisted Composition",
-            Feature.Refunds => "30-Day Money Back Guarantee",
-            _ => feature.ToString()
         };
     }
 

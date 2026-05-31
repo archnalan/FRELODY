@@ -87,6 +87,50 @@ namespace FRELODYAPP.Areas.Admin.LogicData
             }
         }
 
+        // Targeted bulk resolve for play-along views: takes the handful of chord names a
+        // song actually uses and returns each as a chord + its charts in one round trip,
+        // so the client never downloads the full catalog or fires a per-card fetch (N+1).
+        public async Task<ServiceResult<List<ChordWithChartsDto>>> ResolveChordsWithChartsAsync(IEnumerable<string> names)
+        {
+            try
+            {
+                var wanted = (names ?? Enumerable.Empty<string>())
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Select(n => n.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (wanted.Count == 0)
+                    return ServiceResult<List<ChordWithChartsDto>>.Success(new List<ChordWithChartsDto>());
+
+                var lowered = wanted.Select(n => n.ToLower()).ToList();
+
+                var chords = await _context.Chords
+                    .AsNoTracking()
+                    .Where(c => lowered.Contains(c.ChordName.Trim().ToLower()))
+                    .Include(ch => ch.ChordCharts!.OrderBy(cc => cc.FretPosition))
+                    .AsSplitQuery()
+                    .ToListAsync();
+
+                // Collapse duplicate name rows here too: keep the one that actually has
+                // charts so a chartless duplicate can never shadow the real voicings.
+                var deduped = chords
+                    .GroupBy(c => c.ChordName.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .Select(g => g.OrderByDescending(c => c.ChordCharts?.Count ?? 0).First())
+                    .ToList();
+
+                var dto = deduped.Adapt<List<ChordWithChartsDto>>();
+
+                return ServiceResult<List<ChordWithChartsDto>>.Success(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resolving chords with charts: {Error}", ex);
+                return ServiceResult<List<ChordWithChartsDto>>.Failure(new
+                    Exception($"Error resolving chords with charts. Details: {ex.Message}"));
+            }
+        }
+
         public async Task<ServiceResult<ChordDto>> GetChordByIdAsync(string id)
         {
             try

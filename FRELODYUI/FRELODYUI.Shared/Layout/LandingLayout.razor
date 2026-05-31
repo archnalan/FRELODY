@@ -20,9 +20,9 @@
 
             <!-- CENTER (DESKTOP NAV LINKS) -->
             <nav class="center-nav d-none d-lg-flex">
-                <a href="/" class="@NavActive("/")">Songs</a>
+                <a href="/songs" class="@NavActive("/songs")">Songs</a>
                 <a href="/studio/landing" class="@NavActive("/studio/landing")">Studio</a>
-                <a href="/discover/landing" class="@NavActive("/discover/landing")">Discover</a>
+                <a href="/" class="@NavActive("/")">Discover</a>
                 <a href="/pricing" class="@NavActive("/pricing")">Pricing</a>
                 <a href="/playlists/landing" class="@NavActive("/playlists/landing")">Playlists</a>
             </nav>
@@ -110,14 +110,14 @@
             </button>
         </div>
         <nav class="drawer-nav">
-            <a href="/" class="@NavActive("/")" @onclick="CloseDrawer">
+            <a href="/songs" class="@NavActive("/songs")" @onclick="CloseDrawer">
                 <i class="bi bi-music-note-beamed me-2"></i>Songs
             </a>
             <a href="/studio/landing" class="@NavActive("/studio/landing")" @onclick="CloseDrawer">
                 <i class="bi bi-easel me-2"></i>Studio
             </a>
-            <a href="/discover/landing" class="@NavActive("/discover/landing")" @onclick="CloseDrawer">
-                <i class="bi bi-binoculars"></i>Discover
+            <a href="/" class="@NavActive("/")" @onclick="CloseDrawer">
+                <i class="bi bi-binoculars me-2"></i>Discover
             </a>
             <a href="/pricing" class="@NavActive("/pricing")" @onclick="CloseDrawer">
                 <i class="bi bi-tag me-2"></i>Pricing
@@ -341,8 +341,9 @@
         var relativePath = _navManager.ToBaseRelativePath(_navManager.Uri);
         var path = "/" + relativePath.Split('?')[0].Split('#')[0].TrimEnd('/');
 
+        // "/" is now the Discover home; light it up for the landing + its detail routes.
         if (href == "/")
-            return path == "/" || path.StartsWith("/songs") ? "active" : "";
+            return path == "/" || path.StartsWith("/discover") || path.StartsWith("/play/") ? "active" : "";
 
         return path.StartsWith(href, StringComparison.OrdinalIgnoreCase) ? "active" : "";
     }

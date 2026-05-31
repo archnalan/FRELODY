@@ -38,5 +38,8 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Get("/api/chords/search-chords")]
         Task<IApiResponse<PaginationDetails<ChordDto>>> SearchChords([Query] string? keywords, [Query] int offset = 0, [Query] int limit = 10);
+
+        [Post("/api/chords/resolve-chords-with-charts")]
+        Task<IApiResponse<List<ChordWithChartsDto>>> ResolveChordsWithCharts([Body] List<string> names);
     }
 }

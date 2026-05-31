@@ -1,7 +1,8 @@
+@page "/play/{VideoId}"
 @page "/discover/landing/{VideoId}"
 @layout LandingLayout
 
-<DiscoverVideoContent VideoId="@VideoId" BackUrl="/discover/landing" />
+<DiscoverVideoContent VideoId="@VideoId" BackUrl="/" />
 
 @code {
     [Parameter] public string VideoId { get; set; } = default!;

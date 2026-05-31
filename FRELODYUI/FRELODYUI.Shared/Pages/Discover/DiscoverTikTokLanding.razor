@@ -1,7 +1,8 @@
+@page "/play/tiktok"
 @page "/discover/landing/tiktok"
 @layout LandingLayout
 
-<DiscoverTikTokContent Url="@Url" BackUrl="/discover/landing" />
+<DiscoverTikTokContent Url="@Url" BackUrl="/" />
 
 @code {
     [SupplyParameterFromQuery] public string? Url { get; set; }

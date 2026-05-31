@@ -17,7 +17,7 @@ namespace FRELODYAPP.Services.Seed
         Task<SeedResult> SeedIfNeededAsync(bool force = false, CancellationToken cancellationToken = default);
     }
 
-    public record SeedResult(bool Ran, int ChordsInserted, int VoicingsSeeded, string Version, string? SkipReason = null);
+    public record SeedResult(bool Ran, int ChordsInserted, int VoicingsSeeded, int DuplicatesMerged, string Version, string? SkipReason = null);
 
     public class StandardChordSeedService : IStandardChordSeedService
     {
@@ -54,7 +54,7 @@ namespace FRELODYAPP.Services.Seed
             if (!File.Exists(sourcePath))
             {
                 _logger.LogWarning("Standard chord source not found at {Path}; skipping seed.", sourcePath);
-                return new SeedResult(false, 0, 0, "", "source-missing");
+                return new SeedResult(false, 0, 0, 0, "", "source-missing");
             }
 
             var hash = ComputeFileHash(sourcePath);
@@ -66,7 +66,7 @@ namespace FRELODYAPP.Services.Seed
             if (!force && version?.Version == hash)
             {
                 _logger.LogDebug("Standard chord seed already current at {Version}.", hash);
-                return new SeedResult(false, 0, 0, hash, "up-to-date");
+                return new SeedResult(false, 0, 0, 0, hash, "up-to-date");
             }
 
             var importer = new ChordsDbImporter();
@@ -74,11 +74,15 @@ namespace FRELODYAPP.Services.Seed
             if (voicings.Count == 0)
             {
                 _logger.LogWarning("Chord importer returned zero voicings; aborting seed.");
-                return new SeedResult(false, 0, 0, hash, "no-voicings");
+                return new SeedResult(false, 0, 0, 0, hash, "no-voicings");
             }
 
             using var tx = await _db.Database.BeginTransactionAsync(cancellationToken);
 
+            // Collapse pre-existing duplicate chord-name rows first. This both repairs the
+            // catalog (so the upserts below can key safely by name) and is required because
+            // ad-hoc chord creation during song import does not de-dup by name.
+            var duplicatesMerged = await MergeDuplicateChordsAsync(cancellationToken);
             var chordsInserted = await UpsertChordsAsync(voicings, cancellationToken);
             var voicingsSeeded = await ReplaceStandardChartsAsync(voicings, cancellationToken);
             await UpsertSeedVersionAsync(version, hash, cancellationToken);
@@ -86,20 +90,89 @@ namespace FRELODYAPP.Services.Seed
             await tx.CommitAsync(cancellationToken);
 
             _logger.LogInformation(
-                "Standard chord seed complete: +{ChordsInserted} chords, {Voicings} voicings, version {Version}.",
-                chordsInserted, voicingsSeeded, hash);
+                "Standard chord seed complete: +{ChordsInserted} chords, {Voicings} voicings, {Merged} duplicates merged, version {Version}.",
+                chordsInserted, voicingsSeeded, duplicatesMerged, hash);
 
-            return new SeedResult(true, chordsInserted, voicingsSeeded, hash);
+            return new SeedResult(true, chordsInserted, voicingsSeeded, duplicatesMerged, hash);
+        }
+
+        /// <summary>
+        /// Collapses duplicate chord-name rows into a single canonical chord, preserving every
+        /// user-created artifact: all <see cref="ChordChart"/> and <see cref="LyricSegment"/>
+        /// references on the duplicates are repointed onto the survivor, and any metadata the
+        /// user set on a duplicate is coalesced onto it. Only the redundant name rows are deleted —
+        /// no chart a user drew is ever lost.
+        /// </summary>
+        private async Task<int> MergeDuplicateChordsAsync(CancellationToken ct)
+        {
+            // Live rows only — leave soft-deleted chords untouched.
+            var liveChords = await _db.Chords
+                .IgnoreQueryFilters()
+                .Where(c => c.IsDeleted == false || c.IsDeleted == null)
+                .ToListAsync(ct);
+
+            // Group on the trimmed name so whitespace-only variants ("Eb" vs "Eb ")
+            // collapse too — those are invisible to an exact-match lookup but real duplicates.
+            var dupeGroups = liveChords
+                .GroupBy(c => c.ChordName.Trim())
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+            if (dupeGroups.Count == 0) return 0;
+
+            var mergedCount = 0;
+            foreach (var group in dupeGroups)
+            {
+                // Survivor: prefer the global/standard row (TenantId == null), then the oldest.
+                var ordered = group
+                    .OrderByDescending(c => c.TenantId == null)
+                    .ThenBy(c => c.DateCreated)
+                    .ToList();
+                var canonical = ordered[0];
+                var duplicates = ordered.Skip(1).ToList();
+                var duplicateIds = duplicates.Select(c => c.Id).ToList();
+
+                // Normalize the survivor's name to the trimmed form so lookups match.
+                canonical.ChordName = group.Key;
+
+                // Keep metadata a user may have set on a duplicate but not on the survivor.
+                canonical.Difficulty ??= duplicates.FirstOrDefault(d => d.Difficulty != null)?.Difficulty;
+                canonical.ChordType ??= duplicates.FirstOrDefault(d => d.ChordType != null)?.ChordType;
+                canonical.ChordAudioFilePath ??= duplicates
+                    .FirstOrDefault(d => !string.IsNullOrEmpty(d.ChordAudioFilePath))?.ChordAudioFilePath;
+
+                // Repoint every chart & lyric segment (including soft-deleted, to avoid dangling
+                // FKs when the duplicate row is hard-deleted) onto the survivor.
+                await _db.ChordCharts
+                    .IgnoreQueryFilters()
+                    .Where(cc => duplicateIds.Contains(cc.ChordId))
+                    .ExecuteUpdateAsync(s => s.SetProperty(cc => cc.ChordId, canonical.Id), ct);
+
+                await _db.LyricSegments
+                    .IgnoreQueryFilters()
+                    .Where(ls => duplicateIds.Contains(ls.ChordId))
+                    .ExecuteUpdateAsync(s => s.SetProperty(ls => ls.ChordId, canonical.Id), ct);
+
+                _db.Chords.RemoveRange(duplicates);
+                mergedCount += duplicates.Count;
+            }
+
+            await _db.SaveChangesAsync(ct);
+            return mergedCount;
         }
 
         private async Task<int> UpsertChordsAsync(IReadOnlyList<SeededVoicing> voicings, CancellationToken ct)
         {
             var distinctNames = voicings.Select(v => v.ChordName).Distinct().ToList();
 
-            var existing = await _db.Chords
+            // Live rows only, grouped defensively: the Chords table has no unique index on
+            // ChordName, so a straight ToDictionary by name can throw on stray duplicates.
+            var existing = (await _db.Chords
                 .IgnoreQueryFilters()
-                .Where(c => distinctNames.Contains(c.ChordName))
-                .ToDictionaryAsync(c => c.ChordName, ct);
+                .Where(c => (c.IsDeleted == false || c.IsDeleted == null) && distinctNames.Contains(c.ChordName))
+                .ToListAsync(ct))
+                .GroupBy(c => c.ChordName)
+                .ToDictionary(g => g.Key, g => g.First());
 
             var inserted = 0;
             foreach (var name in distinctNames)
@@ -135,10 +208,13 @@ namespace FRELODYAPP.Services.Seed
                 await _db.SaveChangesAsync(ct);
             }
 
-            var chordIdByName = await _db.Chords
+            var voicingNames = voicings.Select(v => v.ChordName).Distinct().ToList();
+            var chordIdByName = (await _db.Chords
                 .IgnoreQueryFilters()
-                .Where(c => voicings.Select(v => v.ChordName).Distinct().Contains(c.ChordName))
-                .ToDictionaryAsync(c => c.ChordName, c => c.Id, ct);
+                .Where(c => (c.IsDeleted == false || c.IsDeleted == null) && voicingNames.Contains(c.ChordName))
+                .ToListAsync(ct))
+                .GroupBy(c => c.ChordName)
+                .ToDictionary(g => g.Key, g => g.First().Id);
 
             var now = DateTimeOffset.UtcNow;
             foreach (var v in voicings)

@@ -387,7 +387,7 @@ namespace FRELODYAPP.Data.Infrastructure
         {
             Id = Guid.NewGuid().ToString(),
             Name = "Starter",
-            Description = "For individuals trying FRELODY",
+            Description = "2 song analyses every day — auto chords, slow-down & section loops. Free forever, no card.",
             Price = FREE_FOREVER,
             Currency = "UGX",
             Period = BillingPeriod.forever,
@@ -406,7 +406,7 @@ namespace FRELODYAPP.Data.Infrastructure
         {
             Id = Guid.NewGuid().ToString(),
             Name = "Creator Monthly",
-            Description = "For growing creators and freelancers - Monthly subscription",
+            Description = "Unlimited song analyses and longer songs (up to 20 min). Billed monthly, cancel anytime.",
             Price = CREATOR_MONTHLY,
             Currency = "UGX",
             Period = BillingPeriod.monthly,
@@ -429,7 +429,7 @@ namespace FRELODYAPP.Data.Infrastructure
         {
             Id = Guid.NewGuid().ToString(),
             Name = "Creator One-Time",
-            Description = "For creators who prefer one-time payment - Lifetime access",
+            Description = "Unlimited song analyses forever. One payment, lifetime access — no subscription.",
             Price = CREATOR_ONE_TIME,
             Currency = "UGX",
             Period = BillingPeriod.forever,
@@ -451,7 +451,7 @@ namespace FRELODYAPP.Data.Infrastructure
         {
             Id = Guid.NewGuid().ToString(),
             Name = "Creator Yearly",
-            Description = "For growing creators and freelancers - Annual subscription (Save 20%)",
+            Description = "Unlimited analyses and longer songs (up to 20 min). Billed yearly — save 20%.",
             Price = CREATOR_YEARLY,
             Currency = "UGX",
             Period = BillingPeriod.yearly,
@@ -474,7 +474,7 @@ namespace FRELODYAPP.Data.Infrastructure
         {
             Id = Guid.NewGuid().ToString(),
             Name = "Studio",
-            Description = "For teams needing collaboration and controls",
+            Description = "For bands, churches & teams — shared library, member controls, bulk import and priority support.",
             Price = STUDIO_MONTHLY,
             Currency = "UGX",
             Period = BillingPeriod.monthly,

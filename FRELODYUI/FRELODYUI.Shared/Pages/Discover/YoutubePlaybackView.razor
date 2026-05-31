@@ -1,5 +1,6 @@
 @using FRELODYUI.Shared.Pages.Discover
 @using FRELODYUI.Shared.Pages.Chord
+@using FRELODYSHRD.Dtos.HybridDtos
 @inject IJSRuntime JS
 @inject IYouTubeApi YoutubeApi
 @implements IAsyncDisposable
@@ -268,14 +269,15 @@
                         }
                         else
                         {
-                            @foreach (var chord in _chordCards)
+                            @foreach (var card in _chordCards)
                             {
-                                <div class="pv-chord-card" @key="chord.Id ?? chord.ChordName">
-                                    <span class="pv-chord-name">@chord.ChordName</span>
-                                    <ChordCarousel Chord="@chord"
+                                <div class="pv-chord-card" @key="card.Chord.Id ?? card.Chord.ChordName">
+                                    <span class="pv-chord-name">@card.Chord.ChordName</span>
+                                    <ChordCarousel Chord="@card.Chord"
+                                                   PreloadedCharts="@card.Charts"
                                                    Size="CarouselSize.Medium"
                                                    ShowActions="false"
-                                                   CarouselId="@($"pv-chord-{chord.Id ?? chord.ChordName}")" />
+                                                   CarouselId="@($"pv-chord-{card.Chord.Id ?? card.Chord.ChordName}")" />
                                 </div>
                             }
                         }
@@ -365,6 +367,7 @@
             @if (_popoverChord is not null)
             {
                 <ChordCarousel Chord="_popoverChord"
+                               PreloadedCharts="@_popoverCharts"
                                Size="CarouselSize.Popover"
                                ShowActions="false"
                                CarouselId="@($"pv-pop-{_popoverChord.Id ?? _popoverChord.ChordName}")" />
@@ -588,6 +591,7 @@
     private bool _showChordPopover;
     private bool _popoverPinned;          // touch tap → pinned with a Play-here button
     private ChordDto? _popoverChord;
+    private List<ChordChartEditDto>? _popoverCharts;
     private string? _popoverName;
     private float _popoverTime;
     private double _popoverTop;
@@ -633,7 +637,9 @@
 
     // Distinct playable raw labels in first-seen order — capo-independent identity.
     private readonly List<string> _uniqueRawChords = [];
-    private List<ChordDto> _chordCards = [];
+    // Each card carries the charts we hand straight to the carousel (PreloadedCharts),
+    // so it renders without its own fetch (no N+1). Shared with the Timeline view.
+    private List<ResolvedChordCard> _chordCards = [];
     private bool _chordsLoading;
     private CancellationTokenSource? _chordRefetchCts;
 
@@ -712,18 +718,40 @@
         {
             await Task.Delay(300, token);
 
-            // Capo lowers the fingered shapes: shift every chord down by the capo fret,
-            // then resolve charts through the shared resolver (same path as the song player).
-            var names = _uniqueRawChords
+            // Capo lowers the fingered shapes: shift every chord down by the capo fret.
+            var displayNames = _uniqueRawChords
                 .Select(raw => ChordLabel.PlainName(ChordLabel.TransposeRaw(raw, -_capo, _preferFlat)))
                 .Where(n => !string.IsNullOrEmpty(n))
                 .Select(n => n!)
                 .ToList();
 
-            var resolved = await _chartResolver.ResolveAsync(names, token);
-
+            // One round trip resolves every needed name → chord + charts. The server
+            // prefers the chart-bearing row per name, and we feed those charts straight
+            // to each carousel (PreloadedCharts) so there's no per-card fetch (no N+1).
+            var distinct = displayNames.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var resp = await _chordsApi.ResolveChordsWithCharts(distinct);
             if (token.IsCancellationRequested) return;
-            _chordCards = resolved;
+
+            var byName = (resp.IsSuccessStatusCode ? resp.Content : null)?
+                .Where(c => !string.IsNullOrWhiteSpace(c.ChordName))
+                .GroupBy(c => c.ChordName.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase)
+                ?? new Dictionary<string, ChordWithChartsDto>(StringComparer.OrdinalIgnoreCase);
+
+            _chordCards = displayNames
+                .Select(name => byName.TryGetValue(name, out var hit)
+                    ? new ResolvedChordCard(
+                        new ChordDto
+                        {
+                            Id = hit.Id,
+                            ChordName = hit.ChordName,
+                            Difficulty = hit.Difficulty,
+                            ChordAudioFilePath = hit.ChordAudioFilePath
+                        },
+                        hit.Charts ?? new List<ChordChartEditDto>())
+                    // No catalog match → name-only placeholder card ("No chart yet").
+                    : new ResolvedChordCard(new ChordDto { ChordName = name }, new List<ChordChartEditDto>()))
+                .ToList();
         }
         catch (OperationCanceledException) { return; }
         finally
@@ -863,7 +891,9 @@
         _popoverTimer = null;
         _isMouseOverPopover = false;
 
-        _popoverChord = FindCard(p.Raw);
+        var card = FindCard(p.Raw);
+        _popoverChord = card?.Chord;
+        _popoverCharts = card?.Charts;
         _popoverName = ChordLabel.Display(ChordLabel.TransposeRaw(p.Raw, -_capo, _preferFlat));
         _popoverTime = p.Time;
         _popoverPinned = p.Pinned;
@@ -916,6 +946,7 @@
         _showChordPopover = false;
         _popoverPinned = false;
         _popoverChord = null;
+        _popoverCharts = null;
         _popoverName = null;
         StateHasChanged();
     }
@@ -926,12 +957,12 @@
         HideChordPopover();
     }
 
-    private ChordDto? FindCard(string? raw)
+    private ResolvedChordCard? FindCard(string? raw)
     {
         var name = ChordLabel.PlainName(ChordLabel.TransposeRaw(raw, -_capo, _preferFlat));
         if (string.IsNullOrEmpty(name)) return null;
         return _chordCards.FirstOrDefault(c =>
-            string.Equals(c.ChordName, name, StringComparison.OrdinalIgnoreCase));
+            string.Equals(c.Chord.ChordName, name, StringComparison.OrdinalIgnoreCase));
     }
 
     // ── Maximize: CSS overlay (keeps the floating player on top & playing) ────

@@ -1,0 +1,363 @@
+@page "/admin/products"
+@layout AdminLayout
+@using FRELODYSHRD.Dtos.PesaPalDtos
+@inject IProductsApi _productsApi
+
+<PageTitle>Plans &amp; pricing - FRELODY</PageTitle>
+
+<AuthGuard RequireOrganization="true">
+<OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin })">
+    <NotAuthorizedContent>
+        <div class="admin-card admin-card-pad">
+            <h2 class="admin-title">Not authorized</h2>
+            <p class="text-muted mb-3">Only Owners and Admins can manage plans and pricing.</p>
+            <a class="admin-btn primary" href="/dashboard">Back to dashboard</a>
+        </div>
+    </NotAuthorizedContent>
+    <ChildContent>
+        <div class="admin-header">
+            <div>
+                <h1 class="admin-title">Plans &amp; pricing</h1>
+                <p class="admin-subtitle">Edit the plans shown on the public pricing page. Changes are live immediately.</p>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <a class="admin-btn" href="/admin/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                <button class="admin-btn primary" @onclick="OpenAdd"><i class="bi bi-plus-lg"></i> Add plan</button>
+            </div>
+        </div>
+
+        @if (_loading)
+        {
+            <div class="admin-card">
+                <div class="admin-card-pad">
+                    @for (int i = 0; i < 4; i++)
+                    {
+                        <div class="admin-skeleton mb-2" style="height:44px;"></div>
+                    }
+                </div>
+            </div>
+        }
+        else if (_products.Count == 0)
+        {
+            <div class="admin-card admin-empty">
+                <div class="admin-empty-title">No plans yet</div>
+                <p class="mb-3">Add your first plan to populate the pricing page.</p>
+                <button class="admin-btn primary" @onclick="OpenAdd"><i class="bi bi-plus-lg"></i> Add plan</button>
+            </div>
+        }
+        else
+        {
+            <div class="admin-card ap-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Plan</th>
+                            <th>Price</th>
+                            <th>Billing</th>
+                            <th>Features</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in _products.OrderBy(p => p.Price ?? 0))
+                        {
+                            <tr>
+                                <td>
+                                    <div class="ap-name">
+                                        <span class="fw-semibold">@p.Name</span>
+                                        @if (p.IsPopular == true)
+                                        {
+                                            <span class="admin-pill"><i class="bi bi-star-fill"></i> Popular</span>
+                                        }
+                                    </div>
+                                    <div class="ap-desc">@p.Description</div>
+                                </td>
+                                <td class="ap-price">
+                                    @if ((p.Price ?? 0) == 0)
+                                    {
+                                        <span>Free</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@(p.Currency ?? "UGX") @((p.Price ?? 0).ToString("N0"))</span>
+                                    }
+                                </td>
+                                <td>@(p.Period?.ToFriendlyString() ?? "—")</td>
+                                <td><span class="admin-chip">@(p.Features?.Count ?? 0) features</span></td>
+                                <td class="text-end">
+                                    <span class="admin-row-actions">
+                                        <button class="admin-btn icon-only" title="Edit" @onclick="() => OpenEdit(p)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="admin-btn icon-only danger" title="Delete" @onclick="() => OpenDelete(p)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="admin-alert danger mt-3">@_error</div>
+        }
+    </ChildContent>
+</OrgRoleAuthorizeView>
+</AuthGuard>
+
+@* ── Add / edit modal ── *@
+<ConfirmDialog Visible="_showEdit"
+               Title="@(_isNew ? "Add plan" : "Edit plan")"
+               Icon="bi-tag"
+               ConfirmLabel="@(_isNew ? "Create plan" : "Save changes")"
+               Busy="_saving"
+               OnCancel="@(() => _showEdit = false)"
+               OnConfirm="Save">
+    <BodyContent>
+        @if (_form is not null)
+        {
+            <div class="admin-field">
+                <label class="admin-field-label">Plan name</label>
+                <input @bind="_form.Name" placeholder="e.g. Creator Monthly" />
+            </div>
+            <div class="admin-field">
+                <label class="admin-field-label">Description</label>
+                <textarea rows="2" @bind="_form.Description"
+                          placeholder="One honest line about what this plan unlocks"></textarea>
+            </div>
+            <div class="ap-grid-2">
+                <div class="admin-field">
+                    <label class="admin-field-label">Price</label>
+                    <input type="number" min="0" step="any" @bind="_price" />
+                    <div class="admin-field-help">0 = free plan</div>
+                </div>
+                <div class="admin-field">
+                    <label class="admin-field-label">Currency</label>
+                    <input @bind="_form.Currency" placeholder="UGX" />
+                </div>
+            </div>
+            <div class="ap-grid-2">
+                <div class="admin-field">
+                    <label class="admin-field-label">Billing period</label>
+                    <select @bind="_period">
+                        @foreach (var bp in Enum.GetValues<BillingPeriod>())
+                        {
+                            <option value="@bp">@bp.ToFriendlyString()</option>
+                        }
+                    </select>
+                </div>
+                <div class="admin-field">
+                    <label class="admin-field-label">Highlight</label>
+                    <label class="ap-switch">
+                        <input type="checkbox" @bind="_form.IsPopular" />
+                        <span>Mark as "Most popular"</span>
+                    </label>
+                </div>
+            </div>
+            <div class="admin-field mb-0">
+                <label class="admin-field-label">Features</label>
+                <div class="ap-features">
+                    @foreach (var f in Enum.GetValues<Feature>())
+                    {
+                        var feat = f;
+                        <label class="ap-feature-chip @(_selectedFeatures.Contains(feat) ? "on" : "")">
+                            <input type="checkbox"
+                                   checked="@_selectedFeatures.Contains(feat)"
+                                   @onchange="e => ToggleFeature(feat, e)" />
+                            <span>@FeatureLabel(feat)</span>
+                        </label>
+                    }
+                </div>
+            </div>
+        }
+    </BodyContent>
+</ConfirmDialog>
+
+@* ── Delete confirm ── *@
+<ConfirmDialog Visible="_showDelete"
+               Title="Delete plan"
+               Icon="bi-trash"
+               Destructive="true"
+               ConfirmLabel="Delete plan"
+               Busy="_saving"
+               OnCancel="@(() => _showDelete = false)"
+               OnConfirm="ConfirmDelete">
+    <BodyContent>
+        <p class="mb-0">
+            Delete <strong>@_target?.Name</strong>? It will disappear from the pricing page.
+            This can't be undone.
+        </p>
+    </BodyContent>
+</ConfirmDialog>
+
+@code {
+    private List<ProductDto> _products = new();
+    private bool _loading = true;
+    private string? _error;
+
+    // edit/add modal state
+    private bool _showEdit;
+    private bool _isNew;
+    private bool _saving;
+    private ProductDto? _form;
+    private decimal _price;
+    private BillingPeriod _period = BillingPeriod.monthly;
+    private HashSet<Feature> _selectedFeatures = new();
+
+    // delete modal state
+    private bool _showDelete;
+    private ProductDto? _target;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var resp = await _productsApi.GetProducts();
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+                _products = resp.Content;
+            else
+                _error = "Failed to load plans. Please refresh.";
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenAdd()
+    {
+        _isNew = true;
+        _form = new ProductDto { Name = "", Currency = "UGX" };
+        _price = 0;
+        _period = BillingPeriod.monthly;
+        _selectedFeatures = new();
+        _showEdit = true;
+    }
+
+    private void OpenEdit(ProductDto p)
+    {
+        _isNew = false;
+        // Work on a copy so cancel doesn't mutate the table row.
+        _form = new ProductDto
+        {
+            Id = p.Id,
+            Name = p.Name,
+            Description = p.Description,
+            Currency = p.Currency ?? "UGX",
+            IsPopular = p.IsPopular
+        };
+        _price = p.Price ?? 0;
+        _period = p.Period ?? BillingPeriod.monthly;
+        _selectedFeatures = p.Features is null ? new() : new HashSet<Feature>(p.Features);
+        _showEdit = true;
+    }
+
+    private void ToggleFeature(Feature f, ChangeEventArgs e)
+    {
+        if (e.Value is bool on && on) _selectedFeatures.Add(f);
+        else _selectedFeatures.Remove(f);
+    }
+
+    private async Task Save()
+    {
+        if (_form is null) return;
+        if (string.IsNullOrWhiteSpace(_form.Name))
+        {
+            _toastService.Show("Plan name is required.", ToastType.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            _form.Price = _price;
+            _form.Period = _period;
+            _form.Currency = string.IsNullOrWhiteSpace(_form.Currency) ? "UGX" : _form.Currency.Trim().ToUpperInvariant();
+            _form.Features = _selectedFeatures.ToList();
+
+            var resp = _isNew
+                ? await _productsApi.AddProduct(_form)
+                : await _productsApi.UpdateProduct(_form);
+
+            if (resp.IsSuccessStatusCode)
+            {
+                _toastService.Show(_isNew ? "Plan created." : "Plan updated.", ToastType.Success);
+                _showEdit = false;
+                await Load();
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void OpenDelete(ProductDto p)
+    {
+        _target = p;
+        _showDelete = true;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_target?.Id is null) return;
+        _saving = true;
+        try
+        {
+            var resp = await _productsApi.DeleteProduct(_target.Id);
+            if (resp.IsSuccessStatusCode)
+            {
+                _toastService.Show("Plan deleted.", ToastType.Success);
+                _showDelete = false;
+                await Load();
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string FeatureLabel(Feature feature) => feature switch
+    {
+        Feature.UnlimitedSongCreations => "Unlimited song creations",
+        Feature.UnlimitedSongAcccess => "Unlimited song access",
+        Feature.DedicatedSupport => "Dedicated support",
+        Feature.SongManagement => "Song management",
+        Feature.ChordManagement => "Chord management",
+        Feature.UserManagement => "Team & user management",
+        Feature.PdfExport => "PDF export",
+        Feature.BulkPdfImport => "Bulk PDF import",
+        Feature.AiAssistedComposition => "AI-assisted composition",
+        Feature.Refunds => "30-day money back",
+        _ => feature.ToString()
+    };
+}

@@ -56,6 +56,7 @@
                          @onclick="() => OnSlotClick(capturedSlot)">
                         <ChordCarouselTimeline
                             Chord="@slot.ChordDto"
+                            PreloadedCharts="@slot.Charts"
                             DisplayName="@slot.DisplayName"
                             Size="CarouselSize.Medium"
                             ShowNavigation="@(distance == 0)"
@@ -73,10 +74,10 @@
     // Beat times in seconds — drives the lead-sheet grid above the carousel strip.
     [Parameter] public List<float> Beats { get; set; } = [];
 
-    // Resolved diagrams keyed by chord-name. Parent (YoutubePlaybackView) already
-    // resolves these for the "Chord shapes" section — we share that list rather
-    // than re-resolving per slot.
-    [Parameter] public List<ChordDto> ChordCards { get; set; } = [];
+    // Resolved chords + their charts. Parent (YoutubePlaybackView) already resolves
+    // these (with charts) for the "Chord shapes" section in one call — we share that
+    // list so each slot renders from PreloadedCharts rather than re-fetching per slot.
+    [Parameter] public List<ResolvedChordCard> ChordCards { get; set; } = [];
 
     [Parameter] public int ActiveBeatIndex { get; set; } = -1;
 
@@ -108,7 +109,7 @@
     // One slot per chord change. N/X rests are intentionally skipped: this strip
     // conveys chord *shapes* in change-order, not beat rhythm — the grid above is
     // the rhythm-bearing surface.
-    private record Slot(int Key, int StartBeatIndex, float StartTime, string DisplayName, ChordDto? ChordDto);
+    private record Slot(int Key, int StartBeatIndex, float StartTime, string DisplayName, ChordDto? ChordDto, List<ChordChartEditDto>? Charts);
 
     private List<Slot> _slots = new();
     private int _activeSlotIndex;
@@ -156,19 +157,19 @@
             if (display == prevDisplay) continue;
 
             var card = FindCard(sc.Chord);
-            slots.Add(new Slot(sc.BeatIndex, sc.BeatIndex, sc.Time, display, card));
+            slots.Add(new Slot(sc.BeatIndex, sc.BeatIndex, sc.Time, display, card?.Chord, card?.Charts));
             prevDisplay = display;
         }
 
         _slots = slots;
     }
 
-    private ChordDto? FindCard(string? raw)
+    private ResolvedChordCard? FindCard(string? raw)
     {
         var name = ChordLabel.PlainName(ChordLabel.TransposeRaw(raw, CapoShift, PreferFlat));
         if (string.IsNullOrEmpty(name)) return null;
         return ChordCards.FirstOrDefault(c =>
-            string.Equals(c.ChordName, name, StringComparison.OrdinalIgnoreCase));
+            string.Equals(c.Chord.ChordName, name, StringComparison.OrdinalIgnoreCase));
     }
 
     // Linear scan suffices: typical songs have under ~100 chord changes, and

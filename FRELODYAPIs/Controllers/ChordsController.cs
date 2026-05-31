@@ -4,6 +4,7 @@ using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.Dtos.EditDtos;
+using FRELODYSHRD.Dtos.HybridDtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -115,10 +116,23 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         public async Task<IActionResult> SearchChords([FromQuery]string? keywords, [FromQuery] int offset = 0, [FromQuery] int limit = 10)
         {
             var chordResult = await _chordService.SearchChordsAsync(keywords, offset, limit);
-            
+
             if (!chordResult.IsSuccess)
                 return StatusCode(chordResult.StatusCode, new { message = chordResult.Error.Message });
-            
+
+            return Ok(chordResult.Data);
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(List<ChordWithChartsDto>), 200)]
+        public async Task<IActionResult> ResolveChordsWithCharts([FromBody] List<string> names)
+        {
+            var chordResult = await _chordService.ResolveChordsWithChartsAsync(names ?? new List<string>());
+
+            if (!chordResult.IsSuccess)
+                return StatusCode(chordResult.StatusCode, new { message = chordResult.Error.Message });
+
             return Ok(chordResult.Data);
         }
 

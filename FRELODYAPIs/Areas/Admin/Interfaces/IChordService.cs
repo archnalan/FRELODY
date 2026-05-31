@@ -11,6 +11,7 @@ namespace FRELODYAPP.Areas.Admin.Interfaces
 	{
         Task<ServiceResult<PaginationDetails<ChordDto>>> GetChordsAsync(int offset, int limit);
 		Task<ServiceResult<List<ChordWithChartsDto>>> GetChordsWithChartsAsync();
+		Task<ServiceResult<List<ChordWithChartsDto>>> ResolveChordsWithChartsAsync(IEnumerable<string> names);
 		Task<ServiceResult<ChordDto>> GetChordByIdAsync(string id);
 		Task<ServiceResult<ChordWithChartsDto>> GetChordWithChartsByIdAsync(string id);
 		Task<ServiceResult<ChordEditDto>> CreateChordAsync(ChordCreateDto chordDto);
