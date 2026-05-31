@@ -131,7 +131,16 @@
 @media (min-width: 768px) {
     .pr-grid {
         grid-template-columns: 1fr 1fr;
-        align-items: stretch;
+        align-items: center;
+    }
+
+    .pr-card--popular {
+        transform: scale(1.03);
+        z-index: 1;
+    }
+
+    .pr-card--popular:hover {
+        transform: scale(1.03) translateY(-4px);
     }
 }
 
@@ -155,7 +164,8 @@
 
 .pr-card--popular {
     border-color: var(--bs-primary);
-    box-shadow: var(--k-shadow-lg);
+    border-width: 2px;
+    box-shadow: var(--k-shadow-lg), 0 0 0 3px color-mix(in srgb, var(--bs-primary) 10%, transparent);
 }
 
 .pr-badge {
@@ -245,6 +255,31 @@
     font-size: 1rem;
     margin-top: 0.1rem;
     flex-shrink: 0;
+}
+
+/* Free card: soften checks so Premium's stand out */
+.pr-card:not(.pr-card--popular) .pr-feats li i {
+    color: var(--text-muted);
+}
+
+/* Locked premium features shown on free card */
+.pr-feat-divider {
+    height: 1px;
+    background: var(--border-light);
+    margin: var(--k-space-1, 0.25rem) 0;
+}
+
+.pr-feat--locked {
+    opacity: 0.45;
+    font-size: var(--k-font-size-sm, 0.85rem);
+}
+
+/* Per-day price anchor */
+.pr-price-daily {
+    flex-basis: 100%;
+    font-size: var(--k-font-size-xs, 0.7rem);
+    font-weight: 600;
+    color: var(--bs-success, #198754);
 }
 
 /* ── CTAs ── */

@@ -16,11 +16,11 @@
 <section class="pr-hero">
     <div class="pr-shell">
         <span class="pr-eyebrow">Pricing</span>
-        <h1 class="pr-hero-title">Stop searching for tabs. Start playing.</h1>
+        <h1 class="pr-hero-title">Hear it. Slow it down. Play it.</h1>
         <p class="pr-hero-sub">
-            Paste any YouTube or TikTok link and get the chords instantly — then slow the song
-            down and loop the tricky bar until your fingers catch up. Start free, upgrade when
-            you're hooked.
+            Paste any YouTube or TikTok link — FRELODY detects the chords, lets you slow the
+            tempo and loop the tricky parts until your fingers catch up. Start free, upgrade
+            when you're hooked.
         </p>
         <div class="pr-trust">
             <span class="pr-trust-item"><i class="bi bi-x-circle"></i> No card to start</span>
@@ -71,12 +71,9 @@
                 <article class="pr-card">
                     <header class="pr-card-head">
                         <h2 class="pr-card-name">Free</h2>
+                        <span class="pr-price-note">forever, no card</span>
                         <p class="pr-card-tag">Perfect for casual practice</p>
                     </header>
-                    <div class="pr-price">
-                        <span class="pr-price-amt">Free</span>
-                        <span class="pr-price-note">forever, no card</span>
-                    </div>
                     <ul class="pr-feats">
                         @* Curated tier limits stay as copy; capability bullets come from the plan's Features. *@
                         <li><i class="bi bi-check-lg"></i> <strong>2</strong> song analyses every day</li>
@@ -84,6 +81,15 @@
                         @foreach (var f in CardFeatures(Starter))
                         {
                             <li><i class="bi bi-check-lg"></i> @f.ToSalesCopy()</li>
+                        }
+                        @{ var locked = LockedFeatures().ToList(); }
+                        @if (locked.Count > 0)
+                        {
+                            <li class="pr-feat-divider" aria-hidden="true"></li>
+                            @foreach (var f in locked)
+                            {
+                                <li class="pr-feat--locked"><i class="bi bi-lock"></i> @f.ToSalesCopy()</li>
+                            }
                         }
                     </ul>
                     <button class="pr-cta pr-cta--ghost"
@@ -94,7 +100,12 @@
                 </article>
 
                 <!-- Premium -->
-                @{ var premium = Premium; var premiumPrice = premium is null ? null : GetDisplayPrice(premium); }
+                @{
+                    var premium = Premium;
+                    var premiumPrice = premium is null ? null : GetDisplayPrice(premium);
+                    var daily = PerDayLabel(premiumPrice);
+                    var showAmt = PremiumDisplayAmount(premiumPrice);
+                }
                 <article class="pr-card pr-card--popular">
                     <span class="pr-badge"><i class="bi bi-star-fill"></i> Most popular</span>
                     <header class="pr-card-head">
@@ -108,13 +119,21 @@
                         }
                         else
                         {
-                            <span class="pr-price-amt">@premiumPrice!.FormattedAmount</span>
+                            <span class="pr-price-amt">@showAmt</span>
                             <span class="pr-price-per">@PremiumPriceSuffix</span>
-                            @if (premiumPrice.IsConverted)
+                            @if (billing == "yearly")
+                            {
+                                <span class="pr-price-note">Billed @premiumPrice!.FormattedAmount/year</span>
+                            }
+                            else if (premiumPrice!.IsConverted)
                             {
                                 <span class="pr-price-note">
                                     ≈ @premiumPrice.OriginalCurrency @premiumPrice.OriginalAmount?.ToString("N0")
                                 </span>
+                            }
+                            @if (daily is not null)
+                            {
+                                <span class="pr-price-daily">@daily</span>
                             }
                         }
                     </div>
@@ -541,7 +560,7 @@
     private bool payPalEnabled = false;
     private bool pesaPalEnabled = true;
     private string checkoutGateway = "pesapal";
-    private string billing = "monthly";
+    private string billing = "yearly";
     private string paymentRedirectUrl = string.Empty;
     private ProductDto? selectedProduct;
 
@@ -582,7 +601,7 @@
     private string PremiumPriceSuffix => billing switch
     {
         "lifetime" => "one-time",
-        "yearly" => "/year",
+        "yearly" => "/mo",
         _ => "/month"
     };
 
@@ -591,7 +610,7 @@
     private string PremiumFootNote => billing switch
     {
         "lifetime" => "One payment · lifetime access · no subscription",
-        "yearly" => "Billed yearly · cancel anytime",
+        "yearly" => "Save 20% vs monthly · cancel anytime",
         _ => "Billed monthly · cancel anytime"
     };
 
@@ -625,6 +644,39 @@
             .Distinct()
             .Where(f => !TierMeteredFeatures.Contains(f))
             .OrderBy(f => (int)f);
+    }
+
+    private IEnumerable<Feature> LockedFeatures()
+    {
+        var free = Starter?.Features?.ToHashSet() ?? new HashSet<Feature>();
+        var prem = Premium?.Features ?? new List<Feature>();
+        return prem
+            .Where(f => !free.Contains(f) && !TierMeteredFeatures.Contains(f))
+            .OrderBy(f => (int)f)
+            .Take(3);
+    }
+
+    private string? PerDayLabel(CurrencyDisplayInfo? price)
+    {
+        if (price is null || price.Amount <= 0) return null;
+        int days = billing switch
+        {
+            "yearly" => 365,
+            "lifetime" => 1095,
+            _ => 0
+        };
+        if (days == 0) return null;
+        var perDay = price.Amount / days;
+        var formatted = perDay >= 1 ? $"{Math.Ceiling(perDay):N0}" : $"{perDay:N2}";
+        return $"Less than {price.CurrencyCode} {formatted}/day";
+    }
+
+    private string PremiumDisplayAmount(CurrencyDisplayInfo? price)
+    {
+        if (price is null) return "—";
+        if (billing != "yearly") return price.FormattedAmount;
+        var monthly = price.Amount / 12m;
+        return _currencyDisplay.FormatCurrency(monthly, price.CurrencyCode);
     }
 
     private bool HasFeature(ProductDto? p, Feature f) => p?.Features?.Contains(f) == true;

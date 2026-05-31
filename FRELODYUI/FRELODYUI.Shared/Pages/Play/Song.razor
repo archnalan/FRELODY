@@ -251,7 +251,7 @@
                                             <div class="chord-chart-card">
                                                 <div class="chord-chart-name-ghost"></div>
                                                 <ChordCarousel IsLoading="true"
-                                                               Size="CarouselSize.Medium"
+                                                               Size="CarouselSize.Small"
                                                                ShowActions="false"
                                                                CarouselId="@($"ghost-carousel-{g}")" />
                                             </div>
@@ -291,7 +291,7 @@
                                         <div class="chord-chart-card" @key="chord.Id ?? chord.ChordName">
                                             <h6 class="chord-chart-name">@chord.ChordName</h6>
                                             <ChordCarousel Chord="@chord"
-                                                           Size="CarouselSize.Medium"
+                                                           Size="CarouselSize.Small"
                                                            ShowActions="false"
                                                            CarouselId="@($"inline-carousel-{chord.Id ?? chord.ChordName}")" />
                                         </div>

@@ -451,6 +451,11 @@
     -ms-overflow-style: none;
 }
 
+    /* Small carousel stage is 8rem + 0.75rem padding each side */
+    .chord-charts-track .chord-chart-card {
+        min-width: 9.5rem;
+    }
+
     .chord-charts-track::-webkit-scrollbar {
         display: none;
     }
@@ -491,10 +496,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Keep the card wide enough for the medium carousel stage so empty
-       "No chart yet" cards take identical space to populated ones. */
     flex: 0 0 auto;
-    min-width: 13rem;
     padding: 0.75rem;
     background: var(--input-bg);
     border: 1px solid var(--border-light);

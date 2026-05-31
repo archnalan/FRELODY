@@ -204,8 +204,8 @@ else
 
     // Local settings state
     private double scrollSpeed = 1.5;
-    private int chordFontSize = 14;
-    private int lyricFontSize = 18;
+    private int chordFontSize = 25;
+    private int lyricFontSize = 20;
     private string fontFamily = "'Kanit','Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'";
     private SongDisplay songDisplayMode = SongDisplay.LyricsAndChordsAndCharts;
     private ChordDisplay chordDisplayMode = ChordDisplay.Above;
@@ -282,8 +282,8 @@ else
 
     private void ApplySettings(SettingDto settings)
     {
-        chordFontSize = int.TryParse(settings.ChordFontSize, out var cfs) ? cfs : 14;
-        lyricFontSize = int.TryParse(settings.LyricFontSize, out var lfs) ? lfs : 18;
+        chordFontSize = int.TryParse(settings.ChordFontSize, out var cfs) ? cfs : 25;
+        lyricFontSize = int.TryParse(settings.LyricFontSize, out var lfs) ? lfs : 20;
         fontFamily = settings.ChordFont ?? fontFamily;
         songDisplayMode = settings.SongDisplay ?? SongDisplay.LyricsAndChordsAndCharts;
         chordDisplayMode = settings.ChordDisplay ?? ChordDisplay.Above;
