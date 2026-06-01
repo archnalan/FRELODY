@@ -78,6 +78,13 @@
     border-radius: 1px;
 }
 
+/* Docs external-link indicator */
+.nav-docs-link .bi-box-arrow-up-right {
+    font-size: 0.65em;
+    opacity: 0.6;
+    vertical-align: super;
+}
+
 /* ── Brand ── */
 .brand {
     font-weight: 700;

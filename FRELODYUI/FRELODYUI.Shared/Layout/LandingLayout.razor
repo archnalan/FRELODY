@@ -25,6 +25,9 @@
                 <a href="/" class="@NavActive("/")">Discover</a>
                 <a href="/pricing" class="@NavActive("/pricing")">Pricing</a>
                 <a href="/playlists/landing" class="@NavActive("/playlists/landing")">Playlists</a>
+                <a href="@_docsUrl" target="_blank" rel="noopener noreferrer" class="nav-docs-link">
+                    Docs<i class="bi bi-box-arrow-up-right ms-1"></i>
+                </a>
             </nav>
 
             <!-- RIGHT -->
@@ -125,6 +128,9 @@
             <a href="/playlists/landing" class="@NavActive("/playlists/landing")" @onclick="CloseDrawer">
                 <i class="bi bi-music-note-list me-2"></i>Playlists
             </a>
+            <a href="@_docsUrl" target="_blank" rel="noopener noreferrer" class="nav-docs-link" @onclick="CloseDrawer">
+                <i class="bi bi-book me-2"></i>Docs<i class="bi bi-box-arrow-up-right ms-2"></i>
+            </a>
         </nav>
     </div>
 
@@ -211,12 +217,14 @@
     private bool isDrawerOpen = false;
     private SearchModal? searchModalRef = default!;
     private string _appVersion = "dev";
+    private string _docsUrl = "https://docs.frelody.com";
 
     [Inject] private IConfiguration Configuration { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
         _appVersion = Configuration["AppSettings:Version"] ?? "dev";
+        _docsUrl = Configuration["AppSettings:DocsUrl"] ?? "https://docs.frelody.com";
 
         var theme = await _storageService.GetItemAsync<string>("Theme");
         isDarkTheme = theme == "dark";
