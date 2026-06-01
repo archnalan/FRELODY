@@ -25,7 +25,7 @@
                 <a href="/" class="@NavActive("/")">Discover</a>
                 <a href="/pricing" class="@NavActive("/pricing")">Pricing</a>
                 <a href="/playlists/landing" class="@NavActive("/playlists/landing")">Playlists</a>
-                <a href="@_docsUrl" target="_blank" rel="noopener noreferrer" class="nav-docs-link">
+                <a href="@_docsHref" target="_blank" rel="noopener noreferrer" class="nav-docs-link">
                     Docs<i class="bi bi-box-arrow-up-right ms-1"></i>
                 </a>
             </nav>
@@ -128,7 +128,7 @@
             <a href="/playlists/landing" class="@NavActive("/playlists/landing")" @onclick="CloseDrawer">
                 <i class="bi bi-music-note-list me-2"></i>Playlists
             </a>
-            <a href="@_docsUrl" target="_blank" rel="noopener noreferrer" class="nav-docs-link" @onclick="CloseDrawer">
+            <a href="@_docsHref" target="_blank" rel="noopener noreferrer" class="nav-docs-link" @onclick="CloseDrawer">
                 <i class="bi bi-book me-2"></i>Docs<i class="bi bi-box-arrow-up-right ms-2"></i>
             </a>
         </nav>
@@ -218,6 +218,10 @@
     private SearchModal? searchModalRef = default!;
     private string _appVersion = "dev";
     private string _docsUrl = "https://docs.frelody.com";
+    // The docs site lives on a separate origin, so it can't read this origin's
+    // localStorage. When the user is signed in we hand their session to it via a
+    // URL fragment (#session=…); _docsHref is _docsUrl with that fragment appended.
+    private string _docsHref = "https://docs.frelody.com";
 
     [Inject] private IConfiguration Configuration { get; set; } = default!;
 
@@ -225,6 +229,9 @@
     {
         _appVersion = Configuration["AppSettings:Version"] ?? "dev";
         _docsUrl = Configuration["AppSettings:DocsUrl"] ?? "https://docs.frelody.com";
+        _docsHref = _docsUrl;
+        await RefreshDocsHrefAsync();
+        _globalAuth.AuthenticationStateChanged += OnAuthStateChanged;
 
         var theme = await _storageService.GetItemAsync<string>("Theme");
         isDarkTheme = theme == "dark";
@@ -336,6 +343,7 @@
         _navManager.LocationChanged -= OnLocationChanged;
         _modalService.OnShow -= OnModalStateChanged;
         _modalService.OnClose -= OnModalStateChanged;
+        _globalAuth.AuthenticationStateChanged -= OnAuthStateChanged;
     }
 
     private void OnToastChanged() => InvokeAsync(StateHasChanged);
@@ -343,6 +351,40 @@
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
         => InvokeAsync(StateHasChanged);
+
+    // Re-bridge the docs link whenever the user signs in or out.
+    private void OnAuthStateChanged(Task<AuthenticationState> task) => _ = RefreshDocsHrefAsync();
+
+    // Builds the Docs link target. When a session exists, append it as a URL fragment
+    // (#session=<base64url-json>) so the cross-origin docs SPA can pick it up — the same
+    // encoding the login flow uses in NavigateToReturnUrlAsync. Best-effort: on any failure
+    // (or when signed out) the link falls back to opening the docs site without a session.
+    private async Task RefreshDocsHrefAsync()
+    {
+        var href = _docsUrl;
+        try
+        {
+            var session = await _storageService.GetItemAsync<LoginResponseDto>("sessionState");
+            if (session is not null && !string.IsNullOrEmpty(session.Token))
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(session);
+                var encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json))
+                    .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+                var sep = href.Contains('#') ? "&" : "#";
+                href = $"{href}{sep}session={encoded}";
+            }
+        }
+        catch
+        {
+            // best-effort bridge — fall back to the plain docs URL
+        }
+
+        if (href != _docsHref)
+        {
+            _docsHref = href;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
     private string NavActive(string href)
     {
