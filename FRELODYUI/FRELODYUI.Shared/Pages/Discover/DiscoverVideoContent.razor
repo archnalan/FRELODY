@@ -12,14 +12,25 @@
 
 <div class="dv-page">
 
-    @if (_video is not null)
-    {
-        <!-- Video header -->
-        <div class="dv-header">
-            <button class="dv-back" @onclick='() => Nav.NavigateTo(BackUrl)' title="Back to Discover">
-                <i class="bi bi-arrow-left"></i>
-            </button>
+    <!-- Video header — always rendered so dv-card position stays stable -->
+    <div class="dv-header">
+        <button class="dv-back" @onclick='() => Nav.NavigateTo(BackUrl)' title="Back to Discover">
+            <i class="bi bi-arrow-left"></i>
+        </button>
 
+        @if (_video is null)
+        {
+            <div class="dv-video-meta placeholder-glow">
+                <div class="dv-thumb placeholder"></div>
+                <div class="dv-video-info">
+                    <span class="dv-skel-line dv-skel-line--title placeholder"></span>
+                    <span class="dv-skel-line dv-skel-line--title dv-skel-line--short placeholder"></span>
+                    <span class="dv-skel-line dv-skel-line--channel placeholder"></span>
+                </div>
+            </div>
+        }
+        else
+        {
             <div class="dv-video-meta">
                 @if (!string.IsNullOrEmpty(_video.ThumbnailUrl))
                 {
@@ -36,17 +47,17 @@
                     }
                 </div>
             </div>
+        }
 
-            <div class="dv-header-actions">
-                <AnalyzedQuotaBadge @ref="_quotaBadge" />
-                <button type="button" class="dv-share" @onclick="ShareAsync"
-                        title="Copy share link" aria-label="Copy share link">
-                    <i class="bi bi-link-45deg" aria-hidden="true"></i>
-                    <span class="dv-share-label">Share</span>
-                </button>
-            </div>
+        <div class="dv-header-actions">
+            <AnalyzedQuotaBadge @ref="_quotaBadge" />
+            <button type="button" class="dv-share" @onclick="ShareAsync"
+                    title="Copy share link" aria-label="Copy share link">
+                <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                <span class="dv-share-label">Share</span>
+            </button>
         </div>
-    }
+    </div>
 
     <!-- Analysis card -->
     <div class="dv-card">

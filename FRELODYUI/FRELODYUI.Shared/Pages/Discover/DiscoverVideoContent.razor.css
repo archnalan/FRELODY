@@ -144,6 +144,26 @@
     }
 }
 
+/* ── Header skeleton ───────────────────────────────────────── */
+.dv-skel-line {
+    display: block;
+    border-radius: var(--k-radius-xs);
+}
+
+.dv-skel-line--title {
+    height: 0.875rem;
+    width: 80%;
+}
+
+.dv-skel-line--short {
+    width: 50%;
+}
+
+.dv-skel-line--channel {
+    height: 0.75rem;
+    width: 40%;
+}
+
 /* ── Analysis card ──────────────────────────────────────────── */
 .dv-card {
     border-radius: var(--k-radius-md);
