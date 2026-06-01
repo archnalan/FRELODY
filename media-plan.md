@@ -79,12 +79,22 @@ docs DocumentService -> injects <img>/<iframe> into <figure data-media-slot="...
   Gated on `Auth.IsSuperAdmin` (new helper; narrower than `IsAdmin`). Slots grouped by page, each card has context +
   aspect/kind badges + live-page link, `InputFile` image picker, YouTube URL/id field, caption, clear buttons, per-card
   save state + thumbnails. SuperAdmin-only **Media** link added to `MainLayout` topbar.
-- [x] **Phase 6 — Config & deploy** ✅
+- [x] **Phase 6 — Config & deploy** ✅ **ROLLED OUT to prod 2026-06-01**
   - Docs `wwwroot/appsettings.Production.json` created: `Api`/`Web` BaseUrl = `https://frelody.com` (mirrors
     `FRELODYUI.Web.Client` prod; gateway proxies `/api`).
   - `nginx.conf`: added `location /docs-media/` → `frelody-api:8080` on the `frelody.com` server block (mirrors `/share-og/`).
-    **After deploy, reload the gateway: `docker exec frelody-gateway nginx -s reload`.**
   - API default `DocsMedia:Root = media/docs-media` (on existing `frelody_media` volume).
+  - **Rollout executed:** rebuilt+recreated `frelody-api` and `frelody-docs`, then **force-recreated** the `nginx`
+    gateway. Force-recreate (not just `nginx -s reload`) was required: `nginx.conf` is bind-mounted and had been
+    atomically replaced, so the live container held a stale inode (no `/docs-media/` block); recreate also
+    re-resolves the static `frelody-api` upstream IP. CI/CD skipped this deploy because the commit message lacked a
+    `feat:`/`fix:` prefix — manual rollout on the box.
+  - **Bug found & fixed during rollout:** the docs-side `DocMediaService` called `api/docmedia/*` but the API uses a
+    global kebab-case URL transformer, so the real routes are `api/doc-media/get-manifest|upload-image|set-text|clear`.
+    All four client URLs corrected; without this the manifest fetch + every admin write 404'd (silent → placeholders
+    only). A clean build did not catch it (hardcoded URL strings).
+  - **Verified live:** anon `GET /api/doc-media/get-manifest` → 200 `{"slots":{}}`; unauth writes → 401;
+    `docs.frelody.com` → 200; fixed URL present in the published WASM bundle.
 
 ## Build status
 `dotnet build FRELODYAPP.sln -c Debug` → **0 errors** (API, docs, full solution all green). Runtime verification

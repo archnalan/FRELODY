@@ -39,7 +39,7 @@ public class DocMediaService
     {
         try
         {
-            var manifest = await _api.GetFromJsonAsync<DocMediaManifest>("api/docmedia/getmanifest");
+            var manifest = await _api.GetFromJsonAsync<DocMediaManifest>("api/doc-media/get-manifest");
             _slots = new Dictionary<string, DocMediaEntry>(
                 manifest?.Slots ?? new(), StringComparer.OrdinalIgnoreCase);
         }
@@ -75,14 +75,14 @@ public class DocMediaService
         file.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         form.Add(file, "file", fileName);
 
-        using var req = new HttpRequestMessage(HttpMethod.Post, "api/docmedia/uploadimage") { Content = form };
+        using var req = new HttpRequestMessage(HttpMethod.Post, "api/doc-media/upload-image") { Content = form };
         return await SendAndStoreAsync(req);
     }
 
     public async Task<DocMediaEntry?> SetTextAsync(string slot, string? videoUrlOrId, string? caption)
     {
         var body = new { videoUrlOrId, caption };
-        using var req = new HttpRequestMessage(HttpMethod.Put, $"api/docmedia/settext?slot={Uri.EscapeDataString(slot)}")
+        using var req = new HttpRequestMessage(HttpMethod.Put, $"api/doc-media/set-text?slot={Uri.EscapeDataString(slot)}")
         {
             Content = JsonContent.Create(body)
         };
@@ -92,7 +92,7 @@ public class DocMediaService
     public async Task<DocMediaEntry?> ClearAsync(string slot, string kind)
     {
         using var req = new HttpRequestMessage(HttpMethod.Delete,
-            $"api/docmedia/clear?slot={Uri.EscapeDataString(slot)}&kind={Uri.EscapeDataString(kind)}");
+            $"api/doc-media/clear?slot={Uri.EscapeDataString(slot)}&kind={Uri.EscapeDataString(kind)}");
         return await SendAndStoreAsync(req);
     }
 
