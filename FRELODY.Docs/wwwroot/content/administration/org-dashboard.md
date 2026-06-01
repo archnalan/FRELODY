@@ -10,7 +10,7 @@ The dashboard is gated to **Owner**, **Admin** and **Manager**. Without one of t
 
 Below the header are metric cards that summarise activity. A brand-new organization gets a "Welcome to <org>" getting-started panel with prompts to **Invite members**, **Add a song** and **Create a playlist** — a quick way to set the workspace up.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="administration-org-dashboard--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The organization dashboard with metric cards and links to Members, Projects and Plans">
     <span class="img-frame-caption">The organization dashboard at /admin/dashboard</span>
   </div>

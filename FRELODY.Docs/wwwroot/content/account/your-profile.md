@@ -10,7 +10,7 @@ The profile page has a header showing your details, plus a set of tabs: **Librar
 
 Use this page when you want to check what you have saved, restore unsaved work, change your theme, or update your password.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="account-your-profile--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The FRELODY profile page with the header and tabbed navigation">
     <span class="img-frame-caption">The profile page with its Library, Recovery, Settings and Account tabs</span>
   </div>

@@ -24,7 +24,7 @@ Each song also has its own settings and a rating, so you can fine-tune the view 
 - The display **Mode** is your account preference, so it carries across every song you open. See [Light and dark themes](/docs/getting-started/themes-and-display) to set it.
 - Want to send a song to a friend? Use a share link.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="library-viewing-a-song--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="A FRELODY song page showing chords lined up above the lyrics">
     <span class="img-frame-caption">A FRELODY song page showing chords lined up above the lyrics</span>
   </div>

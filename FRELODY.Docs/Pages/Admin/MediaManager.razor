@@ -1,0 +1,311 @@
+@page "/admin/media"
+@inject AuthService Auth
+@inject DocMediaService Media
+@inject NavigationDataService NavData
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Documentation media · FRELODY Docs</PageTitle>
+
+<div class="media-admin">
+    <header class="media-admin-head">
+        <h1>Documentation media</h1>
+        <p class="muted">
+            Upload screenshots and link YouTube walkthroughs for each documentation page.
+            Changes publish to the live docs immediately — no rebuild needed.
+        </p>
+    </header>
+
+    @if (_checking)
+    {
+        <div class="media-loading">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line short"></div>
+        </div>
+    }
+    else if (!Auth.IsAuthenticated)
+    {
+        <div class="media-gate">
+            <h2>Sign in required</h2>
+            <p class="muted">The media manager is available to platform SuperAdmins only.</p>
+            <button type="button" class="btn btn-primary" @onclick="() => Auth.RequestSignIn()">Sign in</button>
+        </div>
+    }
+    else if (!Auth.IsSuperAdmin)
+    {
+        <div class="media-gate">
+            <h2>Not authorised</h2>
+            <p class="muted">
+                You are signed in as <strong>@Auth.Current?.Name</strong>, but managing documentation media
+                is reserved for the platform <strong>SuperAdmin</strong> role.
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="media-toolbar">
+            <span class="muted">@MediaRegistry.Slots.Count slots · @FilledCount filled</span>
+            <button type="button" class="btn btn-ghost btn-sm" @onclick="ReloadAsync" disabled="@_busyGlobal">Refresh</button>
+        </div>
+
+        @foreach (var group in MediaRegistry.Slots.GroupBy(s => s.PageSlug).OrderBy(g => g.Key))
+        {
+            var title = NavData.FindBySlug(group.Key)?.Title ?? group.Key;
+            <section class="media-group">
+                <div class="media-group-head">
+                    <h2>@title</h2>
+                    <a class="media-group-link" href="/docs/@group.Key" target="_blank" rel="noopener">View page ↗</a>
+                </div>
+
+                @foreach (var slot in group)
+                {
+                    var entry = Media.Get(slot.Key);
+                    <article class="media-card">
+                        <div class="media-card-info">
+                            <div class="media-tags">
+                                <span class="media-kind media-kind-@(slot.Kind.ToString().ToLowerInvariant())">@slot.Kind</span>
+                                <span class="media-aspect" title="Target aspect ratio">@slot.AspectRatio</span>
+                            </div>
+                            <p class="media-context">@slot.Context</p>
+                            <code class="media-slotkey">@slot.Key</code>
+                        </div>
+
+                        <div class="media-card-body">
+                            <div class="media-preview" style="aspect-ratio: @slot.AspectRatio;">
+                                @if (slot.Kind == MediaKind.Image && entry?.HasImage == true)
+                                {
+                                    <img src="@Media.AbsoluteImageUrl(entry)" alt="@(entry.Caption ?? slot.Context)" />
+                                }
+                                else if (slot.Kind == MediaKind.Video && entry?.HasVideo == true)
+                                {
+                                    <img class="media-video-thumb" src="https://img.youtube.com/vi/@entry.VideoId/hqdefault.jpg" alt="Video thumbnail" />
+                                    <span class="media-video-badge">▶ @entry.VideoId</span>
+                                }
+                                else
+                                {
+                                    <span class="media-preview-empty">No @(slot.Kind == MediaKind.Video ? "video" : "image") yet</span>
+                                }
+                            </div>
+
+                            <div class="media-controls">
+                                @if (slot.Kind == MediaKind.Image)
+                                {
+                                    <label class="btn btn-primary btn-sm media-upload-label">
+                                        <span>@(entry?.HasImage == true ? "Replace image" : "Upload image")</span>
+                                        <InputFile OnChange="@(e => OnFileAsync(e, slot))" accept="image/png,image/jpeg,image/webp" class="media-file-hidden" />
+                                    </label>
+                                    @if (entry?.HasImage == true)
+                                    {
+                                        <button type="button" class="btn btn-ghost btn-sm" @onclick='() => ClearAsync(slot, "image")' disabled="@IsBusy(slot)">Remove</button>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="media-field">
+                                        <label>YouTube link or video ID</label>
+                                        <input type="text" @bind="_videoInput[slot.Key]" placeholder="https://youtu.be/… or 11-character ID" />
+                                    </div>
+                                }
+
+                                <div class="media-field">
+                                    <label>Caption (optional)</label>
+                                    <input type="text" @bind="_captionInput[slot.Key]" placeholder='Short caption shown under the @(slot.Kind == MediaKind.Video ? "video" : "image")' />
+                                </div>
+
+                                <div class="media-actions">
+                                    @if (slot.Kind == MediaKind.Video)
+                                    {
+                                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => SaveTextAsync(slot)" disabled="@IsBusy(slot)">Save video</button>
+                                        @if (entry?.HasVideo == true)
+                                        {
+                                            <button type="button" class="btn btn-ghost btn-sm" @onclick='() => ClearAsync(slot, "video")' disabled="@IsBusy(slot)">Remove</button>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-ghost btn-sm" @onclick="() => SaveTextAsync(slot)" disabled="@IsBusy(slot)">Save caption</button>
+                                    }
+                                    @if (IsBusy(slot))
+                                    {
+                                        <span class="media-busy">Saving…</span>
+                                    }
+                                </div>
+
+                                @if (_msg.TryGetValue(slot.Key, out var m))
+                                {
+                                    <p class="media-msg @(m.Ok ? "is-ok" : "is-err")">@m.Text</p>
+                                }
+                            </div>
+                        </div>
+                    </article>
+                }
+            </section>
+        }
+    }
+</div>
+
+@code {
+    private bool _checking = true;
+    private bool _busyGlobal;
+
+    private readonly Dictionary<string, string?> _videoInput = new();
+    private readonly Dictionary<string, string?> _captionInput = new();
+    private readonly HashSet<string> _busy = new();
+    private readonly Dictionary<string, (bool Ok, string Text)> _msg = new();
+
+    private int FilledCount => MediaRegistry.Slots.Count(s =>
+    {
+        var e = Media.Get(s.Key);
+        return e is not null && (e.HasImage || e.HasVideo);
+    });
+
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.OnChanged += OnAuthChanged;
+        // The layout also bridges the session; calling here is idempotent and guarantees we know
+        // the auth state before deciding what to render.
+        try { await Auth.InitializeAsync(); } catch { }
+
+        if (Auth.IsSuperAdmin)
+        {
+            await Media.ReloadAsync();
+            SeedInputs();
+        }
+        _checking = false;
+    }
+
+    private async void OnAuthChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (Auth.IsSuperAdmin && Media.Slots.Count == 0)
+            {
+                await Media.ReloadAsync();
+                SeedInputs();
+            }
+            StateHasChanged();
+        });
+    }
+
+    private void SeedInputs()
+    {
+        foreach (var slot in MediaRegistry.Slots)
+        {
+            var e = Media.Get(slot.Key);
+            _videoInput[slot.Key] = e?.VideoId ?? string.Empty;
+            _captionInput[slot.Key] = e?.Caption ?? string.Empty;
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        _busyGlobal = true;
+        StateHasChanged();
+        await Media.ReloadAsync();
+        SeedInputs();
+        _busyGlobal = false;
+    }
+
+    private bool IsBusy(MediaSlot slot) => _busy.Contains(slot.Key);
+
+    private async Task OnFileAsync(InputFileChangeEventArgs e, MediaSlot slot)
+    {
+        var file = e.File;
+        if (file is null) return;
+        _msg.Remove(slot.Key);
+
+        const long max = 5 * 1024 * 1024;
+        if (file.Size > max)
+        {
+            _msg[slot.Key] = (false, "Image exceeds the 5 MB limit.");
+            return;
+        }
+
+        _busy.Add(slot.Key);
+        StateHasChanged();
+        try
+        {
+            using var ms = new MemoryStream();
+            await using (var stream = file.OpenReadStream(max))
+            {
+                await stream.CopyToAsync(ms);
+            }
+            ms.Position = 0;
+            await Media.UploadImageAsync(slot.Key, ms, file.Name, file.ContentType);
+            _captionInput[slot.Key] = Media.Get(slot.Key)?.Caption ?? _captionInput.GetValueOrDefault(slot.Key);
+            _msg[slot.Key] = (true, "Image published.");
+        }
+        catch (DocMediaException ex)
+        {
+            _msg[slot.Key] = (false, ex.Message);
+        }
+        catch (Exception)
+        {
+            _msg[slot.Key] = (false, "Upload failed. Check the connection and try again.");
+        }
+        finally
+        {
+            _busy.Remove(slot.Key);
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveTextAsync(MediaSlot slot)
+    {
+        _msg.Remove(slot.Key);
+        _busy.Add(slot.Key);
+        StateHasChanged();
+        try
+        {
+            var video = slot.Kind == MediaKind.Video ? _videoInput.GetValueOrDefault(slot.Key) : null;
+            var caption = _captionInput.GetValueOrDefault(slot.Key);
+            await Media.SetTextAsync(slot.Key, video, caption);
+            _msg[slot.Key] = (true, slot.Kind == MediaKind.Video ? "Video published." : "Caption saved.");
+        }
+        catch (DocMediaException ex)
+        {
+            _msg[slot.Key] = (false, ex.Message);
+        }
+        catch (Exception)
+        {
+            _msg[slot.Key] = (false, "Save failed. Check the connection and try again.");
+        }
+        finally
+        {
+            _busy.Remove(slot.Key);
+            StateHasChanged();
+        }
+    }
+
+    private async Task ClearAsync(MediaSlot slot, string kind)
+    {
+        _msg.Remove(slot.Key);
+        _busy.Add(slot.Key);
+        StateHasChanged();
+        try
+        {
+            await Media.ClearAsync(slot.Key, kind);
+            if (kind == "video") _videoInput[slot.Key] = string.Empty;
+            _msg[slot.Key] = (true, kind == "video" ? "Video removed." : "Image removed.");
+        }
+        catch (DocMediaException ex)
+        {
+            _msg[slot.Key] = (false, ex.Message);
+        }
+        catch (Exception)
+        {
+            _msg[slot.Key] = (false, "Could not remove. Try again.");
+        }
+        finally
+        {
+            _busy.Remove(slot.Key);
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        Auth.OnChanged -= OnAuthChanged;
+    }
+}

@@ -10,7 +10,7 @@ Access is gated to the **SuperAdmin** platform role — this is not the same as 
 
 Each plan's features are chosen from the same feature catalog that drives the public pricing cards, so what you toggle here is exactly what visitors see. The catalog includes features such as **AutoChordDetection**, **SlowDownPractice**, **SectionLooping**, **ChordTimeline**, **PlaylistSaving**, **SongSharing**, **PdfExport**, **UnlimitedAnalyses**, **ExtendedSongLength**, **PrioritySupport** and **SharedTeamLibrary**.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="administration-products-and-pricing--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The Plans and pricing editor listing plans with their feature toggles">
     <span class="img-frame-caption">The Plans &amp; pricing editor at /admin/products</span>
   </div>

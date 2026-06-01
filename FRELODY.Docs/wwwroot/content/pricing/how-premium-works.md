@@ -18,7 +18,7 @@ Premium is granted server-side the moment your payment is captured, so access tu
 - **Chord-chart printing** and clean **PDF export**.
 - The full data-driven feature set shown on the plan cards (such as a shared team library and priority support on **Studio**).
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="pricing-how-premium-works--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The Discover analysis screen with the daily-limit badge cleared after upgrading to Premium">
     <span class="img-frame-caption">With Premium active, the daily-limit badge no longer blocks analysis</span>
   </div>

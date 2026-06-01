@@ -10,7 +10,7 @@ There are two tiers. **Starter (free)** lets you analyse 2 songs every day, with
 
 You don't need a card to start, and you can cancel anytime. The pricing page is at `/pricing`.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="pricing-plans--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="FRELODY pricing page showing the Starter and Creator plan cards with a monthly, yearly and lifetime billing toggle">
     <span class="img-frame-caption">The pricing page with the Starter and Creator cards</span>
   </div>

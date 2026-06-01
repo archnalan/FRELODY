@@ -12,7 +12,7 @@ The page shows a grid of the songs you've unlocked, each with its thumbnail, a p
 
 Today's Songs pairs naturally with **Premium**. With unlimited analyses you can fill this list freely and keep every song to hand all day. To see what Premium includes without the hard sell, read [Plans and billing](/docs/pricing/plans).
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="discover-todays-songs--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The Today's Songs grid showing unlocked songs with time remaining">
     <span class="img-frame-caption">The Today's Songs grid showing unlocked songs with time remaining</span>
   </div>

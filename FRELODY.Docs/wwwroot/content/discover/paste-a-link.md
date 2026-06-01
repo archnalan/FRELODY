@@ -10,7 +10,7 @@ The single search field is flexible. On YouTube it accepts a song title or artis
 
 This page is for everyone, signed in or not. You can try analysis straight away within the free daily limit. To see how many free songs you get and the length caps, read [Free daily limits and song length](/docs/discover/free-limits).
 
-<div class="video-embed">
+<div class="video-embed" data-media-slot="discover-paste-a-link--1">
   <iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
           title="Pasting a song link into FRELODY Discover"
           loading="lazy"

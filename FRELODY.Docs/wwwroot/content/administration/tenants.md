@@ -10,7 +10,7 @@ The page shows a searchable, virtualised list of tenants. Use the **Search tenan
 
 Use this screen when you need to locate a specific tenant or scan the list of tenants in the application.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="administration-tenants--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The Tenant Management page with a search box and tenant list">
     <span class="img-frame-caption">The Tenant Management page at /admin/tenants</span>
   </div>

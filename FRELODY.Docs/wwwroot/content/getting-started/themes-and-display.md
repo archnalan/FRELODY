@@ -8,7 +8,7 @@ FRELODY comes in light and dark themes so you can match your room or your mood. 
 
 Signed-in members get a couple of extra display options under **Settings**, including a per-account theme preference and a control for how much detail each song shows.
 
-<figure class="img-frame" style="aspect-ratio: 1 / 1;">
+<figure class="img-frame" data-media-slot="getting-started-themes-and-display--1" style="aspect-ratio: 1 / 1;">
   <div class="img-frame-placeholder" role="img" aria-label="The light and dark theme toggle in the FRELODY navigation bar">
     <span class="img-frame-caption">The theme toggle in the nav bar</span>
   </div>

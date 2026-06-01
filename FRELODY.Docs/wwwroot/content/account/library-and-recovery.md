@@ -10,7 +10,7 @@ The **Library** tab lists the content tied to your account, so you can jump stra
 
 Recovery is your safety net. If you were working in Compose and a session ended before you saved, FRELODY keeps a draft so your work is not lost. This is the same mechanism behind the session-recovery prompt in the editor.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="account-library-and-recovery--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The Recovery tab listing auto-saved editing drafts with timestamps">
     <span class="img-frame-caption">The Recovery tab listing auto-saved drafts with timestamps and a Preview action</span>
   </div>

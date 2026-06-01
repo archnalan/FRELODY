@@ -10,7 +10,7 @@ From here you can add a member two ways: **invite** an existing FRELODY user, or
 
 Changing a role opens a confirm dialog ("Change member roles", with a **Save changes** action) so the change is deliberate. Remember the management rule: you can only act on members you strictly outrank — see Members, roles and ranks for the full hierarchy.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="administration-manage-members--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The Members page with invite, role-edit and enable controls">
     <span class="img-frame-caption">The Members page at /admin/members</span>
   </div>

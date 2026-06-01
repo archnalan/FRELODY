@@ -47,6 +47,13 @@ public class AuthService
     public bool IsAdmin => Current?.IsAdmin == true;
     public bool IsPremium => Current?.IsPremium == true;
 
+    /// <summary>
+    /// True only for the platform SuperAdmin role. Note this is narrower than <see cref="IsAdmin"/>,
+    /// which also includes org Owner/Admin — the docs media manager is SuperAdmin-only to match the API.
+    /// </summary>
+    public bool IsSuperAdmin =>
+        Current?.Roles.Any(r => string.Equals(r, "SuperAdmin", StringComparison.OrdinalIgnoreCase)) == true;
+
     public Audience CurrentAudience
     {
         get

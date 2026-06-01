@@ -25,7 +25,7 @@ When you share a playlist, visitors see a public version at the `/playlists/land
 - Use the **Search playlists...** box to jump to a set quickly once you have a few.
 - Saving songs into playlists is a member feature — make sure you're signed in. See [Sign in and sign out](/docs/getting-started/sign-in-and-sign-out).
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="library-playlists--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The FRELODY playlists page with folders and saved playlists">
     <span class="img-frame-caption">The FRELODY playlists page with folders and saved playlists</span>
   </div>

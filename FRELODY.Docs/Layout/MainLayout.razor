@@ -25,6 +25,10 @@
         @if (Auth.IsAuthenticated)
         {
             <div class="topbar-user" title="@(string.Join(", ", Auth.Current!.Roles))">
+                @if (Auth.IsSuperAdmin)
+                {
+                    <a class="btn btn-ghost btn-sm topbar-media-link" href="/admin/media" title="Manage documentation media">Media</a>
+                }
                 <span class="topbar-user-name">@Auth.Current!.Name</span>
                 @if (Auth.IsAdmin)
                 {

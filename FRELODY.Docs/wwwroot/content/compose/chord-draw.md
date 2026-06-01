@@ -19,7 +19,7 @@ When your chart looks right, you can save it with **Download SVG** or **Download
 5. Adjust the diagram using the settings panel.
 6. Choose **Download SVG** or **Download PNG** to save your chord.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 5;">
+<figure class="img-frame" data-media-slot="compose-chord-draw--1" style="aspect-ratio: 4 / 5;">
   <div class="img-frame-placeholder" role="img" aria-label="The chord-draw fret diagram editor with a chord shape placed on the fretboard">
     <span class="img-frame-caption">The chord-draw fret diagram editor</span>
   </div>

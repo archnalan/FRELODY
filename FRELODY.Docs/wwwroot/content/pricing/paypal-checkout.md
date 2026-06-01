@@ -20,7 +20,7 @@ This page assumes you're signed in. If you're not, see [Sign in and sign out](/d
 6. FRELODY shows "Confirming your payment…", then "You're Premium! 🎉".
 7. The page reloads into **Discover** with your new limits already active.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="pricing-paypal-checkout--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="The Complete your upgrade window with the PayPal tab selected and the PayPal buttons loaded">
     <span class="img-frame-caption">The PayPal tab in the upgrade window</span>
   </div>

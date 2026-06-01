@@ -24,7 +24,7 @@ Because the card is baked into the page's HTML, it shows correctly on WhatsApp, 
 - The card pulls from the share link's saved title, description and image, so a clear song title makes for a clearer card.
 - Nothing extra is needed to make cards work — they're generated for you with every share link.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="sharing-social-cards--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="A FRELODY Open Graph card previewing a shared song in a chat app">
     <span class="img-frame-caption">A FRELODY Open Graph card previewing a shared song in a chat app</span>
   </div>

@@ -12,7 +12,7 @@ The chord grid is the centre of it all. As the song plays, FRELODY highlights th
 
 The player itself floats in a draggable window you can move out of the way or minimise; on small screens it docks neatly at the bottom instead.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="discover-chord-playback--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The playback view with synced chord grid, beat strip and meta chips">
     <span class="img-frame-caption">The playback view with synced chord grid, beat strip and meta chips</span>
   </div>

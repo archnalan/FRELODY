@@ -10,7 +10,7 @@ The analysis pipeline and the playback experience are the same as YouTube: FRELO
 
 One thing to note: TikTok analyses aren't saved to your library, so there's no **Save to Library** option here. You can still come back to it the same day from [Today's Songs](/docs/discover/todays-songs). An **Open on TikTok** link takes you to the original video whenever you want it.
 
-<figure class="img-frame" style="aspect-ratio: 9 / 16;">
+<figure class="img-frame" data-media-slot="discover-tiktok-analysis--1" style="aspect-ratio: 9 / 16;">
   <div class="img-frame-placeholder" role="img" aria-label="A TikTok analysis with the vertical floating player and chord chart">
     <span class="img-frame-caption">A TikTok analysis with the vertical floating player and chord chart</span>
   </div>

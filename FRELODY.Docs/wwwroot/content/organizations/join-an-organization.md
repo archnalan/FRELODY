@@ -10,7 +10,7 @@ Open `/organizations/join`. The page is titled "Join an organization" with the s
 
 When you select **Continue**, FRELODY previews the switch and asks you to confirm before changing your active workspace. This is so you do not switch away from your current organization by accident.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="organizations-join-an-organization--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="The Join an organization form with the Organization ID field">
     <span class="img-frame-caption">The Join an organization form</span>
   </div>

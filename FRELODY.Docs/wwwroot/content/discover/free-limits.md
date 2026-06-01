@@ -12,7 +12,7 @@ There are also length caps. Free songs can be up to 8 minutes long. Premium rais
 
 Once you've analysed a song, it stays free to replay for a 24-hour window, so you can keep practising it through the day without spending another slot. You'll find those songs in [Today's Songs](/docs/discover/todays-songs).
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="discover-free-limits--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="The daily quota badge and access sheet shown on an analysis">
     <span class="img-frame-caption">The daily quota badge and access sheet shown on an analysis</span>
   </div>

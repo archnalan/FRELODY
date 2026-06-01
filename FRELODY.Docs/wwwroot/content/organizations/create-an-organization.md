@@ -10,7 +10,7 @@ Open `/organizations/create`. The page is titled "Create your organization" with
 
 If you are already a member of an organization, FRELODY will tell you: "You're already a member of <Name>. Leave it first if you want to create a new one." A **View my organization** link takes you to your current workspace.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="organizations-create-an-organization--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="The Create your organization form with name, industry and country fields">
     <span class="img-frame-caption">The Create your organization form</span>
   </div>

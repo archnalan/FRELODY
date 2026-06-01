@@ -10,7 +10,7 @@ The page lays out the essentials in simple rows: **Chord:** the chord it's for, 
 
 This is a read-only view — to change a chart, open it in the chord chart editor instead.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 5;">
+<figure class="img-frame" data-media-slot="compose-viewing-chord-charts--1" style="aspect-ratio: 4 / 5;">
   <div class="img-frame-placeholder" role="img" aria-label="A chord chart detail page showing the chord, fret position and diagram">
     <span class="img-frame-caption">A chord chart detail page</span>
   </div>

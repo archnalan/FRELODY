@@ -10,7 +10,7 @@ The page header shows the video thumbnail, title and channel, a quota badge trac
 
 Sometimes you'll hit a stopping point instead. If you've used your free songs for the day you'll see "Daily limit reached"; a song over the length cap shows "Too long to analyze"; and if something goes wrong you'll get "Analysis failed" with a **Try again** button. The free limits and length caps are explained in [Free daily limits and song length](/docs/discover/free-limits).
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="discover-youtube-analysis--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="A completed YouTube analysis with the synced chord playback view">
     <span class="img-frame-caption">A completed YouTube analysis with the synced chord playback view</span>
   </div>

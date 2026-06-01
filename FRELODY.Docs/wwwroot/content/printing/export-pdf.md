@@ -18,7 +18,7 @@ If you're on the free plan, see [Plans and billing](/docs/pricing/plans) to lear
 4. When your device's print dialog opens, set the destination to "Save as PDF" (the wording varies by browser).
 5. Save the file to your device.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="printing-export-pdf--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="A browser print dialog with the destination set to Save as PDF for a FRELODY chord sheet">
     <span class="img-frame-caption">Saving a chord sheet as a PDF from the print dialog</span>
   </div>

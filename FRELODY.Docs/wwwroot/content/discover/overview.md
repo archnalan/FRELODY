@@ -12,7 +12,7 @@ The search box adapts to the source. On YouTube you can type a song title, an ar
 
 Results appear in a grid. If nothing matches you'll see "No results found", and while you're still deciding a scrolling chord display keeps the page alive. Pick a result and FRELODY takes you to the analysis page for that video, where the chords are worked out.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="discover-overview--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The Discover search page with the YouTube and TikTok source toggle">
     <span class="img-frame-caption">The Discover search page with the YouTube and TikTok source toggle</span>
   </div>

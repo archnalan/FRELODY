@@ -24,7 +24,7 @@ If a link no longer works you'll see a clear message: **This share link has expi
 - These pages are made to be crawler-friendly, so the link shows a proper preview on chat and social apps. See [Social cards (Open Graph)](/docs/sharing/social-cards).
 - Share links can expire — if yours has, ask the sender for a fresh one.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="sharing-public-landings--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="A public FRELODY shared song landing page">
     <span class="img-frame-caption">A public FRELODY shared song landing page</span>
   </div>

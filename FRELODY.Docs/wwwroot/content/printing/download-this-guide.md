@@ -15,7 +15,7 @@ Every page in this guide is built to print cleanly: navigation, buttons and any 
 3. Set the destination to "Save as PDF".
 4. Check the preview, then save the file to your device.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="printing-download-this-guide--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="A browser print dialog set to Save as PDF showing a clean FRELODY documentation page">
     <span class="img-frame-caption">Saving a documentation page as a PDF</span>
   </div>

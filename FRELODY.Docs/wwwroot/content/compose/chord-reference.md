@@ -18,7 +18,7 @@ Open any chord to reach its detail page, headed "Chord Details" with the line "V
 4. Use **Edit Chord** to change it, or the back button to return to the list.
 5. Use **Add Chord** if you need to create a chord that isn't there yet.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="compose-chord-reference--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The chord reference at /chords showing a searchable grid of chord cards">
     <span class="img-frame-caption">The chord reference grid</span>
   </div>

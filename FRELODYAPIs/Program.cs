@@ -110,6 +110,7 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<ISmtpSenderService,SmtpSenderService>();
 builder.Services.AddScoped<IShareLinkService, ShareLinkService>();
 builder.Services.AddScoped<IOgCardService, OgCardService>();
+builder.Services.AddSingleton<FRELODYAPIs.Services.DocsMedia.IDocMediaService, FRELODYAPIs.Services.DocsMedia.DocMediaService>();
 builder.Services.Configure<ShareLandingOptions>(
     builder.Configuration.GetSection(ShareLandingOptions.SectionName));
 
@@ -474,6 +475,23 @@ app.MapStaticAssets();
 // Serve runtime-generated assets (e.g. Open Graph preview PNGs written to
 // wwwroot/share-og/{token}.png) which aren't part of the build-time manifest.
 app.UseStaticFiles();
+
+// Serve SuperAdmin-uploaded documentation media. These live on the persistent
+// frelody_media volume (/app/media/docs-media), outside wwwroot, so they survive
+// redeploys. Short cache: image URLs are cache-busted with ?v=<updatedAt> by the docs site.
+{
+    var docsMediaRoot = builder.Configuration["DocsMedia:Root"] ?? Path.Combine("media", "docs-media");
+    if (!Path.IsPathRooted(docsMediaRoot))
+        docsMediaRoot = Path.Combine(app.Environment.ContentRootPath, docsMediaRoot);
+    Directory.CreateDirectory(docsMediaRoot);
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(docsMediaRoot),
+        RequestPath = "/docs-media",
+        OnPrepareResponse = ctx =>
+            ctx.Context.Response.Headers.CacheControl = "public,max-age=300"
+    });
+}
 
 app.UseRouting();
 

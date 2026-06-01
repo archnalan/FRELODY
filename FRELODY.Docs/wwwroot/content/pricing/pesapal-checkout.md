@@ -20,7 +20,7 @@ This page assumes you're signed in. If you're not, see [Sign in and sign out](/d
 6. Choose mobile money, card or bank transfer and follow PesaPal's prompts.
 7. When PesaPal confirms, you're returned to FRELODY with Premium active.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="pricing-pesapal-checkout--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="The Complete Your Payment window showing the PesaPal gateway for mobile money, card and bank transfer">
     <span class="img-frame-caption">The PesaPal gateway window</span>
   </div>

@@ -8,7 +8,7 @@ Signing in unlocks your saved songs, the **Compose** editor, your playlists and 
 
 You can sign in with your email or username and password, or use **Continue with Google**. If you have visited before, FRELODY may show a **Continue as** chip so you can pick up your session in one tap, reviving it quietly in the background where possible.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="getting-started-sign-in-and-sign-out--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="The Welcome back sign-in card with email and password fields and a Continue with Google button">
     <span class="img-frame-caption">The sign-in card</span>
   </div>

@@ -25,7 +25,7 @@ Every share link carries a small preview snapshot — a title, description and i
 - The preview card is generated automatically — see [Social cards (Open Graph)](/docs/sharing/social-cards) for how it looks when posted.
 - Visitors who open your link land on a public page that works without an account. See [Public song and playlist pages](/docs/sharing/public-landings).
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="sharing-share-links--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="The song share menu with the Share Link option highlighted">
     <span class="img-frame-caption">The song share menu with the Share Link option highlighted</span>
   </div>

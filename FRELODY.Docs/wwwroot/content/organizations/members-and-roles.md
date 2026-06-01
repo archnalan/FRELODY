@@ -10,7 +10,7 @@ The roles, from highest rank to lowest, are: **Owner** (70), **Admin** (60), **M
 
 The core rule is simple: a member can only manage targets they strictly outrank. An Admin (60) can manage a Manager (50) or below, but not another Admin or the Owner. This keeps people from changing the role of a peer or someone above them.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="organizations-members-and-roles--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The Members page listing organization members with their roles">
     <span class="img-frame-caption">The Members page at /admin/members</span>
   </div>

@@ -16,7 +16,7 @@ Printing is a Premium feature. If you're on the free plan, you can read more on 
 4. FRELODY opens your device's print dialog and shows "Print dialog opened!".
 5. Pick your printer and settings, then print.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="printing-print-chord-charts--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="The song share dropdown open with the Print option highlighted">
     <span class="img-frame-caption">The Print option in the song's share menu</span>
   </div>

@@ -12,7 +12,7 @@ Below the form, your song is laid out on the SongBoard as sections, rows and seg
 
 Compose is a member feature that needs the org **Editor** or **Contributor** role. If you can't open it, ask your organisation owner to grant one of those roles.
 
-<div class="video-embed">
+<div class="video-embed" data-media-slot="compose-overview--1">
   <iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
           title="A tour of the Compose song editor"
           loading="lazy"
@@ -21,7 +21,7 @@ Compose is a member feature that needs the org **Editor** or **Contributor** rol
 </div>
 <p class="video-embed-caption">A short tour of the Compose editor, from the song form to sections and chords.</p>
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="compose-overview--2" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The Compose Song Editor showing the song form and tabbed section boards">
     <span class="img-frame-caption">The Compose Song Editor</span>
   </div>

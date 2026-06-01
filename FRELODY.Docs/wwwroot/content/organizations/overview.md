@@ -10,7 +10,7 @@ Open `/organizations/me` to see your organization. If you are a member, the page
 
 Members hold a role that sets what they can do. From most to least access, the roles are **Owner**, **Admin**, **Manager**, **Editor**, **Contributor**, **Viewer** and **Guest**. Owners and Admins manage the organization; Editors and Contributors create content; Viewers and Guests have lighter access.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="organizations-overview--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The My organization page showing organization name, member count and country">
     <span class="img-frame-caption">The My organization page at /organizations/me</span>
   </div>

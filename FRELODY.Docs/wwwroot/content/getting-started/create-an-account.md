@@ -8,7 +8,7 @@ You can try FRELODY without an account, but creating one lets you save analysed 
 
 Sign-up is a short, guided wizard with a step indicator at the top so you always know where you are. You will enter your name and email, then confirm your email with a one-time code we send you.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="getting-started-create-an-account--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="The Create your FRELODY account form with name and email fields and a step indicator">
     <span class="img-frame-caption">The first step of the sign-up wizard</span>
   </div>

@@ -20,7 +20,7 @@ The wizard runs through five steps — **Details**, **Draw**, **Media**, **Notes
 6. **Notes** — add notes about the shape or fingering.
 7. **Review** — check everything, then save the chart.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 5;">
+<figure class="img-frame" data-media-slot="compose-chord-charts--1" style="aspect-ratio: 4 / 5;">
   <div class="img-frame-placeholder" role="img" aria-label="The chord chart wizard on the Draw step with a diagram in progress">
     <span class="img-frame-caption">The chord chart wizard, Draw step</span>
   </div>

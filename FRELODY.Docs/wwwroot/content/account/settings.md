@@ -10,7 +10,7 @@ Under **Appearance** you will find a **Theme** dropdown and a **Notify** switch.
 
 Under **Display** you can choose a song **Mode** with a segmented control: **Full** (lyrics, chords and chord charts together), lyrics-and-chords, or lyrics-only. This is the layout FRELODY uses when you view a song.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="account-settings--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The Settings tab showing the Theme dropdown, Notify switch and song display Mode control">
     <span class="img-frame-caption">The Settings tab with Appearance and Display options</span>
   </div>

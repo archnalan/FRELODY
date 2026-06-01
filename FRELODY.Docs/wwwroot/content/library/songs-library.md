@@ -25,7 +25,7 @@ When you have a lot of songs, the list loads smoothly as you scroll, so even a b
 - Use `/songs` when you just want to browse a tidy, read-only view.
 - Saving a song from **Discover** adds it here automatically — no extra step needed.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="library-songs-library--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The FRELODY songs library with search and a grid of saved songs">
     <span class="img-frame-caption">The FRELODY songs library with search and a grid of saved songs</span>
   </div>

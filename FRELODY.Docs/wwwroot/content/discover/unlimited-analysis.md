@@ -12,7 +12,7 @@ Premium also raises the length cap. Free songs can be up to 8 minutes; Premium l
 
 Premium is granted as soon as your payment is confirmed, and it stays active for as long as your plan runs. To understand how access is applied and when it renews or lapses, see [How premium access works](/docs/pricing/how-premium-works). For prices and what each plan includes, see [Plans and billing](/docs/pricing/plans).
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="discover-unlimited-analysis--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="An analysis running without a daily-limit prompt on Premium">
     <span class="img-frame-caption">An analysis running without a daily-limit prompt on Premium</span>
   </div>

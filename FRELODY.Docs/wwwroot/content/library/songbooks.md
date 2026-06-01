@@ -23,7 +23,7 @@ Songbooks are a member feature, so sign in to create and manage them.
 
 - Songbooks suit collections you keep coming back to, like a worship set or an album you're learning. For lighter, ad-hoc groupings, a playlist may be quicker.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="library-songbooks--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The FRELODY Song Books page showing songbook cards">
     <span class="img-frame-caption">The FRELODY Song Books page showing songbook cards</span>
   </div>

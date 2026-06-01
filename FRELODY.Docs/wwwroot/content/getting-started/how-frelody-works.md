@@ -8,7 +8,7 @@ FRELODY takes a song link and gives you back chords you can play. There is no sp
 
 Under the bonnet, FRELODY detects the chords in the recording, works out the key, tempo and time signature, and syncs each chord to the moment it is played. That is what lets you slow the song down and loop a single bar without losing your place.
 
-<div class="video-embed">
+<div class="video-embed" data-media-slot="getting-started-how-frelody-works--1">
   <iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
           title="How FRELODY turns a song link into a playable chord chart"
           loading="lazy"
@@ -23,7 +23,7 @@ Under the bonnet, FRELODY detects the chords in the recording, works out the key
 2. **Get the chords.** FRELODY detects the chords and lines them up with the audio.
 3. **Slow it down and loop.** Drop the tempo, loop the hard bar, and play along.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="getting-started-how-frelody-works--2" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="A synced chord grid playing alongside a song with a beat strip below">
     <span class="img-frame-caption">The playback view syncs chords to the audio</span>
   </div>

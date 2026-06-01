@@ -8,7 +8,7 @@ If something is not working as expected, or you simply want to tell us what woul
 
 The fastest way to reach the team from inside the app is the feedback dialog, where you can send a message, report a problem or share a suggestion.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="help-get-support--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="The in-app feedback dialog for sending a message to the FRELODY team">
     <span class="img-frame-caption">The in-app feedback dialog</span>
   </div>

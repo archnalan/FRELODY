@@ -22,7 +22,7 @@ If you like what you see, creating an account unlocks the full experience: savin
 
 - Followed a shared song? You'll usually land on a `/songs/landing/...` page — the same view, made for sharing.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="library-song-preview--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="A FRELODY song preview as seen by a signed-out visitor">
     <span class="img-frame-caption">A FRELODY song preview as seen by a signed-out visitor</span>
   </div>

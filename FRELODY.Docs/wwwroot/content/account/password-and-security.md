@@ -10,7 +10,7 @@ The **Security** section has a **Password** entry — "Change your account passw
 
 If you have forgotten your password, FRELODY can email you a reset link. Following that link takes you to a reset page where you can set a new password. In some cases FRELODY may also require you to change your password on your next sign-in.
 
-<figure class="img-frame" style="aspect-ratio: 4 / 3;">
+<figure class="img-frame" data-media-slot="account-password-and-security--1" style="aspect-ratio: 4 / 3;">
   <div class="img-frame-placeholder" role="img" aria-label="The Change Password dialog open over the Account security section">
     <span class="img-frame-caption">The Change Password dialog</span>
   </div>

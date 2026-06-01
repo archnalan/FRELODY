@@ -10,7 +10,7 @@ The page is organised into tabs for **Songs**, **Playlists** and **Songbooks**. 
 
 This page is for organization staff: it is gated to **Owner**, **Admin**, **Manager** and **Editor**. Use it as a quick map of what the team has built.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="organizations-projects--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The Projects page with Songs, Playlists and Songbooks tabs">
     <span class="img-frame-caption">The Projects page at /admin/projects</span>
   </div>

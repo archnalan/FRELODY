@@ -10,7 +10,7 @@ It is built for hobbyist musicians who want to learn a song fast, without huntin
 
 You can start straight away. The home page is the **Discover** search, so there is no splash screen to click through and no card needed to try it. Start free, and upgrade when you are hooked.
 
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="getting-started-welcome--1" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="The FRELODY Discover home page with a search box ready for a song link">
     <span class="img-frame-caption">The FRELODY home page is the Discover search</span>
   </div>

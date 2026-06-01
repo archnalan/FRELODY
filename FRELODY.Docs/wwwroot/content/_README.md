@@ -95,22 +95,24 @@ inline `code` for routes/field names, and **bold** for visible UI labels the use
 
 ### Image placeholders
 
-You **cannot** embed Blazor components from inside markdown, so use this raw-HTML placeholder pattern —
-the build treats it as raw HTML and an operator later replaces the inner `<div>` with a real `<img>`:
+You **cannot** embed Blazor components from inside markdown, so use this raw-HTML placeholder pattern.
+The placeholder is shown until a SuperAdmin uploads the real image on the **Media manager**
+(`/admin/media`); the site then injects the `<img>` automatically at render time — **no commit or
+redeploy needed**. The binding is the `data-media-slot` attribute:
 
 ```html
-<figure class="img-frame" style="aspect-ratio: 16 / 9;">
+<figure class="img-frame" data-media-slot="<page-slug-dashes>--<n>" style="aspect-ratio: 16 / 9;">
   <div class="img-frame-placeholder" role="img" aria-label="Caption goes here">
     <span class="img-frame-caption">Caption goes here</span>
   </div>
 </figure>
 ```
 
-When the screenshot is ready, replace the inner `<div>` with:
-
-```html
-<img src="/images/<slug-relative-path>.png" alt="Descriptive alt text" loading="lazy" />
-```
+**Slot key rule:** `<page-slug-dashes>--<n>` where the slug's `/` become `-` and `<n>` is the media
+item's 1-based position **in document order on that page** (images and videos share the sequence).
+Example: the 2nd media item on `compose/overview` is `compose-overview--2`. Every new placeholder
+**must** get a unique slot key **and** a matching entry added to `FRELODY.Docs/Services/MediaRegistry.cs`,
+otherwise it can never be filled.
 
 **Aspect ratios:** full page screenshot `16 / 9`; form/dialog `4 / 3`; mobile portrait `9 / 16`;
 icon/single control `1 / 1`; wide diagram `21 / 9`; **chord chart / fret diagram `4 / 5`**.
@@ -118,11 +120,12 @@ At most one image per H2. Keep alt text descriptive (not "screenshot").
 
 ### Video embeds (YouTube walkthroughs)
 
-For feature walkthroughs you may embed a YouTube video. Use this raw-HTML pattern — an operator later
-fills in the real video ID:
+For feature walkthroughs you may embed a YouTube video. Use this raw-HTML pattern; a SuperAdmin later
+pastes the YouTube link on the **Media manager** (`/admin/media`) and the site injects the real video
+id at render time. The binding is the same `data-media-slot` key (see the image rule above):
 
 ```html
-<div class="video-embed">
+<div class="video-embed" data-media-slot="<page-slug-dashes>--<n>">
   <iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
           title="Descriptive video title"
           loading="lazy"
