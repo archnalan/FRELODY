@@ -1,0 +1,84 @@
+/* Scoped to NavMenuItem.razor.
+
+   IMPORTANT: <NavLink> is a child component, so the <a> it renders does NOT
+   receive this component's scope attribute. .nav-link rules therefore live in
+   the global app.css. Only elements rendered DIRECTLY by NavMenuItem are
+   styled here: the expand/collapse <button class="nav-group">, the <div class="nav-children">
+   wrapper, the caret span, and the dot/text spans inside the NavLink's
+   ChildContent (those *are* owned by NavMenuItem). */
+
+.nav-group {
+    --depth: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    padding-left: calc(0.75rem + var(--depth) * 0.85rem);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+}
+
+.nav-group:hover {
+    background: var(--bg-muted);
+}
+
+.nav-group[style*="--depth:0"] {
+    font-weight: 700;
+    color: var(--text);
+}
+
+.nav-group.is-trail {
+    color: var(--nav-active-fg);
+}
+
+.nav-group-caret {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--transition);
+    color: var(--text-muted);
+}
+
+.nav-group-caret svg {
+    width: 12px;
+    height: 12px;
+}
+
+.nav-group.is-expanded .nav-group-caret {
+    transform: rotate(90deg);
+}
+
+.nav-children {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    border-left: 1px dashed var(--border);
+    margin-left: calc(0.75rem + (var(--depth) - 1) * 0.85rem + 0.4rem);
+    padding-left: 0.25rem;
+}
+
+/* These spans are NavMenuItem's ChildContent inside the NavLink; they DO get
+   the scope attribute because NavMenuItem renders them. */
+.nav-link-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    flex: none;
+    transition: background var(--transition);
+}
+
+.nav-link-text {
+    /* Inherits color from the <a class="nav-link"> in app.css. */
+}

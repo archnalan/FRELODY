@@ -1,0 +1,65 @@
+@*
+    AccessGate
+    ----------
+    Renders an inline gate when the visiting user does not meet the
+    audience required for a documentation page.
+    Pages call this component instead of rendering markdown when blocked.
+*@
+@inject AuthService Auth
+
+<section class="access-gate" aria-live="polite">
+    <div class="access-gate-card">
+        <div class="access-gate-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+        </div>
+        <h2 class="access-gate-title">@Title</h2>
+        <p class="access-gate-body">@Body</p>
+
+        @if (!Auth.IsAuthenticated)
+        {
+            <button type="button" class="btn btn-primary" @onclick="OnSignIn">Sign in</button>
+        }
+        else if (Required == Audience.Premium && !Auth.IsPremium)
+        {
+            <p class="access-gate-note muted">
+                You are signed in as <strong>@Auth.Current?.Name</strong>. This page covers a premium feature —
+                <a href="/docs/pricing/plans">see plans</a> to unlock it.
+            </p>
+        }
+        else if (Required == Audience.Admin && !Auth.IsAdmin)
+        {
+            <p class="access-gate-note muted">
+                You are signed in as <strong>@Auth.Current?.Name</strong>, but this section is reserved for organization administrators.
+            </p>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public Audience Required { get; set; }
+
+    /// <summary>Invoked when the user clicks "Sign in" — parent should start the sign-in bridge.</summary>
+    [Parameter] public EventCallback OnSignIn { get; set; }
+
+    private string Title => Required switch
+    {
+        Audience.Admin => "Administrator access required",
+        Audience.Premium => "Premium feature",
+        Audience.Member => "Sign in to view this page",
+        _ => "Restricted content",
+    };
+
+    private string Body => Required switch
+    {
+        Audience.Admin =>
+            "This page documents organization and platform administration. Sign in with an administrator account (Owner, Admin or SuperAdmin) to view the full guidance.",
+        Audience.Premium =>
+            "This page covers a premium feature — such as unlimited song analysis, Today's Songs, extended song length or chord-chart printing. Upgrade to a Creator or Studio plan to unlock it.",
+        Audience.Member =>
+            "This page covers tasks that only apply to signed-in FRELODY accounts — such as the song editor, your library, playlists and songbooks. Sign in to view it.",
+        _ => "You do not have permission to view this page.",
+    };
+}

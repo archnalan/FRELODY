@@ -1,0 +1,38 @@
+@*
+    ImagePlaceholder
+    ----------------
+    Renders a fixed-aspect-ratio frame so the layout stays consistent
+    whether or not the final image has been supplied. When Src is set,
+    the image is shown using object-fit: cover so it fills the frame
+    regardless of its intrinsic aspect ratio.
+*@
+
+<figure class="img-frame @CssClass" style="aspect-ratio: @AspectRatio;">
+    @if (!string.IsNullOrWhiteSpace(Src))
+    {
+        <img src="@Src" alt="@Alt" loading="lazy" />
+    }
+    else
+    {
+        <div class="img-frame-placeholder" role="img" aria-label="@(Alt ?? Caption ?? "Image placeholder")">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span class="img-frame-caption">@Caption</span>
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Caption) && !string.IsNullOrWhiteSpace(Src))
+    {
+        <figcaption class="img-frame-figcaption">@Caption</figcaption>
+    }
+</figure>
+
+@code {
+    [Parameter] public string? Src { get; set; }
+    [Parameter] public string? Alt { get; set; }
+    [Parameter] public string? Caption { get; set; } = "Image coming soon";
+    [Parameter] public string AspectRatio { get; set; } = "16 / 9";
+    [Parameter] public string? CssClass { get; set; }
+}

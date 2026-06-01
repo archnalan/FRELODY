@@ -1,0 +1,96 @@
+/* Scoped to NavMenu.razor — affects only the markup this component renders.
+   .nav-link / .nav-group / .nav-children rules live in NavMenuItem.razor.css
+   because that's the component that renders them. */
+
+.navmenu {
+    padding: 1rem 0.75rem 2rem;
+}
+
+.navmenu-search {
+    position: relative;
+    margin: 0 0.25rem 1rem;
+}
+
+.navmenu-search .search-icon {
+    position: absolute;
+    left: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--text-subtle);
+}
+
+.navmenu-search input {
+    width: 100%;
+    padding: 0.55rem 0.75rem 0.55rem 2.1rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text);
+    font-size: 0.9rem;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.navmenu-search input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.navmenu-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.nav-section + .nav-section {
+    margin-top: 0.25rem;
+}
+
+/* Search results */
+.navmenu-search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0 0.25rem;
+}
+
+.search-result {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.55rem 0.65rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+}
+
+.search-result:hover {
+    background: var(--bg-muted);
+}
+
+.search-result.is-active {
+    background: var(--accent-soft);
+    color: var(--accent-soft-text);
+}
+
+.search-result-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.search-result-slug {
+    font-size: 0.72rem;
+    color: var(--text-subtle);
+    font-family: var(--font-mono);
+}
+
+.search-empty {
+    padding: 0.5rem 0.65rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}

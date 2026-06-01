@@ -1,0 +1,28 @@
+# Docker uses this automatically for Dockerfile.docs
+# (naming convention: {dockerfile}.dockerignore)
+
+# ── Build outputs ────────────────────────────────────────────
+**/bin/
+**/obj/
+
+# ── IDE / tooling artefacts ──────────────────────────────────
+**/.vs/
+**/.idea/
+**/*.user
+**/*.suo
+
+# ── Git ──────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Only the Docs project is needed for this build ──────────
+FRELODYAPIs/
+FRELODYLIB/
+FRELODYSHRD/
+FRELODYUI/
+SongalUI/
+
+# ── Logs & temp ──────────────────────────────────────────────
+**/Logs/
+**/logs/
+**/*.log

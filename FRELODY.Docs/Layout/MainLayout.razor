@@ -1,0 +1,113 @@
+@inherits LayoutComponentBase
+@inject ThemeService Theme
+@inject NavigationManager Nav
+@inject AuthService Auth
+@implements IDisposable
+
+<div class="app-shell">
+    <header class="app-topbar">
+        <button class="icon-btn topbar-menu-btn" @onclick="ToggleSidebar" aria-label="Toggle navigation menu" aria-expanded="@_sidebarOpen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
+        <a class="brand" href="/">
+            <span class="brand-mark" aria-hidden="true">
+                <img src="fet_melody_logo.png" alt="FRELODY" onerror="this.style.display='none'" />
+            </span>
+            <span class="brand-text">
+                <span class="brand-title">FRELODY</span>
+                <span class="brand-sub">Documentation</span>
+            </span>
+        </a>
+
+        <div class="topbar-spacer"></div>
+
+        @if (Auth.IsAuthenticated)
+        {
+            <div class="topbar-user" title="@(string.Join(", ", Auth.Current!.Roles))">
+                <span class="topbar-user-name">@Auth.Current!.Name</span>
+                @if (Auth.IsAdmin)
+                {
+                    <span class="topbar-user-badge" aria-label="Administrator">Admin</span>
+                }
+                else if (Auth.IsPremium)
+                {
+                    <span class="topbar-user-badge topbar-user-badge-premium" aria-label="Premium">Premium</span>
+                }
+                <button type="button" class="btn btn-ghost btn-sm" @onclick="SignOut">Sign out</button>
+            </div>
+        }
+        else
+        {
+            <button type="button" class="btn btn-primary btn-sm topbar-signin" @onclick="SignIn">Sign in</button>
+        }
+
+        <button class="icon-btn theme-btn" @onclick="ToggleTheme" aria-label="Toggle dark mode" title="Toggle dark mode">
+            @if (Theme.Current == "dark")
+            {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            }
+            else
+            {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            }
+        </button>
+    </header>
+
+    <div class="sidebar-backdrop @(_sidebarOpen ? "is-visible" : "")" @onclick="CloseSidebar" aria-hidden="true"></div>
+
+    <aside class="app-sidebar @(_sidebarOpen ? "is-open" : "")" aria-label="Documentation navigation">
+        <NavMenu OnNavigate="CloseSidebar" />
+    </aside>
+
+    <main class="app-main" id="main-content">
+        @Body
+        <footer class="app-footer">
+            <div class="footer-inner">
+                <p>© @DateTime.Now.Year FRELODY — paste a song link, get the chords, slow it down and loop it.</p>
+                <p class="muted">FRELODY · chord charts, lyrics, song analysis and the Compose editor.</p>
+            </div>
+        </footer>
+    </main>
+</div>
+
+<PdfExportOverlay />
+
+@code {
+    private bool _sidebarOpen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Theme.InitAsync();
+        Theme.ThemeChanged += OnThemeChanged;
+        Nav.LocationChanged += OnLocationChanged;
+        Auth.OnChanged += OnAuthChanged;
+
+        // Bridge any session passed in by the FRELODY web app (URL fragment), or restore
+        // a previously cached one. Best-effort — never throws.
+        try { await Auth.InitializeAsync(); } catch { }
+    }
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+    private void OnAuthChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _sidebarOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleSidebar() => _sidebarOpen = !_sidebarOpen;
+    private void CloseSidebar() => _sidebarOpen = false;
+    private async Task ToggleTheme() => await Theme.ToggleAsync();
+
+    private void SignIn() => Auth.RequestSignIn();
+    private async Task SignOut() => await Auth.LogoutAsync();
+
+    public void Dispose()
+    {
+        Theme.ThemeChanged -= OnThemeChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+        Auth.OnChanged -= OnAuthChanged;
+    }
+}

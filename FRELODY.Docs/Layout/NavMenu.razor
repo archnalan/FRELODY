@@ -1,0 +1,123 @@
+@inject NavigationDataService NavData
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="navmenu">
+    <div class="navmenu-search">
+        <span class="search-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <input type="search" placeholder="Search documentation…" @bind="_searchTerm" @bind:event="oninput" aria-label="Search documentation" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+    {
+        <div class="navmenu-search-results">
+            @{
+                var results = NavData.Search(_searchTerm).Take(20).ToList();
+            }
+            @foreach (var match in results)
+            {
+                <button class="search-result @(IsActive(match) ? "is-active" : "")" @onclick="() => NavigateTo(match)">
+                    <span class="search-result-title">@match.Title</span>
+                    <span class="search-result-slug">@match.Slug</span>
+                </button>
+            }
+            @if (results.Count == 0)
+            {
+                <p class="search-empty">No matches.</p>
+            }
+        </div>
+    }
+    else
+    {
+        <nav class="navmenu-tree" aria-label="Documentation sections">
+            @foreach (var section in NavData.Sections)
+            {
+                <div class="nav-section">
+                    <NavMenuItem Item="section"
+                                 Depth="0"
+                                 CurrentSlug="_currentSlug"
+                                 Expanded="_expanded"
+                                 OnNavigate="HandleNavigated" />
+                </div>
+            }
+        </nav>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback OnNavigate { get; set; }
+
+    private string _currentSlug = string.Empty;
+    private HashSet<string> _expanded = new(StringComparer.OrdinalIgnoreCase);
+    private string _searchTerm = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += HandleLocationChanged;
+        UpdateCurrentSlug();
+        ExpandToCurrent();
+    }
+
+    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        UpdateCurrentSlug();
+        ExpandToCurrent();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateCurrentSlug()
+    {
+        var rel = Nav.ToBaseRelativePath(Nav.Uri).TrimEnd('/');
+        if (rel.StartsWith("docs/", StringComparison.OrdinalIgnoreCase))
+        {
+            _currentSlug = rel.Substring(5);
+        }
+        else
+        {
+            _currentSlug = string.Empty;
+        }
+    }
+
+    private void ExpandToCurrent()
+    {
+        if (string.IsNullOrEmpty(_currentSlug)) return;
+        var trail = NavData.GetBreadcrumbTrail(_currentSlug);
+        foreach (var item in trail)
+        {
+            if (item.HasChildren)
+            {
+                _expanded.Add(item.Title);
+            }
+        }
+    }
+
+    private bool IsActive(NavItem item) =>
+        !string.IsNullOrEmpty(item.Slug) &&
+        string.Equals(item.Slug, _currentSlug, StringComparison.OrdinalIgnoreCase);
+
+    private async Task NavigateTo(NavItem item)
+    {
+        if (string.IsNullOrEmpty(item.Slug)) return;
+        Nav.NavigateTo($"/docs/{item.Slug}");
+        _searchTerm = string.Empty;
+        if (OnNavigate.HasDelegate)
+        {
+            await OnNavigate.InvokeAsync();
+        }
+    }
+
+    private async Task HandleNavigated(NavItem _)
+    {
+        if (OnNavigate.HasDelegate)
+        {
+            await OnNavigate.InvokeAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= HandleLocationChanged;
+    }
+}

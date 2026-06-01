@@ -330,7 +330,7 @@ else
         var authState = await _globalAuth.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            NavigateToReturnUrl();
+            await NavigateToReturnUrlAsync();
             return;
         }
 
@@ -386,7 +386,7 @@ else
                     }
                     else
                     {
-                        NavigateToReturnUrl();
+                        await NavigateToReturnUrlAsync();
                     }
                 }
                 else
@@ -514,7 +514,7 @@ else
                     }
                     else
                     {
-                        NavigateToReturnUrl();
+                        await NavigateToReturnUrlAsync();
                     }
                 }
                 else
@@ -631,10 +631,46 @@ else
         }
     }
 
-    private void NavigateToReturnUrl()
+    private async Task NavigateToReturnUrlAsync()
     {
-        var url = !string.IsNullOrEmpty(ReturnUrl) ? ReturnUrl : "/dashboard";
-        _navManager.NavigateTo(url, replace: true);
+        if (string.IsNullOrEmpty(ReturnUrl))
+        {
+            _navManager.NavigateTo("/dashboard", replace: true);
+            return;
+        }
+
+        // Cross-origin return (e.g. the separate FRELODY.Docs site on another port/host):
+        // hand the freshly-minted session to the destination via a URL fragment so a
+        // different-origin SPA can pick it up (it cannot read this origin's localStorage).
+        // Same-origin / relative return URLs behave exactly as before.
+        if (Uri.TryCreate(ReturnUrl, UriKind.Absolute, out var target) &&
+            Uri.TryCreate(_navManager.BaseUri, UriKind.Absolute, out var origin) &&
+            !string.Equals(target.Authority, origin.Authority, StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var session = await _storageService.GetItemAsync<LoginResponseDto>("sessionState");
+                if (session is not null && !string.IsNullOrEmpty(session.Token))
+                {
+                    var json = System.Text.Json.JsonSerializer.Serialize(session);
+                    var encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json))
+                        .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+                    var sep = ReturnUrl.Contains('#') ? "&" : "#";
+                    _navManager.NavigateTo($"{ReturnUrl}{sep}session={encoded}", forceLoad: true);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not bridge session to external return URL");
+            }
+
+            // No session to bridge — fall back to a plain cross-origin redirect.
+            _navManager.NavigateTo(ReturnUrl, forceLoad: true);
+            return;
+        }
+
+        _navManager.NavigateTo(ReturnUrl, replace: true);
     }
 
     private void ClearMessages()

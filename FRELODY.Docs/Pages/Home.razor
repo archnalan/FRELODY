@@ -1,0 +1,95 @@
+@page "/"
+@inject NavigationDataService NavData
+@inject PdfExportService PdfExport
+
+<div class="page-container">
+    <section class="hero">
+        <p class="hero-eyebrow">FRELODY · Documentation</p>
+        <h1 class="hero-title">Paste a link. Play the chords.</h1>
+        <p class="hero-lead">
+            FRELODY turns any song into a playable chord chart. Paste a YouTube, TikTok or video link and
+            FRELODY detects the chords, lines them up with the lyrics, and lets you slow it down and loop the
+            hard parts. This documentation explains how to discover and analyse songs, build your own charts in
+            the Compose editor, organise your library, unlock premium features and print or share your work.
+        </p>
+        <div class="hero-actions">
+            <a class="btn-primary" href="/docs/getting-started/welcome">Get started</a>
+            <a class="btn-secondary" href="/docs/discover/overview">Analyse a song</a>
+            <button type="button" class="btn-secondary hero-pdf-btn" @onclick="DownloadFullGuide">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download full guide (PDF)
+            </button>
+        </div>
+    </section>
+
+    <section class="quick-cards">
+        <a class="quick-card" href="/docs/getting-started/how-frelody-works">
+            <h3>How FRELODY works</h3>
+            <p>The core loop: paste a link, get chords and lyrics, slow it down and loop the tricky bars.</p>
+        </a>
+        <a class="quick-card" href="/docs/discover/paste-a-link">
+            <h3>Analyse a song</h3>
+            <p>Drop a YouTube or TikTok link and let FRELODY detect the chords and sync them to playback.</p>
+        </a>
+        <a class="quick-card" href="/docs/compose/overview">
+            <h3>Compose your own chart</h3>
+            <p>Build and edit chord charts and lyrics in the Compose editor, with import and session recovery.</p>
+        </a>
+        <a class="quick-card" href="/docs/pricing/how-premium-works">
+            <h3>Go premium</h3>
+            <p>Unlock unlimited analysis, Today's Songs, longer songs and chord-chart printing.</p>
+        </a>
+        <a class="quick-card" href="/docs/printing/print-chord-charts">
+            <h3>Print &amp; export</h3>
+            <p>Print clean chord charts or export songs and this guide as a PDF.</p>
+        </a>
+        <a class="quick-card" href="/docs/help/faq">
+            <h3>Frequently asked questions</h3>
+            <p>Quick answers about analysis limits, accounts, payments and playback.</p>
+        </a>
+    </section>
+
+    <section class="sections-grid">
+        <h2>All documentation sections</h2>
+        <div class="sections-list">
+            @foreach (var sec in NavData.Sections)
+            {
+                <div class="section-card">
+                    <h3>@sec.Title</h3>
+                    <ul>
+                        @foreach (var child in sec.Children.Take(6))
+                        {
+                            if (!string.IsNullOrEmpty(child.Slug))
+                            {
+                                <li><a href="/docs/@child.Slug">@child.Title</a></li>
+                            }
+                            else
+                            {
+                                <li class="section-subgroup">
+                                    <span class="section-subgroup-title">@child.Title</span>
+                                    <ul>
+                                        @foreach (var grand in child.Children.Take(4))
+                                        {
+                                            <li><a href="/docs/@grand.Slug">@grand.Title</a></li>
+                                        }
+                                    </ul>
+                                </li>
+                            }
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </section>
+</div>
+
+@code {
+    private async Task DownloadFullGuide()
+    {
+        await PdfExport.ExportFullGuideAsync();
+    }
+}

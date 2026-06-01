@@ -1,0 +1,166 @@
+@page "/docs/{*Slug}"
+@inject DocumentService Docs
+@inject NavigationDataService NavData
+@inject NavigationManager Nav
+@inject AuthService Auth
+@inject PdfExportService PdfExport
+@implements IDisposable
+
+<div class="page-container">
+    <div class="page-header-row">
+        <Breadcrumbs Slug="@Slug" />
+        @if (!_loading && !_blocked && _found)
+        {
+            <div class="page-actions">
+                <button type="button"
+                        class="page-action-btn page-action-btn-stack has-tooltip tooltip-left"
+                        data-tooltip="Download this page as PDF"
+                        aria-label="Download this page as PDF"
+                        @onclick="DownloadCurrentPage">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span class="page-action-label">PDF</span>
+                </button>
+            </div>
+        }
+    </div>
+
+    @if (_loading)
+    {
+        <div class="page-loading">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line short"></div>
+        </div>
+    }
+    else if (_blocked)
+    {
+        <AccessGate Required="_requiredAudience" OnSignIn="RequestSignIn" />
+    }
+    else if (!_found)
+    {
+        <article class="doc-article">
+            <h1>Content coming soon</h1>
+            <p class="lead">
+                This documentation page has been planned but its content has not been published yet.
+            </p>
+            <p>
+                If you reached this page from the navigation, please check back shortly.
+                The team is preparing the page text for <code>@Slug</code>.
+            </p>
+            <a class="btn-primary" href="/">Return to documentation home</a>
+        </article>
+    }
+    else
+    {
+        <article class="doc-article">
+            @((MarkupString)_html)
+        </article>
+    }
+
+    @if (_found && !_blocked && (_prev is not null || _next is not null))
+    {
+        <nav class="page-nav" aria-label="Page navigation">
+            <div class="page-nav-prev">
+                @if (_prev is not null)
+                {
+                    <a class="page-nav-link" href="/docs/@_prev.Slug">
+                        <span class="page-nav-direction">← Previous</span>
+                        <span class="page-nav-title">@_prev.Title</span>
+                    </a>
+                }
+            </div>
+            <div class="page-nav-next">
+                @if (_next is not null)
+                {
+                    <a class="page-nav-link is-next" href="/docs/@_next.Slug">
+                        <span class="page-nav-direction">Next →</span>
+                        <span class="page-nav-title">@_next.Title</span>
+                    </a>
+                }
+            </div>
+        </nav>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Slug { get; set; }
+
+    private string _html = string.Empty;
+    private bool _found;
+    private bool _loading = true;
+    private bool _blocked;
+    private Audience _requiredAudience = Audience.Public;
+    private NavItem? _prev;
+    private NavItem? _next;
+    private string _lastSlug = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Auth.OnChanged += OnAuthChanged;
+    }
+
+    private async void OnAuthChanged()
+    {
+        // Re-evaluate access when the user signs in / out.
+        await InvokeAsync(async () =>
+        {
+            await ReloadAsync(force: true);
+            StateHasChanged();
+        });
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var slug = (Slug ?? string.Empty).Trim('/');
+        if (slug == _lastSlug && !_loading) return;
+        _lastSlug = slug;
+        await ReloadAsync(force: false);
+    }
+
+    private async Task ReloadAsync(bool force)
+    {
+        var slug = _lastSlug;
+        _loading = true;
+        StateHasChanged();
+
+        // Audience check before fetching content.
+        _requiredAudience = NavData.GetAudienceForSlug(slug);
+        _blocked = _requiredAudience > Auth.CurrentAudience;
+
+        if (_blocked)
+        {
+            _html = string.Empty;
+            _found = false;
+            _prev = _next = null;
+            _loading = false;
+            return;
+        }
+
+        var result = await Docs.LoadAsync(slug);
+        _html = result.Html;
+        _found = result.Found;
+        (_prev, _next) = NavData.GetAdjacent(slug);
+        _loading = false;
+    }
+
+    private void RequestSignIn()
+    {
+        Auth.RequestSignIn();
+    }
+
+    private async Task DownloadCurrentPage()
+    {
+        var title = NavData.FindBySlug(_lastSlug)?.Title ?? "FRELODY page";
+        await PdfExport.ExportCurrentPageAsync(_lastSlug, title);
+    }
+
+    public void Dispose()
+    {
+        Auth.OnChanged -= OnAuthChanged;
+    }
+}

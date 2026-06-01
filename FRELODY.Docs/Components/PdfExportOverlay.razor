@@ -1,0 +1,60 @@
+@*
+    PdfExportOverlay
+    ----------------
+    Full-screen, blocking progress overlay surfaced while a PDF export is in
+    flight. Subscribes to PdfExportService.OnProgress and renders status,
+    a determinate progress bar and a Cancel button.
+    Mounted once in MainLayout so it sits above all routes.
+*@
+@implements IDisposable
+@inject PdfExportService Pdf
+
+@if (_progress.IsActive)
+{
+    <div class="pdf-overlay" role="alertdialog" aria-modal="true" aria-labelledby="pdf-overlay-title">
+        <div class="pdf-overlay-card">
+            <div class="pdf-overlay-spinner" aria-hidden="true"></div>
+            <h2 id="pdf-overlay-title" class="pdf-overlay-title">Building your PDF</h2>
+            <p class="pdf-overlay-status">@_progress.Status</p>
+
+            @if (_progress.Total > 0)
+            {
+                <div class="pdf-overlay-bar" role="progressbar"
+                     aria-valuenow="@_progress.Percent" aria-valuemin="0" aria-valuemax="100">
+                    <div class="pdf-overlay-bar-fill" style="width:@_progress.Percent%"></div>
+                </div>
+                <p class="pdf-overlay-count muted">@_progress.Done of @_progress.Total · @_progress.Percent%</p>
+            }
+            else
+            {
+                <div class="pdf-overlay-bar pdf-overlay-bar-indet" role="progressbar" aria-valuetext="Working">
+                    <div class="pdf-overlay-bar-fill"></div>
+                </div>
+            }
+
+            <button type="button" class="btn btn-ghost" @onclick="Cancel">Cancel</button>
+        </div>
+    </div>
+}
+
+@code {
+    private PdfExportProgress _progress = PdfExportProgress.Idle;
+
+    protected override void OnInitialized()
+    {
+        Pdf.OnProgress += HandleProgress;
+    }
+
+    private void HandleProgress(PdfExportProgress p)
+    {
+        _progress = p;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Cancel() => Pdf.Cancel();
+
+    public void Dispose()
+    {
+        Pdf.OnProgress -= HandleProgress;
+    }
+}
