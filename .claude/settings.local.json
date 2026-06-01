@@ -10,11 +10,15 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(xargs grep -l \"YouTubeVideo\\\\|YouTubeTranscription\")",
       "Bash(dir \"D:\\\\PROGRAMMER\\\\TYPESCRIPT\\\\ChordMiniApp\\\\python_backend\\\\models\")",
-      "Bash(docker compose *)"
-    ],
-    "ask": [
+      "Bash(docker compose *)",
       "Bash(git *)",
       "PowerShell(git *)"
+    ],
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "PowerShell(git commit:*)",
+      "PowerShell(git push:*)"
     ],
     "defaultMode": "bypassPermissions"
   },

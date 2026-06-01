@@ -8,6 +8,7 @@
 
 # ─── Stage 1: Restore & Build ────────────────────────────────
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+ARG APP_VERSION=dev
 WORKDIR /src
 
 # Copy project files first for optimal layer-caching of restore
@@ -35,6 +36,11 @@ RUN dotnet publish FRELODYUI.Web.csproj \
         -o /app/publish \
         /p:UseAppHost=false \
         --no-restore
+
+# Inject build-time version into WASM client appsettings (browser reads this file)
+RUN if [ -f /app/publish/wwwroot/appsettings.json ]; then \
+        sed -i "s/\"Version\": \"dev\"/\"Version\": \"${APP_VERSION}\"/" /app/publish/wwwroot/appsettings.json; \
+    fi
 
 # ─── Stage 2: Runtime Image ──────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
