@@ -223,13 +223,20 @@ services:
       # yt-dlp bot-wall bypass tunables (see docker/ytdlp_server.py)
       YTDLP_PLAYER_CLIENT: "default,tv"
       YTDLP_POT_BASE_URL: "http://bgutil-provider:4416"
-      # YTDLP_COOKIES_FILE: "/app/cookies/youtube.txt"   # optional escalation only
+      # Datacenter IPs (this is a Contabo VPS) get bot-walled even WITH a valid PO
+      # token, so we escalate to logged-in cookies. Export a throwaway YouTube
+      # account's cookies into ./docker/cookies/youtube.txt (Netscape format) — see
+      # CLAUDE.md "AI Analysis / YouTube bot-wall". Absent file → sidecar no-ops.
+      YTDLP_COOKIES_FILE: "/app/cookies/youtube.txt"
     depends_on:
       - bgutil-provider
     volumes:
       - frelody_media:/app/media
       - chordmini_models:/app/models
       - ./docker/ytdlp_server.py:/app/ytdlp_server.py:ro
+      # Read-only: the sidecar copies this to a writable temp file per call so
+      # yt-dlp's cookie-jar rewrite can't corrupt or rotate the source.
+      - ./docker/cookies:/app/cookies:ro
     networks:
       - frelody-net
 

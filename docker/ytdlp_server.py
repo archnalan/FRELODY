@@ -20,7 +20,9 @@ Tunables (all via env, so the bypass can be adjusted without code changes):
 import os
 import sys
 import json
+import shutil
 import subprocess
+import tempfile
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -52,6 +54,22 @@ def _extractor_args() -> list:
         # bgutil HTTP PO-token provider plugin reads its server URL from here.
         args += ["--extractor-args", f"youtubepot-bgutilhttp:base_url={POT_BASE_URL}"]
     return args
+
+
+def _cookie_args() -> tuple:
+    """Return (['--cookies', path], cleanup_path) or ([], None).
+
+    yt-dlp rewrites the cookie jar on exit, and the source is bind-mounted
+    read-only and shared by both gunicorn workers — writing/sharing it directly
+    would error or corrupt it. So hand each call a private throwaway copy and let
+    the caller delete it afterwards. The mounted original stays pristine.
+    """
+    if not (COOKIES_FILE and os.path.isfile(COOKIES_FILE)):
+        return [], None
+    fd, tmp = tempfile.mkstemp(prefix="ytcookies_", suffix=".txt")
+    os.close(fd)
+    shutil.copyfile(COOKIES_FILE, tmp)
+    return ["--cookies", tmp], tmp
 
 
 def _resolve_url(body: dict):
@@ -145,11 +163,15 @@ class Handler(BaseHTTPRequestHandler):
             "--no-warnings",
         ]
         cmd += _extractor_args()
-        if COOKIES_FILE and os.path.isfile(COOKIES_FILE):
-            cmd += ["--cookies", COOKIES_FILE]
+        cookie_flags, cookie_tmp = _cookie_args()
+        cmd += cookie_flags
         cmd.append(url)
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        finally:
+            if cookie_tmp and os.path.exists(cookie_tmp):
+                os.remove(cookie_tmp)
 
         if result.returncode != 0:
             raw_err = result.stderr.strip() or "yt-dlp failed"
@@ -184,11 +206,15 @@ class Handler(BaseHTTPRequestHandler):
 
         cmd = [*YTDLP_CMD, "-J", "--skip-download", "--no-playlist", "--no-warnings"]
         cmd += _extractor_args()
-        if COOKIES_FILE and os.path.isfile(COOKIES_FILE):
-            cmd += ["--cookies", COOKIES_FILE]
+        cookie_flags, cookie_tmp = _cookie_args()
+        cmd += cookie_flags
         cmd.append(url)
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        finally:
+            if cookie_tmp and os.path.exists(cookie_tmp):
+                os.remove(cookie_tmp)
         if result.returncode != 0:
             raw_err = result.stderr.strip() or "yt-dlp failed"
             print(f"[ytdlp] info failed for {url}: {raw_err}", file=sys.stderr, flush=True)

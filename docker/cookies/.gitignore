@@ -1,0 +1,4 @@
+# Never commit YouTube cookies — they are account credentials.
+# Drop the exported Netscape cookie jar here as youtube.txt (see CLAUDE.md).
+*
+!.gitignore

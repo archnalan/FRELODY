@@ -142,6 +142,11 @@ Mapster handles DTO ↔ Entity transformations; global rules registered in `Mapp
     - **ASP.NET Core**: `HttpClient` timeout set to `TimeSpan.FromMinutes(10)`.
     - **Python (Gunicorn)**: `--timeout 600`.
 - **Application Error Mapping** — Do not use 502/503 for expected application-level failures (e.g., YouTube "bot wall"). Use **422 Unprocessable Entity** with a JSON error body. This prevents Nginx/Cloudflare from intercepting the response with a generic "Bad Gateway" HTML page, allowing the Blazor UI to show the friendly error message to the user.
+- **YouTube "Sign in to confirm you're not a bot"** — Caused by **IP reputation**, not config. The prod box exits through a Contabo datacenter IP, which YouTube bot-walls *even with a valid bgutil PO token*; a residential IP (e.g. local dev) is trusted, which is why it works locally. PO tokens are necessary but **not sufficient** on datacenter IPs ([yt-dlp #15865](https://github.com/yt-dlp/yt-dlp/issues/15865)). Escalation path (already wired): logged-in **cookies**.
+    - Export a **throwaway** YouTube account's cookies in Netscape format (Firefox export is the only reliably-working method in 2026; Chrome 127+ app-bound encryption breaks the others). Save as `docker/cookies/youtube.txt` (git-ignored — it's account credentials).
+    - `docker compose up -d chordmini-backend` to remount; verify via `docker exec frelody-chordmini curl -s localhost:8081/api/ytdlp/health` → `"cookies": true`.
+    - The sidecar (`docker/ytdlp_server.py`) copies the jar to a private temp file **per request** — yt-dlp rewrites the cookie jar on exit and concurrent workers sharing one file corrupts it ([#12045](https://github.com/yt-dlp/yt-dlp/issues/12045)), so the mount is `:ro` and the source stays pristine.
+    - Cookies expire/get rotated; refresh `youtube.txt` when the bot-wall returns. Keep request rate low to reduce ban risk on the cookie account. Alternative for scale: a residential `--proxy`.
 
 ## Notable Behaviors
 

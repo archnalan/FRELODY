@@ -15,6 +15,7 @@ services:
     depends_on:
       - frelody-web
       - frelody-api
+      - frelody-docs
     networks:
       - frelody-net
 
@@ -84,6 +85,21 @@ services:
     # Port 5080 no longer needs to be exposed publicly if Nginx handles it
     ports:
       - "5080:5080"
+    networks:
+      - frelody-net
+
+  # ── FRELODY Docs (static Blazor WASM) ────────────────────────
+  # Self-contained nginx static server (see Dockerfile.docs + nginx.docs.conf).
+  # Reached over the internal Docker network by the gateway, which routes
+  # docs.frelody.com here — same server_name pattern as tickets.frelody.com.
+  # No host port is published; only the gateway proxies to it.
+  frelody-docs:
+    build:
+      context: .
+      dockerfile: Dockerfile.docs
+    image: frelody-docs:${APP_VERSION:-latest}
+    container_name: frelody-docs
+    restart: unless-stopped
     networks:
       - frelody-net
 

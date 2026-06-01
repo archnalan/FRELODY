@@ -4,9 +4,9 @@
 # Runtime: nginx:alpine  (static file server — WASM publishes to
 #          plain HTML/JS/WASM, no .NET runtime needed at serve time)
 #
-# Published to docs.frelody.com via a Cloudflare Tunnel (cloudflared),
-# which connects to this container over plain HTTP on port 80 and
-# terminates TLS at Cloudflare's edge.
+# Served at docs.frelody.com: the main nginx gateway routes that
+# server_name to this container over plain HTTP on port 80 (same pattern
+# as tickets.frelody.com). TLS is terminated upstream at the edge.
 # ============================================================
 
 # ─── Stage 1: Restore & Publish ──────────────────────────────
