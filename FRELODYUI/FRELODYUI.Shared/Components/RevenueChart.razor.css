@@ -1,0 +1,62 @@
+.revenue-chart-wrapper {
+    width: 100%;
+    height: 100%;
+}
+
+.revenue-chart-container {
+    width: 100%;
+    height: 100%;
+    min-height: 260px;
+}
+
+.revenue-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 260px;
+}
+
+/* Currency segmented-control toggle */
+.revenue-currency-toggle {
+    display: flex;
+    gap: var(--k-space-1);
+    background: var(--k-bg-surface-2, var(--bg-hover));
+    border-radius: var(--k-radius-pill);
+    padding: var(--k-space-1);
+    width: fit-content;
+}
+
+.currency-pill {
+    border: none;
+    background: transparent;
+    padding: var(--k-space-1) var(--k-space-3);
+    border-radius: var(--k-radius-pill);
+    font-size: var(--k-font-size-sm);
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background var(--k-transition), color var(--k-transition);
+    line-height: 1.5;
+}
+
+    .currency-pill:hover {
+        background: var(--k-bg-hover, var(--bg-hover));
+        color: var(--text-primary);
+    }
+
+    .currency-pill.active {
+        background: var(--bg-active);
+        color: #fff;
+        box-shadow: var(--k-shadow-sm);
+    }
+
+@media (max-width: 576px) {
+    .revenue-chart-container {
+        min-height: 200px;
+    }
+
+    .revenue-empty-state {
+        min-height: 200px;
+    }
+}

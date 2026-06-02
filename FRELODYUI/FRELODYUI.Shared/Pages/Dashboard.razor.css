@@ -679,3 +679,12 @@
     font-weight: 600;
     white-space: nowrap;
 }
+
+/* SuperAdmin platform-overview section */
+.platform-overview-heading {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+}

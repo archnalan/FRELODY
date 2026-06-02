@@ -3,6 +3,7 @@ using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Dtos.UserDtos;
 using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Dtos.UserDtos;
+using FRELODYSHRD.Dtos.HybridDtos;
 
 namespace FRELODYUI.Shared.RefitApis
 {
@@ -54,5 +55,12 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Post("/api/users/enable-user")]
         Task<IApiResponse<bool>> EnableUser([Query] string userId);
+
+        // Format "o" → ISO-8601 round-trip so the server binds DateTimeOffset reliably
+        // (default Refit emits culture-specific "MM/dd/yyyy HH:mm:ss zzz" which is fragile).
+        [Get("/api/users/get-signup-stats")]
+        Task<IApiResponse<UserSignupStatsDto>> GetSignupStats(
+            [Query(Format = "o")] DateTimeOffset from,
+            [Query(Format = "o")] DateTimeOffset to);
     }
 }

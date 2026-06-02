@@ -3,6 +3,7 @@ using FRELODYAPP.Dtos.SubDtos;
 using FRELODYAPP.Dtos.UserDtos;
 using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Constants;
+using FRELODYSHRD.Dtos.HybridDtos;
 using FRELODYSHRD.Dtos.UserDtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -125,6 +126,25 @@ namespace FRELODYAPIs.Controllers
                 return StatusCode(result.StatusCode, result.Error);
             }
 
+            return Ok(result.Data);
+        }
+
+        // Route comes from the [action] token + SlugifyParameterTransformer
+        // (Program.cs) → /api/users/get-signup-stats. An explicit [HttpGet("...")]
+        // template would append to [action] and 404 as /get-signup-stats/get-signup-stats.
+        [HttpGet]
+        [Authorize(Roles = UserRoles.SuperAdmin)]
+        [ProducesResponseType(typeof(UserSignupStatsDto), 200)]
+        public async Task<IActionResult> GetSignupStats(
+            [FromQuery] DateTimeOffset from,
+            [FromQuery] DateTimeOffset to,
+            CancellationToken ct = default)
+        {
+            var result = await _userService.GetSignupStatsAsync(from, to, ct);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
             return Ok(result.Data);
         }
 

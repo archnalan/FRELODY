@@ -1,6 +1,7 @@
 ﻿using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos;
+using FRELODYSHRD.Dtos.HybridDtos;
 using FRELODYSHRD.Models.PesaPal;
 
 namespace FRELODYAPIs.Areas.Admin.Interfaces
@@ -15,6 +16,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<List<PaymentDto>>> GetPaymentsAsync();
         Task<ServiceResult<List<PaymentDto>>> GetPaymentsByCustomerIdAsync(string customerId);
         Task<ServiceResult<List<PaymentDto>>> GetPaymentsByStatusAsync(PaymentStatus status);
+        Task<ServiceResult<RevenueStatsDto>> GetRevenueStatsAsync(DateTimeOffset from, DateTimeOffset to);
         Task<ServiceResult<PaymentDto>> UpdatePayment(PesaPayment payment);
     }
 }

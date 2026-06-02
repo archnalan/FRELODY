@@ -1,0 +1,62 @@
+.user-signups-wrapper {
+    width: 100%;
+    height: 100%;
+}
+
+.user-signups-chart-container {
+    width: 100%;
+    height: 100%;
+    min-height: 260px;
+}
+
+.signups-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 260px;
+}
+
+/* Daily / Total segmented-control toggle (mirrors RevenueChart's currency toggle) */
+.signups-mode-toggle {
+    display: flex;
+    gap: var(--k-space-1);
+    background: var(--k-bg-surface-2, var(--bg-hover));
+    border-radius: var(--k-radius-pill);
+    padding: var(--k-space-1);
+    width: fit-content;
+}
+
+.mode-pill {
+    border: none;
+    background: transparent;
+    padding: var(--k-space-1) var(--k-space-3);
+    border-radius: var(--k-radius-pill);
+    font-size: var(--k-font-size-sm);
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background var(--k-transition), color var(--k-transition);
+    line-height: 1.5;
+}
+
+    .mode-pill:hover {
+        background: var(--k-bg-hover, var(--bg-hover));
+        color: var(--text-primary);
+    }
+
+    .mode-pill.active {
+        background: var(--bg-active);
+        color: #fff;
+        box-shadow: var(--k-shadow-sm);
+    }
+
+@media (max-width: 576px) {
+    .user-signups-chart-container {
+        min-height: 200px;
+    }
+
+    .signups-empty-state {
+        min-height: 200px;
+    }
+}

@@ -147,6 +147,74 @@
             </div>
         </div>
 
+        @if (_isSuperAdmin)
+        {
+            <!-- SuperAdmin: Platform Overview — placed right below the stat cards
+                 since revenue + signups are the SuperAdmin's primary signal. -->
+            <div class="container-fluid mb-4">
+                <h5 class="platform-overview-heading mb-3">
+                    <i class="bi bi-bar-chart-line me-2"></i>Platform overview
+                </h5>
+                <div class="row g-4">
+                    <!-- Revenue chart -->
+                    <div class="col-12 col-xl-6">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="bi bi-cash-coin me-2"></i>Revenue
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                @if (_revenueStats?.RevenueByCurrency?.Any() == true)
+                                {
+                                    <div class="chart-container">
+                                        <RevenueChart Data="@_revenueStats" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-state">
+                                        <i class="bi bi-cash-coin fs-1 text-muted"></i>
+                                        <p class="text-muted mt-2">No revenue yet</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User signups chart -->
+                    <div class="col-12 col-xl-6">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="bi bi-people me-2"></i>New Accounts
+                                </h5>
+                                @if (_signupStats != null)
+                                {
+                                    <span class="card-link">@_signupStats.TotalUsers total users</span>
+                                }
+                            </div>
+                            <div class="card-body">
+                                @if (_signupStats?.CumulativeByDate?.Any() == true)
+                                {
+                                    <div class="chart-container">
+                                        <UserSignupsChart Data="@_signupStats" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="empty-state">
+                                        <i class="bi bi-people fs-1 text-muted"></i>
+                                        <p class="text-muted mt-2">No signups yet</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
         <!-- Main Content Grid -->
         <div class="container-fluid">
             <div class="row g-4">
@@ -354,6 +422,7 @@
                 </div>
             </div>
         </div>
+
     }
 </div>
 
@@ -378,6 +447,11 @@
     private SettingDto? currentUserSetting;
     private string? _currentOrgName;
 
+    // SuperAdmin analytics
+    private bool _isSuperAdmin;
+    private RevenueStatsDto? _revenueStats;
+    private UserSignupStatsDto? _signupStats;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -389,12 +463,15 @@
             if (user.IsSuccess && user.Data != null)
             {
                 currentUserId = user.Data.Id;
+                _isSuperAdmin = user.Data.UserType == UserType.SuperAdmin;
                 // Always resolve the org from the API so the banner reflects
                 // joins/creates that happened after the cached JWT claims were
                 // issued (claims aren't refreshed on every request).
                 await RefreshCurrentOrganizationAsync();
                 await LoadDashboardData();
                 await LoadActivitySummary();
+                if (_isSuperAdmin)
+                    await LoadSuperAdminStats();
                 var response = await _settingsApi.GetUserSettings(currentUserId);
                 currentUserSetting = response.IsSuccessStatusCode ? response.Content : null;
                 showAlert = currentUserSetting?.ShowNotifications ?? false;
@@ -649,6 +726,33 @@
         activitySummary = null;
         // Optionally save dismissal preference to user preferences
         StateHasChanged();
+    }
+
+    private async Task LoadSuperAdminStats()
+    {
+        try
+        {
+            var from = (DateTimeOffset)DateTime.UtcNow.AddDays(-30);
+            var to = (DateTimeOffset)DateTime.UtcNow;
+
+            var revenueTask = _paymentsApi.GetRevenueStats(from, to);
+            var signupTask = _usersApi.GetSignupStats(from, to);
+
+            // Run in parallel; each is already started, WhenAll just awaits completion
+            await Task.WhenAll(revenueTask, signupTask);
+
+            var revenueResp = revenueTask.Result;
+            if (revenueResp.IsSuccessStatusCode && revenueResp.Content != null)
+                _revenueStats = revenueResp.Content;
+
+            var signupResp = signupTask.Result;
+            if (signupResp.IsSuccessStatusCode && signupResp.Content != null)
+                _signupStats = signupResp.Content;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading SuperAdmin analytics stats");
+        }
     }
 
     public void Dispose()

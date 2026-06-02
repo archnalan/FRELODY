@@ -2,6 +2,7 @@
 using FRELODYAPP.Dtos.UserDtos;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Dtos.HybridDtos;
 using FRELODYSHRD.Dtos.UserDtos;
 
 namespace FRELODYAPIs.Areas.Admin.Interfaces
@@ -12,6 +13,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<bool>> EnableUser(string userId);
         Task<ServiceResult<UpdateUserProfileOutDto>> EditUserProfile(UpdateUserProfile dto);
         Task<ServiceResult<PaginationDetails<AppUserDto>>> GetAllUsers(int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken);
+        Task<ServiceResult<UserSignupStatsDto>> GetSignupStatsAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken);
         Task<ServiceResult<UpdateUserProfileOutDto>> GetUserProfile(string userId);
         Task<ServiceResult<PaginationDetails<AppUserDto>>> SearchForUsers(string keywords, int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken);
         Task<ServiceResult<PaginationDetails<CreateUserResponseDto>>> SearchUserByKeywords(string keywords, int offSet, int limit, CancellationToken cancellationToken, string sortByColumn, bool sortAscending);

@@ -4,6 +4,7 @@ using FRELODYLIB.Models;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos;
+using FRELODYSHRD.Dtos.HybridDtos;
 using FRELODYSHRD.Models.PesaPal;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
@@ -241,6 +242,48 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 _logger.LogError(ex, "Error occurred while updating the payment.");
                 return ServiceResult<PaymentDto>.Failure(
                     new ServerErrorException("An error occurred while updating the payment."));
+            }
+        }
+
+        public async Task<ServiceResult<RevenueStatsDto>> GetRevenueStatsAsync(DateTimeOffset from, DateTimeOffset to)
+        {
+            try
+            {
+                var payments = await _context.Payments
+                    .Where(p => p.Status == PaymentStatus.COMPLETED && p.Amount != null)
+                    .Select(p => new
+                    {
+                        Currency = p.Currency,
+                        Amount = p.Amount!.Value,
+                        Date = p.CompletedDate ?? p.CreatedDate
+                    })
+                    .ToListAsync();
+
+                var inWindow = payments
+                    .Where(p => p.Date.HasValue && p.Date.Value >= from && p.Date.Value <= to)
+                    .ToList();
+
+                var dto = new RevenueStatsDto();
+
+                var byCurrency = inWindow.GroupBy(p => string.IsNullOrEmpty(p.Currency) ? "UGX" : p.Currency);
+                foreach (var currencyGroup in byCurrency)
+                {
+                    var currency = currencyGroup.Key;
+                    var byDay = currencyGroup
+                        .GroupBy(p => p.Date!.Value.Date)
+                        .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
+
+                    dto.RevenueByCurrency[currency] = byDay;
+                    dto.TotalsByCurrency[currency] = byDay.Values.Sum();
+                }
+
+                return ServiceResult<RevenueStatsDto>.Success(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching revenue stats.");
+                return ServiceResult<RevenueStatsDto>.Failure(
+                    new ServerErrorException("An error occurred while fetching revenue stats."));
             }
         }
 

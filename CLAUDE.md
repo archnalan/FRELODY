@@ -114,6 +114,10 @@ Mapster handles DTO ↔ Entity transformations; global rules registered in `Mapp
 3. Add service logic in `FRELODYLIB/Services/` or `FRELODYAPIs/Services/`
 4. Register Refit client in both `FRELODYUI.Web/Program.cs` and `FRELODYUI.Web.Client/Program.cs`
 
+> **⚠️ Route slugify transformer (easy to miss → causes 404s).** `Program.cs` registers a `RouteTokenTransformerConvention(new SlugifyParameterTransformer())`, so the `[Route("api/[controller]/[action]")]` tokens are auto-kebab-cased: `UsersController.GetSignupStats` → `/api/users/get-signup-stats`. Therefore **annotate the action with a bare `[HttpGet]` / `[HttpPost]` and let the `[action]` token produce the path** — match it from Refit with the kebab string. Do **NOT** add an explicit template like `[HttpGet("get-signup-stats")]`: it *appends* to the `[action]` token and yields `/api/users/get-signup-stats/get-signup-stats` (404). Mirror an existing action (e.g. `GetAllUsers`) when unsure.
+>
+> **⚠️ `DateTimeOffset`/`DateTime` query params over Refit.** Default Refit serializes these with the culture-default `ToString()` (e.g. `05/03/2026 20:54:05 +00:00`), which binds unreliably server-side. Always tag the parameter `[Query(Format = "o")]` so it sends ISO-8601 round-trip.
+
 **New database entity:**
 1. Add model in `FRELODYLIB/Models/` (inherit `BaseEntity` for Id/timestamps)
 2. Configure relationships in `SongDbContext.OnModelCreating()`

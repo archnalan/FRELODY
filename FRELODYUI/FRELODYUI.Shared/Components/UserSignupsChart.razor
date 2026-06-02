@@ -1,0 +1,81 @@
+@using System.Linq
+@using FRELODYSHRD.Dtos.HybridDtos
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="user-signups-wrapper">
+    @if (Data == null || Data.CumulativeByDate == null || !Data.CumulativeByDate.Any())
+    {
+        <div class="signups-empty-state">
+            <i class="bi bi-people fs-1 text-muted"></i>
+            <p class="text-muted mt-2">No signups yet</p>
+        </div>
+    }
+    else
+    {
+        <div class="signups-mode-toggle mb-3">
+            <button class="mode-pill @(_mode == "daily" ? "active" : "")"
+                    @onclick='() => SelectMode("daily")'>
+                Daily
+            </button>
+            <button class="mode-pill @(_mode == "cumulative" ? "active" : "")"
+                    @onclick='() => SelectMode("cumulative")'>
+                Cumulative
+            </button>
+        </div>
+        <div id="@_chartId" class="user-signups-chart-container"></div>
+    }
+</div>
+
+@code {
+    [Parameter] public UserSignupStatsDto? Data { get; set; }
+
+    private IJSObjectReference? _module;
+    private readonly string _chartId = $"usc-{Guid.NewGuid():N}";
+    private string _mode = "daily"; // "daily" (new per day) | "cumulative" (running total)
+    private UserSignupStatsDto? _lastRenderedData;
+    private string _lastRenderedMode = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/FRELODYUI.Shared/Components/UserSignupsChart.razor.js");
+        }
+
+        if (_module != null
+            && Data?.CumulativeByDate?.Any() == true
+            && (!ReferenceEquals(Data, _lastRenderedData) || _mode != _lastRenderedMode))
+        {
+            _lastRenderedData = Data;
+            _lastRenderedMode = _mode;
+
+            // CumulativeByDate is fully filled (every day in the window) → canonical axis.
+            var sortedDays = Data.CumulativeByDate.Keys.OrderBy(d => d).TakeLast(30).ToList();
+            var labels = sortedDays.Select(d => d.ToString("MMM dd")).ToArray();
+            var values = _mode == "cumulative"
+                ? sortedDays.Select(d => Data.CumulativeByDate[d]).ToArray()
+                : sortedDays.Select(d => Data.NewByDate.TryGetValue(d, out var v) ? v : 0).ToArray();
+
+            await _module.InvokeVoidAsync("renderChart", _chartId, labels, values, _mode);
+        }
+    }
+
+    private async Task SelectMode(string mode)
+    {
+        _mode = mode;
+        StateHasChanged();
+        // OnAfterRenderAsync re-renders via the mode-change guard.
+        await Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module != null)
+        {
+            try { await _module.InvokeVoidAsync("destroyChart", _chartId); } catch { }
+            try { await _module.DisposeAsync(); } catch { }
+        }
+    }
+}

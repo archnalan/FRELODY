@@ -6,6 +6,7 @@ using FRELODYAPP.Models;
 using FRELODYAPP.Models.SubModels;
 using FRELODYLIB.ServiceHandler;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Dtos.HybridDtos;
 using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYSHRD.Dtos.UserDtos;
 using Mapster;
@@ -279,6 +280,64 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError("Error while searching Users: {ex}", ex);
                 return ServiceResult<PaginationDetails<AppUserDto>>.Failure(new Exception(ex.Message));
+            }
+        }
+        #endregion
+
+        #region Get Signup Stats
+        public async Task<ServiceResult<UserSignupStatsDto>> GetSignupStatsAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var baseQuery = _context.Users
+                    .Where(u => u.UserType != UserType.SuperAdmin && u.UserType != UserType.TenantAdmin);
+
+                var totalUsers = await baseQuery.CountAsync(cancellationToken);
+
+                // Pull all DateCreated values up to `to` into memory for grouping
+                var allDates = await baseQuery
+                    .Where(u => u.DateCreated.HasValue && u.DateCreated.Value <= to)
+                    .Select(u => u.DateCreated!.Value)
+                    .ToListAsync(cancellationToken);
+
+                // New signups in window grouped by day
+                var newByDate = allDates
+                    .Where(d => d >= from)
+                    .GroupBy(d => d.Date)
+                    .ToDictionary(g => g.Key, g => g.Count());
+
+                var newInWindow = newByDate.Values.Sum();
+
+                // Baseline: count of users created before the window start
+                var baseline = allDates.Count(d => d < from);
+
+                // Build cumulative by walking each day in the window
+                var cumulativeByDate = new Dictionary<DateTime, int>();
+                var windowStartDate = from.Date;
+                var windowEndDate = to.Date;
+                var running = baseline;
+                for (var day = windowStartDate; day <= windowEndDate; day = day.AddDays(1))
+                {
+                    if (newByDate.TryGetValue(day, out var dayCount))
+                        running += dayCount;
+                    cumulativeByDate[day] = running;
+                }
+
+                var dto = new UserSignupStatsDto
+                {
+                    NewByDate = newByDate,
+                    CumulativeByDate = cumulativeByDate,
+                    TotalUsers = totalUsers,
+                    NewInWindow = newInWindow
+                };
+
+                return ServiceResult<UserSignupStatsDto>.Success(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error while retrieving signup stats: {ex}", ex);
+                return ServiceResult<UserSignupStatsDto>.Failure(
+                    new ServerErrorException("An error occurred while fetching signup stats."));
             }
         }
         #endregion

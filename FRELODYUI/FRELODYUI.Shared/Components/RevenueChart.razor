@@ -1,0 +1,92 @@
+@using System.Linq
+@using FRELODYSHRD.Dtos.HybridDtos
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="revenue-chart-wrapper">
+    @if (Data == null || Data.RevenueByCurrency == null || !Data.RevenueByCurrency.Any())
+    {
+        <div class="revenue-empty-state">
+            <i class="bi bi-cash-coin fs-1 text-muted"></i>
+            <p class="text-muted mt-2">No revenue yet</p>
+        </div>
+    }
+    else
+    {
+        @if (_currencies.Count > 1)
+        {
+            <div class="revenue-currency-toggle mb-3">
+                @foreach (var currencyCode in _currencies)
+                {
+                    <button class="currency-pill @(_selectedCurrency == currencyCode ? "active" : "")"
+                            @onclick="() => SelectCurrency(currencyCode)">
+                        @currencyCode
+                    </button>
+                }
+            </div>
+        }
+        <div id="@_chartId" class="revenue-chart-container"></div>
+    }
+</div>
+
+@code {
+    [Parameter] public RevenueStatsDto? Data { get; set; }
+
+    private IJSObjectReference? _module;
+    private readonly string _chartId = $"rc-{Guid.NewGuid():N}";
+    private string _selectedCurrency = "USD";
+    private List<string> _currencies = new();
+    private RevenueStatsDto? _lastRenderedData;
+    private string _lastRenderedCurrency = "";
+
+    protected override void OnParametersSet()
+    {
+        if (Data?.RevenueByCurrency?.Any() == true)
+        {
+            _currencies = Data.RevenueByCurrency.Keys.OrderBy(k => k).ToList();
+            // Default to USD if present, else first key
+            if (!_currencies.Contains(_selectedCurrency))
+                _selectedCurrency = _currencies[0];
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/FRELODYUI.Shared/Components/RevenueChart.razor.js");
+        }
+
+        if (_module != null
+            && Data?.RevenueByCurrency?.ContainsKey(_selectedCurrency) == true
+            && (!ReferenceEquals(Data, _lastRenderedData) || _selectedCurrency != _lastRenderedCurrency))
+        {
+            _lastRenderedData = Data;
+            _lastRenderedCurrency = _selectedCurrency;
+
+            var dayData = Data.RevenueByCurrency[_selectedCurrency];
+            var sorted = dayData.OrderBy(d => d.Key).TakeLast(30).ToList();
+            var labels = sorted.Select(d => d.Key.ToString("MMM dd")).ToArray();
+            var values = sorted.Select(d => (double)d.Value).ToArray();
+            await _module.InvokeVoidAsync("renderChart", _chartId, labels, values, _selectedCurrency);
+        }
+    }
+
+    private async Task SelectCurrency(string code)
+    {
+        _selectedCurrency = code;
+        StateHasChanged();
+        // OnAfterRenderAsync will pick it up via the currency change guard
+        await Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module != null)
+        {
+            try { await _module.InvokeVoidAsync("destroyChart", _chartId); } catch { }
+            try { await _module.DisposeAsync(); } catch { }
+        }
+    }
+}
