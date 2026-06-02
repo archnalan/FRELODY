@@ -29,6 +29,11 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTPS_PORT: ""
+      # SuperAdminSeeder elevates this account to UserType + SuperAdmin role on
+      # every startup. Without it the seeder silently skips, so an account can
+      # carry UserType=SuperAdmin (UI menus show) yet lack the SuperAdmin role
+      # ([Authorize(Roles=SuperAdmin)] endpoints 403). Keep it set in prod.
+      SUPERADMIN_SEED_EMAIL: "${SUPERADMIN_SEED_EMAIL:-superuser@frelody.com}"
       ConnectionStrings__SongData: >-
         Server=sqlserver,1433;
         Database=SongData;
