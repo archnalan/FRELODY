@@ -7,10 +7,11 @@
 
 <PageTitle>Documentation media · FRELODY Docs</PageTitle>
 
-<div class="media-admin">
-    <header class="media-admin-head">
+<div class="mm">
+    <header class="mm-head">
+        <span class="mm-eyebrow">SuperAdmin</span>
         <h1>Documentation media</h1>
-        <p class="muted">
+        <p class="mm-sub">
             Upload screenshots and link YouTube walkthroughs for each documentation page.
             Changes publish to the live docs immediately — no rebuild needed.
         </p>
@@ -18,129 +19,201 @@
 
     @if (_checking)
     {
-        <div class="media-loading">
-            <div class="skeleton skeleton-title"></div>
-            <div class="skeleton skeleton-line"></div>
-            <div class="skeleton skeleton-line short"></div>
+        <div class="mm-skeleton">
+            <div class="skeleton skeleton-line" style="width: 38%; height: 18px;"></div>
+            <div class="mm-skeleton-grid">
+                <div class="skeleton mm-skeleton-card"></div>
+                <div class="skeleton mm-skeleton-card"></div>
+                <div class="skeleton mm-skeleton-card"></div>
+            </div>
         </div>
     }
     else if (!Auth.IsAuthenticated)
     {
-        <div class="media-gate">
+        <div class="mm-gate">
+            <div class="mm-gate-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
             <h2>Sign in required</h2>
-            <p class="muted">The media manager is available to platform SuperAdmins only.</p>
+            <p class="mm-gate-body">The media manager is available to platform SuperAdmins only.</p>
             <button type="button" class="btn btn-primary" @onclick="() => Auth.RequestSignIn()">Sign in</button>
         </div>
     }
     else if (!Auth.IsSuperAdmin)
     {
-        <div class="media-gate">
+        <div class="mm-gate">
+            <div class="mm-gate-icon mm-gate-icon-warn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
             <h2>Not authorised</h2>
-            <p class="muted">
-                You are signed in as <strong>@Auth.Current?.Name</strong>, but managing documentation media
-                is reserved for the platform <strong>SuperAdmin</strong> role.
+            <p class="mm-gate-body">
+                Signed in as <strong>@Auth.Current?.Name</strong>. Managing documentation media
+                needs the platform <strong>SuperAdmin</strong> role.
             </p>
+            <div class="mm-gate-roles">
+                <span class="mm-gate-roles-label">Roles on this account</span>
+                <div class="mm-gate-chips">
+                    @if (Auth.Current?.Roles is { Count: > 0 } roles)
+                    {
+                        @foreach (var r in roles)
+                        {
+                            <span class="mm-role-chip @(string.Equals(r, "SuperAdmin", StringComparison.OrdinalIgnoreCase) ? "is-super" : "")">@r</span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="mm-role-chip is-none">none</span>
+                    }
+                </div>
+            </div>
+            <p class="mm-gate-hint">
+                If you expect access, sign out and back in to refresh your roles. If it persists,
+                this account is missing the SuperAdmin role on this environment.
+            </p>
+            <button type="button" class="btn btn-ghost btn-sm" @onclick="SignOut">Sign out</button>
         </div>
     }
     else
     {
-        <div class="media-toolbar">
-            <span class="muted">@MediaRegistry.Slots.Count slots · @FilledCount filled</span>
-            <button type="button" class="btn btn-ghost btn-sm" @onclick="ReloadAsync" disabled="@_busyGlobal">Refresh</button>
+        <div class="mm-toolbar">
+            <div class="mm-progress" role="img" aria-label="@FilledCount of @MediaRegistry.Slots.Count slots filled">
+                <div class="mm-progress-track"><span style="width: @ProgressPct%"></span></div>
+                <span class="mm-progress-text">@FilledCount / @MediaRegistry.Slots.Count filled</span>
+            </div>
+
+            <div class="mm-tools">
+                <div class="mm-search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="search" placeholder="Search pages or captions…" @bind="_search" @bind:event="oninput" aria-label="Search slots" />
+                </div>
+                <button type="button" class="mm-icon-btn" @onclick="ReloadAsync" disabled="@_busyGlobal" title="Refresh" aria-label="Refresh">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                </button>
+            </div>
+
+            <div class="mm-filters" role="tablist" aria-label="Filter slots">
+                <button type="button" class="mm-chip @Active("all")" @onclick='() => _filter = "all"'>All <span>@MediaRegistry.Slots.Count</span></button>
+                <button type="button" class="mm-chip @Active("empty")" @onclick='() => _filter = "empty"'>Needs media <span>@NeedsCount</span></button>
+                <button type="button" class="mm-chip @Active("filled")" @onclick='() => _filter = "filled"'>Done <span>@FilledCount</span></button>
+                <button type="button" class="mm-chip @Active("image")" @onclick='() => _filter = "image"'>Images <span>@ImageCount</span></button>
+                <button type="button" class="mm-chip @Active("video")" @onclick='() => _filter = "video"'>Videos <span>@VideoCount</span></button>
+            </div>
         </div>
 
-        @foreach (var group in MediaRegistry.Slots.GroupBy(s => s.PageSlug).OrderBy(g => g.Key))
+        @if (!VisibleGroups.Any())
         {
-            var title = NavData.FindBySlug(group.Key)?.Title ?? group.Key;
-            <section class="media-group">
-                <div class="media-group-head">
-                    <h2>@title</h2>
-                    <a class="media-group-link" href="/docs/@group.Key" target="_blank" rel="noopener">View page ↗</a>
-                </div>
+            <div class="mm-empty-result">
+                <p>No slots match this filter.</p>
+                <button type="button" class="btn btn-ghost btn-sm" @onclick='() => { _filter = "all"; _search = string.Empty; }'>Clear filters</button>
+            </div>
+        }
+        else
+        {
+            @foreach (var group in VisibleGroups)
+            {
+                <section class="mm-group">
+                    <div class="mm-group-head">
+                        <h2>@PageTitle(group.Key)</h2>
+                        <a class="mm-group-link" href="/docs/@group.Key" target="_blank" rel="noopener">View page ↗</a>
+                    </div>
 
-                @foreach (var slot in group)
-                {
-                    var entry = Media.Get(slot.Key);
-                    <article class="media-card">
-                        <div class="media-card-info">
-                            <div class="media-tags">
-                                <span class="media-kind media-kind-@(slot.Kind.ToString().ToLowerInvariant())">@slot.Kind</span>
-                                <span class="media-aspect" title="Target aspect ratio">@slot.AspectRatio</span>
-                            </div>
-                            <p class="media-context">@slot.Context</p>
-                            <code class="media-slotkey">@slot.Key</code>
-                        </div>
-
-                        <div class="media-card-body">
-                            <div class="media-preview" style="aspect-ratio: @slot.AspectRatio;">
-                                @if (slot.Kind == MediaKind.Image && entry?.HasImage == true)
-                                {
-                                    <img src="@Media.AbsoluteImageUrl(entry)" alt="@(entry.Caption ?? slot.Context)" />
-                                }
-                                else if (slot.Kind == MediaKind.Video && entry?.HasVideo == true)
-                                {
-                                    <img class="media-video-thumb" src="https://img.youtube.com/vi/@entry.VideoId/hqdefault.jpg" alt="Video thumbnail" />
-                                    <span class="media-video-badge">▶ @entry.VideoId</span>
-                                }
-                                else
-                                {
-                                    <span class="media-preview-empty">No @(slot.Kind == MediaKind.Video ? "video" : "image") yet</span>
-                                }
-                            </div>
-
-                            <div class="media-controls">
-                                @if (slot.Kind == MediaKind.Image)
-                                {
-                                    <label class="btn btn-primary btn-sm media-upload-label">
-                                        <span>@(entry?.HasImage == true ? "Replace image" : "Upload image")</span>
-                                        <InputFile OnChange="@(e => OnFileAsync(e, slot))" accept="image/png,image/jpeg,image/webp" class="media-file-hidden" />
-                                    </label>
-                                    @if (entry?.HasImage == true)
+                    <div class="mm-grid">
+                        @foreach (var slot in group)
+                        {
+                            var entry = Media.Get(slot.Key);
+                            var filled = entry is not null && (entry.HasImage || entry.HasVideo);
+                            <article class="mm-card @(filled ? "is-filled" : "")">
+                                <div class="mm-preview" style="aspect-ratio: @slot.AspectRatio;">
+                                    @if (slot.Kind == MediaKind.Image && entry?.HasImage == true)
                                     {
-                                        <button type="button" class="btn btn-ghost btn-sm" @onclick='() => ClearAsync(slot, "image")' disabled="@IsBusy(slot)">Remove</button>
+                                        <img src="@Media.AbsoluteImageUrl(entry)" alt="@(entry.Caption ?? slot.Context)" />
                                     }
-                                }
-                                else
-                                {
-                                    <div class="media-field">
-                                        <label>YouTube link or video ID</label>
-                                        <input type="text" @bind="_videoInput[slot.Key]" placeholder="https://youtu.be/… or 11-character ID" />
-                                    </div>
-                                }
-
-                                <div class="media-field">
-                                    <label>Caption (optional)</label>
-                                    <input type="text" @bind="_captionInput[slot.Key]" placeholder='Short caption shown under the @(slot.Kind == MediaKind.Video ? "video" : "image")' />
-                                </div>
-
-                                <div class="media-actions">
-                                    @if (slot.Kind == MediaKind.Video)
+                                    else if (slot.Kind == MediaKind.Video && entry?.HasVideo == true)
                                     {
-                                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => SaveTextAsync(slot)" disabled="@IsBusy(slot)">Save video</button>
-                                        @if (entry?.HasVideo == true)
-                                        {
-                                            <button type="button" class="btn btn-ghost btn-sm" @onclick='() => ClearAsync(slot, "video")' disabled="@IsBusy(slot)">Remove</button>
-                                        }
+                                        <img class="mm-video-thumb" src="https://img.youtube.com/vi/@entry.VideoId/hqdefault.jpg" alt="Video thumbnail" />
+                                        <span class="mm-play" aria-hidden="true">▶</span>
                                     }
                                     else
                                     {
-                                        <button type="button" class="btn btn-ghost btn-sm" @onclick="() => SaveTextAsync(slot)" disabled="@IsBusy(slot)">Save caption</button>
+                                        <div class="mm-preview-empty">
+                                            @if (slot.Kind == MediaKind.Video)
+                                            {
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                                                <span>No video yet</span>
+                                            }
+                                            else
+                                            {
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                                                <span>No image yet</span>
+                                            }
+                                        </div>
                                     }
-                                    @if (IsBusy(slot))
+                                    <span class="mm-kind mm-kind-@(slot.Kind.ToString().ToLowerInvariant())">@slot.Kind</span>
+                                    @if (filled)
                                     {
-                                        <span class="media-busy">Saving…</span>
+                                        <span class="mm-filled-dot" title="Published"></span>
                                     }
                                 </div>
 
-                                @if (_msg.TryGetValue(slot.Key, out var m))
-                                {
-                                    <p class="media-msg @(m.Ok ? "is-ok" : "is-err")">@m.Text</p>
-                                }
-                            </div>
-                        </div>
-                    </article>
-                }
-            </section>
+                                <div class="mm-body">
+                                    <p class="mm-context">@slot.Context</p>
+                                    <code class="mm-key">@slot.Key · @slot.AspectRatio</code>
+
+                                    <div class="mm-controls">
+                                        @if (slot.Kind == MediaKind.Image)
+                                        {
+                                            <label class="btn btn-primary btn-sm mm-upload">
+                                                <span>@(entry?.HasImage == true ? "Replace image" : "Upload image")</span>
+                                                <InputFile OnChange="@(e => OnFileAsync(e, slot))" accept="image/png,image/jpeg,image/webp" class="mm-file-hidden" />
+                                            </label>
+                                        }
+                                        else
+                                        {
+                                            <div class="mm-field">
+                                                <label>YouTube link or video ID</label>
+                                                <input type="text" @bind="_videoInput[slot.Key]" placeholder="https://youtu.be/… or 11-character ID" />
+                                            </div>
+                                        }
+
+                                        <div class="mm-field">
+                                            <label>Caption (optional)</label>
+                                            <input type="text" @bind="_captionInput[slot.Key]" placeholder='Short caption shown under the @(slot.Kind == MediaKind.Video ? "video" : "image")' />
+                                        </div>
+
+                                        <div class="mm-actions">
+                                            @if (slot.Kind == MediaKind.Video)
+                                            {
+                                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => SaveTextAsync(slot)" disabled="@IsBusy(slot)">Save video</button>
+                                                @if (entry?.HasVideo == true)
+                                                {
+                                                    <button type="button" class="btn btn-ghost btn-sm" @onclick='() => ClearAsync(slot, "video")' disabled="@IsBusy(slot)">Remove</button>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-ghost btn-sm" @onclick="() => SaveTextAsync(slot)" disabled="@IsBusy(slot)">Save caption</button>
+                                                @if (entry?.HasImage == true)
+                                                {
+                                                    <button type="button" class="btn btn-ghost btn-sm" @onclick='() => ClearAsync(slot, "image")' disabled="@IsBusy(slot)">Remove</button>
+                                                }
+                                            }
+                                            @if (IsBusy(slot))
+                                            {
+                                                <span class="mm-busy">Saving…</span>
+                                            }
+                                        </div>
+
+                                        @if (_msg.TryGetValue(slot.Key, out var m))
+                                        {
+                                            <p class="mm-msg @(m.Ok ? "is-ok" : "is-err")">@m.Text</p>
+                                        }
+                                    </div>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                </section>
+            }
         }
     }
 </div>
@@ -149,16 +222,54 @@
     private bool _checking = true;
     private bool _busyGlobal;
 
+    private string _filter = "all";
+    private string _search = string.Empty;
+
     private readonly Dictionary<string, string?> _videoInput = new();
     private readonly Dictionary<string, string?> _captionInput = new();
     private readonly HashSet<string> _busy = new();
     private readonly Dictionary<string, (bool Ok, string Text)> _msg = new();
 
-    private int FilledCount => MediaRegistry.Slots.Count(s =>
+    private bool IsFilled(MediaSlot slot)
     {
-        var e = Media.Get(s.Key);
+        var e = Media.Get(slot.Key);
         return e is not null && (e.HasImage || e.HasVideo);
-    });
+    }
+
+    private int FilledCount => MediaRegistry.Slots.Count(IsFilled);
+    private int NeedsCount => MediaRegistry.Slots.Count(s => !IsFilled(s));
+    private int ImageCount => MediaRegistry.Slots.Count(s => s.Kind == MediaKind.Image);
+    private int VideoCount => MediaRegistry.Slots.Count(s => s.Kind == MediaKind.Video);
+    private int ProgressPct => MediaRegistry.Slots.Count == 0
+        ? 0
+        : (int)Math.Round(FilledCount * 100.0 / MediaRegistry.Slots.Count);
+
+    private string PageTitle(string slug) => NavData.FindBySlug(slug)?.Title ?? slug;
+    private string Active(string key) => _filter == key ? "is-active" : string.Empty;
+
+    private bool MatchesFilter(MediaSlot slot) => _filter switch
+    {
+        "empty" => !IsFilled(slot),
+        "filled" => IsFilled(slot),
+        "image" => slot.Kind == MediaKind.Image,
+        "video" => slot.Kind == MediaKind.Video,
+        _ => true
+    };
+
+    private bool MatchesSearch(MediaSlot slot)
+    {
+        if (string.IsNullOrWhiteSpace(_search)) return true;
+        var q = _search.Trim();
+        return (slot.Context?.Contains(q, StringComparison.OrdinalIgnoreCase) == true)
+            || slot.Key.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || PageTitle(slot.PageSlug).Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IEnumerable<IGrouping<string, MediaSlot>> VisibleGroups =>
+        MediaRegistry.Slots
+            .Where(s => MatchesFilter(s) && MatchesSearch(s))
+            .GroupBy(s => s.PageSlug)
+            .OrderBy(g => PageTitle(g.Key), StringComparer.OrdinalIgnoreCase);
 
     protected override async Task OnInitializedAsync()
     {
@@ -303,6 +414,8 @@
             StateHasChanged();
         }
     }
+
+    private async Task SignOut() => await Auth.LogoutAsync();
 
     public void Dispose()
     {
