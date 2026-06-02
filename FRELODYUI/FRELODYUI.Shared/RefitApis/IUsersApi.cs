@@ -51,5 +51,8 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Post("/api/users/disable-user")]
         Task<IApiResponse<bool>> DisableUser([Query] string userId);
+
+        [Post("/api/users/enable-user")]
+        Task<IApiResponse<bool>> EnableUser([Query] string userId);
     }
 }

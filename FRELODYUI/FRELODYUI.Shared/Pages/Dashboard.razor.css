@@ -666,3 +666,16 @@
     margin: 0.25rem 0 0;
     opacity: 0.9;
 }
+
+/* Org CTA: coming-soon pill */
+.org-cta-coming-soon {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.65rem;
+    border-radius: var(--k-radius-pill, 999px);
+    background: var(--k-warning-soft);
+    color: var(--k-warning-soft-text);
+    font-size: var(--k-font-size-xs, 0.75rem);
+    font-weight: 600;
+    white-space: nowrap;
+}

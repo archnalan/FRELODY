@@ -40,6 +40,7 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<Chord> Chords { get; set; }
         public DbSet<ChordChart> ChordCharts { get; set; }
         public DbSet<UserFeedback> UserFeedback { get; set; }
+        public DbSet<FeedbackReply> FeedbackReplies => Set<FeedbackReply>();
         public DbSet<Page> Pages { get; set; }
         public DbSet<Setting> Settings { get; set; }
         public DbSet<Artist> Artists { get; set; } = default!;
@@ -185,6 +186,16 @@ namespace FRELODYAPP.Data.Infrastructure
                 .HasOne(fb => fb.Song)
                 .WithMany(song => song.Feedback)
                 .HasForeignKey(fb => fb.SongId);
+
+            builder.Entity<FeedbackReply>()
+                .HasOne(r => r.Feedback)
+                .WithMany(fb => fb.Replies)
+                .HasForeignKey(r => r.FeedbackId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<FeedbackReply>()
+                .Property(r => r.Direction)
+                .HasConversion<string>();
 
             builder.Entity<ChordChart>()
                 .HasOne<Chord>()

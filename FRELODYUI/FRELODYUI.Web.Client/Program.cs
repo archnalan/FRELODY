@@ -56,6 +56,10 @@ builder.Services.AddRefitClient<IFeedbackApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddRefitClient<IMyFeedbackApi>()
+               .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
 builder.Services.AddRefitClient<ISettingsApi>()
                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();

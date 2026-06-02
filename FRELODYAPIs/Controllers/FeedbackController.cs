@@ -1,4 +1,5 @@
 using FRELODYAPIs.Areas.Admin.Interfaces;
+using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
@@ -10,7 +11,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
-    [Authorize(Roles = $"{UserRoles.Editor},{UserRoles.Contributor},{UserRoles.Admin},{UserRoles.Owner}")]
+    [Authorize(Roles = $"{UserRoles.Editor},{UserRoles.Contributor},{UserRoles.Admin},{UserRoles.Owner},{UserRoles.SuperAdmin}")]
     public class FeedbackController : ControllerBase
     {
         private readonly IFeedbackService _feedbackService;
@@ -110,6 +111,50 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         public async Task<IActionResult> GetFeedbackByUserId([FromQuery] string userId)
         {
             var result = await _feedbackService.GetFeedbackByUserIdAsync(userId);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+
+            return Ok(result.Data);
+        }
+
+        [HttpGet]
+        [ProducesResponseType(typeof(PaginationDetails<UserFeedbackDto>), 200)]
+        public async Task<IActionResult> GetFeedbackPaged(
+            [FromQuery] string? keywords = null,
+            [FromQuery] FeedbackStatus? status = null,
+            [FromQuery] int offSet = 0,
+            [FromQuery] int limit = 20,
+            [FromQuery] string sortByColumn = "DateCreated",
+            [FromQuery] bool sortAscending = false,
+            CancellationToken cancellationToken = default)
+        {
+            var result = await _feedbackService.GetFeedbackPagedAsync(
+                keywords, status, offSet, limit, sortByColumn, sortAscending, cancellationToken);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+
+            return Ok(result.Data);
+        }
+
+        [HttpPost]
+        [ProducesResponseType(typeof(UserFeedbackDto), 200)]
+        public async Task<IActionResult> ReplyToFeedback([FromQuery] string id, [FromBody] FeedbackReplyCreateDto reply)
+        {
+            var result = await _feedbackService.ReplyToFeedbackAsync(id, reply.Body);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+
+            return Ok(result.Data);
+        }
+
+        [HttpPost]
+        [ProducesResponseType(typeof(UserFeedbackDto), 200)]
+        public async Task<IActionResult> LogUserReply([FromQuery] string id, [FromBody] FeedbackReplyCreateDto reply)
+        {
+            var result = await _feedbackService.LogUserReplyAsync(id, reply.Body);
 
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, new { message = result.Error.Message });

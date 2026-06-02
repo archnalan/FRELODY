@@ -191,6 +191,13 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     ProfilePicUrl = x.ProfilePicUrl,
                     CoverPhotoUrl = x.CoverPhotoUrl,
                     TenantId = x.TenantId,
+                    Email = x.Email,
+                    DateCreated = x.DateCreated,
+                    UserType = x.UserType,
+                    IsActive = x.IsActive,
+                    BillingStatus = x.BillingStatus,
+                    BillingExpiresAt = x.BillingExpiresAt,
+                    LastLoginDate = x.LastLoginDate,
                 }).ToPaginatedResultAsync(offSet, limit, cancellationToken, sortByColumn, sortAscending);
 
                 return ServiceResult<PaginationDetails<AppUserDto>>.Success(result);
@@ -256,7 +263,14 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     Contacts = x.Contact,
                     ProfilePicUrl = x.ProfilePicUrl,
                     CoverPhotoUrl = x.CoverPhotoUrl,
-                    TenantId = x.TenantId
+                    TenantId = x.TenantId,
+                    Email = x.Email,
+                    DateCreated = x.DateCreated,
+                    UserType = x.UserType,
+                    IsActive = x.IsActive,
+                    BillingStatus = x.BillingStatus,
+                    BillingExpiresAt = x.BillingExpiresAt,
+                    LastLoginDate = x.LastLoginDate,
                 }).ToPaginatedResultAsync(offSet, limit, cancellationToken, sortByColumn, sortAscending);
 
                 return ServiceResult<PaginationDetails<AppUserDto>>.Success(result);
@@ -280,7 +294,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     return ServiceResult<bool>.Failure(new Exception("User not found."));
                 }
 
-                if (user.UserType == UserType.SuperAdmin || user.UserType != UserType.TenantAdmin)
+                if (user.UserType == UserType.SuperAdmin || user.UserType == UserType.TenantAdmin)
                 {
                     return ServiceResult<bool>.Failure(new Exception("Cannot disable a system user."));
                 }
@@ -294,6 +308,35 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError("Error while disabling user: {ex}", ex);
                 return ServiceResult<bool>.Failure(new Exception("Could not disable user."));
+            }
+        }
+        #endregion
+
+        #region Enable User
+        public async Task<ServiceResult<bool>> EnableUser(string userId)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return ServiceResult<bool>.Failure(new Exception("User not found."));
+                }
+
+                if (user.UserType == UserType.SuperAdmin || user.UserType == UserType.TenantAdmin)
+                {
+                    return ServiceResult<bool>.Failure(new Exception("Cannot modify a system user."));
+                }
+
+                user.IsActive = true;
+                _context.Users.Update(user);
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error while enabling user: {ex}", ex);
+                return ServiceResult<bool>.Failure(new Exception("Could not enable user."));
             }
         }
         #endregion

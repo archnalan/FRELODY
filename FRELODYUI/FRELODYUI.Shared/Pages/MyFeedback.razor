@@ -1,0 +1,278 @@
+@page "/my-feedback"
+@inject IMyFeedbackApi _myFeedbackApi
+@inject ILogger<MyFeedback> _logger
+
+<PageTitle>My feedback - FRELODY</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="mf-page">
+            <div class="mf-header">
+                <div>
+                    <h1 class="mf-title">My Feedback</h1>
+                    <p class="mf-subtitle">Your conversations with the Frelody team.</p>
+                </div>
+                <a class="mf-btn primary" href="/support">
+                    <i class="bi bi-plus-lg me-1"></i> New conversation
+                </a>
+            </div>
+
+            @if (_loading)
+            {
+                <div class="mf-skeleton-list">
+                    @for (int i = 0; i < 3; i++)
+                    {
+                        <div class="mf-card placeholder-glow">
+                            <div class="mf-card-header">
+                                <span class="placeholder mf-skel-subject"></span>
+                                <span class="placeholder mf-skel-badge"></span>
+                            </div>
+                            <div class="mf-skel-body">
+                                <span class="placeholder mf-skel-line w-75"></span>
+                                <span class="placeholder mf-skel-line w-50"></span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else if (_items.Count == 0)
+            {
+                <div class="mf-empty">
+                    <div class="mf-empty-icon">
+                        <i class="bi bi-chat-left-text"></i>
+                    </div>
+                    <h2 class="mf-empty-title">No conversations yet</h2>
+                    <p class="mf-empty-desc">
+                        Haven't reached out yet? Start a conversation and our team will reply here and by email.
+                    </p>
+                    <a class="mf-btn primary" href="/support">
+                        <i class="bi bi-send me-1"></i> Start a conversation
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="mf-thread-list">
+                    @foreach (var fb in _items)
+                    {
+                        var isOpen = _openThreadId == fb.Id;
+                        <div class="mf-card @(isOpen ? "mf-card-open" : "")">
+                            <button class="mf-card-header" @onclick="() => ToggleThread(fb.Id)">
+                                <div class="mf-card-meta">
+                                    <span class="mf-subject">@fb.Subject</span>
+                                    @if (fb.Song is not null)
+                                    {
+                                        <span class="mf-song-chip">
+                                            <i class="bi bi-music-note mf-mini-icon"></i>@fb.Song.Title
+                                        </span>
+                                    }
+                                </div>
+                                <div class="mf-card-right">
+                                    <span class="mf-status-badge @StatusChipClass(fb.Status)">@StatusLabel(fb.Status)</span>
+                                    <span class="mf-date">@RelativeTime(fb.DateCreated)</span>
+                                    <i class="bi @(isOpen ? "bi-chevron-up" : "bi-chevron-down") mf-chevron"></i>
+                                </div>
+                            </button>
+
+                            @if (isOpen)
+                            {
+                                <div class="mf-thread-body">
+                                    @* Original message — always first, from user side *@
+                                    <div class="mf-bubble mf-bubble-mine">
+                                        <div class="mf-bubble-author">
+                                            You
+                                            <span class="mf-bubble-time">@RelativeTime(fb.DateCreated)</span>
+                                        </div>
+                                        <div class="mf-bubble-text">@fb.Comment</div>
+                                    </div>
+
+                                    @* Reply thread (chronological) *@
+                                    @if (fb.Replies is not null)
+                                    {
+                                        @foreach (var r in fb.Replies)
+                                        {
+                                            var isMine = r.Direction == FeedbackReplyDirection.UserToAdmin;
+                                            <div class="mf-bubble @(isMine ? "mf-bubble-mine" : "mf-bubble-team")">
+                                                <div class="mf-bubble-author">
+                                                    @(isMine ? "You" : "Frelody team")
+                                                    <span class="mf-bubble-time">@RelativeTime(r.DateCreated)</span>
+                                                </div>
+                                                <div class="mf-bubble-text">@r.Body</div>
+                                            </div>
+                                        }
+                                    }
+
+                                    @* Reply composer *@
+                                    <div class="mf-composer">
+                                        <textarea class="mf-composer-input" rows="3"
+                                                  placeholder="Write a reply…"
+                                                  value="@GetReplyBody(fb.Id)"
+                                                  @oninput="e => SetReplyBody(fb.Id, e.Value?.ToString() ?? string.Empty)"
+                                                  disabled="@IsSending(fb.Id)"></textarea>
+                                        <div class="mf-composer-actions">
+                                            @if (IsSending(fb.Id))
+                                            {
+                                                <button class="mf-btn primary" disabled>
+                                                    <span class="spinner-border spinner-border-sm me-1"></span> Sending…
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="mf-btn primary"
+                                                        disabled="@string.IsNullOrWhiteSpace(GetReplyBody(fb.Id))"
+                                                        @onclick="() => SendReply(fb)">
+                                                    <i class="bi bi-send me-1"></i> Send reply
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="mf-alert">@_error</div>
+            }
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        @{
+            _navManager.NavigateTo("/login?returnUrl=%2Fmy-feedback", replace: false);
+        }
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<UserFeedbackDto> _items = new();
+    private bool _loading = true;
+    private string? _error;
+    private string? _openThreadId;
+
+    // Per-thread reply state: feedbackId → (body, isSending)
+    private Dictionary<string, string> _replyBodies = new();
+    private HashSet<string> _sendingSet = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFeedback();
+    }
+
+    private async Task LoadFeedback()
+    {
+        _loading = true;
+        _error = null;
+        StateHasChanged();
+        try
+        {
+            var resp = await _myFeedbackApi.GetMyFeedback();
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            {
+                _items = resp.Content;
+                // Auto-expand the newest thread
+                if (_openThreadId is null && _items.Count > 0)
+                    _openThreadId = _items[0].Id;
+            }
+            else
+            {
+                _error = _apiResponseHandler.GetApiErrorMessage(resp);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading my feedback");
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ToggleThread(string? id)
+    {
+        _openThreadId = _openThreadId == id ? null : id;
+    }
+
+    private string GetReplyBody(string? id) =>
+        id is not null && _replyBodies.TryGetValue(id, out var val) ? val : string.Empty;
+
+    private void SetReplyBody(string? id, string value)
+    {
+        if (id is null) return;
+        _replyBodies[id] = value;
+    }
+
+    private bool IsSending(string? id) =>
+        id is not null && _sendingSet.Contains(id);
+
+    private async Task SendReply(UserFeedbackDto fb)
+    {
+        if (fb.Id is null) return;
+        var body = GetReplyBody(fb.Id);
+        if (string.IsNullOrWhiteSpace(body)) return;
+
+        _sendingSet.Add(fb.Id);
+        StateHasChanged();
+
+        try
+        {
+            var resp = await _myFeedbackApi.Reply(fb.Id, new FeedbackReplyCreateDto { Body = body });
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            {
+                // Replace the thread in-place with the refreshed version
+                var idx = _items.FindIndex(x => x.Id == fb.Id);
+                if (idx >= 0)
+                    _items[idx] = resp.Content;
+
+                _replyBodies.Remove(fb.Id);
+                _toastService.Show("Reply sent.", ToastType.Success);
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _sendingSet.Remove(fb.Id);
+        }
+    }
+
+    // ── Helpers ──
+    private static string RelativeTime(DateTimeOffset? dt)
+    {
+        if (dt is null) return "—";
+        var diff = DateTimeOffset.UtcNow - dt.Value;
+        if (diff.TotalSeconds < 60) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        if (diff.TotalDays < 30) return $"{(int)(diff.TotalDays / 7)}w ago";
+        if (diff.TotalDays < 365) return $"{(int)(diff.TotalDays / 30)}mo ago";
+        return $"{(int)(diff.TotalDays / 365)}y ago";
+    }
+
+    private static string StatusLabel(FeedbackStatus? status) => status switch
+    {
+        FeedbackStatus.Pending => "Pending",
+        FeedbackStatus.UnderReview => "Under review",
+        FeedbackStatus.Addressed => "Resolved",
+        _ => "—"
+    };
+
+    private static string StatusChipClass(FeedbackStatus? status) => status switch
+    {
+        FeedbackStatus.Pending => "mf-badge-pending",
+        FeedbackStatus.UnderReview => "mf-badge-review",
+        FeedbackStatus.Addressed => "mf-badge-resolved",
+        _ => ""
+    };
+}

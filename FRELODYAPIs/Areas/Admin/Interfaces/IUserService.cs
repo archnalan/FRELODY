@@ -9,6 +9,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
     public interface IUserService
     {
         Task<ServiceResult<bool>> DisableUser(string userId);
+        Task<ServiceResult<bool>> EnableUser(string userId);
         Task<ServiceResult<UpdateUserProfileOutDto>> EditUserProfile(UpdateUserProfile dto);
         Task<ServiceResult<PaginationDetails<AppUserDto>>> GetAllUsers(int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken);
         Task<ServiceResult<UpdateUserProfileOutDto>> GetUserProfile(string userId);

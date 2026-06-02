@@ -1,4 +1,5 @@
 using Refit;
+using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYSHRD.ModelTypes;
@@ -30,5 +31,21 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Get("/api/feedback/get-feedback-by-user-id")]
         Task<IApiResponse<IEnumerable<UserFeedbackDto>>> GetFeedbackByUserId([Query] string userId);
+
+        [Get("/api/feedback/get-feedback-paged")]
+        Task<IApiResponse<PaginationDetails<UserFeedbackDto>>> GetFeedbackPaged(
+            [Query] string? keywords = null,
+            [Query] FeedbackStatus? status = null,
+            [Query] int offSet = 0,
+            [Query] int limit = 20,
+            [Query] string sortByColumn = "DateCreated",
+            [Query] bool sortAscending = false,
+            CancellationToken cancellationToken = default);
+
+        [Post("/api/feedback/reply-to-feedback")]
+        Task<IApiResponse<UserFeedbackDto>> ReplyToFeedback([Query] string id, [Body] FeedbackReplyCreateDto reply);
+
+        [Post("/api/feedback/log-user-reply")]
+        Task<IApiResponse<UserFeedbackDto>> LogUserReply([Query] string id, [Body] FeedbackReplyCreateDto reply);
     }
 }

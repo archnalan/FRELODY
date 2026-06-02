@@ -1,5 +1,6 @@
 ﻿@implements IDisposable
 @inject IOrganizationsApi _orgApi
+@inject IMyFeedbackApi _myFeedbackApi
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -82,6 +83,15 @@
                     </NavLink>
                 </div>
 
+                @if (_hasFeedback)
+                {
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="/my-feedback" Match="NavLinkMatch.Prefix">
+                            <span class="bi bi-chat-left-text-nav-menu" aria-hidden="true"></span> <span class="nav-label">My Feedback</span>
+                        </NavLink>
+                    </div>
+                }
+
                 <OrgRoleAuthorizeView Roles="@(new[] { UserRoles.Owner, UserRoles.Admin, UserRoles.Manager, UserRoles.Editor, UserRoles.Contributor, UserRoles.Viewer, UserRoles.Guest })">
                     <ChildContent>
                         @if (_hasOrganization)
@@ -115,6 +125,16 @@
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="/admin/products" Match="NavLinkMatch.Prefix">
                             <span class="bi bi-tag-nav-menu" aria-hidden="true"></span> <span class="nav-label">Pricing</span>
+                        </NavLink>
+                    </div>
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="/admin/users" Match="NavLinkMatch.Prefix">
+                            <span class="bi bi-people-nav-menu" aria-hidden="true"></span> <span class="nav-label">Users</span>
+                        </NavLink>
+                    </div>
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="/admin/feedback" Match="NavLinkMatch.Prefix">
+                            <span class="bi bi-chat-left-text-nav-menu" aria-hidden="true"></span> <span class="nav-label">Feedback</span>
                         </NavLink>
                     </div>
                 }
@@ -318,6 +338,7 @@
     private bool isPremiumUser;
     private bool _hasOrganization;
     private bool _isSuperAdmin;
+    private bool _hasFeedback;
 
     // Your Songs state
     private bool isYourSongsExpanded;
@@ -464,6 +485,14 @@
             hasUserSongs = songsCheck.IsSuccessStatusCode && songsCheck.Content?.TotalSize > 0;
         }
         catch { hasUserSongs = false; }
+
+        // Pre-check if the user has any feedback to decide whether to show "My Feedback"
+        try
+        {
+            var feedbackCheck = await _myFeedbackApi.HasFeedback();
+            _hasFeedback = feedbackCheck.IsSuccessStatusCode && feedbackCheck.Content;
+        }
+        catch { _hasFeedback = false; }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

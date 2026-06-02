@@ -44,6 +44,8 @@ namespace FRELODYSHRD.Dtos
 
         [ForeignKey(nameof(SongId))]
         public SongDto? Song { get; set; }
+
+        public List<FeedbackReplyDto>? Replies { get; set; }
     }
 
 }

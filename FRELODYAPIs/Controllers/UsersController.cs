@@ -87,6 +87,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = UserRoles.SuperAdmin)]
         [ProducesResponseType(typeof(PaginationDetails<AppUserDto>), 200)]
         public async Task<IActionResult> GetAllUsers(
             [FromQuery] int offSet = 0,
@@ -106,6 +107,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = UserRoles.SuperAdmin)]
         [ProducesResponseType(typeof(PaginationDetails<AppUserDto>), 200)]
         public async Task<IActionResult> SearchForUsers(
             [FromQuery] string? keywords = null,
@@ -127,11 +129,24 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = $"{UserRoles.Moderator},{UserRoles.Admin},{UserRoles.Owner}")]
+        [Authorize(Roles = $"{UserRoles.SuperAdmin},{UserRoles.Moderator},{UserRoles.Admin},{UserRoles.Owner}")]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> DisableUser([FromQuery] string userId)
         {
             var result = await _userService.DisableUser(userId);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
+            return Ok(result.Data);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = $"{UserRoles.SuperAdmin},{UserRoles.Moderator},{UserRoles.Admin},{UserRoles.Owner}")]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> EnableUser([FromQuery] string userId)
+        {
+            var result = await _userService.EnableUser(userId);
             if (!result.IsSuccess)
             {
                 return StatusCode(result.StatusCode, result.Error);

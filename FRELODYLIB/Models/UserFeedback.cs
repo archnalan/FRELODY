@@ -7,6 +7,7 @@ namespace FRELODYAPP.Models
 {
 	public class UserFeedback:BaseEntity
 	{
+        public ICollection<FeedbackReply>? Replies { get; set; }
         [Required]
         [StringLength(100)]
         public string Subject { get; set; }

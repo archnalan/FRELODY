@@ -1,0 +1,400 @@
+/* ══════════════════════════════════════
+   Admin · Feedback  (af- prefix)
+   ══════════════════════════════════════ */
+
+/* ── Toolbar ── */
+.af-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--k-space-3, 12px);
+    align-items: center;
+    margin-bottom: var(--k-space-3, 12px);
+}
+
+/* ── Status filter chips ── */
+.af-status-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--k-space-2, 8px);
+    flex-shrink: 0;
+}
+
+.af-chip {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--k-radius-pill, 999px);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: var(--k-font-size-sm, 0.85rem);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--k-transition-fast, 0.15s) ease,
+                color var(--k-transition-fast, 0.15s) ease,
+                border-color var(--k-transition-fast, 0.15s) ease;
+}
+
+.af-chip:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.af-chip.active {
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+    border-color: transparent;
+}
+
+/* ── Search ── */
+.af-search-wrap {
+    position: relative;
+    flex: 1 1 200px;
+}
+
+.af-search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    background-image: none !important;
+    filter: none !important;
+    font-size: 0.9rem;
+}
+
+.af-search-input {
+    width: 100%;
+    padding: 0.55rem 0.75rem 0.55rem 2.2rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--k-radius-sm, 6px);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: var(--k-font-size-sm, 0.85rem);
+    outline: none;
+    transition: border-color var(--k-transition-fast, 0.15s) ease,
+                box-shadow var(--k-transition-fast, 0.15s) ease;
+}
+
+.af-search-input:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 3px var(--k-accent-soft);
+}
+
+/* ── Table wrap ── */
+.af-table-wrap {
+    overflow-x: auto;
+}
+
+/* ── Feedback cell ── */
+.af-subject {
+    font-weight: 600;
+    font-size: var(--k-font-size-sm, 0.85rem);
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.af-preview {
+    font-size: var(--k-font-size-xs, 0.75rem);
+    color: var(--text-secondary);
+    max-width: 28rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 0.25rem;
+}
+
+.af-song-chip {
+    font-size: var(--k-font-size-xs, 0.75rem);
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+}
+
+.af-mini-icon {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 0.2rem 0 0 !important;
+    top: 0 !important;
+    background-image: none !important;
+    filter: none !important;
+    font-size: 0.65rem;
+}
+
+/* ── Sender ── */
+.af-sender-name {
+    font-size: var(--k-font-size-sm, 0.85rem);
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.af-sender-email {
+    font-size: var(--k-font-size-xs, 0.75rem);
+    color: var(--text-secondary);
+    word-break: break-all;
+}
+
+.af-date {
+    font-size: var(--k-font-size-xs, 0.75rem);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+/* ── Status badge tints ── */
+.af-chip-pending {
+    background: var(--k-warning-soft);
+    color: var(--k-warning-soft-text);
+}
+
+.af-chip-review {
+    background: var(--k-info-soft);
+    color: var(--k-info-soft-text);
+}
+
+.af-chip-resolved {
+    background: var(--k-success-soft);
+    color: var(--k-success-soft-text);
+}
+
+/* ── Load more ── */
+.af-load-more-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--k-space-4, 16px);
+    min-height: 56px;
+}
+
+.af-load-more-btn {
+    min-width: 120px;
+}
+
+.af-count-label {
+    font-size: var(--k-font-size-xs, 0.75rem);
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ══════════════════════════
+   Thread modal body
+   ══════════════════════════ */
+
+/* ── Meta header ── */
+.af-thread-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: var(--k-space-3, 12px);
+    padding-bottom: var(--k-space-3, 12px);
+    border-bottom: 1px solid var(--input-border);
+}
+
+.af-thread-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--k-font-size-sm, 0.85rem);
+}
+
+.af-meta-label {
+    font-size: var(--k-font-size-xs, 0.75rem);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    min-width: 52px;
+}
+
+.af-meta-email {
+    color: var(--text-secondary);
+    font-size: var(--k-font-size-xs, 0.75rem);
+}
+
+.af-song-link {
+    font-size: var(--k-font-size-sm, 0.85rem);
+    color: var(--bs-primary);
+    text-decoration: none;
+}
+
+.af-song-link:hover {
+    text-decoration: underline;
+}
+
+.af-status-select {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--k-radius-xs, 4px);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: var(--k-font-size-sm, 0.85rem);
+    outline: none;
+    cursor: pointer;
+}
+
+/* ── Thread bubbles ── */
+.af-thread-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-3, 12px);
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 0.25rem 0.1rem;
+    margin-bottom: var(--k-space-3, 12px);
+}
+
+.af-thread-body::-webkit-scrollbar {
+    width: 4px;
+}
+
+.af-thread-body::-webkit-scrollbar-thumb {
+    background: var(--border-light, var(--input-border));
+    border-radius: 2px;
+}
+
+.af-bubble {
+    max-width: 85%;
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--k-radius-sm, 6px);
+    font-size: var(--k-font-size-sm, 0.85rem);
+    line-height: 1.5;
+}
+
+/* User / incoming messages — left aligned */
+.af-bubble-user {
+    align-self: flex-start;
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-radius: var(--k-radius-sm, 6px) var(--k-radius-sm, 6px) var(--k-radius-sm, 6px) 2px;
+}
+
+/* Admin outgoing — right aligned */
+.af-bubble-admin {
+    align-self: flex-end;
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+    border-radius: var(--k-radius-sm, 6px) var(--k-radius-sm, 6px) 2px var(--k-radius-sm, 6px);
+}
+
+.af-bubble-author {
+    font-size: var(--k-font-size-xs, 0.75rem);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.af-bubble-time {
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+.af-bubble-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ── Reply composer ── */
+.af-composer {
+    margin-top: var(--k-space-3, 12px);
+}
+
+.af-composer-label {
+    display: block;
+    font-size: var(--k-font-size-xs, 0.75rem);
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.af-composer-input {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--k-radius-sm, 6px);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: var(--k-font-size-sm, 0.85rem);
+    resize: vertical;
+    outline: none;
+    transition: border-color var(--k-transition-fast, 0.15s) ease,
+                box-shadow var(--k-transition-fast, 0.15s) ease;
+}
+
+.af-composer-input:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 3px var(--k-accent-soft);
+}
+
+/* ── Log user reply section ── */
+.af-log-section {
+    margin-top: var(--k-space-3, 12px);
+    padding-top: var(--k-space-3, 12px);
+    border-top: 1px dashed var(--input-border);
+}
+
+.af-log-toggle {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: var(--k-font-size-xs, 0.75rem);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.af-log-toggle:hover {
+    color: var(--text-primary);
+}
+
+/* ── Responsive: stack as cards ── */
+@media (max-width: 640px) {
+    .admin-table thead {
+        display: none;
+    }
+
+    .admin-table,
+    .admin-table tbody,
+    .admin-table tr,
+    .admin-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .admin-table tr {
+        border: 1px solid var(--input-border);
+        border-radius: var(--k-radius-sm, 6px);
+        margin-bottom: var(--k-space-3, 12px);
+        padding: var(--k-space-3, 12px);
+    }
+
+    .admin-table td {
+        padding: 0.3rem 0;
+        border: none;
+    }
+
+    .admin-table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        font-size: var(--k-font-size-xs, 0.75rem);
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 2px;
+    }
+
+    .admin-table td.text-end {
+        text-align: left !important;
+    }
+
+    .af-bubble {
+        max-width: 100%;
+    }
+}

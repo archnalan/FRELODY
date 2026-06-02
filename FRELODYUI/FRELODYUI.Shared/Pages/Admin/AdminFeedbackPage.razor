@@ -1,0 +1,636 @@
+@page "/admin/feedback"
+@layout AdminLayout
+@using Refit
+@using FRELODYLIB.ServiceHandler
+
+<PageTitle>Feedback - FRELODY</PageTitle>
+
+<AuthGuard RequirePremium="false">
+    @if (!_isSuperAdmin)
+    {
+        <div class="admin-card admin-card-pad">
+            <h2 class="admin-title">Not authorized</h2>
+            <p class="text-muted mb-3">Only platform administrators can manage feedback.</p>
+            <a class="admin-btn primary" href="/dashboard">Back to dashboard</a>
+        </div>
+    }
+    else
+    {
+        <div class="admin-header">
+            <div>
+                <h1 class="admin-title">Feedback</h1>
+                <p class="admin-subtitle">Reply to users and track every request to resolution.</p>
+            </div>
+            <a class="admin-btn" href="/admin/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        </div>
+
+        @* ── Filter + search bar ── *@
+        <div class="af-toolbar admin-card admin-card-pad">
+            <div class="af-status-chips">
+                @foreach (var chip in StatusChips)
+                {
+                    var c = chip;
+                    <button class="af-chip @(_filterStatus == c.Value ? "active" : "")"
+                            @onclick="() => SetStatusFilter(c.Value)">
+                        @c.Label
+                    </button>
+                }
+            </div>
+            <div class="af-search-wrap">
+                <i class="bi bi-search af-search-icon"></i>
+                <input class="af-search-input" type="search" placeholder="Search subject, comment, sender…"
+                       value="@_searchTerm" @oninput="OnSearchInput" />
+            </div>
+        </div>
+
+        @if (_loading && _items.Count == 0)
+        {
+            <div class="admin-card">
+                <div class="admin-card-pad">
+                    @for (int i = 0; i < 5; i++)
+                    {
+                        <div class="admin-skeleton mb-2" style="height:52px;"></div>
+                    }
+                </div>
+            </div>
+        }
+        else if (!_loading && _items.Count == 0)
+        {
+            <div class="admin-card admin-empty">
+                <div class="admin-empty-title">No feedback found</div>
+                <p class="mb-0">
+                    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+                    {
+                        <span>No results for "@_searchTerm".</span>
+                    }
+                    else if (_filterStatus.HasValue)
+                    {
+                        <span>No feedback with this status.</span>
+                    }
+                    else
+                    {
+                        <span>No feedback submissions yet.</span>
+                    }
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="admin-card af-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Feedback</th>
+                            <th>From</th>
+                            <th>Status</th>
+                            <th>Received</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var fb in _items)
+                        {
+                            <tr>
+                                <td data-label="Feedback">
+                                    <div class="af-subject">@fb.Subject</div>
+                                    <div class="af-preview">@TruncateComment(fb.Comment)</div>
+                                    @if (fb.Song is not null)
+                                    {
+                                        <span class="admin-chip af-song-chip"><i class="bi bi-music-note af-mini-icon"></i> @fb.Song.Title</span>
+                                    }
+                                </td>
+                                <td data-label="From">
+                                    <div class="af-sender-name">@(fb.FullName is { Length: > 0 } fn ? fn : "(anonymous)")</div>
+                                    @if (!string.IsNullOrWhiteSpace(fb.Email))
+                                    {
+                                        <div class="af-sender-email">@fb.Email</div>
+                                    }
+                                </td>
+                                <td data-label="Status">
+                                    <span class="admin-chip @StatusChipClass(fb.Status)">@StatusLabel(fb.Status)</span>
+                                </td>
+                                <td data-label="Received" class="af-date">@RelativeTime(fb.DateCreated)</td>
+                                <td class="text-end" data-label="Actions">
+                                    <span class="admin-row-actions">
+                                        <button class="admin-btn icon-only" title="View / Reply"
+                                                @onclick="() => OpenThread(fb.Id)">
+                                            <i class="bi bi-chat-left-text"></i>
+                                        </button>
+                                        <button class="admin-btn icon-only danger" title="Delete"
+                                                @onclick="() => OpenDelete(fb)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @* ── Load-more sentinel + button ── *@
+            <div class="af-load-more-area" @ref="_sentinelRef">
+                @if (_loading)
+                {
+                    <div class="admin-skeleton" style="height:36px;width:120px;margin:0 auto;"></div>
+                }
+                else if (_hasMore)
+                {
+                    <button class="admin-btn af-load-more-btn" @onclick="LoadMore">
+                        <i class="bi bi-chevron-down"></i> Load more
+                    </button>
+                }
+                else if (_items.Count > 0)
+                {
+                    <p class="af-count-label">Showing @_items.Count of @_totalSize</p>
+                }
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="admin-alert danger mt-3">@_error</div>
+        }
+    }
+</AuthGuard>
+
+@* ══════════════════════════
+   Thread / Reply modal
+   ══════════════════════════ *@
+<ConfirmDialog Visible="_showThread"
+               Title="@(_thread?.Subject ?? "Feedback")"
+               Icon="bi-chat-left-text"
+               ConfirmLabel="Done"
+               CancelLabel="Close"
+               Busy="_threadBusy"
+               OnCancel="@(() => _showThread = false)"
+               OnConfirm="@(() => _showThread = false)">
+    <BodyContent>
+        @if (_threadLoading)
+        {
+            <div class="admin-skeleton mb-2" style="height:40px;"></div>
+            <div class="admin-skeleton mb-2" style="height:60px;"></div>
+            <div class="admin-skeleton" style="height:40px;"></div>
+        }
+        else if (_thread is not null)
+        {
+            @* ── Thread header meta ── *@
+            <div class="af-thread-meta">
+                <div class="af-thread-meta-row">
+                    <span class="af-meta-label">From</span>
+                    <span>
+                        @(string.IsNullOrWhiteSpace(_thread.FullName) ? "" : _thread.FullName + " ")
+                        @if (!string.IsNullOrWhiteSpace(_thread.Email))
+                        {
+                            <span class="af-meta-email">@_thread.Email</span>
+                        }
+                    </span>
+                </div>
+                @if (_thread.Song is not null)
+                {
+                    <div class="af-thread-meta-row">
+                        <span class="af-meta-label">Song</span>
+                        <a href="/songs/@_thread.Song.Id" class="af-song-link">@_thread.Song.Title</a>
+                    </div>
+                }
+                <div class="af-thread-meta-row">
+                    <span class="af-meta-label">Status</span>
+                    <select class="af-status-select" value="@_thread.Status" @onchange="OnStatusChange">
+                        @foreach (var s in Enum.GetValues<FeedbackStatus>())
+                        {
+                            <option value="@s" selected="@(_thread.Status == s)">@StatusLabel(s)</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            @* ── Thread messages ── *@
+            <div class="af-thread-body">
+                @* Original message *@
+                <div class="af-bubble af-bubble-user">
+                    <div class="af-bubble-author">
+                        @(string.IsNullOrWhiteSpace(_thread.FullName) ? (_thread.Email ?? "User") : _thread.FullName)
+                        <span class="af-bubble-time">@RelativeTime(_thread.DateCreated)</span>
+                    </div>
+                    <div class="af-bubble-text">@_thread.Comment</div>
+                </div>
+
+                @* Reply thread *@
+                @if (_thread.Replies is not null)
+                {
+                    @foreach (var r in _thread.Replies)
+                    {
+                        var isAdmin = r.Direction == FeedbackReplyDirection.AdminToUser;
+                        <div class="af-bubble @(isAdmin ? "af-bubble-admin" : "af-bubble-user")">
+                            <div class="af-bubble-author">
+                                @(isAdmin ? "You" : (r.AuthorName ?? "User"))
+                                <span class="af-bubble-time">@RelativeTime(r.DateCreated)</span>
+                            </div>
+                            <div class="af-bubble-text">@r.Body</div>
+                        </div>
+                    }
+                }
+            </div>
+
+            @* ── Reply composer ── *@
+            @if (!string.IsNullOrWhiteSpace(_thread.Email))
+            {
+                <div class="af-composer">
+                    <label class="af-composer-label">Reply to @(_thread.Email)</label>
+                    <textarea class="af-composer-input" rows="3"
+                              placeholder="Write a reply…"
+                              @bind="_replyBody"></textarea>
+                    <div class="d-flex gap-2 justify-content-end mt-2">
+                        <button class="admin-btn primary" disabled="@(_threadBusy || string.IsNullOrWhiteSpace(_replyBody))"
+                                @onclick="SendReply">
+                            @if (_threadBusy) { <span>Sending…</span> } else { <span><i class="bi bi-send"></i> Send reply</span> }
+                        </button>
+                    </div>
+                </div>
+            }
+
+            @* ── Log user reply (secondary, understated) ── *@
+            <div class="af-log-section">
+                @if (!_showLogUserReply)
+                {
+                    <button class="af-log-toggle" @onclick="@(() => _showLogUserReply = true)">
+                        + Log a reply the user sent back
+                    </button>
+                }
+                else
+                {
+                    <div class="af-composer">
+                        <label class="af-composer-label">Paste the user's reply</label>
+                        <textarea class="af-composer-input" rows="3"
+                                  placeholder="Paste text from user's email…"
+                                  @bind="_logBody"></textarea>
+                        <div class="d-flex gap-2 mt-2">
+                            <button class="admin-btn" @onclick="@(() => _showLogUserReply = false)">Cancel</button>
+                            <button class="admin-btn primary" disabled="@(_threadBusy || string.IsNullOrWhiteSpace(_logBody))"
+                                    @onclick="LogUserReply">
+                                Log reply
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </BodyContent>
+</ConfirmDialog>
+
+@* ── Delete confirm ── *@
+<ConfirmDialog Visible="_showDelete"
+               Title="Delete feedback"
+               Icon="bi-trash"
+               Destructive="true"
+               ConfirmLabel="Delete"
+               Busy="_deleting"
+               OnCancel="@(() => _showDelete = false)"
+               OnConfirm="ConfirmDelete">
+    <BodyContent>
+        <p class="mb-0">Delete feedback "<strong>@_deleteTarget?.Subject</strong>"? This cannot be undone.</p>
+    </BodyContent>
+</ConfirmDialog>
+
+@code {
+    private const int PageSize = 20;
+
+    // List state
+    private List<UserFeedbackDto> _items = new();
+    private bool _loading;
+    private bool _isSuperAdmin;
+    private bool _hasMore;
+    private int _offset;
+    private int _totalSize;
+    private string? _error;
+    private string _searchTerm = string.Empty;
+    private FeedbackStatus? _filterStatus;
+    private string _sortByColumn = "DateCreated";
+    private bool _sortAscending = false;
+
+    // Load-more sentinel
+    private ElementReference _sentinelRef;
+    private DotNetObjectReference<AdminFeedbackPage>? _selfRef;
+    private bool _observerAttached;
+
+    // Search debounce
+    private CancellationTokenSource? _searchCts;
+
+    // Thread modal
+    private bool _showThread;
+    private bool _threadLoading;
+    private bool _threadBusy;
+    private UserFeedbackDto? _thread;
+    private string _replyBody = string.Empty;
+    private string _logBody = string.Empty;
+    private bool _showLogUserReply;
+
+    // Delete
+    private bool _showDelete;
+    private bool _deleting;
+    private UserFeedbackDto? _deleteTarget;
+
+    private static readonly (string Label, FeedbackStatus? Value)[] StatusChips = new[]
+    {
+        ("All", (FeedbackStatus?)null),
+        ("Pending", (FeedbackStatus?)FeedbackStatus.Pending),
+        ("Under review", (FeedbackStatus?)FeedbackStatus.UnderReview),
+        ("Resolved", (FeedbackStatus?)FeedbackStatus.Addressed),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+        _isSuperAdmin = userResult.IsSuccess && userResult.Data?.UserType == UserType.SuperAdmin;
+        if (_isSuperAdmin)
+            await LoadPage(reset: true);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_isSuperAdmin && _hasMore && !_observerAttached && _selfRef is not null)
+        {
+            try
+            {
+                await JsRt.InvokeVoidAsync("eval", @"
+                    if (!window.__setupAdminFeedbackScroll) {
+                        window.__setupAdminFeedbackScroll = function(dotNetRef, sentinel) {
+                            if (!sentinel || sentinel.__afObserved) return;
+                            sentinel.__afObserved = true;
+                            const observer = new IntersectionObserver(function(entries) {
+                                entries.forEach(function(e) {
+                                    if (e.isIntersecting) dotNetRef.invokeMethodAsync('OnSentinelVisible');
+                                });
+                            }, { rootMargin: '200px' });
+                            observer.observe(sentinel);
+                        };
+                    }");
+                await JsRt.InvokeVoidAsync("__setupAdminFeedbackScroll", _selfRef, _sentinelRef);
+                _observerAttached = true;
+            }
+            catch { /* SSR / prerender */ }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnSentinelVisible()
+    {
+        if (!_loading && _hasMore)
+            await LoadPage(reset: false);
+    }
+
+    private async Task LoadPage(bool reset)
+    {
+        _loading = true;
+        _error = null;
+        if (reset) { _offset = 0; _items.Clear(); _observerAttached = false; }
+        StateHasChanged();
+
+        try
+        {
+            _selfRef ??= DotNetObjectReference.Create(this);
+            var resp = await _feedbackApi.GetFeedbackPaged(
+                _searchTerm, _filterStatus, _offset, PageSize, _sortByColumn, _sortAscending);
+
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            {
+                _items.AddRange(resp.Content.Data ?? new());
+                _offset = _items.Count;
+                _hasMore = resp.Content.HasMore;
+                _totalSize = resp.Content.TotalSize;
+            }
+            else
+            {
+                _error = _apiResponseHandler.GetApiErrorMessage(resp);
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+            _observerAttached = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMore() => await LoadPage(reset: false);
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(350, _searchCts.Token);
+            await LoadPage(reset: true);
+        }
+        catch (TaskCanceledException) { /* debounced */ }
+    }
+
+    private async Task SetStatusFilter(FeedbackStatus? status)
+    {
+        _filterStatus = status;
+        await LoadPage(reset: true);
+    }
+
+    // ── Thread modal ──
+
+    private async Task OpenThread(string? id)
+    {
+        if (id is null) return;
+        _showThread = true;
+        _threadLoading = true;
+        _replyBody = string.Empty;
+        _logBody = string.Empty;
+        _showLogUserReply = false;
+        _thread = null;
+        StateHasChanged();
+
+        try
+        {
+            var resp = await _feedbackApi.GetFeedbackById(id);
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+                _thread = resp.Content;
+            else
+                _toastService.Show("Could not load feedback thread.", ToastType.Error);
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _threadLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnStatusChange(ChangeEventArgs e)
+    {
+        if (_thread?.Id is null) return;
+        if (!Enum.TryParse<FeedbackStatus>(e.Value?.ToString(), out var newStatus)) return;
+        _threadBusy = true;
+        try
+        {
+            var resp = await _feedbackApi.UpdateFeedbackStatus(_thread.Id, newStatus);
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            {
+                _thread.Status = resp.Content.Status;
+                // Update list row in-place
+                var row = _items.FirstOrDefault(x => x.Id == _thread.Id);
+                if (row is not null) row.Status = _thread.Status;
+                _toastService.Show("Status updated.", ToastType.Success);
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _threadBusy = false;
+        }
+    }
+
+    private async Task SendReply()
+    {
+        if (_thread?.Id is null || string.IsNullOrWhiteSpace(_replyBody)) return;
+        _threadBusy = true;
+        try
+        {
+            var resp = await _feedbackApi.ReplyToFeedback(_thread.Id,
+                new FeedbackReplyCreateDto { Body = _replyBody });
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            {
+                _thread = resp.Content;
+                // Update list row status in-place
+                var row = _items.FirstOrDefault(x => x.Id == _thread.Id);
+                if (row is not null) row.Status = _thread.Status;
+                _replyBody = string.Empty;
+                _toastService.Show($"Reply sent to {_thread.Email}.", ToastType.Success);
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _threadBusy = false;
+        }
+    }
+
+    private async Task LogUserReply()
+    {
+        if (_thread?.Id is null || string.IsNullOrWhiteSpace(_logBody)) return;
+        _threadBusy = true;
+        try
+        {
+            var resp = await _feedbackApi.LogUserReply(_thread.Id,
+                new FeedbackReplyCreateDto { Body = _logBody });
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            {
+                _thread = resp.Content;
+                _logBody = string.Empty;
+                _showLogUserReply = false;
+                _toastService.Show("User reply logged.", ToastType.Success);
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _threadBusy = false;
+        }
+    }
+
+    // ── Delete ──
+    private void OpenDelete(UserFeedbackDto fb)
+    {
+        _deleteTarget = fb;
+        _showDelete = true;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_deleteTarget?.Id is null) return;
+        _deleting = true;
+        try
+        {
+            var resp = await _feedbackApi.DeleteFeedback(_deleteTarget.Id);
+            if (resp.IsSuccessStatusCode)
+            {
+                _toastService.Show("Feedback deleted.", ToastType.Success);
+                _showDelete = false;
+                _items.RemoveAll(x => x.Id == _deleteTarget.Id);
+                _totalSize = Math.Max(0, _totalSize - 1);
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _deleting = false;
+        }
+    }
+
+    // ── Helpers ──
+    private static string RelativeTime(DateTimeOffset? dt)
+    {
+        if (dt is null) return "—";
+        var diff = DateTimeOffset.UtcNow - dt.Value;
+        if (diff.TotalSeconds < 60) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        if (diff.TotalDays < 30) return $"{(int)(diff.TotalDays / 7)}w ago";
+        if (diff.TotalDays < 365) return $"{(int)(diff.TotalDays / 30)}mo ago";
+        return $"{(int)(diff.TotalDays / 365)}y ago";
+    }
+
+    private static string TruncateComment(string? comment)
+    {
+        if (string.IsNullOrWhiteSpace(comment)) return string.Empty;
+        return comment.Length > 120 ? comment[..117] + "…" : comment;
+    }
+
+    private static string StatusLabel(FeedbackStatus? status) => status switch
+    {
+        FeedbackStatus.Pending => "Pending",
+        FeedbackStatus.UnderReview => "Under review",
+        FeedbackStatus.Addressed => "Resolved",
+        _ => "Unknown"
+    };
+
+    private static string StatusChipClass(FeedbackStatus? status) => status switch
+    {
+        FeedbackStatus.Pending => "af-chip-pending",
+        FeedbackStatus.UnderReview => "af-chip-review",
+        FeedbackStatus.Addressed => "af-chip-resolved",
+        _ => ""
+    };
+}
