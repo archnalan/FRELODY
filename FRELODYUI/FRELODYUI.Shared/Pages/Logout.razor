@@ -1,0 +1,63 @@
+@page "/logout"
+@layout LandingLayout
+
+@*
+    GET-addressable logout endpoint.
+
+    The web app is the single identity provider for the platform, including the
+    separate FRELODY.Docs site. A docs-side "Sign out" can only clear its own
+    origin's localStorage; the web app's session (a different origin) survives,
+    so the next docs sign-in silently SSOs the user back. The docs therefore
+    round-trips through here: this page clears the web app's session and then
+    bounces back to the docs (or any returnUrl), giving a true, complete logout.
+
+    localStorage is cleared in OnAfterRenderAsync because the page prerenders
+    under InteractiveAuto, where JS interop isn't yet available.
+*@
+
+<PageTitle>Signing out… - FRELODY</PageTitle>
+
+<div class="logout-page">
+    <div class="logout-card">
+        <span class="logout-spinner" aria-hidden="true"></span>
+        <p class="logout-message">Signing you out…</p>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private bool _handled;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _handled) return;
+        _handled = true;
+
+        // Clear the web app's session (localStorage + in-memory cache).
+        try { await _globalAuth.MarkUserAsLoggedOutAsync(); } catch { /* best-effort */ }
+
+        Redirect();
+    }
+
+    private void Redirect()
+    {
+        if (string.IsNullOrWhiteSpace(ReturnUrl))
+        {
+            _navManager.NavigateTo("/login", replace: true);
+            return;
+        }
+
+        // Cross-origin returnUrl (e.g. the docs site) → full-page redirect so the
+        // destination reloads cleanly with no session. Same-origin/relative → SPA nav.
+        if (Uri.TryCreate(ReturnUrl, UriKind.Absolute, out var target) &&
+            Uri.TryCreate(_navManager.BaseUri, UriKind.Absolute, out var origin) &&
+            !string.Equals(target.Authority, origin.Authority, StringComparison.OrdinalIgnoreCase))
+        {
+            _navManager.NavigateTo(ReturnUrl, forceLoad: true);
+            return;
+        }
+
+        _navManager.NavigateTo(ReturnUrl, replace: true);
+    }
+}

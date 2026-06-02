@@ -183,9 +183,25 @@ public class AuthService
         _nav.NavigateTo(loginUrl, forceLoad: true);
     }
 
+    /// <summary>
+    /// Signs the user out. Clearing only the docs-side session is not enough: the
+    /// FRELODY web app is the identity provider and keeps its own session in a
+    /// different origin's localStorage, so the next <see cref="RequestSignIn"/> would
+    /// silently SSO the user straight back. We therefore clear the local session and
+    /// then round-trip through the web app's <c>/logout</c> (which clears its session
+    /// and bounces back here), giving a true, complete logout.
+    /// </summary>
     public async Task LogoutAsync()
     {
         await ClearAsync();
+
+        // No configured web app → docs-local logout is the best we can do.
+        if (string.IsNullOrEmpty(_webBaseUrl)) return;
+
+        // Return to the current docs page, minus any fragment (e.g. a stale #session).
+        var returnUrl = Uri.EscapeDataString(_nav.Uri.Split('#')[0]);
+        var logoutUrl = $"{_webBaseUrl}/logout?returnUrl={returnUrl}";
+        _nav.NavigateTo(logoutUrl, forceLoad: true);
     }
 
     private async Task ClearAsync()
