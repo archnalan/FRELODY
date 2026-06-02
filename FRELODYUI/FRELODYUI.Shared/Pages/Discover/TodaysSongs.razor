@@ -14,16 +14,37 @@
         <p class="ts-sub">Songs you unlocked today — available for 24 hours.</p>
     </header>
 
+    @if (!_loading && _songs is { Count: > 0 })
+    {
+        <div class="ts-search-wrap @(_searchFocused ? "ts-search-wrap--focused" : "")">
+            <i class="bi bi-search ts-search-icon" aria-hidden="true"></i>
+            <input class="ts-search-input"
+                   type="search"
+                   placeholder="Filter songs…"
+                   value="@_query"
+                   @oninput="OnSearchInput"
+                   @onfocus="() => _searchFocused = true"
+                   @onblur="() => _searchFocused = false"
+                   aria-label="Filter today's songs" />
+            @if (!string.IsNullOrEmpty(_query))
+            {
+                <button class="ts-search-clear" type="button" @onclick="ClearSearch" aria-label="Clear search">
+                    <i class="bi bi-x" aria-hidden="true"></i>
+                </button>
+            }
+        </div>
+    }
+
     @if (_loading)
     {
         <div class="ts-grid">
             @for (var i = 0; i < 4; i++)
             {
                 <div class="ts-card ts-card--skeleton">
-                    <div class="ts-thumb k-shimmer"></div>
-                    <div class="ts-meta">
-                        <span class="ts-line k-shimmer"></span>
-                        <span class="ts-line ts-line--short k-shimmer"></span>
+                    <div class="ts-card__thumb-wrap k-shimmer"></div>
+                    <div class="ts-card__body">
+                        <span class="ts-skel-line k-shimmer"></span>
+                        <span class="ts-skel-line ts-skel-line--short k-shimmer"></span>
                     </div>
                 </div>
             }
@@ -31,33 +52,64 @@
     }
     else if (_songs is { Count: > 0 })
     {
-        <div class="ts-grid">
-            @foreach (var song in _songs)
-            {
-                <button type="button" class="ts-card" @onclick="() => Play(song)">
-                    <div class="ts-thumb">
-                        @if (!string.IsNullOrEmpty(song.ThumbnailUrl))
-                        {
-                            <img src="@song.ThumbnailUrl" alt="@song.Title" loading="lazy" />
-                        }
-                        else
-                        {
-                            <div class="ts-thumb-fallback"><i class="bi bi-music-note-beamed"></i></div>
-                        }
-                        <span class="ts-platform" title="@song.Platform">
-                            <i class="bi @(song.Platform == AnalyzedPlatform.TikTok ? "bi-tiktok" : "bi-youtube")"></i>
-                        </span>
+        var filtered = FilteredSongs;
+
+        @if (filtered.Count > 0)
+        {
+            <div class="ts-grid">
+                @foreach (var song in filtered)
+                {
+                    var captured = song;
+                    <div class="ts-card"
+                         role="button"
+                         tabindex="0"
+                         title="@(string.IsNullOrWhiteSpace(song.Title) ? song.VideoId : song.Title)"
+                         @onclick="() => Play(captured)"
+                         @onkeydown="(e) => HandleKeyDown(e, captured)">
+                        <div class="ts-card__thumb-wrap">
+                            @if (!string.IsNullOrEmpty(song.ThumbnailUrl))
+                            {
+                                <img src="@song.ThumbnailUrl" alt="@song.Title" class="ts-card__thumb" loading="lazy" />
+                            }
+                            else
+                            {
+                                <div class="ts-card__thumb-empty">
+                                    <i class="bi bi-music-note-beamed" aria-hidden="true"></i>
+                                </div>
+                            }
+                            <span class="ts-platform" title="@song.Platform">
+                                <i class="bi @(song.Platform == AnalyzedPlatform.TikTok ? "bi-tiktok" : "bi-youtube")" aria-hidden="true"></i>
+                            </span>
+                            <div class="ts-card__play-overlay" aria-hidden="true">
+                                <i class="bi bi-play-fill"></i>
+                            </div>
+                        </div>
+                        <div class="ts-card__body">
+                            <p class="ts-card__title">@(string.IsNullOrWhiteSpace(song.Title) ? song.VideoId : song.Title)</p>
+                            <span class="ts-card__expiry">
+                                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                @ExpiresInLabel(song.ExpiresAt)
+                            </span>
+                            <span class="ts-card__action">
+                                Play <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                            </span>
+                        </div>
                     </div>
-                    <div class="ts-meta">
-                        <span class="ts-name">@(string.IsNullOrWhiteSpace(song.Title) ? song.VideoId : song.Title)</span>
-                        <span class="ts-expiry">
-                            <i class="bi bi-clock-history" aria-hidden="true"></i>
-                            @ExpiresInLabel(song.ExpiresAt)
-                        </span>
-                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="ts-empty ts-empty--nomatch">
+                <div class="ts-empty-icon"><i class="bi bi-search"></i></div>
+                <p class="ts-empty-heading">No matches for &ldquo;@_query&rdquo;</p>
+                <p class="ts-empty-sub">Try a different title or video ID.</p>
+                <button class="ts-empty-btn ts-empty-btn--ghost" @onclick="ClearSearch">
+                    <i class="bi bi-x-circle" aria-hidden="true"></i>
+                    Clear search
                 </button>
-            }
-        </div>
+            </div>
+        }
     }
     else
     {
@@ -76,6 +128,24 @@
 @code {
     private List<AnalyzedSongDto>? _songs;
     private bool _loading = true;
+    private string _query = string.Empty;
+    private bool _searchFocused;
+
+    private List<AnalyzedSongDto> FilteredSongs
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_query) || _songs is null)
+                return _songs ?? [];
+
+            var q = _query.Trim();
+            return _songs
+                .Where(s =>
+                    (s.Title?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (s.VideoId?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false))
+                .ToList();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -93,6 +163,16 @@
         _loading = false;
     }
 
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _query = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void ClearSearch()
+    {
+        _query = string.Empty;
+    }
+
     private void Play(AnalyzedSongDto song)
     {
         if (song.Platform == AnalyzedPlatform.TikTok)
@@ -104,6 +184,12 @@
         {
             Nav.NavigateTo($"/discover/{song.VideoId}");
         }
+    }
+
+    private Task HandleKeyDown(KeyboardEventArgs e, AnalyzedSongDto song)
+    {
+        if (e.Key == "Enter" || e.Key == " ") Play(song);
+        return Task.CompletedTask;
     }
 
     private static string ExpiresInLabel(DateTimeOffset expiresAt)
