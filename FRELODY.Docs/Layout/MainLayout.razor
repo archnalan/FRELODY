@@ -65,7 +65,24 @@
     </aside>
 
     <main class="app-main" id="main-content">
-        @Body
+        <ErrorBoundary @ref="_errorBoundary">
+            <ChildContent>
+                @Body
+            </ChildContent>
+            <ErrorContent>
+                <div class="page-error" role="alert">
+                    <div class="page-error-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <h2>Something went wrong on this page</h2>
+                    <p>We hit an unexpected error while loading this content. You can try again, or head back to the documentation home.</p>
+                    <div class="page-error-actions">
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="RetryPage">Try again</button>
+                        <a class="btn btn-ghost btn-sm" href="/">Go home</a>
+                    </div>
+                </div>
+            </ErrorContent>
+        </ErrorBoundary>
         <footer class="app-footer">
             <div class="footer-inner">
                 <p>© @DateTime.Now.Year FRELODY — paste a song link, get the chords, slow it down and loop it.</p>
@@ -79,6 +96,7 @@
 
 @code {
     private bool _sidebarOpen;
+    private ErrorBoundary? _errorBoundary;
 
     protected override async Task OnInitializedAsync()
     {
@@ -98,8 +116,13 @@
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         _sidebarOpen = false;
+        // Clear any captured error so navigating away from a broken page
+        // gives the next route a clean slate instead of staying errored.
+        _errorBoundary?.Recover();
         InvokeAsync(StateHasChanged);
     }
+
+    private void RetryPage() => _errorBoundary?.Recover();
 
     private void ToggleSidebar() => _sidebarOpen = !_sidebarOpen;
     private void CloseSidebar() => _sidebarOpen = false;

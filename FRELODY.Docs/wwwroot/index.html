@@ -31,6 +31,47 @@
         <a class="dismiss">🗙</a>
     </div>
 
+    <style>
+        /* Boot-failure fallback. Lives in the host page (not a Razor
+           component) because a WASM download failure happens BEFORE Blazor
+           starts, so no component — not even MainLayout — can render. Uses
+           the theme vars already set on :root by the inline theme script. */
+        .boot-error {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: var(--bg, #fff);
+            color: var(--text, #1f2430);
+            font-family: var(--font-sans, system-ui, sans-serif);
+        }
+        .boot-error-card {
+            max-width: 30rem;
+            text-align: center;
+            background: var(--bg-elevated, #fff);
+            border: 1px solid var(--border, #e5e7eb);
+            border-radius: var(--radius-lg, 16px);
+            box-shadow: var(--shadow-lg, 0 18px 40px -12px rgba(15, 23, 42, .18));
+            padding: 2rem 1.75rem;
+        }
+        .boot-error-icon { font-size: 2.25rem; line-height: 1; }
+        .boot-error-card h1 { font-size: 1.25rem; margin: .75rem 0 .5rem; }
+        .boot-error-card p { color: var(--text-muted, #5b6678); margin: 0 0 1.25rem; line-height: 1.55; }
+        .boot-error-card button {
+            border: 0;
+            cursor: pointer;
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: var(--accent, #4f46e5);
+            border-radius: var(--radius-md, 10px);
+            padding: .6rem 1.4rem;
+            transition: background var(--transition, 180ms ease);
+        }
+        .boot-error-card button:hover { background: var(--accent-hover, #4338ca); }
+    </style>
+
     <script>
         // Apply persisted theme before Blazor boots to prevent flash.
         (function () {
@@ -61,6 +102,37 @@
         };
     </script>
     <script src="js/pdf-export.js"></script>
-    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_framework/blazor.webassembly.js" autostart="false"></script>
+    <script>
+        // Start Blazor manually so a boot failure (e.g. a framework asset 404s
+        // after a stale redeploy, or the network drops mid-download) shows a
+        // friendly, actionable message instead of leaving the spinner forever
+        // with errors buried in the console.
+        (function () {
+            function showBootError() {
+                var app = document.getElementById('app');
+                if (!app) return;
+                app.innerHTML =
+                    '<div class="boot-error" role="alert">' +
+                      '<div class="boot-error-card">' +
+                        '<div class="boot-error-icon" aria-hidden="true">⚠️</div>' +
+                        '<h1>We couldn’t load the documentation</h1>' +
+                        '<p>This is usually a brief network hiccup or a freshly deployed ' +
+                        'update still settling in. Reloading the page almost always fixes it.</p>' +
+                        '<button type="button" onclick="location.reload()">Reload</button>' +
+                      '</div>' +
+                    '</div>';
+            }
+            try {
+                Blazor.start().catch(function (err) {
+                    console.error('FRELODY Docs failed to start:', err);
+                    showBootError();
+                });
+            } catch (err) {
+                console.error('FRELODY Docs failed to start:', err);
+                showBootError();
+            }
+        })();
+    </script>
 </body>
 </html>
