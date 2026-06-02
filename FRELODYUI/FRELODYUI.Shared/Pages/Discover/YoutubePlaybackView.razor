@@ -152,7 +152,9 @@
 
         <!-- Actions -->
         <div class="pv-actions">
-        @if (AllowSaveToLibrary && Transcription.SyncedChords.Count > 0)
+        @* Only offer the save once there are real chords to map — synced cells can be
+           all N/X rests, which would persist a blank chart. *@
+        @if (AllowSaveToLibrary && _uniqueRawChords.Count > 0)
         {
             <button type="button" class="pv-btn pv-btn--primary"
                     @onclick="SaveToLibraryAsync" disabled="@_isSaving">

@@ -1,5 +1,8 @@
 ﻿@using FRELODYUI.Shared.Pages
 
+@* App-wide watchdog: clears state + redirects to /login when a session hard-expires. *@
+<SessionGuard />
+
 <Router AppAssembly="typeof(Layout.MainLayout).Assembly">
     <Found Context="routeData">
         @if (routeData.PageType == typeof(Home))

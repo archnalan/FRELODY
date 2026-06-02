@@ -294,10 +294,12 @@
     private void NavigateToLogin()
     {
         var currentPath = _navManager.ToBaseRelativePath(_navManager.Uri);
-        var returnUrl = string.IsNullOrEmpty(currentPath) || currentPath == "login" || currentPath == "register"
-            ? ""
-            : $"?returnUrl={Uri.EscapeDataString("/" + currentPath)}";
-        _navManager.NavigateTo($"/login{returnUrl}");
+        // Send the user back to wherever they requested login from — including the "/"
+        // landing. Previously root was blanked, so landing visitors always bounced to
+        // /dashboard; now only the auth pages themselves fall back to "/".
+        var pathOnly = currentPath.Split('?')[0].Split('#')[0].TrimEnd('/');
+        var returnTarget = pathOnly is "login" or "register" ? "/" : "/" + currentPath;
+        _navManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(returnTarget)}");
     }
 
     private async Task LogoutUser()

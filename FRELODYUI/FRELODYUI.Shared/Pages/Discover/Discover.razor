@@ -82,7 +82,7 @@
             @if (!_hasSearched && _mode == SearchMode.YouTube)
             {
                 <div class="dc-chips" role="group" aria-label="Suggested searches">
-                    @foreach (var suggestion in _suggestions)
+                    @foreach (var suggestion in _displayedSuggestions)
                     {
                         <button class="dc-chip" type="button" @onclick="() => QuickSearch(suggestion)">
                             @suggestion
@@ -159,11 +159,49 @@
     private bool _focused;
     private string? _error;
 
-    private static readonly string[] _suggestions =
-        ["worship songs", "fingerstyle guitar", "Ed Sheeran", "jazz standards", "hillsong"];
+    // Full curated pool — varied artists, genres, learning intents, instruments.
+    private static readonly string[] _suggestionPool =
+    [
+        // Worship / Christian
+        "hillsong worship", "elevation worship", "bethel music", "phil wickham",
+        "chris tomlin", "crowder", "cory asbury", "brandon lake",
+
+        // Pop singer-songwriters
+        "Ed Sheeran", "Taylor Swift", "John Mayer", "Adele",
+        "Olivia Rodrigo", "Billie Eilish", "Harry Styles", "Shawn Mendes",
+
+        // Classic rock / rock
+        "Coldplay", "The Beatles", "Eric Clapton", "Eagles",
+        "Fleetwood Mac", "Oasis", "Red Hot Chili Peppers", "Green Day",
+
+        // Jazz / soul / R&B
+        "jazz standards", "Frank Sinatra", "norah jones", "Amy Winehouse",
+        "john coltrane", "bossa nova guitar", "blues guitar",
+
+        // Fingerstyle / acoustic / instrumental
+        "fingerstyle guitar", "Tommy Emmanuel", "acoustic guitar",
+        "Travis picking", "classical guitar", "ukulele songs",
+
+        // Piano / keyboard
+        "beginner piano songs", "easy piano", "Chopin nocturne",
+        "lofi piano", "cinematic piano", "gospel piano",
+
+        // Learning-intent searches
+        "easy guitar songs", "beginner guitar chords", "campfire songs",
+        "3 chord songs", "worship guitar tutorial", "chord progressions",
+
+        // More artists / bands
+        "Imagine Dragons", "Twenty One Pilots", "Hozier", "Ben Howard",
+        "Iron & Wine", "Bon Iver", "Jack Johnson", "Jason Mraz",
+    ];
+
+    // 5 chips picked once per landing view — stable during typing.
+    private List<string> _displayedSuggestions = [];
 
     protected override async Task OnInitializedAsync()
     {
+        PickSuggestions();
+
         if (!string.IsNullOrWhiteSpace(v))
         {
             _nav.NavigateTo($"/discover/{v}", replace: true);
@@ -174,6 +212,20 @@
             _query = q;
             await SearchAsync();
         }
+    }
+
+    private void PickSuggestions()
+    {
+        // Partial Fisher–Yates: shuffle a copy and take 5 — guarantees 5 *distinct*
+        // chips (GetItems samples with replacement, so it can repeat / yield < 5).
+        var pool = (string[])_suggestionPool.Clone();
+        var take = Math.Min(5, pool.Length);
+        for (var i = 0; i < take; i++)
+        {
+            var j = Random.Shared.Next(i, pool.Length);
+            (pool[i], pool[j]) = (pool[j], pool[i]);
+        }
+        _displayedSuggestions = pool.Take(take).ToList();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -199,6 +251,7 @@
         _results = null;
         _hasSearched = false;
         _query = string.Empty;
+        if (mode == SearchMode.YouTube) PickSuggestions();
         _ = _localStorage.SetItemAsync(ModeKey, mode.ToString());
     }
 

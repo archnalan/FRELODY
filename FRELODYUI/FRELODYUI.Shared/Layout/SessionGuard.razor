@@ -1,0 +1,52 @@
+@implements IDisposable
+
+@* Invisible behaviour-only component. Listens for the "session ended" signal raised by
+   AuthHeaderHandler when a token refresh hard-fails (revoked / expired-beyond-refresh /
+   tampered token), then clears auth state, toasts the user, and redirects to /login —
+   carrying a returnUrl so they land back where they were after re-authenticating.
+   Mounted once in Routes.razor so it covers every layout with a single subscriber. *@
+
+@code {
+    [Inject] private SessionEndedNotifier _sessionEnded { get; set; } = default!;
+
+    // Collapse a burst of concurrent 401s into a single sign-out/redirect.
+    private bool _handled;
+
+    protected override void OnInitialized()
+    {
+        _sessionEnded.OnSessionEnded += HandleSessionEndedAsync;
+    }
+
+    private async Task HandleSessionEndedAsync(string? reason)
+    {
+        if (_handled) return;
+
+        // Already on the auth pages → nothing to do (avoids redirect loops on /login).
+        var path = "/" + _navManager.ToBaseRelativePath(_navManager.Uri)
+            .Split('?')[0].Split('#')[0].TrimEnd('/');
+        if (path.Equals("/login", StringComparison.OrdinalIgnoreCase)
+            || path.Equals("/register", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        _handled = true;
+
+        await InvokeAsync(async () =>
+        {
+            try
+            {
+                await _globalAuth.MarkUserAsLoggedOutAsync();
+                _toastService.Show(reason ?? "Your session has ended. Please sign in again.",
+                    ToastType.Warning);
+            }
+            catch { /* best-effort: still attempt the redirect below */ }
+
+            var returnUrl = Uri.EscapeDataString(string.IsNullOrEmpty(path) ? "/" : path);
+            _navManager.NavigateTo($"/login?returnUrl={returnUrl}", replace: true);
+        });
+    }
+
+    public void Dispose()
+    {
+        _sessionEnded.OnSessionEnded -= HandleSessionEndedAsync;
+    }
+}

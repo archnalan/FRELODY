@@ -51,6 +51,7 @@ builder.Services.AddScoped<UserSettingsService>();
 builder.Services.AddScoped<GlobalAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
                 provider.GetRequiredService<GlobalAuthStateProvider>());
+builder.Services.AddScoped<SessionEndedNotifier>();
 builder.Services.AddSingleton<ITimeHelper, TimeHelper>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ICurrencyConverter, CurrencyConverter>();

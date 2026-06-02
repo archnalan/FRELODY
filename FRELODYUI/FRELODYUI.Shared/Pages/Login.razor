@@ -290,6 +290,7 @@ else
 
 @code {
     [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery] public bool Forgot { get; set; }
     [Parameter] public EventCallback OnLoginSuccess { get; set; }
     [Parameter] public EventCallback OnCloseLoginModal { get; set; }
     [Parameter] public EventCallback<TenantDto?> HandleRegisterSuccess { get; set; }
@@ -333,6 +334,10 @@ else
             await NavigateToReturnUrlAsync();
             return;
         }
+
+        // Deep link from the support page ("Reset password") opens the modal directly.
+        if (Forgot)
+            ShowForgotPassword();
 
         // Detect Google OAuth callback — defer to OnAfterRenderAsync where JS interop is available
         _pendingOAuthCode = queryParams["code"];

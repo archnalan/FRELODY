@@ -17,13 +17,15 @@ namespace FRELODYUI.Shared.Services
         private readonly IStorageService _localStorage;
         private readonly ILogger<AuthHeaderHandler> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly SessionEndedNotifier _sessionEnded;
         private static readonly SemaphoreSlim _refreshLock = new(1, 1);
 
-        public AuthHeaderHandler(IStorageService localStorage, ILogger<AuthHeaderHandler> logger, IHttpClientFactory httpClientFactory)
+        public AuthHeaderHandler(IStorageService localStorage, ILogger<AuthHeaderHandler> logger, IHttpClientFactory httpClientFactory, SessionEndedNotifier sessionEnded)
         {
             _localStorage = localStorage;
             _logger = logger;
             _httpClientFactory = httpClientFactory;
+            _sessionEnded = sessionEnded;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -104,6 +106,10 @@ namespace FRELODYUI.Shared.Services
             if (string.IsNullOrEmpty(session.RefreshToken) || string.IsNullOrEmpty(session.Token))
                 return session;
 
+            // Tracks whether the refresh definitively failed (vs. succeeded or was
+            // superseded by a concurrent refresh). Notify *after* releasing the lock.
+            var refreshFailed = false;
+
             await _refreshLock.WaitAsync();
             try
             {
@@ -142,15 +148,26 @@ namespace FRELODYUI.Shared.Services
                 {
                     _logger.LogWarning("Token refresh failed with status {StatusCode}", response.StatusCode);
                     await _localStorage.RemoveItemAsync("sessionState");
+                    refreshFailed = true;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during token refresh");
+                refreshFailed = true;
             }
             finally
             {
                 _refreshLock.Release();
+            }
+
+            // Refresh is dead: the session can't be revived. Signal the UI to clear
+            // auth state, toast the user, and redirect to /login — instead of letting
+            // the now-anonymous request 500 deeper in the app on a stale identity.
+            if (refreshFailed)
+            {
+                await _sessionEnded.NotifySessionEndedAsync(
+                    "Your session has ended. Please sign in again.");
             }
 
             return null;

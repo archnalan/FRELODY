@@ -65,7 +65,7 @@
                         <span class="sp-quick-sub">Upgrade, manage, or compare Free vs Premium.</span>
                     </a>
 
-                    <a class="sp-quick-item" href="/forgotpassword">
+                    <a class="sp-quick-item" href="/login?forgot=true">
                         <i class="bi bi-key sp-quick-icon"></i>
                         <span class="sp-quick-title">Reset password</span>
                         <span class="sp-quick-sub">Locked out? Get a secure reset link by email.</span>
@@ -183,6 +183,10 @@
     private bool isComplete;
     private string? errorMessage;
 
+    // The subject we last auto-filled from a quick-help tap. Lets a second tap
+    // swap the subject while still preserving anything the user typed themselves.
+    private string? autoFilledSubject;
+
     private static readonly string[] Categories =
     {
         "General question",
@@ -218,8 +222,16 @@
     {
         if (Categories.Contains(category))
             model.Category = category;
-        if (string.IsNullOrWhiteSpace(model.Subject))
+
+        // Fill the subject when it's blank or still holds a value we auto-filled,
+        // so switching between quick-help options swaps the subject too — but never
+        // clobber a subject the user typed manually.
+        if (string.IsNullOrWhiteSpace(model.Subject) ||
+            string.Equals(model.Subject, autoFilledSubject, StringComparison.Ordinal))
+        {
             model.Subject = subject;
+            autoFilledSubject = subject;
+        }
 
         StateHasChanged();
         try
@@ -279,6 +291,7 @@
         model.Subject = "";
         model.Comment = "";
         model.Category = "General question";
+        autoFilledSubject = null;
         errorMessage = null;
         isComplete = false;
     }
