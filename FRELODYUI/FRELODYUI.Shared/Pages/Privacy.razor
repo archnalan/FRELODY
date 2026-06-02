@@ -22,18 +22,18 @@
         <nav class="pv-toc" aria-label="Policy sections">
             <h2 class="pv-toc-title">Contents</h2>
             <ol class="pv-toc-list">
-                <li><a href="#about">About this policy</a></li>
-                <li><a href="#collect">Information we collect</a></li>
-                <li><a href="#use">How we use your information</a></li>
-                <li><a href="#share">How we share your information</a></li>
-                <li><a href="#security">Data security</a></li>
-                <li><a href="#retention">Data retention</a></li>
-                <li><a href="#rights">Your rights &amp; controls</a></li>
-                <li><a href="#children">Children's privacy</a></li>
-                <li><a href="#international">International data transfers</a></li>
-                <li><a href="#cookies">Cookies &amp; local storage</a></li>
-                <li><a href="#changes">Changes to this policy</a></li>
-                <li><a href="#contact">Contact us</a></li>
+                <li><a href="#about" @onclick:preventDefault @onclick='() => ScrollToSection("about")'>About this policy</a></li>
+                <li><a href="#collect" @onclick:preventDefault @onclick='() => ScrollToSection("collect")'>Information we collect</a></li>
+                <li><a href="#use" @onclick:preventDefault @onclick='() => ScrollToSection("use")'>How we use your information</a></li>
+                <li><a href="#share" @onclick:preventDefault @onclick='() => ScrollToSection("share")'>How we share your information</a></li>
+                <li><a href="#security" @onclick:preventDefault @onclick='() => ScrollToSection("security")'>Data security</a></li>
+                <li><a href="#retention" @onclick:preventDefault @onclick='() => ScrollToSection("retention")'>Data retention</a></li>
+                <li><a href="#rights" @onclick:preventDefault @onclick='() => ScrollToSection("rights")'>Your rights &amp; controls</a></li>
+                <li><a href="#children" @onclick:preventDefault @onclick='() => ScrollToSection("children")'>Children's privacy</a></li>
+                <li><a href="#international" @onclick:preventDefault @onclick='() => ScrollToSection("international")'>International data transfers</a></li>
+                <li><a href="#cookies" @onclick:preventDefault @onclick='() => ScrollToSection("cookies")'>Cookies &amp; local storage</a></li>
+                <li><a href="#changes" @onclick:preventDefault @onclick='() => ScrollToSection("changes")'>Changes to this policy</a></li>
+                <li><a href="#contact" @onclick:preventDefault @onclick='() => ScrollToSection("contact")'>Contact us</a></li>
             </ol>
         </nav>
     </div>
@@ -601,3 +601,22 @@
         </p>
     </div>
 </section>
+
+@code {
+    // The page body scrolls inside the layout's `.app-body` (overflow-auto) container,
+    // not the document, and Blazor intercepts in-page `#hash` clicks — so a plain anchor
+    // doesn't move the viewport. Mirror the Support page: scroll the target into view via
+    // JS. `scroll-margin-top` on .pv-section keeps the heading clear of the sticky header.
+    private async Task ScrollToSection(string id)
+    {
+        try
+        {
+            await JsRt.InvokeVoidAsync("eval",
+                $"document.getElementById('{id}')?.scrollIntoView({{behavior:'smooth',block:'start'}})");
+        }
+        catch
+        {
+            // Smooth-scroll is a nicety; ignore if the JS host is unavailable (prerender).
+        }
+    }
+}

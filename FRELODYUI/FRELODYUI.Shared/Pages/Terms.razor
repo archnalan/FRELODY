@@ -1,0 +1,584 @@
+@page "/terms"
+@layout LandingLayout
+
+<PageTitle>Terms of Service - FRELODY</PageTitle>
+
+<!-- Hero -->
+<section class="ts-hero">
+    <div class="ts-shell">
+        <span class="ts-eyebrow">Terms of Service</span>
+        <h1 class="ts-hero-title">The deal between you and FRELODY</h1>
+        <p class="ts-hero-sub">
+            Plain language, no fine-print traps. These terms explain what you can expect from
+            FRELODY, what we expect from you, and the rules that keep the music flowing for everyone.
+        </p>
+        <p class="ts-effective">Effective date: 1 June 2026</p>
+    </div>
+</section>
+
+<!-- Table of Contents -->
+<section class="ts-toc-section">
+    <div class="ts-shell">
+        <nav class="ts-toc" aria-label="Terms sections">
+            <h2 class="ts-toc-title">Contents</h2>
+            <ol class="ts-toc-list">
+                <li><a href="#agreement" @onclick:preventDefault @onclick='() => ScrollToSection("agreement")'>Agreement to these terms</a></li>
+                <li><a href="#eligibility" @onclick:preventDefault @onclick='() => ScrollToSection("eligibility")'>Who can use FRELODY</a></li>
+                <li><a href="#account" @onclick:preventDefault @onclick='() => ScrollToSection("account")'>Your account</a></li>
+                <li><a href="#service" @onclick:preventDefault @onclick='() => ScrollToSection("service")'>What FRELODY does</a></li>
+                <li><a href="#plans" @onclick:preventDefault @onclick='() => ScrollToSection("plans")'>Free &amp; paid plans</a></li>
+                <li><a href="#payments" @onclick:preventDefault @onclick='() => ScrollToSection("payments")'>Payments, renewals &amp; refunds</a></li>
+                <li><a href="#acceptable" @onclick:preventDefault @onclick='() => ScrollToSection("acceptable")'>Acceptable use</a></li>
+                <li><a href="#content" @onclick:preventDefault @onclick='() => ScrollToSection("content")'>Your content</a></li>
+                <li><a href="#ip" @onclick:preventDefault @onclick='() => ScrollToSection("ip")'>Music, chords &amp; copyright</a></li>
+                <li><a href="#thirdparty" @onclick:preventDefault @onclick='() => ScrollToSection("thirdparty")'>Third-party services</a></li>
+                <li><a href="#availability" @onclick:preventDefault @onclick='() => ScrollToSection("availability")'>Availability &amp; changes</a></li>
+                <li><a href="#disclaimer" @onclick:preventDefault @onclick='() => ScrollToSection("disclaimer")'>Disclaimers &amp; liability</a></li>
+                <li><a href="#termination" @onclick:preventDefault @onclick='() => ScrollToSection("termination")'>Suspension &amp; termination</a></li>
+                <li><a href="#law" @onclick:preventDefault @onclick='() => ScrollToSection("law")'>Governing law</a></li>
+                <li><a href="#changes" @onclick:preventDefault @onclick='() => ScrollToSection("changes")'>Changes to these terms</a></li>
+                <li><a href="#contact" @onclick:preventDefault @onclick='() => ScrollToSection("contact")'>Contact us</a></li>
+            </ol>
+        </nav>
+    </div>
+</section>
+
+<!-- Terms Sections -->
+<div class="ts-body">
+    <div class="ts-shell">
+
+        <!-- 1. Agreement -->
+        <section id="agreement" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">1</span>
+                Agreement to these terms
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    These Terms of Service (the <strong>"Terms"</strong>) are a binding agreement
+                    between you and FRELODY (<strong>"we"</strong>, <strong>"us"</strong>, or
+                    <strong>"our"</strong>) covering the FRELODY website, web application, mobile
+                    apps, and all related features (together, the <strong>"Service"</strong>).
+                </p>
+                <p>
+                    By creating an account, signing in, or using the Service in any way, you agree
+                    to these Terms and to our
+                    <a href="/privacy">Privacy Policy</a>. If you don't agree, that's completely
+                    fine — but please don't use FRELODY.
+                </p>
+                <div class="ts-callout">
+                    <i class="bi bi-music-note-beamed"></i>
+                    <p>
+                        <strong>The short version:</strong> paste a song link, get the chords, slow
+                        it down, loop the tricky bar, transpose to your key, and play along. Use it
+                        to learn and make music. Don't abuse it, don't break the law, and respect the
+                        artists whose songs you're learning.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Eligibility -->
+        <section id="eligibility" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">2</span>
+                Who can use FRELODY
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    You must be at least <strong>13 years old</strong> (or the minimum age of
+                    digital consent in your country, if higher) to use FRELODY. If you're under the
+                    age of majority where you live, you may only use the Service with the consent and
+                    supervision of a parent or guardian who agrees to these Terms on your behalf.
+                </p>
+                <p>
+                    By using the Service you confirm that you can form a binding contract with us and
+                    that you are not barred from using the Service under the laws of your country.
+                </p>
+            </div>
+        </section>
+
+        <!-- 3. Your account -->
+        <section id="account" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">3</span>
+                Your account
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    To unlock most of FRELODY you'll create an account with your email, or sign in
+                    with Google. A few things you agree to when you do:
+                </p>
+            </div>
+            <ul class="ts-checks">
+                <li><i class="bi bi-check-circle-fill"></i> Give us <strong>accurate information</strong> and keep it up to date in your profile.</li>
+                <li><i class="bi bi-check-circle-fill"></i> Keep your <strong>password and devices secure</strong> — you're responsible for activity under your account.</li>
+                <li><i class="bi bi-check-circle-fill"></i> <strong>One account per person.</strong> Don't share logins or create accounts to dodge plan limits.</li>
+                <li><i class="bi bi-check-circle-fill"></i> Tell us promptly at <a href="mailto:support@frelody.com">support@frelody.com</a> if you spot a sign-in you don't recognise.</li>
+            </ul>
+            <div class="ts-prose">
+                <p>
+                    We protect accounts with measures like password hashing, login monitoring,
+                    rate-limiting, and one-time email codes — but the first line of defence is a
+                    strong, unique password that only you know. See the
+                    <a href="/privacy">Privacy Policy</a> for how we handle your data.
+                </p>
+            </div>
+        </section>
+
+        <!-- 4. What FRELODY does -->
+        <section id="service" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">4</span>
+                What FRELODY does
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    FRELODY is a tool for <strong>learning and practising songs</strong>. Here's what
+                    you can do with it:
+                </p>
+            </div>
+            <div class="ts-cards">
+                <article class="ts-card">
+                    <div class="ts-card-icon"><i class="bi bi-link-45deg"></i></div>
+                    <h3 class="ts-card-title">Paste a link, get chords</h3>
+                    <p class="ts-card-text">
+                        Drop in a song link and FRELODY analyses it into a chord-and-lyric chart you
+                        can read and play along to.
+                    </p>
+                </article>
+                <article class="ts-card">
+                    <div class="ts-card-icon"><i class="bi bi-speedometer2"></i></div>
+                    <h3 class="ts-card-title">Slow down &amp; loop</h3>
+                    <p class="ts-card-text">
+                        Drop the tempo to catch a fast run, and loop the bar you keep fumbling until
+                        it sticks.
+                    </p>
+                </article>
+                <article class="ts-card">
+                    <div class="ts-card-icon"><i class="bi bi-arrow-left-right"></i></div>
+                    <h3 class="ts-card-title">Transpose to your key</h3>
+                    <p class="ts-card-text">
+                        Shift a chart up or down so it fits your voice or your capo, with the chords
+                        recalculated for you.
+                    </p>
+                </article>
+                <article class="ts-card">
+                    <div class="ts-card-icon"><i class="bi bi-card-image"></i></div>
+                    <h3 class="ts-card-title">Read sheet music</h3>
+                    <p class="ts-card-text">
+                        Upload a photo of a chord sheet and our text recognition pulls the chords and
+                        lyrics into an editable chart.
+                    </p>
+                </article>
+                <article class="ts-card">
+                    <div class="ts-card-icon"><i class="bi bi-music-note-list"></i></div>
+                    <h3 class="ts-card-title">Build playlists</h3>
+                    <p class="ts-card-text">
+                        Save favourites, rate songs, and group them into playlists — private, or
+                        shared with a link.
+                    </p>
+                </article>
+                <article class="ts-card">
+                    <div class="ts-card-icon"><i class="bi bi-stars"></i></div>
+                    <h3 class="ts-card-title">AI-assisted analysis</h3>
+                    <p class="ts-card-text">
+                        Behind the scenes we use AI to detect chords and structure. It's smart, but
+                        it's a best-effort interpretation — see Section 12.
+                    </p>
+                </article>
+            </div>
+            <div class="ts-prose">
+                <div class="ts-callout ts-callout--warn">
+                    <i class="bi bi-info-circle"></i>
+                    <p>
+                        <strong>Chord charts are interpretations, not official transcriptions.</strong>
+                        Automated and community-sourced analysis can get a chord, key, or timing
+                        wrong. Trust your ears and adjust the chart as you go — that's exactly why
+                        every chart is editable.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Plans -->
+        <section id="plans" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">5</span>
+                Free &amp; paid plans
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    FRELODY has a <strong>Free</strong> plan and a paid <strong>Premium</strong>
+                    plan. The Free plan lets you analyse a limited number of songs and includes some
+                    practical limits (for example on song length); Premium raises or removes those
+                    limits so you can keep going.
+                </p>
+                <p>
+                    Because song analysis is metered, your Free allowance refreshes on a regular
+                    cycle, and what you've used is shown to you in the app. The exact features,
+                    quotas, and prices for each plan are displayed on the
+                    <a href="/pricing">Pricing page</a> and in your account — those pages are part of
+                    these Terms, and they're the source of truth if anything here differs.
+                </p>
+                <p>
+                    We may adjust plan features, limits, and pricing over time. If we make a change
+                    that materially reduces what you're paying for during a billing period you've
+                    already paid for, we'll honour your existing terms until that period ends.
+                </p>
+            </div>
+        </section>
+
+        <!-- 6. Payments -->
+        <section id="payments" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">6</span>
+                Payments, renewals &amp; refunds
+            </h2>
+            <div class="ts-list-cards">
+                <div class="ts-list-card">
+                    <h4><i class="bi bi-credit-card-2-front"></i> How you pay</h4>
+                    <p>
+                        Payments are handled by <strong>PayPal</strong> and <strong>PesaPal</strong>.
+                        We never see or store your full card number, PayPal password, or mobile-money
+                        PIN — those stay with the payment provider. By paying, you also agree to that
+                        provider's terms.
+                    </p>
+                </div>
+                <div class="ts-list-card">
+                    <h4><i class="bi bi-arrow-repeat"></i> Subscriptions &amp; renewals</h4>
+                    <p>
+                        If you choose a recurring Premium subscription (monthly or annual), it renews
+                        automatically at the end of each period at the then-current price until you
+                        cancel. You can cancel anytime; your Premium access continues until the end of
+                        the period you've already paid for, and you won't be charged again after that.
+                    </p>
+                </div>
+                <div class="ts-list-card">
+                    <h4><i class="bi bi-bag-check"></i> One-time purchases</h4>
+                    <p>
+                        Some upgrades — like unlocking extra song analyses — are one-time purchases
+                        rather than subscriptions. Once a one-time unlock has been delivered or used,
+                        it is consumed and non-refundable.
+                    </p>
+                </div>
+                <div class="ts-list-card">
+                    <h4><i class="bi bi-receipt"></i> Refunds</h4>
+                    <p>
+                        Because FRELODY delivers digital goods immediately, fees are generally
+                        <strong>non-refundable</strong> and we don't refund partial periods. Where the
+                        law gives you a mandatory right to a refund or cancellation, that right still
+                        applies. If something went wrong with a charge, email
+                        <a href="mailto:support@frelody.com">support@frelody.com</a> and we'll make it
+                        right where we can.
+                    </p>
+                </div>
+                <div class="ts-list-card">
+                    <h4><i class="bi bi-currency-exchange"></i> Taxes &amp; currency</h4>
+                    <p>
+                        Prices may be shown in a currency such as USD and may exclude taxes. You're
+                        responsible for any taxes, conversion fees, or charges your bank or provider
+                        adds.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Acceptable use -->
+        <section id="acceptable" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">7</span>
+                Acceptable use
+            </h2>
+            <div class="ts-prose">
+                <p>FRELODY is for learning and making music. To keep it that way, you agree <strong>not</strong> to:</p>
+            </div>
+            <ul class="ts-donts">
+                <li><i class="bi bi-x-circle-fill"></i> Break the law, infringe anyone's copyright, or use FRELODY to distribute content you don't have the right to share.</li>
+                <li><i class="bi bi-x-circle-fill"></i> Scrape, crawl, hammer, or bulk-automate the Service, or try to bypass plan limits, paywalls, or rate limits.</li>
+                <li><i class="bi bi-x-circle-fill"></i> Reverse-engineer, probe, or interfere with the Service, its security, or the infrastructure it runs on.</li>
+                <li><i class="bi bi-x-circle-fill"></i> Resell, sublicense, or commercially redistribute access to FRELODY or its analysis output without our written permission.</li>
+                <li><i class="bi bi-x-circle-fill"></i> Upload malware, spam, or content that is illegal, hateful, harassing, or that violates someone else's rights or privacy.</li>
+                <li><i class="bi bi-x-circle-fill"></i> Misuse other people's accounts, or impersonate anyone.</li>
+            </ul>
+            <div class="ts-prose">
+                <p>
+                    Heavy or abusive automated use is exactly the behaviour our rate limits and
+                    monitoring are built to catch. If your usage threatens the Service for everyone
+                    else, we may throttle, suspend, or remove access (see Section 13).
+                </p>
+            </div>
+        </section>
+
+        <!-- 8. Your content -->
+        <section id="content" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">8</span>
+                Your content
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    <strong>"Your content"</strong> means anything you add to FRELODY — uploaded
+                    images, edits you make to a chart, playlists, ratings, your profile, and messages
+                    you send us.
+                </p>
+                <p>
+                    <strong>You keep ownership of your content.</strong> You only need to grant us a
+                    limited, worldwide, royalty-free licence to host, store, process, display, and
+                    share it <em>for the purpose of operating and improving the Service for you</em> —
+                    for example, storing your edited chart so it's there next time, or showing a
+                    playlist to people you share its link with. This licence ends when you delete the
+                    content or your account, except for content others have already saved or shared,
+                    and copies kept in routine backups for a limited time.
+                </p>
+                <p>
+                    You're responsible for your content. By uploading it, you confirm you have the
+                    right to do so and that it doesn't break these Terms or anyone else's rights.
+                </p>
+            </div>
+        </section>
+
+        <!-- 9. Music, chords & copyright -->
+        <section id="ip" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">9</span>
+                Music, chords &amp; copyright
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    The FRELODY name, logo, software, and design are ours and are protected by
+                    intellectual-property laws. These Terms don't give you any right to use our
+                    branding without permission.
+                </p>
+                <p>
+                    <strong>We don't own the songs.</strong> The underlying musical compositions,
+                    recordings, and lyrics belong to their respective artists, writers, and rights
+                    holders. FRELODY provides chord analysis and practice tools as an aid for personal
+                    learning. You're responsible for making sure your use of any song is lawful where
+                    you are — and for honouring the rights of the people who made it.
+                </p>
+                <div class="ts-callout">
+                    <i class="bi bi-flag"></i>
+                    <p>
+                        <strong>Rights holder?</strong> If you believe content on FRELODY infringes
+                        your copyright, email <a href="mailto:legal@frelody.com">legal@frelody.com</a>
+                        with the work concerned, where it appears on the Service, and your contact
+                        details. We review notices promptly and remove infringing material where
+                        appropriate.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 10. Third-party services -->
+        <section id="thirdparty" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">10</span>
+                Third-party services
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    FRELODY works alongside services we don't control — the sites you paste links
+                    from, Google sign-in, and payment providers like PayPal and PesaPal. We're
+                    <strong>not affiliated with, endorsed by, or sponsored by</strong> those
+                    platforms or the artists whose songs you analyse.
+                </p>
+                <p>
+                    When you use a third-party service through FRELODY, that service's own terms and
+                    privacy policy apply to your use of it, and we're not responsible for their
+                    content, availability, or practices. If a source platform blocks, changes, or
+                    removes content, that may affect what FRELODY can analyse — and that's outside our
+                    control.
+                </p>
+            </div>
+        </section>
+
+        <!-- 11. Availability & changes -->
+        <section id="availability" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">11</span>
+                Availability &amp; changes
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    We work hard to keep FRELODY fast and reliable, but the Service is provided on an
+                    <strong>"as available"</strong> basis. We may add, change, pause, or remove
+                    features, and we may run maintenance, without notice. Some analysis tasks (like
+                    chord recognition or pulling a song from a link) can take time or occasionally
+                    fail because of the source platform or processing limits.
+                </p>
+                <p>
+                    We don't guarantee that the Service will be uninterrupted, error-free, or that
+                    every song can be analysed. We may set reasonable technical limits — such as file
+                    sizes, song length, request rates, and per-plan quotas — to keep things working
+                    for everyone.
+                </p>
+            </div>
+        </section>
+
+        <!-- 12. Disclaimers & liability -->
+        <section id="disclaimer" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">12</span>
+                Disclaimers &amp; limitation of liability
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    To the fullest extent allowed by law, FRELODY is provided <strong>"as is"</strong>
+                    and <strong>"as available"</strong>, without warranties of any kind — express or
+                    implied — including fitness for a particular purpose, accuracy, or
+                    non-infringement. In particular, <strong>chord charts, keys, timings, and other
+                    analysis are best-effort interpretations and may be inaccurate or incomplete.</strong>
+                    FRELODY is an educational and practice aid, not an authoritative transcription.
+                </p>
+                <p>
+                    To the fullest extent allowed by law, FRELODY and its team won't be liable for any
+                    indirect, incidental, special, consequential, or punitive damages, or for any loss
+                    of data, goodwill, or profits, arising from your use of (or inability to use) the
+                    Service. Where liability can't be excluded, our total liability to you is limited
+                    to the greater of the amount you paid us in the
+                    <strong>three months</strong> before the claim, or <strong>USD&nbsp;50</strong>.
+                </p>
+                <p>
+                    Some places don't allow certain exclusions, so parts of this section may not apply
+                    to you. Nothing in these Terms limits rights that can't be limited by law. You
+                    agree to indemnify FRELODY against claims arising from your content or your misuse
+                    of the Service.
+                </p>
+            </div>
+        </section>
+
+        <!-- 13. Suspension & termination -->
+        <section id="termination" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">13</span>
+                Suspension &amp; termination
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    You can stop using FRELODY and delete your account at any time from your account
+                    settings or by contacting us. When you delete your account we remove your personal
+                    data as described in the <a href="/privacy">Privacy Policy</a>.
+                </p>
+                <p>
+                    We may suspend or terminate your access if you break these Terms, if your use
+                    harms the Service or other people, or if we're required to by law. Where it's
+                    reasonable and lawful, we'll give you notice and a chance to put things right.
+                    Sections that by their nature should survive termination — such as content
+                    licences you've granted, intellectual-property terms, disclaimers, and liability
+                    limits — continue to apply afterwards.
+                </p>
+            </div>
+        </section>
+
+        <!-- 14. Governing law -->
+        <section id="law" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">14</span>
+                Governing law
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    These Terms are governed by the laws of the <strong>Republic of Uganda</strong>,
+                    without regard to conflict-of-law rules, and the courts of Uganda have
+                    jurisdiction over any dispute — except where the mandatory consumer laws of your
+                    country of residence grant you the right to bring proceedings locally.
+                </p>
+                <p>
+                    Before heading to court, please reach out to us first at
+                    <a href="mailto:support@frelody.com">support@frelody.com</a>. Most issues can be
+                    sorted out quickly and informally, and we'd always rather fix the problem than
+                    fight about it.
+                </p>
+            </div>
+        </section>
+
+        <!-- 15. Changes to these terms -->
+        <section id="changes" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">15</span>
+                Changes to these terms
+            </h2>
+            <div class="ts-prose">
+                <p>
+                    We may update these Terms from time to time. When we make material changes, we'll
+                    post the updated Terms here and refresh the "Effective date" above, and for
+                    significant changes we may also notify you by email or an in-app notice.
+                </p>
+                <p>
+                    Your continued use of FRELODY after changes take effect means you accept the
+                    updated Terms. If you don't agree with a change, you can stop using the Service and
+                    close your account.
+                </p>
+            </div>
+        </section>
+
+        <!-- 16. Contact -->
+        <section id="contact" class="ts-section">
+            <h2 class="ts-section-title">
+                <span class="ts-section-num">16</span>
+                Contact us
+            </h2>
+            <div class="ts-prose">
+                <p>Questions about these Terms? We're real people and we'd love to hear from you.</p>
+            </div>
+            <div class="ts-contact-card">
+                <div class="ts-contact-row">
+                    <i class="bi bi-life-preserver"></i>
+                    <a href="/support">Visit our support page</a>
+                </div>
+                <div class="ts-contact-row">
+                    <i class="bi bi-envelope"></i>
+                    <a href="mailto:support@frelody.com">support@frelody.com</a>
+                </div>
+                <div class="ts-contact-row">
+                    <i class="bi bi-globe2"></i>
+                    <a href="https://frelody.com">frelody.com</a>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<!-- Footer CTA -->
+<section class="ts-final">
+    <div class="ts-shell">
+        <h2 class="ts-final-title">Enough reading — go play something</h2>
+        <p class="ts-final-sub">
+            Paste a link, get the chords, slow it down, and learn your next song today.
+        </p>
+        <a href="/songs" class="ts-cta ts-cta--invert">Start playing</a>
+    </div>
+</section>
+
+<!-- Legal -->
+<section class="ts-legal">
+    <div class="ts-shell">
+        <p class="ts-legal-text">
+            <i class="bi bi-info-circle"></i>
+            By using FRELODY you agree to these Terms of Service and our
+            <a href="/privacy">Privacy Policy</a>.
+        </p>
+    </div>
+</section>
+
+@code {
+    // The page body scrolls inside the layout's `.app-body` (overflow-auto) container,
+    // not the document, and Blazor intercepts in-page `#hash` clicks — so a plain anchor
+    // doesn't move the viewport. Mirror the Support/Privacy pages: scroll the target into
+    // view via JS. `scroll-margin-top` on .ts-section keeps the heading clear of the
+    // sticky header.
+    private async Task ScrollToSection(string id)
+    {
+        try
+        {
+            await JsRt.InvokeVoidAsync("eval",
+                $"document.getElementById('{id}')?.scrollIntoView({{behavior:'smooth',block:'start'}})");
+        }
+        catch
+        {
+            // Smooth-scroll is a nicety; ignore if the JS host is unavailable (prerender).
+        }
+    }
+}
