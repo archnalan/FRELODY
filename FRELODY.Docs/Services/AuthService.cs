@@ -76,36 +76,50 @@ public class AuthService
 
     /// <summary>
     /// On app startup: pick up a bridged session from the URL fragment if present,
-    /// otherwise rehydrate from localStorage. Best-effort — never throws.
+    /// otherwise rehydrate from localStorage. Handles all three hand-off cases
+    /// gracefully — no session in the URL, a hand-off carrying no/empty token, and a
+    /// malformed or expired token — always landing on a clean URL and a sensible auth
+    /// state (a valid session, or anonymous). Best-effort — never throws.
     /// </summary>
     public async Task InitializeAsync()
     {
         try
         {
             // 1) Did the FRELODY web app just bounce the browser here with a session?
+            //    This also strips the #session fragment from the address bar whatever
+            //    its contents, so a token is never left visible/shareable and a bad
+            //    fragment isn't reprocessed on the next reload.
             var bridged = await TryReadFragmentSessionAsync();
-            string? token = bridged;
 
-            // 2) Otherwise fall back to a previously stored token.
-            if (string.IsNullOrEmpty(token))
+            // 2) Prefer a *valid* bridged token. A missing/empty/expired/garbled one must
+            //    NOT clobber an existing good local session (e.g. the user followed a
+            //    public "Docs" link that deliberately carried no token) — so only persist
+            //    and adopt the bridged token once it actually parses.
+            if (!string.IsNullOrWhiteSpace(bridged))
             {
-                try
+                var bridgedUser = ParseToken(bridged);
+                if (bridgedUser is not null)
                 {
-                    token = await _js.InvokeAsync<string?>("localStorage.getItem", StorageKey);
+                    await PersistTokenAsync(bridged); // store only validated tokens
+                    Current = bridgedUser;
+                    OnChanged?.Invoke();
+                    return;
                 }
-                catch { token = null; }
-            }
-            else
-            {
-                // Persist the fresh bridged token so a hard refresh still works.
-                try { await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, token); } catch { }
+
+                // Bridged token was invalid/expired — ignore it and fall through to any
+                // previously stored session rather than forcing the user anonymous.
+                LogDebug("FRELODY.Docs: ignored an invalid or expired bridged session token.");
             }
 
-            if (string.IsNullOrWhiteSpace(token)) return;
+            // 3) Fall back to a previously stored token. If it has gone stale, drop it so
+            //    the user lands cleanly as anonymous instead of in a half-signed state.
+            var stored = await GetStoredTokenAsync();
+            if (string.IsNullOrWhiteSpace(stored)) return;
 
-            var user = ParseToken(token);
-            if (user is null) { await ClearAsync(); return; }
-            Current = user;
+            var storedUser = ParseToken(stored);
+            if (storedUser is null) { await ClearAsync(); return; }
+
+            Current = storedUser;
             OnChanged?.Invoke();
         }
         catch
@@ -115,31 +129,52 @@ public class AuthService
     }
 
     /// <summary>
-    /// Reads <c>#session=&lt;urlsafe-base64-json&gt;</c> from the current URL, extracts
-    /// the JWT, and removes the fragment from the address bar. Returns the JWT, or null.
+    /// Reads <c>#session=&lt;urlsafe-base64-json&gt;</c> from the current URL and extracts
+    /// the JWT. If a <c>session=</c> part is present it is stripped from the address bar
+    /// regardless of whether it turns out to be valid (so a token is never left visible
+    /// and a bad fragment can't replay), while any other fragment — e.g. a deep-link
+    /// anchor — is preserved. Returns the JWT, or null if the fragment is absent, carries
+    /// no token, or is malformed. Never throws.
     /// </summary>
     private async Task<string?> TryReadFragmentSessionAsync()
     {
-        string? hash;
-        try { hash = await _js.InvokeAsync<string?>("eval", "window.location.hash"); }
-        catch { return null; }
+        // NavigationManager.Uri carries the fragment in WASM, so we can read it without a
+        // JS round-trip (and without eval, which a Content-Security-Policy may block).
+        var hashIndex = _nav.Uri.IndexOf('#');
+        if (hashIndex < 0) return null;
 
-        if (string.IsNullOrEmpty(hash)) return null;
-        var trimmed = hash.TrimStart('#');
-        if (string.IsNullOrEmpty(trimmed)) return null;
+        var fragment = _nav.Uri.Substring(hashIndex + 1);
+        if (string.IsNullOrEmpty(fragment)) return null;
 
-        // Look for "session=..." anywhere in the fragment (supports "#session=..." and
-        // "#foo=bar&session=..." styles).
+        // Pull out "session=..." and keep every other fragment part so we can rebuild a
+        // clean fragment afterwards (supports "#session=...", "#a=b&session=...", and
+        // preserves a legitimate "#getting-started" style anchor).
         string? encoded = null;
-        foreach (var part in trimmed.Split('&'))
+        var kept = new List<string>();
+        foreach (var part in fragment.Split('&'))
         {
-            if (part.StartsWith("session=", StringComparison.OrdinalIgnoreCase))
+            if (encoded is null && part.StartsWith("session=", StringComparison.OrdinalIgnoreCase))
             {
                 encoded = part.Substring("session=".Length);
-                break;
+            }
+            else if (!string.IsNullOrEmpty(part))
+            {
+                kept.Add(part);
             }
         }
-        if (string.IsNullOrEmpty(encoded)) return null;
+
+        // No session hand-off in this fragment — leave the URL untouched (it may be a
+        // real doc anchor) and let the caller fall back to a stored session.
+        if (encoded is null) return null;
+
+        // A session= WAS present: strip just that part from the address bar now, before
+        // any validation, so neither a valid token nor a bad one can linger or replay.
+        var baseUri = _nav.Uri.Substring(0, hashIndex);
+        var cleanUri = kept.Count > 0 ? $"{baseUri}#{string.Join('&', kept)}" : baseUri;
+        try { await _js.InvokeVoidAsync("history.replaceState", null, "", cleanUri); }
+        catch { /* address-bar tidy-up is best-effort */ }
+
+        if (encoded.Length == 0) return null; // "#session=" with no payload
 
         string json;
         try
@@ -148,20 +183,14 @@ public class AuthService
         }
         catch { return null; }
 
-        // The bridged JSON is FRELODY's LoginResponseDto. Extract the JWT.
-        string? token;
+        // The bridged JSON is FRELODY's LoginResponseDto. Extract the JWT — which may be
+        // absent (e.g. a public hand-off with a null token), in which case we return null.
         try
         {
             using var doc = JsonDocument.Parse(json);
-            token = TryGetString(doc.RootElement, "token", "Token", "accessToken", "jwt");
+            return TryGetString(doc.RootElement, "token", "Token", "accessToken", "jwt");
         }
         catch { return null; }
-
-        // Strip the fragment from the URL bar so the token isn't visible / shared.
-        try { await _js.InvokeVoidAsync("history.replaceState", null, "", _nav.Uri.Split('#')[0]); }
-        catch { /* ignore */ }
-
-        return token;
     }
 
     /// <summary>
@@ -209,6 +238,23 @@ public class AuthService
         Current = null;
         try { await _js.InvokeVoidAsync("localStorage.removeItem", StorageKey); } catch { }
         OnChanged?.Invoke();
+    }
+
+    private async Task<string?> GetStoredTokenAsync()
+    {
+        try { return await _js.InvokeAsync<string?>("localStorage.getItem", StorageKey); }
+        catch { return null; }
+    }
+
+    private async Task PersistTokenAsync(string token)
+    {
+        try { await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, token); }
+        catch { /* persistence is best-effort; the session still works for this load */ }
+    }
+
+    private void LogDebug(string message)
+    {
+        try { _js.InvokeVoidAsync("console.debug", message); } catch { }
     }
 
     private static string? TryGetString(JsonElement root, params string[] names)
