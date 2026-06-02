@@ -9,6 +9,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<List<UserFeedbackDto>>> GetFeedbackAsync();
         Task<ServiceResult<UserFeedbackDto>> GetFeedbackByIdAsync(string id);
         Task<ServiceResult<UserFeedbackDto>> CreateFeedbackAsync(UserFeedbackCreateDto feedbackDto);
+        Task<ServiceResult<UserFeedbackDto>> SubmitSupportRequestAsync(UserFeedbackCreateDto feedbackDto);
         Task<ServiceResult<UserFeedbackDto>> UpdateFeedbackStatusAsync(string id, FRELODYSHRD.ModelTypes.FeedbackStatus status);
         Task<ServiceResult<bool>> DeleteFeedbackAsync(string id);
         Task<ServiceResult<List<UserFeedbackDto>>> GetFeedbackBySongIdAsync(string songId);

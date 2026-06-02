@@ -1,0 +1,306 @@
+@page "/support"
+@layout LandingLayout
+@inject ILogger<Support> _logger
+
+<PageTitle>Support - FRELODY</PageTitle>
+
+<div class="sp-page">
+    <div class="sp-container">
+        <!-- Branding -->
+        <div class="sp-branding">
+            <div class="sp-logo" aria-hidden="true">
+                <span class="sp-logo-icon">
+                    <i class="bi bi-life-preserver"></i>
+                </span>
+            </div>
+            <h1 class="sp-app-name">How can we help?</h1>
+            <p class="sp-tagline">Real humans read every message. We usually reply within a day.</p>
+        </div>
+
+        @if (isComplete)
+        {
+            <div class="sp-card">
+                <div class="sp-success-state">
+                    <i class="bi bi-check-circle-fill sp-success-icon"></i>
+                    <h2 class="sp-card-heading">Message sent</h2>
+                    <p class="sp-desc">
+                        Thanks@(string.IsNullOrWhiteSpace(model.FullName) ? "" : $", {model.FullName.Split(' ')[0]}")
+                        — your message is on its way to our team. We'll reply to
+                        <strong>@model.Email</strong> as soon as we can.
+                    </p>
+                    <div class="sp-success-actions">
+                        <a class="sp-btn primary" href="/">
+                            <i class="bi bi-house me-1"></i> Back home
+                        </a>
+                        <button class="sp-btn ghost" @onclick="ResetForm">
+                            <i class="bi bi-arrow-repeat me-1"></i> Send another
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Quick self-help -->
+            <div class="sp-quick">
+                <h2 class="sp-quick-heading">Quick answers</h2>
+                <div class="sp-quick-grid">
+                    <button type="button" class="sp-quick-item"
+                            @onclick='() => PrefillAndScroll("Account & sign-in security", "I don’t recognize a sign-in on my account")'>
+                        <i class="bi bi-shield-exclamation sp-quick-icon"></i>
+                        <span class="sp-quick-title">Unrecognized sign-in</span>
+                        <span class="sp-quick-sub">Didn't make that login? Tell us &amp; reset your password.</span>
+                    </button>
+
+                    <button type="button" class="sp-quick-item"
+                            @onclick='() => PrefillAndScroll("Song won’t analyze", "A song isn’t analyzing for me")'>
+                        <i class="bi bi-music-note-list sp-quick-icon"></i>
+                        <span class="sp-quick-title">A song won't analyze</span>
+                        <span class="sp-quick-sub">Paste a link and it stalls? Send it and we'll look.</span>
+                    </button>
+
+                    <a class="sp-quick-item" href="/pricing">
+                        <i class="bi bi-credit-card sp-quick-icon"></i>
+                        <span class="sp-quick-title">Billing &amp; plans</span>
+                        <span class="sp-quick-sub">Upgrade, manage, or compare Free vs Premium.</span>
+                    </a>
+
+                    <a class="sp-quick-item" href="/forgotpassword">
+                        <i class="bi bi-key sp-quick-icon"></i>
+                        <span class="sp-quick-title">Reset password</span>
+                        <span class="sp-quick-sub">Locked out? Get a secure reset link by email.</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Contact form -->
+            <div class="sp-card" id="sp-contact">
+                <h2 class="sp-card-heading">Send us a message</h2>
+                <p class="sp-desc">Tell us what's going on and we'll get back to you by email.</p>
+
+                <EditForm Model="@model" OnValidSubmit="HandleSubmit" FormName="supportForm">
+                    <DataAnnotationsValidator />
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="sp-alert error" role="alert">@errorMessage</div>
+                    }
+
+                    <!-- Category -->
+                    <div class="sp-field">
+                        <label class="sp-label" for="sp-category">What's this about?</label>
+                        <div class="sp-input-wrapper">
+                            <i class="bi bi-tag sp-input-icon"></i>
+                            <select id="sp-category" class="sp-input sp-select"
+                                    @bind="model.Category" disabled="@isSubmitting">
+                                @foreach (var c in Categories)
+                                {
+                                    <option value="@c">@c</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Name + Email -->
+                    <div class="sp-field">
+                        <label class="sp-label" for="sp-name">Your name</label>
+                        <div class="sp-input-wrapper">
+                            <i class="bi bi-person sp-input-icon"></i>
+                            <input id="sp-name" type="text" class="sp-input"
+                                   @bind="model.FullName" @bind:event="oninput"
+                                   placeholder="So we know who we're talking to"
+                                   disabled="@isSubmitting" />
+                        </div>
+                    </div>
+
+                    <div class="sp-field">
+                        <label class="sp-label" for="sp-email">Email address</label>
+                        <div class="sp-input-wrapper">
+                            <i class="bi bi-envelope sp-input-icon"></i>
+                            <input id="sp-email" type="email" class="sp-input"
+                                   @bind="model.Email" @bind:event="oninput"
+                                   placeholder="Where should we reply?"
+                                   disabled="@isSubmitting" />
+                        </div>
+                        <ValidationMessage For="@(() => model.Email)" class="sp-validation" />
+                    </div>
+
+                    <!-- Subject -->
+                    <div class="sp-field">
+                        <label class="sp-label" for="sp-subject">Subject</label>
+                        <div class="sp-input-wrapper">
+                            <i class="bi bi-chat-left-text sp-input-icon"></i>
+                            <input id="sp-subject" type="text" class="sp-input"
+                                   @bind="model.Subject" @bind:event="oninput"
+                                   placeholder="A short summary"
+                                   maxlength="100"
+                                   disabled="@isSubmitting" />
+                        </div>
+                        <ValidationMessage For="@(() => model.Subject)" class="sp-validation" />
+                    </div>
+
+                    <!-- Message -->
+                    <div class="sp-field">
+                        <label class="sp-label" for="sp-message">How can we help?</label>
+                        <div class="sp-input-wrapper sp-textarea-wrapper">
+                            <textarea id="sp-message" class="sp-input sp-textarea"
+                                      @bind="model.Comment" @bind:event="oninput"
+                                      placeholder="Share as much detail as you can — links, song titles, what you expected, and what happened."
+                                      rows="5"
+                                      disabled="@isSubmitting"></textarea>
+                        </div>
+                        <ValidationMessage For="@(() => model.Comment)" class="sp-validation" />
+                    </div>
+
+                    <button type="submit" class="sp-btn primary w-100" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            <span>Sending…</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-send me-1"></i>
+                            <span>Send message</span>
+                        }
+                    </button>
+                </EditForm>
+
+                <p class="sp-footer-note">
+                    Prefer email? Reach us directly at
+                    <a href="mailto:support@frelody.com">support@frelody.com</a>.
+                </p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly SupportFormModel model = new();
+    private string? currentUserId;
+
+    private bool isSubmitting;
+    private bool isComplete;
+    private string? errorMessage;
+
+    private static readonly string[] Categories =
+    {
+        "General question",
+        "Song won’t analyze",
+        "Playback, transpose & looping",
+        "Billing & subscription",
+        "Account & sign-in security",
+        "Bug report",
+        "Feature request"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+            if (userResult.IsSuccess && userResult.Data != null)
+            {
+                currentUserId = userResult.Data.Id;
+                model.Email = userResult.Data.Email ?? "";
+                model.FullName = userResult.Data.FullName
+                    ?? $"{userResult.Data.FirstName} {userResult.Data.LastName}".Trim();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Pre-fill is a convenience only; an anonymous visitor fills the form manually.
+            _logger.LogDebug(ex, "Could not pre-fill support form from auth state.");
+        }
+    }
+
+    private async Task PrefillAndScroll(string category, string subject)
+    {
+        if (Categories.Contains(category))
+            model.Category = category;
+        if (string.IsNullOrWhiteSpace(model.Subject))
+            model.Subject = subject;
+
+        StateHasChanged();
+        try
+        {
+            await JsRt.InvokeVoidAsync("eval",
+                "document.getElementById('sp-contact')?.scrollIntoView({behavior:'smooth',block:'start'})");
+        }
+        catch
+        {
+            // Smooth-scroll is a nicety; ignore if the JS host is unavailable.
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            errorMessage = null;
+            isSubmitting = true;
+            StateHasChanged();
+
+            var dto = new UserFeedbackCreateDto
+            {
+                Subject = model.Subject,
+                Title = model.Category,
+                Comment = model.Comment,
+                Email = model.Email,
+                FullName = string.IsNullOrWhiteSpace(model.FullName) ? null : model.FullName,
+                UserId = currentUserId
+            };
+
+            var response = await _feedbackApi.SubmitSupportRequest(dto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                isComplete = true;
+            }
+            else
+            {
+                errorMessage = _apiResponseHandler.GetApiErrorMessage(response);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error submitting support request");
+            errorMessage = "We couldn't send your message just now. Please try again, or email support@frelody.com directly.";
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ResetForm()
+    {
+        model.Subject = "";
+        model.Comment = "";
+        model.Category = "General question";
+        errorMessage = null;
+        isComplete = false;
+    }
+
+    public class SupportFormModel
+    {
+        [Required(ErrorMessage = "Please choose a topic")]
+        public string Category { get; set; } = "General question";
+
+        [Required(ErrorMessage = "A subject helps us route your message")]
+        [StringLength(100, ErrorMessage = "Keep the subject under 100 characters")]
+        public string Subject { get; set; } = "";
+
+        [Required(ErrorMessage = "We need an email to reply to")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address")]
+        public string Email { get; set; } = "";
+
+        [StringLength(100, ErrorMessage = "Name is a little long")]
+        public string? FullName { get; set; }
+
+        [Required(ErrorMessage = "Let us know how we can help")]
+        [MinLength(10, ErrorMessage = "Please add a little more detail (10+ characters)")]
+        public string Comment { get; set; } = "";
+    }
+}

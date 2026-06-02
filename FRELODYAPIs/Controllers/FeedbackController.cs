@@ -56,6 +56,19 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
             return Ok(result.Data);
         }
 
+        [HttpPost]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(UserFeedbackDto), 200)]
+        public async Task<IActionResult> SubmitSupportRequest([FromBody] UserFeedbackCreateDto feedback)
+        {
+            var result = await _feedbackService.SubmitSupportRequestAsync(feedback);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+
+            return Ok(result.Data);
+        }
+
         [HttpPut]
         [ProducesResponseType(typeof(UserFeedbackDto), 200)]
         public async Task<IActionResult> UpdateFeedbackStatus([FromQuery] string id, [FromQuery] FeedbackStatus status)

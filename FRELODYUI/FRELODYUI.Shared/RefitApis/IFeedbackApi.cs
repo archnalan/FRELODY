@@ -16,6 +16,9 @@ namespace FRELODYUI.Shared.RefitApis
         [Post("/api/feedback/create-feedback")]
         Task<IApiResponse<UserFeedbackDto>> CreateFeedback([Body] UserFeedbackCreateDto feedback);
 
+        [Post("/api/feedback/submit-support-request")]
+        Task<IApiResponse<UserFeedbackDto>> SubmitSupportRequest([Body] UserFeedbackCreateDto feedback);
+
         [Put("/api/feedback/update-feedback-status")]
         Task<IApiResponse<UserFeedbackDto>> UpdateFeedbackStatus([Query] string id, [Query] FeedbackStatus status);
 
