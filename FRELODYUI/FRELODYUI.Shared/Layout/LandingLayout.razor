@@ -355,28 +355,44 @@
     // Re-bridge the docs link whenever the user signs in or out.
     private void OnAuthStateChanged(Task<AuthenticationState> task) => _ = RefreshDocsHrefAsync();
 
-    // Builds the Docs link target. When a session exists, append it as a URL fragment
-    // (#session=<base64url-json>) so the cross-origin docs SPA can pick it up — the same
-    // encoding the login flow uses in NavigateToReturnUrlAsync. Best-effort: on any failure
-    // (or when signed out) the link falls back to opening the docs site without a session.
+    // Builds the Docs link target so the cross-origin docs SPA always mirrors *this* app's
+    // current auth state (the web app is the single source of truth). When a valid session
+    // exists we hand it over as a URL fragment (#session=<base64url-json>) — the same
+    // encoding the login flow uses in NavigateToReturnUrlAsync. When signed out we instead
+    // hand over an explicit #signout=1, so the docs site drops any session it cached on its
+    // own origin's localStorage — even a still-valid (unexpired) one. Without this, a plain
+    // no-fragment link would tell docs "keep whatever you had", silently re-signing the user
+    // back in after they logged out here. Best-effort: on any failure we send #signout=1 too,
+    // so stale credentials are never re-fetched.
     private async Task RefreshDocsHrefAsync()
     {
         var href = _docsUrl;
+        var sep = href.Contains('#') ? "&" : "#";
         try
         {
-            var session = await _storageService.GetItemAsync<LoginResponseDto>("sessionState");
+            // GetAuthenticationStateAsync is the canonical gate: it clears expired sessions
+            // and reports anonymous, so an expired-but-present token won't leak across.
+            var authState = await _globalAuth.GetAuthenticationStateAsync();
+            var session = authState.User?.Identity?.IsAuthenticated == true
+                ? await _storageService.GetItemAsync<LoginResponseDto>("sessionState")
+                : null;
+
             if (session is not null && !string.IsNullOrEmpty(session.Token))
             {
                 var json = System.Text.Json.JsonSerializer.Serialize(session);
                 var encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json))
                     .Replace('+', '-').Replace('/', '_').TrimEnd('=');
-                var sep = href.Contains('#') ? "&" : "#";
                 href = $"{href}{sep}session={encoded}";
+            }
+            else
+            {
+                href = $"{href}{sep}signout=1";
             }
         }
         catch
         {
-            // best-effort bridge — fall back to the plain docs URL
+            // best-effort bridge — on failure, err on the side of signing the docs out
+            href = $"{href}{sep}signout=1";
         }
 
         if (href != _docsHref)

@@ -85,16 +85,28 @@ public class AuthService
     {
         try
         {
-            // 1) Did the FRELODY web app just bounce the browser here with a session?
-            //    This also strips the #session fragment from the address bar whatever
-            //    its contents, so a token is never left visible/shareable and a bad
-            //    fragment isn't reprocessed on the next reload.
-            var bridged = await TryReadFragmentSessionAsync();
+            // 1) Did the FRELODY web app just bounce the browser here with a hand-off?
+            //    This also strips the #session / #signout fragment from the address bar
+            //    whatever its contents, so a token is never left visible/shareable and a
+            //    bad fragment isn't reprocessed on the next reload.
+            var signal = await TryReadFragmentSignalAsync();
 
-            // 2) Prefer a *valid* bridged token. A missing/empty/expired/garbled one must
+            // 2) An explicit sign-out wins over everything. The FRELODY web app is the
+            //    single source of truth for auth, and it told us this browser is signed
+            //    OUT (the user followed the Docs link while logged out of the main app).
+            //    Drop any session we cached on this origin — even a still-valid, unexpired
+            //    one — so stale credentials can never silently re-sign the user back in.
+            if (signal.Kind == BridgeKind.SignOut)
+            {
+                await ClearAsync();
+                return;
+            }
+
+            // 3) Prefer a *valid* bridged token. A missing/empty/expired/garbled one must
             //    NOT clobber an existing good local session (e.g. the user followed a
             //    public "Docs" link that deliberately carried no token) — so only persist
             //    and adopt the bridged token once it actually parses.
+            var bridged = signal.Kind == BridgeKind.Session ? signal.Token : null;
             if (!string.IsNullOrWhiteSpace(bridged))
             {
                 var bridgedUser = ParseToken(bridged);
@@ -128,28 +140,46 @@ public class AuthService
         }
     }
 
+    /// <summary>The kind of auth hand-off the FRELODY web app encoded in the URL fragment.</summary>
+    private enum BridgeKind { None, Session, SignOut }
+
+    /// <summary>A parsed fragment hand-off: a session token, an explicit sign-out, or nothing.</summary>
+    private readonly record struct BridgeSignal(BridgeKind Kind, string? Token);
+
     /// <summary>
-    /// Reads <c>#session=&lt;urlsafe-base64-json&gt;</c> from the current URL and extracts
-    /// the JWT. If a <c>session=</c> part is present it is stripped from the address bar
-    /// regardless of whether it turns out to be valid (so a token is never left visible
-    /// and a bad fragment can't replay), while any other fragment — e.g. a deep-link
-    /// anchor — is preserved. Returns the JWT, or null if the fragment is absent, carries
-    /// no token, or is malformed. Never throws.
+    /// Reads the FRELODY web app's auth hand-off from the current URL fragment. Two markers
+    /// are understood — <c>#session=&lt;urlsafe-base64-json&gt;</c> (a bridged session, from
+    /// which the JWT is extracted) and <c>#signout=1</c> (the web app reporting this browser
+    /// is signed out). Whichever marker is present is stripped from the address bar before any
+    /// validation — so a token is never left visible and a bad fragment can't replay — while
+    /// any other fragment (e.g. a <c>#getting-started</c> deep-link anchor) is preserved.
+    /// Returns <see cref="BridgeKind.None"/> when no marker is present, the fragment is absent,
+    /// the session carries no token, or it is malformed. An explicit sign-out takes precedence.
+    /// Never throws.
     /// </summary>
-    private async Task<string?> TryReadFragmentSessionAsync()
+    private async Task<BridgeSignal> TryReadFragmentSignalAsync()
     {
-        // NavigationManager.Uri carries the fragment in WASM, so we can read it without a
-        // JS round-trip (and without eval, which a Content-Security-Policy may block).
-        var hashIndex = _nav.Uri.IndexOf('#');
-        if (hashIndex < 0) return null;
+        // Read the address-bar URL from the browser directly. NavigationManager.Uri does NOT
+        // reliably include the #fragment on a cold first load (it does on a warm refresh), so
+        // relying on it made the session hand-off get missed until the user manually refreshed.
+        // window.location.href is the ground truth and always carries the hash. Fall back to
+        // NavigationManager.Uri if the interop call fails (e.g. JS not yet ready).
+        string uri;
+        try { uri = await _js.InvokeAsync<string>("frelodyNav.href"); }
+        catch { uri = _nav.Uri; }
+        if (string.IsNullOrEmpty(uri)) uri = _nav.Uri;
 
-        var fragment = _nav.Uri.Substring(hashIndex + 1);
-        if (string.IsNullOrEmpty(fragment)) return null;
+        var hashIndex = uri.IndexOf('#');
+        if (hashIndex < 0) return new BridgeSignal(BridgeKind.None, null);
 
-        // Pull out "session=..." and keep every other fragment part so we can rebuild a
-        // clean fragment afterwards (supports "#session=...", "#a=b&session=...", and
+        var fragment = uri.Substring(hashIndex + 1);
+        if (string.IsNullOrEmpty(fragment)) return new BridgeSignal(BridgeKind.None, null);
+
+        // Pull out "session=..." / "signout=..." and keep every other fragment part so we can
+        // rebuild a clean fragment afterwards (supports "#session=...", "#a=b&signout=1", and
         // preserves a legitimate "#getting-started" style anchor).
         string? encoded = null;
+        var signOut = false;
         var kept = new List<string>();
         foreach (var part in fragment.Split('&'))
         {
@@ -157,40 +187,48 @@ public class AuthService
             {
                 encoded = part.Substring("session=".Length);
             }
+            else if (!signOut && part.StartsWith("signout=", StringComparison.OrdinalIgnoreCase))
+            {
+                signOut = true;
+            }
             else if (!string.IsNullOrEmpty(part))
             {
                 kept.Add(part);
             }
         }
 
-        // No session hand-off in this fragment — leave the URL untouched (it may be a
-        // real doc anchor) and let the caller fall back to a stored session.
-        if (encoded is null) return null;
+        // No hand-off marker in this fragment — leave the URL untouched (it may be a real
+        // doc anchor) and let the caller fall back to a stored session.
+        if (encoded is null && !signOut) return new BridgeSignal(BridgeKind.None, null);
 
-        // A session= WAS present: strip just that part from the address bar now, before
-        // any validation, so neither a valid token nor a bad one can linger or replay.
-        var baseUri = _nav.Uri.Substring(0, hashIndex);
+        // A marker WAS present: strip just that part from the address bar now, before any
+        // validation, so neither a valid token nor a bad one can linger or replay.
+        var baseUri = uri.Substring(0, hashIndex);
         var cleanUri = kept.Count > 0 ? $"{baseUri}#{string.Join('&', kept)}" : baseUri;
         try { await _js.InvokeVoidAsync("history.replaceState", null, "", cleanUri); }
         catch { /* address-bar tidy-up is best-effort */ }
 
-        if (encoded.Length == 0) return null; // "#session=" with no payload
+        // An explicit sign-out wins over any session payload that may also be present.
+        if (signOut) return new BridgeSignal(BridgeKind.SignOut, null);
+
+        if (encoded!.Length == 0) return new BridgeSignal(BridgeKind.None, null); // "#session=" with no payload
 
         string json;
         try
         {
             json = System.Text.Encoding.UTF8.GetString(Base64UrlDecodeBytes(encoded));
         }
-        catch { return null; }
+        catch { return new BridgeSignal(BridgeKind.None, null); }
 
         // The bridged JSON is FRELODY's LoginResponseDto. Extract the JWT — which may be
-        // absent (e.g. a public hand-off with a null token), in which case we return null.
+        // absent (e.g. a public hand-off with a null token), in which case there's no session.
         try
         {
             using var doc = JsonDocument.Parse(json);
-            return TryGetString(doc.RootElement, "token", "Token", "accessToken", "jwt");
+            var token = TryGetString(doc.RootElement, "token", "Token", "accessToken", "jwt");
+            return new BridgeSignal(BridgeKind.Session, token);
         }
-        catch { return null; }
+        catch { return new BridgeSignal(BridgeKind.None, null); }
     }
 
     /// <summary>

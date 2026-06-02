@@ -100,6 +100,14 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         };
+
+        // Ground-truth current URL. Blazor's NavigationManager.Uri does not reliably
+        // carry the #fragment on a cold first load (it does on a warm refresh), which
+        // made the session hand-off (#session=...) get missed until the user refreshed.
+        // Reading window.location here always sees the real address-bar URL, hash and all.
+        window.frelodyNav = {
+            href: function () { return window.location.href; }
+        };
     </script>
     <script src="js/pdf-export.js"></script>
     <script src="_framework/blazor.webassembly.js" autostart="false"></script>
