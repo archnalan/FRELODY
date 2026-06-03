@@ -4,9 +4,8 @@
 
 <PageTitle>My feedback - FRELODY</PageTitle>
 
-<AuthorizeView>
-    <Authorized>
-        <div class="mf-page">
+<AuthGuard RequirePremium="false">
+    <div class="mf-page">
             <div class="mf-header">
                 <div>
                     <h1 class="mf-title">My Feedback</h1>
@@ -207,13 +206,7 @@
                 <div class="mf-alert">@_error</div>
             }
         </div>
-    </Authorized>
-    <NotAuthorized>
-        @{
-            _navManager.NavigateTo("/login?returnUrl=%2Fmy-feedback", replace: false);
-        }
-    </NotAuthorized>
-</AuthorizeView>
+</AuthGuard>
 
 @code {
     // ── Pager state ──

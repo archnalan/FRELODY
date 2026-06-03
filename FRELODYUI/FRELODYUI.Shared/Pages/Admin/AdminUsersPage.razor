@@ -230,7 +230,7 @@
                                             else if (_filter == UserAccountFilter.Blocked)
                                             {
                                                 <button class="admin-btn icon-only" title="Unblock user"
-                                                        @onclick="() => UnblockUser(u)">
+                                                        @onclick="() => OpenUnblock(u)">
                                                     <i class="bi bi-check-circle"></i>
                                                 </button>
                                             }
@@ -338,6 +338,20 @@
     </BodyContent>
 </ConfirmDialog>
 
+@* ── Unblock confirm dialog ── *@
+<ConfirmDialog Visible="_showUnblock"
+               Title="Unblock user"
+               Icon="bi-check-circle"
+               Destructive="false"
+               ConfirmLabel="Unblock"
+               Busy="_saving"
+               OnCancel="@(() => _showUnblock = false)"
+               OnConfirm="ConfirmUnblock">
+    <BodyContent>
+        <p class="mb-0">Unblock <strong>@_actionTarget?.FullName</strong>? They will be able to sign in again.</p>
+    </BodyContent>
+</ConfirmDialog>
+
 @* ── Restore confirm dialog ── *@
 <ConfirmDialog Visible="_showRestore"
                Title="Restore account"
@@ -386,6 +400,7 @@
 
     // ── Action modal state ────────────────────────────────────────────────
     private bool _showBlock;
+    private bool _showUnblock;
     private bool _showRestore;
     private bool _saving;
     private AppUserDto? _actionTarget;
@@ -567,15 +582,23 @@
         }
     }
 
-    private async Task UnblockUser(AppUserDto u)
+    private void OpenUnblock(AppUserDto u)
     {
-        if (u.UserId is null) return;
+        _actionTarget = u;
+        _showUnblock = true;
+    }
+
+    private async Task ConfirmUnblock()
+    {
+        if (_actionTarget?.UserId is null) return;
+        _saving = true;
         try
         {
-            var resp = await _usersApi.EnableUser(u.UserId);
+            var resp = await _usersApi.EnableUser(_actionTarget.UserId);
             if (resp.IsSuccessStatusCode)
             {
                 _toastService.Show("User unblocked.", ToastType.Success);
+                _showUnblock = false;
                 await LoadPage(_currentPage);
             }
             else
@@ -586,6 +609,10 @@
         catch (Exception ex)
         {
             _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 

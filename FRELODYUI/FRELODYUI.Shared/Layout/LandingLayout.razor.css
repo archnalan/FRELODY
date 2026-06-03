@@ -9,7 +9,7 @@
     background: var(--modal-content-bg);
     display: flex;
     align-items: center;
-    z-index: 2;
+    z-index: 1030;
     flex-shrink: 0;
     position: relative;
 }

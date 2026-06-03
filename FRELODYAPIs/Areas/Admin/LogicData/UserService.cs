@@ -373,7 +373,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         {
             try
             {
-                var user = await _context.Users.FindAsync(userId);
+                var user = await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == userId);
                 if (user == null)
                 {
                     return ServiceResult<bool>.Failure(new Exception("User not found."));
@@ -402,7 +402,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         {
             try
             {
-                var user = await _context.Users.FindAsync(userId);
+                var user = await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == userId);
                 if (user == null)
                 {
                     return ServiceResult<bool>.Failure(new Exception("User not found."));
@@ -431,8 +431,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         {
             try
             {
-                // FindAsync bypasses query filters — finds soft-deleted/blocked rows.
-                var user = await _context.Users.FindAsync(userId);
+                var user = await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == userId);
                 if (user == null)
                 {
                     return ServiceResult<bool>.Failure(new Exception("User not found."));
