@@ -20,5 +20,8 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Get("/api/analyzed-access/todays-songs")]
         Task<IApiResponse<List<AnalyzedSongDto>>> TodaysSongs();
+
+        [Get("/api/analyzed-access/song-history")]
+        Task<IApiResponse<SongHistoryDto>> SongHistory();
     }
 }

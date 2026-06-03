@@ -280,6 +280,111 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
+        public async Task<ServiceResult<SongHistoryDto>> GetSongHistory()
+        {
+            try
+            {
+                var userId = _tenantProvider.GetUserId();
+                if (string.IsNullOrEmpty(userId))
+                    return ServiceResult<SongHistoryDto>.Success(new SongHistoryDto
+                    {
+                        DailyLimit = _options.FreeAnalyzedSongsPerDay
+                    });
+
+                var now = DateTime.UtcNow;
+                var windowStart = now.AddHours(-_options.AvailabilityWindowHours);
+                var sevenDaysAgo = now.Date.AddDays(-6);
+                // 52 weeks back — covers the full-year activity calendar.
+                var yearAgo = now.Date.AddDays(-364);
+                var todayStart = now.Date;
+
+                var isPremium = await IsPremiumAsync(userId);
+                var usedToday = await CountDistinctTodayAsync(userId, todayStart);
+
+                // Fetch a full year of unlocks for streak + activity calendar; display slice is last 7 days.
+                var allRows = await _db.AnalyzedSongUnlocks
+                    .Where(u => u.UserId == userId && u.UnlockedAt >= yearAgo)
+                    .OrderByDescending(u => u.UnlockedAt)
+                    .ToListAsync();
+
+                // Songs for display: last 7 days, most recent per (Platform, VideoId).
+                var displayRows = allRows.Where(u => u.UnlockedAt >= sevenDaysAgo).ToList();
+                var songs = displayRows
+                    .GroupBy(r => new { r.Platform, r.VideoId })
+                    .Select(g => g.First())
+                    .Select(u =>
+                    {
+                        var unlockedAt = new DateTimeOffset(DateTime.SpecifyKind(u.UnlockedAt, DateTimeKind.Utc));
+                        var expiresAt = unlockedAt.AddHours(_options.AvailabilityWindowHours);
+                        return new SongHistoryItemDto
+                        {
+                            Platform = u.Platform,
+                            VideoId = u.VideoId,
+                            Title = u.Title,
+                            ThumbnailUrl = u.ThumbnailUrl,
+                            SourceUrl = u.SourceUrl,
+                            UnlockedAt = unlockedAt,
+                            ExpiresAt = expiresAt,
+                            IsAccessibleToday = isPremium || u.UnlockedAt >= windowStart
+                        };
+                    })
+                    .OrderByDescending(s => s.UnlockedAt)
+                    .ToList();
+
+                // Daily activity map: distinct songs per UTC calendar day (last 30 days).
+                var dailyActivity = allRows
+                    .GroupBy(u => DateTime.SpecifyKind(u.UnlockedAt, DateTimeKind.Utc).Date)
+                    .ToDictionary(
+                        g => g.Key.ToString("yyyy-MM-dd"),
+                        g => g.Select(u => new { u.Platform, u.VideoId }).Distinct().Count());
+
+                // Streak: consecutive UTC days (ending today OR yesterday as grace-period) with ≥ 1 unlock.
+                var unlockDays = allRows
+                    .Select(u => DateTime.SpecifyKind(u.UnlockedAt, DateTimeKind.Utc).Date)
+                    .Distinct()
+                    .OrderByDescending(d => d)
+                    .ToList();
+
+                var streak = 0;
+                if (unlockDays.Count > 0)
+                {
+                    var mostRecent = unlockDays[0];
+                    // Allow grace period: streak still counts if most recent day is yesterday.
+                    if ((now.Date - mostRecent).TotalDays <= 1)
+                    {
+                        var checkDate = mostRecent;
+                        foreach (var day in unlockDays)
+                        {
+                            if (day == checkDate)
+                            {
+                                streak++;
+                                checkDate = checkDate.AddDays(-1);
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                return ServiceResult<SongHistoryDto>.Success(new SongHistoryDto
+                {
+                    Songs = songs,
+                    DailyLimit = _options.FreeAnalyzedSongsPerDay,
+                    UsedToday = usedToday,
+                    IsPremium = isPremium,
+                    Streak = streak,
+                    DailyActivity = dailyActivity
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving song history");
+                return ServiceResult<SongHistoryDto>.Failure(ex);
+            }
+        }
+
         private async Task<bool> IsPremiumAsync(string userId)
         {
             // SuperAdmins always have full premium privileges, regardless of billing.

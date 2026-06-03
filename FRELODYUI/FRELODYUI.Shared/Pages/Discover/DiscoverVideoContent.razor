@@ -14,7 +14,7 @@
 
     <!-- Video header — always rendered so dv-card position stays stable -->
     <div class="dv-header">
-        <button class="dv-back" @onclick='() => Nav.NavigateTo(BackUrl)' title="Back to Discover">
+        <button class="dv-back" @onclick='() => GoBack()' title="Back to search">
             <i class="bi bi-arrow-left"></i>
         </button>
 
@@ -208,6 +208,10 @@
         var url = Nav.ToAbsoluteUri($"/play/{VideoId}").ToString();
         await _clipboardService.CopyToClipboardAsync(url);
         _toastService.Show("Share link copied to clipboard!", ToastType.Success);
+    }
+ private async Task GoBack()
+    {
+        await JsRt.InvokeVoidAsync("goBack");
     }
 
     private async Task RunAnalysisAsync(bool forceRefresh)

@@ -2,21 +2,113 @@
 @using FRELODYSHRD.Constants
 @using FRELODYSHRD.Dtos
 @using FRELODYUI.Shared.RefitApis
-@using FRELODYUI.Shared.Pages.Discover
 @inject IAnalyzedAccessApi AccessApi
 @inject NavigationManager Nav
 
-<PageTitle>Today's songs · FRELODY</PageTitle>
+<PageTitle>History · FRELODY</PageTitle>
 
-<div class="ts-page">
+<div class="ts-page" @onclick="DismissPaywall">
+
+    <!-- ── Header ─────────────────────────────────────────────── -->
     <header class="ts-header">
-        <h1 class="ts-title">Today's songs</h1>
-        <p class="ts-sub">Songs you unlocked today — available for 24 hours.</p>
+        <div class="ts-header-top">
+            <div class="ts-header-copy">
+                <h1 class="ts-title">Your History</h1>
+                <p class="ts-sub">Songs you've unlocked — available for 24 hours each.</p>
+            </div>
+            @if (!_loading && _history is not null && _history.Streak > 0)
+            {
+                <div class="ts-streak ts-streak--@StreakTier"
+                     title="@_history.Streak consecutive days with at least one song">
+                    <i class="bi bi-fire" aria-hidden="true"></i>
+                    <strong class="ts-streak-count">@_history.Streak</strong>
+                    <span class="ts-streak-label">day streak</span>
+                </div>
+            }
+            else if (!_loading && _history is not null)
+            {
+                <div class="ts-streak ts-streak--zero"
+                     title="Analyze a song every day to build a streak">
+                    <i class="bi bi-music-note-beamed" aria-hidden="true"></i>
+                    <span class="ts-streak-label">Start your streak</span>
+                </div>
+            }
+        </div>
+
+        <!-- Activity calendar (full year, newest weeks on the right) -->
+        @if (!_loading && _history is not null)
+        {
+            <div class="ts-cal-wrap">
+                <!--
+                    DOW labels sit outside the scrollable area so they're always
+                    visible. The inner .ts-cal-outer uses direction:rtl so the
+                    initial scroll position lands on the rightmost (most-recent)
+                    weeks without JavaScript.
+                -->
+                <div class="ts-cal-dow" aria-hidden="true">
+                    <span></span><!-- spacer for the month-label row -->
+                    <span>M</span><span>T</span><span>W</span><span>T</span>
+                    <span>F</span><span>S</span><span>S</span>
+                </div>
+                <div class="ts-cal-outer">
+                    <div class="ts-cal-grid">
+                        @foreach (var item in CalendarCells)
+                        {
+                            @if (item.Date is null)
+                            {
+                                <!-- Month label (row 1 of each week column) -->
+                                <div class="ts-cal-month">@item.MonthLabel</div>
+                            }
+                            else if (item.IsFuture)
+                            {
+                                <div class="ts-cal-cell ts-cal-cell--future" aria-hidden="true"></div>
+                            }
+                            else
+                            {
+                                var tier = item.Count == 0 ? "0"
+                                         : item.Count == 1 ? "1"
+                                         : item.Count == 2 ? "2"
+                                         : "3";
+                                var tipDate = item.Date.Value.ToString("MMM d, yyyy");
+                                var tip = item.Count > 0
+                                    ? $"{item.Count} song{(item.Count > 1 ? "s" : "")} · {tipDate}"
+                                    : tipDate;
+                                <div class="ts-cal-cell ts-cal-cell--@tier @(item.IsToday ? "ts-cal-cell--today" : "")"
+                                     title="@tip"
+                                     aria-label="@tip">
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Quota strip (free users only, when there is history) -->
+        @if (!_loading && _history is not null && !_history.IsPremium && _history.Songs.Count > 0)
+        {
+            <div class="ts-quota" @onclick:stopPropagation="true">
+                <div class="ts-quota-dots" aria-hidden="true">
+                    @for (var i = 0; i < _history.DailyLimit; i++)
+                    {
+                        <span class="ts-quota-dot @(i < _history.UsedToday ? "ts-quota-dot--used" : "")"></span>
+                    }
+                </div>
+                <span class="ts-quota-text">
+                    <b>@_history.UsedToday</b> of <b>@_history.DailyLimit</b> free songs today
+                </span>
+                <button class="ts-quota-cta" @onclick='() => Nav.NavigateTo("/pricing")'>
+                    Upgrade <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+                </button>
+            </div>
+        }
     </header>
 
-    @if (!_loading && _songs is { Count: > 0 })
+    <!-- ── Search ─────────────────────────────────────────────── -->
+    @if (!_loading && _history?.Songs is { Count: > 0 })
     {
-        <div class="ts-search-wrap @(_searchFocused ? "ts-search-wrap--focused" : "")">
+        <div class="ts-search-wrap @(_searchFocused ? "ts-search-wrap--focused" : "")"
+             @onclick:stopPropagation="true">
             <i class="bi bi-search ts-search-icon" aria-hidden="true"></i>
             <input class="ts-search-input"
                    type="search"
@@ -25,20 +117,22 @@
                    @oninput="OnSearchInput"
                    @onfocus="() => _searchFocused = true"
                    @onblur="() => _searchFocused = false"
-                   aria-label="Filter today's songs" />
+                   aria-label="Filter your song history" />
             @if (!string.IsNullOrEmpty(_query))
             {
-                <button class="ts-search-clear" type="button" @onclick="ClearSearch" aria-label="Clear search">
+                <button class="ts-search-clear" type="button"
+                        @onclick="ClearSearch" aria-label="Clear search">
                     <i class="bi bi-x" aria-hidden="true"></i>
                 </button>
             }
         </div>
     }
 
+    <!-- ── Loading skeletons ───────────────────────────────────── -->
     @if (_loading)
     {
         <div class="ts-grid">
-            @for (var i = 0; i < 4; i++)
+            @for (var i = 0; i < 6; i++)
             {
                 <div class="ts-card ts-card--skeleton">
                     <div class="ts-card__thumb-wrap k-shimmer"></div>
@@ -50,51 +144,153 @@
             }
         </div>
     }
-    else if (_songs is { Count: > 0 })
+    else if (_history?.Songs is { Count: > 0 })
     {
         var filtered = FilteredSongs;
 
         @if (filtered.Count > 0)
         {
             <div class="ts-grid">
-                @foreach (var song in filtered)
+                @foreach (var (label, groupSongs) in GroupedSongs(filtered))
                 {
-                    var captured = song;
-                    <div class="ts-card"
-                         role="button"
-                         tabindex="0"
-                         title="@(string.IsNullOrWhiteSpace(song.Title) ? song.VideoId : song.Title)"
-                         @onclick="() => Play(captured)"
-                         @onkeydown="(e) => HandleKeyDown(e, captured)">
-                        <div class="ts-card__thumb-wrap">
-                            @if (!string.IsNullOrEmpty(song.ThumbnailUrl))
+                    <div class="ts-date-label">@label</div>
+
+                    @foreach (var song in groupSongs)
+                    {
+                        var captured    = song;
+                        var isLocked    = !song.IsAccessibleToday;
+                        var showPaywall = _paywallVideoId == song.VideoId;
+
+                        <div class="ts-card @(isLocked ? "ts-card--locked" : "") @(showPaywall ? "ts-card--paywall" : "")"
+                             role="button"
+                             tabindex="0"
+                             title="@(string.IsNullOrWhiteSpace(song.Title) ? song.VideoId : song.Title)"
+                             @onclick="() => OnCardClick(captured)"
+                             @onclick:stopPropagation="true"
+                             @onkeydown="(e) => HandleKeyDown(e, captured)">
+
+                            <div class="ts-card__thumb-wrap">
+                                @if (!string.IsNullOrEmpty(song.ThumbnailUrl))
+                                {
+                                    <img src="@song.ThumbnailUrl"
+                                         alt="@song.Title"
+                                         class="ts-card__thumb"
+                                         loading="lazy" />
+                                }
+                                else
+                                {
+                                    <div class="ts-card__thumb-empty">
+                                        <i class="bi bi-music-note-beamed" aria-hidden="true"></i>
+                                    </div>
+                                }
+
+                                <span class="ts-platform" title="@song.Platform">
+                                    <i class="bi @(song.Platform == AnalyzedPlatform.TikTok ? "bi-tiktok" : "bi-youtube")"
+                                       aria-hidden="true"></i>
+                                </span>
+
+                                @if (!isLocked)
+                                {
+                                    <div class="ts-card__play-overlay" aria-hidden="true">
+                                        <i class="bi bi-play-fill"></i>
+                                    </div>
+                                }
+
+                                @if (isLocked)
+                                {
+                                    <div class="ts-card__lock-overlay" aria-hidden="true">
+                                        <i class="bi bi-lock-fill ts-card__lock-icon"></i>
+                                        <span class="ts-card__lock-hint">
+                                            @(Remaining > 0
+                                                ? $"Replay · {Remaining} free today"
+                                                : "Upgrade to replay")
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="ts-card__body">
+                                <p class="ts-card__title">
+                                    @(string.IsNullOrWhiteSpace(song.Title) ? song.VideoId : song.Title)
+                                </p>
+                                @if (song.IsAccessibleToday)
+                                {
+                                    <span class="ts-card__expiry">
+                                        <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                        @ExpiresInLabel(song.ExpiresAt)
+                                    </span>
+                                    <span class="ts-card__action">
+                                        Play <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="ts-card__expiry ts-card__expiry--expired">
+                                        <i class="bi bi-lock" aria-hidden="true"></i>
+                                        @UnlockedAgoLabel(song.UnlockedAt)
+                                    </span>
+                                    <span class="ts-card__action @(Remaining > 0 ? "" : "ts-card__action--upgrade")">
+                                        @(Remaining > 0 ? "Replay" : "Unlock")
+                                        <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                                    </span>
+                                }
+                            </div>
+
+                            <!-- Full-card sheet: spend-a-slot choice or upgrade -->
+                            @if (showPaywall)
                             {
-                                <img src="@song.ThumbnailUrl" alt="@song.Title" class="ts-card__thumb" loading="lazy" />
-                            }
-                            else
-                            {
-                                <div class="ts-card__thumb-empty">
-                                    <i class="bi bi-music-note-beamed" aria-hidden="true"></i>
+                                <div class="ts-card__paywall" @onclick:stopPropagation="true">
+                                    <button class="ts-paywall-close"
+                                            @onclick="DismissPaywall"
+                                            aria-label="Close">
+                                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                    </button>
+
+                                    @if (Remaining > 0)
+                                    {
+                                        <!-- Still has free slots: let them choose replay vs discover -->
+                                        <i class="bi bi-music-note-beamed ts-paywall-star ts-paywall-star--slot"
+                                           aria-hidden="true"></i>
+                                        <p class="ts-paywall-headline">
+                                            Use 1 of @Remaining free play@(Remaining == 1 ? "" : "s")?
+                                        </p>
+                                        <p class="ts-paywall-body">
+                                            Replay this song, or use your slot on something new.
+                                        </p>
+                                        <button class="ts-paywall-btn"
+                                                @onclick="() => { DismissPaywall(); Play(captured); }">
+                                            Replay this song
+                                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                                        </button>
+                                        <button class="ts-paywall-secondary"
+                                                @onclick='() => Nav.NavigateTo("/discover")'>
+                                            Discover a new song
+                                            <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <!-- No slots left: upgrade path -->
+                                        <i class="bi bi-stars ts-paywall-star" aria-hidden="true"></i>
+                                        <p class="ts-paywall-headline">Daily limit reached</p>
+                                        <p class="ts-paywall-body">
+                                            You've used all @(_history?.DailyLimit ?? 2) free songs today.
+                                            Come back tomorrow or replay everything with Premium.
+                                        </p>
+                                        <button class="ts-paywall-btn"
+                                                @onclick='() => Nav.NavigateTo("/pricing")'>
+                                            Unlock All Songs
+                                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                                        </button>
+                                        <button class="ts-paywall-secondary" @onclick="DismissPaywall">
+                                            Come back tomorrow
+                                            <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+                                        </button>
+                                    }
                                 </div>
                             }
-                            <span class="ts-platform" title="@song.Platform">
-                                <i class="bi @(song.Platform == AnalyzedPlatform.TikTok ? "bi-tiktok" : "bi-youtube")" aria-hidden="true"></i>
-                            </span>
-                            <div class="ts-card__play-overlay" aria-hidden="true">
-                                <i class="bi bi-play-fill"></i>
-                            </div>
                         </div>
-                        <div class="ts-card__body">
-                            <p class="ts-card__title">@(string.IsNullOrWhiteSpace(song.Title) ? song.VideoId : song.Title)</p>
-                            <span class="ts-card__expiry">
-                                <i class="bi bi-clock-history" aria-hidden="true"></i>
-                                @ExpiresInLabel(song.ExpiresAt)
-                            </span>
-                            <span class="ts-card__action">
-                                Play <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                            </span>
-                        </div>
-                    </div>
+                    }
                 }
             </div>
         }
@@ -115,8 +311,10 @@
     {
         <div class="ts-empty">
             <div class="ts-empty-icon"><i class="bi bi-music-note-list"></i></div>
-            <p class="ts-empty-heading">No songs yet today</p>
-            <p class="ts-empty-sub">Paste a YouTube or TikTok link to get chords, then it shows up here.</p>
+            <p class="ts-empty-heading">No songs yet</p>
+            <p class="ts-empty-sub">
+                Paste a YouTube or TikTok link to get chords — your history will appear here.
+            </p>
             <button class="ts-empty-btn" @onclick='() => Nav.NavigateTo("/discover")'>
                 <i class="bi bi-search" aria-hidden="true"></i>
                 Discover a song
@@ -126,54 +324,150 @@
 </div>
 
 @code {
-    private List<AnalyzedSongDto>? _songs;
+    // ── Types ────────────────────────────────────────────────────
+    // MonthLabel != null → month header row; Date != null → day cell.
+    private record CalendarItem(string? MonthLabel, DateOnly? Date, int Count, bool IsFuture, bool IsToday);
+
+    // ── State ────────────────────────────────────────────────────
+    private SongHistoryDto? _history;
     private bool _loading = true;
     private string _query = string.Empty;
     private bool _searchFocused;
+    private string? _paywallVideoId;
+    private List<CalendarItem>? _calendarCells;
 
-    private List<AnalyzedSongDto> FilteredSongs
+    // ── Computed ─────────────────────────────────────────────────
+    private int Remaining =>
+        Math.Max(0, (_history?.DailyLimit ?? 2) - (_history?.UsedToday ?? 0));
+
+    private string StreakTier => _history?.Streak switch
+    {
+        >= 14 => "epic",
+        >= 7  => "hot",
+        _     => "warm"
+    };
+
+    private List<CalendarItem> CalendarCells
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(_query) || _songs is null)
-                return _songs ?? [];
+            if (_history is null) return [];
+            return _calendarCells ??= BuildCalendarCells();
+        }
+    }
 
+    private List<SongHistoryItemDto> FilteredSongs
+    {
+        get
+        {
+            if (_history?.Songs is null) return [];
+            if (string.IsNullOrWhiteSpace(_query)) return _history.Songs;
             var q = _query.Trim();
-            return _songs
-                .Where(s =>
-                    (s.Title?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (s.VideoId?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false))
+            return _history.Songs
+                .Where(s => (s.Title?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                            (s.VideoId?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
         }
     }
 
+    private static List<(string Label, IEnumerable<SongHistoryItemDto> Songs)>
+        GroupedSongs(List<SongHistoryItemDto> songs)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        return songs
+            .GroupBy(s => DateOnly.FromDateTime(s.UnlockedAt.UtcDateTime))
+            .OrderByDescending(g => g.Key)
+            .Select(g =>
+            {
+                var diff = today.DayNumber - g.Key.DayNumber;
+                var label = diff switch
+                {
+                    0 => "Today",
+                    1 => "Yesterday",
+                    _ => g.Key.ToString("dddd, MMMM d")
+                };
+                return (label, (IEnumerable<SongHistoryItemDto>)g);
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Builds 52 week columns × 8 rows (1 month-label row + 7 day rows).
+    /// Cells are in column-major order so CSS grid-auto-flow:column renders correctly.
+    /// Newest week is at the right; oldest at the left.
+    /// </summary>
+    private List<CalendarItem> BuildCalendarCells()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var todayMon = ((int)today.DayOfWeek + 6) % 7; // Mon = 0
+        var currentWeekStart = today.AddDays(-todayMon);     // Monday of current week
+        var gridStart = currentWeekStart.AddDays(-51 * 7);   // Monday 51 weeks back → 52 cols total
+        var gridEnd   = today.AddDays(6 - todayMon);         // Sunday of current week
+
+        var items = new List<CalendarItem>(52 * 8);
+        string? lastMonth = null;
+
+        for (var weekStart = gridStart; weekStart <= gridEnd; weekStart = weekStart.AddDays(7))
+        {
+            // Row 1: month label (non-null only for the first week of each month)
+            var monthAbbr = weekStart.ToString("MMM");
+            items.Add(new(monthAbbr != lastMonth ? monthAbbr : null, null, 0, false, false));
+            if (monthAbbr != lastMonth) lastMonth = monthAbbr;
+
+            // Rows 2-8: Mon → Sun
+            for (var d = 0; d < 7; d++)
+            {
+                var date = weekStart.AddDays(d);
+                var key  = date.ToString("yyyy-MM-dd");
+                var count = _history?.DailyActivity.TryGetValue(key, out var c) == true ? c : 0;
+                items.Add(new(null, date, count, date > today, date == today));
+            }
+        }
+        return items;
+    }
+
+    // ── Lifecycle ────────────────────────────────────────────────
     protected override async Task OnInitializedAsync()
     {
         var auth = await _globalAuth.GetAuthenticationStateAsync();
         if (auth.User.Identity?.IsAuthenticated != true)
         {
-            Nav.NavigateTo($"/login?returnUrl={Uri.EscapeDataString("/discover/today")}", replace: true);
+            Nav.NavigateTo(
+                $"/login?returnUrl={Uri.EscapeDataString("/discover/today")}", replace: true);
             return;
         }
 
-        var resp = await AccessApi.TodaysSongs();
+        var resp = await AccessApi.SongHistory();
         if (resp.IsSuccessStatusCode && resp.Content is not null)
-            _songs = resp.Content;
+            _history = resp.Content;
 
         _loading = false;
     }
 
+    // ── Event handlers ───────────────────────────────────────────
+    private void OnCardClick(SongHistoryItemDto song)
+    {
+        if (!song.IsAccessibleToday)
+        {
+            // Always show the sheet — either "spend a slot / go discover" or "upgrade".
+            _paywallVideoId = _paywallVideoId == song.VideoId ? null : song.VideoId;
+            return;
+        }
+        _paywallVideoId = null;
+        Play(song);
+    }
+
+    private void DismissPaywall() => _paywallVideoId = null;
+
     private void OnSearchInput(ChangeEventArgs e)
     {
         _query = e.Value?.ToString() ?? string.Empty;
+        _paywallVideoId = null;
     }
 
-    private void ClearSearch()
-    {
-        _query = string.Empty;
-    }
+    private void ClearSearch() => _query = string.Empty;
 
-    private void Play(AnalyzedSongDto song)
+    private void Play(SongHistoryItemDto song)
     {
         if (song.Platform == AnalyzedPlatform.TikTok)
         {
@@ -186,17 +480,26 @@
         }
     }
 
-    private Task HandleKeyDown(KeyboardEventArgs e, AnalyzedSongDto song)
+    private Task HandleKeyDown(KeyboardEventArgs e, SongHistoryItemDto song)
     {
-        if (e.Key == "Enter" || e.Key == " ") Play(song);
+        if (e.Key is "Enter" or " ") OnCardClick(song);
         return Task.CompletedTask;
     }
 
+    // ── Labels ───────────────────────────────────────────────────
     private static string ExpiresInLabel(DateTimeOffset expiresAt)
     {
         var remaining = expiresAt - DateTimeOffset.UtcNow;
         if (remaining <= TimeSpan.Zero) return "Expired";
         if (remaining.TotalHours >= 1) return $"{(int)remaining.TotalHours}h left";
         return $"{(int)remaining.TotalMinutes}m left";
+    }
+
+    private static string UnlockedAgoLabel(DateTimeOffset unlockedAt)
+    {
+        var age = DateTimeOffset.UtcNow - unlockedAt;
+        if (age.TotalDays >= 1) return $"{(int)age.TotalDays}d ago";
+        if (age.TotalHours >= 1) return $"{(int)age.TotalHours}h ago";
+        return "Just now";
     }
 }

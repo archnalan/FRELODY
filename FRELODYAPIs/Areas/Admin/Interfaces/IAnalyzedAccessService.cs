@@ -38,5 +38,11 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
 
         /// <summary>Analyzed songs the current user unlocked that are still within their availability window.</summary>
         Task<ServiceResult<List<AnalyzedSongDto>>> GetTodaysSongs();
+
+        /// <summary>
+        /// Last 7 days of the user's song history, with accessibility flags, quota info,
+        /// practice streak, and a 30-day daily activity map for the calendar heatmap.
+        /// </summary>
+        Task<ServiceResult<SongHistoryDto>> GetSongHistory();
     }
 }

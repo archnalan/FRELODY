@@ -5,9 +5,20 @@
     padding: var(--k-space-5) var(--k-space-4) var(--k-space-6);
 }
 
+/* ── Header ──────────────────────────────────────────────────── */
 .ts-header {
+    margin-bottom: var(--k-space-5);
+}
+
+.ts-header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--k-space-4);
     margin-bottom: var(--k-space-4);
 }
+
+.ts-header-copy { flex: 1; min-width: 0; }
 
 .ts-title {
     font-size: 1.5rem;
@@ -22,6 +33,188 @@
     margin: 0;
 }
 
+/* ── Streak badge ─────────────────────────────────────────────── */
+.ts-streak {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: var(--k-radius-pill);
+    padding: 0.3rem 0.85rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: var(--k-font-size-sm);
+    font-weight: 600;
+    color: #fff;
+}
+
+.ts-streak--warm { background: linear-gradient(135deg, #f97316, #f43f5e); }
+.ts-streak--hot  { background: linear-gradient(135deg, #fb923c, #e11d48); }
+.ts-streak--epic {
+    background: linear-gradient(135deg, #f97316, #7c3aed);
+    box-shadow: 0 0 16px rgba(249, 115, 22, 0.4);
+}
+
+.ts-streak--zero {
+    background: var(--k-bg-surface-2);
+    color: var(--k-text-muted);
+    border: 1px solid var(--k-border);
+}
+
+.ts-streak-count { font-size: 1rem; }
+.ts-streak-label { font-weight: 500; }
+
+/* ── Activity calendar ────────────────────────────────────────── *
+ *
+ *  Layout overview (flex row):
+ *    .ts-cal-wrap
+ *      .ts-cal-dow    ← fixed-width DOW labels, always visible
+ *      .ts-cal-outer  ← flex:1, overflow-x:auto, direction:rtl
+ *                         so the initial scroll lands on the RIGHT
+ *                         (most-recent weeks) on narrow screens.
+ *        .ts-cal-grid ← direction:ltr, CSS grid
+ *
+ * ────────────────────────────────────────────────────────────── */
+.ts-cal-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    width: 100%;
+    margin-bottom: var(--k-space-4);
+}
+
+/* Day-of-week labels — never scroll, always visible on the left */
+.ts-cal-dow {
+    display: grid;
+    grid-template-rows: 0.85rem repeat(7, 13px);
+    gap: 2px;
+    flex-shrink: 0;
+    padding-top: 1px;
+}
+
+.ts-cal-dow span {
+    font-size: 0.55rem;
+    color: var(--k-text-subtle);
+    height: 13px;
+    display: flex;
+    align-items: center;
+    user-select: none;
+    white-space: nowrap;
+}
+
+/* Scrollable area — direction:rtl anchors the scroll to the right end */
+.ts-cal-outer {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    direction: rtl;             /* scroll origin = right (newest weeks) */
+    scrollbar-width: thin;
+    scrollbar-color: var(--k-border) transparent;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Full-year grid — direction:ltr restores normal rendering */
+.ts-cal-grid {
+    direction: ltr;
+    display: grid;
+    /* 8 rows: 1 month-label row + 7 day rows */
+    grid-template-rows: 0.85rem repeat(7, 13px);
+    /* Column-major flow; each column = 1 week                 *
+     * minmax(10px,1fr): fills width on wide screens,          *
+     * holds 10 px min on narrow (grid overflows → scrolls).   */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(10px, 1fr);
+    gap: 2px;
+    min-width: 100%;           /* always fill the outer width  */
+}
+
+/* Month abbreviation (row 1 of each column) */
+.ts-cal-month {
+    font-size: 0.58rem;
+    color: var(--k-text-subtle);
+    white-space: nowrap;
+    overflow: hidden;
+    user-select: none;
+    line-height: 0.85rem;
+    display: flex;
+    align-items: center;
+}
+
+/* Day cell */
+.ts-cal-cell {
+    display: block;
+    width: 100%;
+    height: 13px;
+    border-radius: 2px;
+    cursor: default;
+    transition: opacity var(--k-transition-fast);
+}
+
+.ts-cal-cell:hover:not(.ts-cal-cell--future) { opacity: 0.7; }
+
+/* Intensity tiers — 0 = empty, 1-3 = lighter → darker accent */
+.ts-cal-cell--0      { background: var(--k-bg-surface-2); border: 1px solid var(--k-border); }
+.ts-cal-cell--1      { background: rgba(79, 70, 229, 0.28); }
+.ts-cal-cell--2      { background: rgba(79, 70, 229, 0.58); }
+.ts-cal-cell--3      { background: var(--k-accent); }
+.ts-cal-cell--future { background: transparent; border: none; pointer-events: none; }
+.ts-cal-cell--today  { outline: 1.5px solid var(--k-accent); outline-offset: 1.5px; }
+
+[data-bs-theme="dark"] .ts-cal-cell--0 {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ── Quota strip ─────────────────────────────────────────────── */
+.ts-quota {
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-3);
+    padding: 0.5rem 0.85rem;
+    background: var(--k-accent-soft);
+    border: 1px solid rgba(79, 70, 229, 0.18);
+    border-radius: var(--k-radius-md);
+    flex-wrap: wrap;
+}
+
+.ts-quota-dots {
+    display: flex;
+    gap: 0.3rem;
+    flex-shrink: 0;
+}
+
+.ts-quota-dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--k-border-strong);
+    transition: background var(--k-transition-fast);
+}
+
+.ts-quota-dot--used { background: var(--k-accent); }
+
+.ts-quota-text {
+    flex: 1;
+    font-size: var(--k-font-size-xs);
+    color: var(--k-accent-soft-text);
+}
+
+.ts-quota-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: var(--k-font-size-xs);
+    font-weight: 700;
+    color: var(--k-accent);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: opacity var(--k-transition-fast);
+}
+
+.ts-quota-cta:hover { opacity: 0.7; }
+
 /* ── Search bar ──────────────────────────────────────────────── */
 .ts-search-wrap {
     display: flex;
@@ -32,10 +225,10 @@
     border-radius: var(--k-radius-pill);
     padding: var(--k-space-2) var(--k-space-3) var(--k-space-2) var(--k-space-4);
     margin-bottom: var(--k-space-5);
-    box-shadow: var(--k-shadow-sm), 0 0 0 0 transparent;
+    box-shadow: var(--k-shadow-sm);
     transition:
         border-color var(--k-transition-fast),
-        box-shadow var(--k-transition-fast);
+        box-shadow   var(--k-transition-fast);
 }
 
 .ts-search-wrap--focused {
@@ -50,9 +243,7 @@
     transition: color var(--k-transition-fast);
 }
 
-.ts-search-wrap--focused .ts-search-icon {
-    color: var(--k-accent);
-}
+.ts-search-wrap--focused .ts-search-icon { color: var(--k-accent); }
 
 .ts-search-input {
     flex: 1;
@@ -66,13 +257,8 @@
     line-height: 1.4;
 }
 
-.ts-search-input::placeholder {
-    color: var(--k-text-subtle);
-}
-
-.ts-search-input::-webkit-search-cancel-button {
-    display: none;
-}
+.ts-search-input::placeholder              { color: var(--k-text-subtle); }
+.ts-search-input::-webkit-search-cancel-button { display: none; }
 
 .ts-search-clear {
     flex-shrink: 0;
@@ -89,7 +275,7 @@
     cursor: pointer;
     transition:
         background var(--k-transition-fast),
-        color var(--k-transition-fast);
+        color      var(--k-transition-fast);
 }
 
 .ts-search-clear:hover {
@@ -97,15 +283,32 @@
     color: var(--text-primary);
 }
 
+/* ── Date section labels inside the grid ─────────────────────── */
+.ts-date-label {
+    grid-column: 1 / -1;
+    font-size: var(--k-font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--k-text-subtle);
+    padding: var(--k-space-1) 0;
+    border-bottom: 1px solid var(--k-border);
+    margin-top: var(--k-space-2);
+}
+
+.ts-date-label:first-child { margin-top: 0; }
+
 /* ── Grid ────────────────────────────────────────────────────── */
 .ts-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: var(--k-space-4);
+    row-gap: var(--k-space-3);
 }
 
 /* ── Card ────────────────────────────────────────────────────── */
 .ts-card {
+    position: relative;          /* anchors the full-card paywall overlay */
     display: flex;
     flex-direction: column;
     border-radius: var(--k-radius-md);
@@ -115,9 +318,9 @@
     cursor: pointer;
     outline: none;
     transition:
-        transform var(--k-transition),
-        box-shadow var(--k-transition),
-        border-color var(--k-transition);
+        transform      var(--k-transition),
+        box-shadow     var(--k-transition),
+        border-color   var(--k-transition);
 }
 
 .ts-card:hover,
@@ -131,9 +334,11 @@
     box-shadow: var(--k-shadow-hover), 0 0 0 3px var(--k-accent-soft);
 }
 
-.ts-card:active {
-    transform: translateY(-1px);
-}
+.ts-card:active { transform: translateY(-1px); }
+
+/* Locked card */
+.ts-card--locked .ts-card__thumb  { filter: grayscale(45%); }
+.ts-card--locked:hover .ts-card__thumb { filter: grayscale(65%); }
 
 /* ── Thumbnail wrap ──────────────────────────────────────────── */
 .ts-card__thumb-wrap {
@@ -150,12 +355,10 @@
     height: 100%;
     object-fit: cover;
     display: block;
-    transition: transform 0.35s ease;
+    transition: transform 0.35s ease, filter 0.25s ease;
 }
 
-.ts-card:hover .ts-card__thumb {
-    transform: scale(1.04);
-}
+.ts-card:hover .ts-card__thumb { transform: scale(1.04); }
 
 .ts-card__thumb-empty {
     width: 100%;
@@ -181,6 +384,7 @@
     color: #fff;
     font-size: 0.78rem;
     backdrop-filter: blur(4px);
+    z-index: 3;
 }
 
 /* Play overlay */
@@ -195,12 +399,139 @@
     background: rgba(0, 0, 0, 0.28);
     opacity: 0;
     transition: opacity var(--k-transition);
+    z-index: 2;
 }
 
 .ts-card:hover .ts-card__play-overlay,
-.ts-card:focus-visible .ts-card__play-overlay {
-    opacity: 1;
+.ts-card:focus-visible .ts-card__play-overlay { opacity: 1; }
+
+/* Lock overlay — always visible on locked cards */
+.ts-card__lock-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    background: rgba(0, 0, 0, 0.42);
+    color: #fff;
+    z-index: 2;
+    transition: background var(--k-transition);
 }
+
+.ts-card--locked:hover .ts-card__lock-overlay { background: rgba(0, 0, 0, 0.62); }
+
+.ts-card__lock-icon { font-size: 1.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
+
+.ts-card__lock-hint {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: 0;
+    transform: translateY(5px);
+    transition:
+        opacity   var(--k-transition),
+        transform var(--k-transition);
+}
+
+.ts-card--locked:hover .ts-card__lock-hint {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Paywall overlay */
+.ts-card__paywall {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 1rem 0.85rem;
+    background: rgba(10, 14, 30, 0.88);
+    backdrop-filter: blur(8px);
+    z-index: 4;
+    text-align: center;
+    animation: ts-paywall-in 0.18s ease-out;
+}
+
+@keyframes ts-paywall-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.ts-paywall-close {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: none;
+    border-radius: 50%;
+    width: 1.6rem;
+    height: 1.6rem;
+    display: grid;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background var(--k-transition-fast);
+}
+
+.ts-paywall-close:hover { background: rgba(255, 255, 255, 0.22); }
+
+.ts-paywall-star         { font-size: 1.5rem; color: #facc15; }
+.ts-paywall-star--slot   { color: var(--k-accent); }
+
+.ts-paywall-headline {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #f8fafc;
+    line-height: 1.3;
+}
+
+.ts-paywall-body {
+    margin: 0;
+    font-size: 0.72rem;
+    color: rgba(248, 250, 252, 0.7);
+    line-height: 1.4;
+}
+
+.ts-paywall-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.1rem;
+    padding: 0.38rem 0.9rem;
+    background: linear-gradient(135deg, var(--k-accent), #7c3aed);
+    color: #fff;
+    border: none;
+    border-radius: var(--k-radius-pill);
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity var(--k-transition-fast), transform var(--k-transition-fast);
+}
+
+.ts-paywall-btn:hover { opacity: 0.88; transform: scale(1.03); }
+
+.ts-paywall-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    background: none;
+    border: none;
+    padding: 0;
+    color: rgba(248, 250, 252, 0.55);
+    font-size: 0.68rem;
+    cursor: pointer;
+    transition: color var(--k-transition-fast);
+}
+
+.ts-paywall-secondary:hover { color: rgba(248, 250, 252, 0.9); }
 
 /* ── Card body ───────────────────────────────────────────────── */
 .ts-card__body {
@@ -223,6 +554,8 @@
     line-height: 1.4;
 }
 
+.ts-card--locked .ts-card__title { color: var(--k-text-muted); }
+
 .ts-card__expiry {
     display: inline-flex;
     align-items: center;
@@ -231,7 +564,9 @@
     color: var(--k-text-muted);
 }
 
-/* Hover-reveal CTA row */
+.ts-card__expiry--expired { color: var(--k-text-subtle); }
+
+/* Hover-reveal CTA */
 .ts-card__action {
     display: inline-flex;
     align-items: center;
@@ -243,9 +578,11 @@
     opacity: 0;
     transform: translateX(-4px);
     transition:
-        opacity var(--k-transition),
+        opacity   var(--k-transition),
         transform var(--k-transition);
 }
+
+.ts-card__action--upgrade { color: var(--k-warning); }
 
 .ts-card:hover .ts-card__action,
 .ts-card:focus-visible .ts-card__action {
@@ -254,14 +591,7 @@
 }
 
 /* ── Skeleton cards ──────────────────────────────────────────── */
-.ts-card--skeleton {
-    cursor: default;
-    pointer-events: none;
-}
-
-.ts-card--skeleton .ts-card__thumb-wrap {
-    /* shimmer fills the whole 16/9 area */
-}
+.ts-card--skeleton { cursor: default; pointer-events: none; }
 
 .ts-skel-line {
     height: 0.7rem;
@@ -270,9 +600,7 @@
     width: 100%;
 }
 
-.ts-skel-line--short {
-    width: 55%;
-}
+.ts-skel-line--short { width: 55%; }
 
 /* ── Empty states ────────────────────────────────────────────── */
 .ts-empty {
@@ -329,9 +657,7 @@
     transition: opacity var(--k-transition-fast);
 }
 
-.ts-empty-btn:hover {
-    opacity: 0.88;
-}
+.ts-empty-btn:hover { opacity: 0.88; }
 
 .ts-empty-btn--ghost {
     background: var(--k-bg-surface-2);
@@ -345,9 +671,15 @@
     border-color: var(--k-border-strong);
 }
 
-/* ── Mobile: single column below 480px ──────────────────────── */
-@media (max-width: 480px) {
-    .ts-grid {
-        grid-template-columns: 1fr;
-    }
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .ts-grid { grid-template-columns: repeat(2, 1fr); }
+    .ts-header-top { flex-wrap: wrap; }
+    .ts-streak { font-size: var(--k-font-size-xs); padding: 0.25rem 0.65rem; }
+    /* Calendar: cells shrink to 11px min on phones; 10px is the hard min */
+    .ts-cal-grid { grid-auto-columns: minmax(10px, 1fr); }
+}
+
+@media (max-width: 360px) {
+    .ts-grid { grid-template-columns: 1fr; }
 }

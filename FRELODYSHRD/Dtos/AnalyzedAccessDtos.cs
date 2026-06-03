@@ -83,4 +83,40 @@ namespace FRELODYSHRD.Dtos
         public DateTimeOffset UnlockedAt { get; set; }
         public DateTimeOffset ExpiresAt { get; set; }
     }
+
+    /// <summary>
+    /// One entry in the 7-day song history. Includes the accessibility flag so the
+    /// UI can show a padlock on songs that have aged out of the 24-hour window.
+    /// </summary>
+    public class SongHistoryItemDto
+    {
+        public AnalyzedPlatform Platform { get; set; }
+        public string VideoId { get; set; } = default!;
+        public string? Title { get; set; }
+        public string? ThumbnailUrl { get; set; }
+        public string? SourceUrl { get; set; }
+        public DateTimeOffset UnlockedAt { get; set; }
+        public DateTimeOffset ExpiresAt { get; set; }
+        /// <summary>True when still within the configured availability window (playback permitted).</summary>
+        public bool IsAccessibleToday { get; set; }
+    }
+
+    /// <summary>
+    /// Full song history response: last 7 days of unlocks plus quota/streak context.
+    /// </summary>
+    public class SongHistoryDto
+    {
+        public List<SongHistoryItemDto> Songs { get; set; } = new();
+        public int DailyLimit { get; set; }
+        public int UsedToday { get; set; }
+        public bool IsPremium { get; set; }
+        /// <summary>Consecutive UTC calendar days ending today (or yesterday when today has no unlocks) with ≥ 1 unlock.</summary>
+        public int Streak { get; set; }
+        /// <summary>
+        /// Distinct songs analyzed per UTC calendar day for the last 30 days.
+        /// Keys are ISO date strings ("yyyy-MM-dd"); values are the distinct song count.
+        /// Used to render the GitHub-style activity calendar.
+        /// </summary>
+        public Dictionary<string, int> DailyActivity { get; set; } = new();
+    }
 }

@@ -64,5 +64,21 @@ namespace FRELODYAPIs.Controllers
 
             return Ok(result.Data);
         }
+
+        /// <summary>
+        /// Last 7 days of song history with accessibility flags, quota info, practice streak,
+        /// and a 30-day daily activity map for the calendar heatmap.
+        /// </summary>
+        [HttpGet]
+        [ProducesResponseType(typeof(SongHistoryDto), 200)]
+        public async Task<IActionResult> SongHistory()
+        {
+            var result = await _access.GetSongHistory();
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+
+            return Ok(result.Data);
+        }
     }
 }
