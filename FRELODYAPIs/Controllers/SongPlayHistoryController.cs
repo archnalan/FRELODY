@@ -54,7 +54,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(Dictionary<string, int>), 200)]
+        [ProducesResponseType(typeof(List<MostPlayedSongDto>), 200)]
         public async Task<IActionResult> GetMostPlayedSongs([FromQuery] string? userId = null, [FromQuery] int limit = 10)
         {
             var result = await _playLog.GetMostPlayedSongs(userId, limit);

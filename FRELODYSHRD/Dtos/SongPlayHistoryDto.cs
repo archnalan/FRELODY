@@ -19,4 +19,11 @@ namespace FRELODYSHRD.Dtos
         public string? SongTitle { get; set; }
         public int? SongNumber { get; set; }
     }
+
+    public class MostPlayedSongDto
+    {
+        public string SongId { get; set; } = default!;
+        public string Title { get; set; } = default!;
+        public int PlayCount { get; set; }
+    }
 }

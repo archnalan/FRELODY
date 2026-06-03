@@ -22,7 +22,7 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<List<SongPlayHistoryDto>>> GetSongPlayHistory([Query] string songId, [Query] int offset = 0, [Query] int limit = 10);
 
         [Get("/api/song-play-history/get-most-played-songs")]
-        Task<IApiResponse<Dictionary<string, int>>> GetMostPlayedSongs([Query] string? userId = null, [Query] int limit = 10);
+        Task<IApiResponse<List<MostPlayedSongDto>>> GetMostPlayedSongs([Query] string? userId = null, [Query] int limit = 10);
 
         [Get("/api/song-play-history/get-play-statistics")]
         Task<IApiResponse<SongPlayStatisticsDto>> GetPlayStatistics([Query] string? userId = null, [Query] DateTime? fromDate = null, [Query] DateTime? toDate = null);

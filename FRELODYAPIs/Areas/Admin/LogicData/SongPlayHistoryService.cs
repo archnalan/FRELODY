@@ -151,14 +151,14 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
-        public async Task<ServiceResult<Dictionary<string, int>>> GetMostPlayedSongs(string? userId = null, int limit = 10)
+        public async Task<ServiceResult<List<MostPlayedSongDto>>> GetMostPlayedSongs(string? userId = null, int limit = 10)
         {
             try
             {
                 var targetUserId = userId ?? _userId;
                 if (string.IsNullOrEmpty(targetUserId))
                 {
-                    return ServiceResult<Dictionary<string, int>>.Failure(
+                    return ServiceResult<List<MostPlayedSongDto>>.Failure(
                         new BadRequestException("User ID is required."));
                 }
 
@@ -168,20 +168,22 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     .Where(h => h.UserId == targetUserId)
                     .Include(h => h.Song)
                     .GroupBy(h => new { h.SongId, h.Song.Title })
-                    .Select(g => new {
-                        SongTitle = g.Key.Title,
+                    .Select(g => new MostPlayedSongDto
+                    {
+                        SongId = g.Key.SongId,
+                        Title = g.Key.Title,
                         PlayCount = g.Count()
                     })
                     .OrderByDescending(x => x.PlayCount)
                     .Take(limit)
-                    .ToDictionaryAsync(x => x.SongTitle, x => x.PlayCount);
+                    .ToListAsync();
 
-                return ServiceResult<Dictionary<string, int>>.Success(mostPlayed);
+                return ServiceResult<List<MostPlayedSongDto>>.Success(mostPlayed);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving most played songs for user {UserId}", userId);
-                return ServiceResult<Dictionary<string, int>>.Failure(ex);
+                return ServiceResult<List<MostPlayedSongDto>>.Failure(ex);
             }
         }
         #endregion

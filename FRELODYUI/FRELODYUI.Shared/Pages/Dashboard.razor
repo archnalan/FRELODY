@@ -399,12 +399,15 @@
                                     }
                                     @foreach (var song in mostPlayedSongs.Take(5))
                                     {
-                                        <div class="top-song-item">
+                                        <div class="top-song-item" @onclick="() => PlaySong(song.SongId)">
                                             <div class="song-rank rank-@rank">@rank</div>
                                             <div class="song-details flex-grow-1">
-                                                <h6 class="song-title mb-0">@song.Key</h6>
-                                                <small class="text-muted">@song.Value plays</small>
+                                                <h6 class="song-title mb-0">@song.Title</h6>
+                                                <small class="text-muted">@song.PlayCount plays</small>
                                             </div>
+                                            <button class="btn btn-sm btn-play" @onclick:stopPropagation="true" @onclick="() => PlaySong(song.SongId)">
+                                                <i class="bi bi-play-fill"></i>
+                                            </button>
                                         </div>
                                         rank++;
                                     }
@@ -432,7 +435,7 @@
     private SongPlayStatisticsDto? statistics;
     private List<SongPlayHistoryDto> recentPlays = new();
     private List<PlaylistSongs> playlists = new();
-    private Dictionary<string, int> mostPlayedSongs = new();
+    private List<MostPlayedSongDto> mostPlayedSongs = new();
 
     // State
     private bool isLoading = true;

@@ -443,8 +443,9 @@ else
             var codeVerifier = GenerateCodeVerifier();
             var codeChallenge = GenerateCodeChallenge(codeVerifier);
 
-            // Store code_verifier in session storage for the callback
+            // Store code_verifier and any pending return URL in session storage for the callback
             await JsRt.InvokeVoidAsync("sessionStorage.setItem", "google_code_verifier", codeVerifier);
+            await JsRt.InvokeVoidAsync("sessionStorage.setItem", "google_pending_return_url", ReturnUrl ?? "");
 
             var authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
                 $"?client_id={Uri.EscapeDataString(clientId)}" +
@@ -480,6 +481,11 @@ else
 
             var codeVerifier = await JsRt.InvokeAsync<string>("sessionStorage.getItem", "google_code_verifier");
             await JsRt.InvokeVoidAsync("sessionStorage.removeItem", "google_code_verifier");
+
+            var pendingReturnUrl = await JsRt.InvokeAsync<string?>("sessionStorage.getItem", "google_pending_return_url");
+            await JsRt.InvokeVoidAsync("sessionStorage.removeItem", "google_pending_return_url");
+            if (!string.IsNullOrEmpty(pendingReturnUrl))
+                ReturnUrl = pendingReturnUrl;
 
             if (string.IsNullOrEmpty(codeVerifier))
             {
