@@ -23,6 +23,11 @@ namespace FRELODYAPP.Services.Seed
     {
         private const string SeedKey = "standard-chords";
         private const string SeedActor = "system-seed";
+
+        // Bump whenever the importer's output changes (new spellings, quality coverage, etc.).
+        // It's folded into the stored version so a redeploy auto-reseeds even though the source
+        // file hash is unchanged — without it, the startup seed sees a matching hash and skips.
+        private const string SeedLogicVersion = "v2-enharmonic";
         private static readonly string[] SourceRelativePath = ["seed-chords", "_source", "chords-db.guitar.json"];
 
         private static readonly JsonSerializerOptions JsonOpts = new()
@@ -57,7 +62,7 @@ namespace FRELODYAPP.Services.Seed
                 return new SeedResult(false, 0, 0, 0, "", "source-missing");
             }
 
-            var hash = ComputeFileHash(sourcePath);
+            var hash = $"{SeedLogicVersion}:{ComputeFileHash(sourcePath)}";
 
             var version = await _db.SeedVersions
                 .IgnoreQueryFilters()

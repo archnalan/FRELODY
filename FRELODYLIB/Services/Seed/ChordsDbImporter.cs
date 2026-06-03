@@ -25,43 +25,52 @@ namespace FRELODYAPP.Services.Seed
 
             var output = new List<SeededVoicing>();
 
-            foreach (var (key, entries) in root.Chords)
+            foreach (var (dictKey, entries) in root.Chords)
             {
+                // chords-db nests every voicing under exactly one spelling per pitch class
+                // ("C", "Csharp", "D", "Eb", "Fsharp", "Ab", "Bb", ...). We expand each black
+                // key to BOTH enharmonic spellings and seed them as distinct chords: C# and Db
+                // share a fretboard shape but are musically separate names, so a song written in
+                // either spelling resolves to a standard chart. (Unknown keys fall back to the
+                // dataset's literal spelling so nothing is silently lost.)
+                var spellings = RootSpellings.TryGetValue(dictKey, out var s) ? s : [dictKey];
+                var rootPitch = PitchClass(spellings[0]);
+                if (rootPitch < 0) continue;
+
                 foreach (var entry in entries)
                 {
                     var quality = QualityCatalog.Resolve(entry.Suffix);
                     if (quality is null) continue;
 
-                    var rootPitch = PitchClass(key);
-                    if (rootPitch < 0) continue;
-
-                    var picked = new List<SeededVoicing>();
-                    var ordered = entry.Positions
+                    // The shape is spelling-independent: pick the valid voicings once, then
+                    // re-label the same shapes under each enharmonic spelling of the root.
+                    var positions = entry.Positions
                         .Where(p => p.Frets is { Length: MaxStringCount })
-                        .OrderBy(p => p.BaseFret);
+                        .OrderBy(p => p.BaseFret)
+                        .Where(p => IsValid(p, rootPitch, quality))
+                        .Take(MaxVoicingsPerChord)
+                        .ToList();
 
-                    int seq = 1;
-                    foreach (var pos in ordered)
+                    foreach (var spelling in spellings)
                     {
-                        if (!IsValid(pos, rootPitch, quality)) continue;
+                        int seq = 1;
+                        foreach (var pos in positions)
+                        {
+                            var data = ToChordDrawData(pos);
+                            var (label, stem) = BuildLabel(spelling, quality, pos.BaseFret, seq);
+                            var chordName = spelling + quality.NameSuffix;
 
-                        var data = ToChordDrawData(pos);
-                        var (label, stem) = BuildLabel(key, quality, pos.BaseFret, seq);
-                        var chordName = key + quality.NameSuffix;
+                            output.Add(new SeededVoicing(
+                                ChordName: chordName,
+                                DisplayLabel: label,
+                                FileNameStem: stem,
+                                Position: pos.BaseFret,
+                                Data: data,
+                                Midi: pos.Midi ?? Array.Empty<int>()));
 
-                        picked.Add(new SeededVoicing(
-                            ChordName: chordName,
-                            DisplayLabel: label,
-                            FileNameStem: stem,
-                            Position: pos.BaseFret,
-                            Data: data,
-                            Midi: pos.Midi ?? Array.Empty<int>()));
-
-                        seq++;
-                        if (picked.Count >= MaxVoicingsPerChord) break;
+                            seq++;
+                        }
                     }
-
-                    output.AddRange(picked);
                 }
             }
 
@@ -180,6 +189,24 @@ namespace FRELODYAPP.Services.Seed
             return new string(chars);
         }
 
+        // Top-level chords-db dictionary key → the display spelling(s) we seed.
+        // Black keys yield both enharmonic names (sharp first; PitchClass keys off [0]).
+        private static readonly Dictionary<string, string[]> RootSpellings = new()
+        {
+            ["C"]      = ["C"],
+            ["Csharp"] = ["C#", "Db"],
+            ["D"]      = ["D"],
+            ["Eb"]     = ["Eb", "D#"],
+            ["E"]      = ["E"],
+            ["F"]      = ["F"],
+            ["Fsharp"] = ["F#", "Gb"],
+            ["G"]      = ["G"],
+            ["Ab"]     = ["Ab", "G#"],
+            ["A"]      = ["A"],
+            ["Bb"]     = ["Bb", "A#"],
+            ["B"]      = ["B"]
+        };
+
         private static int PitchClass(string note) => note switch
         {
             "C"  => 0,
@@ -256,6 +283,9 @@ namespace FRELODYAPP.Services.Seed
         {
             ["major"]      = new("",       [0, 4, 7],            QualityCategory.Triad),
             ["minor"]      = new("m",      [0, 3, 7],            QualityCategory.Triad),
+            // Slash-chord base alias: chords-db spells minor slash chords "m/G" (not "minor/G"),
+            // so the slash resolver below needs an "m" key to map onto the minor triad.
+            ["m"]          = new("m",      [0, 3, 7],            QualityCategory.Triad),
             ["dim"]        = new("dim",    [0, 3, 6],            QualityCategory.Triad),
             ["aug"]        = new("aug",    [0, 4, 8],            QualityCategory.Triad),
             ["sus"]        = new("sus4",   [0, 5, 7],            QualityCategory.Triad),
