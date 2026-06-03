@@ -9,6 +9,7 @@ using FRELODYLIB.ServiceHandler.ResultModels;
 using FRELODYSHRD.Dtos.HybridDtos;
 using FRELODYSHRD.Dtos.SubDtos;
 using FRELODYSHRD.Dtos.UserDtos;
+using FRELODYSHRD.ModelTypes;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
@@ -175,11 +176,23 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #endregion
 
         #region Get All Users
-        public async Task<ServiceResult<PaginationDetails<AppUserDto>>> GetAllUsers(int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken)
+        public async Task<ServiceResult<PaginationDetails<AppUserDto>>> GetAllUsers(int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken, UserAccountFilter filter = UserAccountFilter.Active)
         {
-            IQueryable<User> query = _context.Users.Where(u => u.UserType != UserType.SuperAdmin || u.UserType != UserType.TenantAdmin);
             try
             {
+                // IgnoreQueryFilters so blocked/deleted rows are visible; we apply
+                // explicit filter predicates below instead.
+                IQueryable<User> query = _context.Users.IgnoreQueryFilters()
+                    .Where(u => u.UserType != UserType.SuperAdmin && u.UserType != UserType.TenantAdmin);
+
+                query = filter switch
+                {
+                    UserAccountFilter.Active  => query.Where(u => (u.IsActive == true || u.IsActive == null) && (u.IsDeleted == false || u.IsDeleted == null)),
+                    UserAccountFilter.Blocked => query.Where(u => u.IsActive == false && (u.IsDeleted == false || u.IsDeleted == null)),
+                    UserAccountFilter.Deleted => query.Where(u => u.IsDeleted == true),
+                    _ => query.Where(u => (u.IsActive == true || u.IsActive == null) && (u.IsDeleted == false || u.IsDeleted == null))
+                };
+
                 var result = await query.AsNoTracking().Select(x => new AppUserDto
                 {
                     UserId = x.Id,
@@ -196,6 +209,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     DateCreated = x.DateCreated,
                     UserType = x.UserType,
                     IsActive = x.IsActive,
+                    IsDeleted = x.IsDeleted,
                     BillingStatus = x.BillingStatus,
                     BillingExpiresAt = x.BillingExpiresAt,
                     LastLoginDate = x.LastLoginDate,
@@ -235,11 +249,22 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         #endregion
 
         #region Search For Users
-        public async Task<ServiceResult<PaginationDetails<AppUserDto>>> SearchForUsers(string keywords, int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken)
+        public async Task<ServiceResult<PaginationDetails<AppUserDto>>> SearchForUsers(string keywords, int offSet, int limit, string sortByColumn, bool sortAscending, CancellationToken cancellationToken, UserAccountFilter filter = UserAccountFilter.Active)
         {
-            IQueryable<User> query = _context.Users.Where(u=> u.UserType != UserType.SuperAdmin || u.UserType != UserType.TenantAdmin);
             try
             {
+                // IgnoreQueryFilters so blocked/deleted rows are visible; explicit predicates below.
+                IQueryable<User> query = _context.Users.IgnoreQueryFilters()
+                    .Where(u => u.UserType != UserType.SuperAdmin && u.UserType != UserType.TenantAdmin);
+
+                query = filter switch
+                {
+                    UserAccountFilter.Active  => query.Where(u => (u.IsActive == true || u.IsActive == null) && (u.IsDeleted == false || u.IsDeleted == null)),
+                    UserAccountFilter.Blocked => query.Where(u => u.IsActive == false && (u.IsDeleted == false || u.IsDeleted == null)),
+                    UserAccountFilter.Deleted => query.Where(u => u.IsDeleted == true),
+                    _ => query.Where(u => (u.IsActive == true || u.IsActive == null) && (u.IsDeleted == false || u.IsDeleted == null))
+                };
+
                 if (!string.IsNullOrEmpty(keywords))
                 {
                     query = query.Where(x =>
@@ -269,6 +294,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     DateCreated = x.DateCreated,
                     UserType = x.UserType,
                     IsActive = x.IsActive,
+                    IsDeleted = x.IsDeleted,
                     BillingStatus = x.BillingStatus,
                     BillingExpiresAt = x.BillingExpiresAt,
                     LastLoginDate = x.LastLoginDate,
@@ -396,6 +422,37 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             {
                 _logger.LogError("Error while enabling user: {ex}", ex);
                 return ServiceResult<bool>.Failure(new Exception("Could not enable user."));
+            }
+        }
+        #endregion
+
+        #region Restore User (un-soft-delete)
+        public async Task<ServiceResult<bool>> RestoreUser(string userId)
+        {
+            try
+            {
+                // FindAsync bypasses query filters — finds soft-deleted/blocked rows.
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return ServiceResult<bool>.Failure(new Exception("User not found."));
+                }
+
+                if (user.UserType == UserType.SuperAdmin || user.UserType == UserType.TenantAdmin)
+                {
+                    return ServiceResult<bool>.Failure(new Exception("Cannot modify a system user."));
+                }
+
+                user.IsDeleted = false;
+                user.IsActive = true;
+                _context.Users.Update(user);
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error while restoring user: {ex}", ex);
+                return ServiceResult<bool>.Failure(new Exception("Could not restore user."));
             }
         }
         #endregion

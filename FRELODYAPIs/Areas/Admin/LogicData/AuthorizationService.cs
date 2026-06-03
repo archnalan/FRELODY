@@ -245,6 +245,19 @@ namespace FRELODYAPP.Data
                 return await LoginUserNoPassword(userFromDb, userFromDb.TenantId);
             }
 
+            // Guard: check for a soft-deleted or blocked account with this email before
+            // creating a new one — FindByEmailAsync respects query filters and would miss it,
+            // leading to a duplicate row.
+            var existingAny = await _context.Users
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(u => u.Email == objFromGoogle.Email);
+
+            if (existingAny != null && (existingAny.IsActive == false || existingAny.IsDeleted == true))
+            {
+                return ServiceResult<LoginResponseDto>.Failure(
+                    new BadRequestException("This account has been suspended. Please contact support@frelody.com if you believe this is a mistake."));
+            }
+
             // Create new user with a new tenant (each Google sign-up = new company/tenant)
             var nameParts = (objFromGoogle.Name ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
             var fullName = objFromGoogle.Name ?? "User";
@@ -475,6 +488,24 @@ namespace FRELODYAPP.Data
                         if (usernameExists)
                         {
                             await HandleUserNameConflict(createUserDto, _tenantId);
+                        }
+
+                        // Check for any existing account (including soft-deleted/blocked) with this email
+                        // before calling CreateAsync — prevents silent DB unique-index violations and
+                        // duplicate rows when RequireUniqueEmail is enforced.
+                        var existingByEmail = await _context.Users
+                            .IgnoreQueryFilters()
+                            .FirstOrDefaultAsync(u => u.Email == createUserDto.Email);
+
+                        if (existingByEmail != null)
+                        {
+                            if (existingByEmail.IsActive == false || existingByEmail.IsDeleted == true)
+                            {
+                                return ServiceResult<CreateUserResponseDto>.Failure(
+                                    new BadRequestException("This account has been suspended. Please contact support@frelody.com if you believe this is a mistake."));
+                            }
+                            return ServiceResult<CreateUserResponseDto>.Failure(
+                                new BadRequestException("An account with this email already exists. Try signing in."));
                         }
 
                         User newUser = createUserDto.Adapt<User>();

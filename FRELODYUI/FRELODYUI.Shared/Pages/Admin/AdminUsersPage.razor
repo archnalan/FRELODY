@@ -24,6 +24,28 @@
             <a class="admin-btn" href="/admin/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
         </div>
 
+        @* ── Filter tabs ── *@
+        <div class="au-tabs" role="tablist" aria-label="User account filter">
+            <button class="au-tab @(_filter == UserAccountFilter.Active ? "au-tab--active" : "")"
+                    role="tab"
+                    aria-selected="@(_filter == UserAccountFilter.Active)"
+                    @onclick="() => SetFilter(UserAccountFilter.Active)">
+                <i class="bi bi-person-check"></i> Active
+            </button>
+            <button class="au-tab @(_filter == UserAccountFilter.Blocked ? "au-tab--active" : "")"
+                    role="tab"
+                    aria-selected="@(_filter == UserAccountFilter.Blocked)"
+                    @onclick="() => SetFilter(UserAccountFilter.Blocked)">
+                <i class="bi bi-slash-circle"></i> Blocked
+            </button>
+            <button class="au-tab @(_filter == UserAccountFilter.Deleted ? "au-tab--active" : "")"
+                    role="tab"
+                    aria-selected="@(_filter == UserAccountFilter.Deleted)"
+                    @onclick="() => SetFilter(UserAccountFilter.Deleted)">
+                <i class="bi bi-trash3"></i> Soft-deleted
+            </button>
+        </div>
+
         @* ── Search + sort bar ── *@
         <div class="au-toolbar admin-card admin-card-pad">
             <div class="au-search-wrap">
@@ -45,176 +67,255 @@
             </div>
         </div>
 
-        @if (_loading && _users.Count == 0)
-        {
-            <div class="admin-card">
+        @* ── Table card ── *@
+        <div class="au-table-card admin-card">
+            @if (_isInitialLoading)
+            {
                 <div class="admin-card-pad">
-                    @for (int i = 0; i < 5; i++)
+                    @for (int i = 0; i < 8; i++)
                     {
-                        <div class="admin-skeleton mb-2" style="height:52px;"></div>
+                        <div class="admin-skeleton mb-2" style="height:44px;"></div>
                     }
                 </div>
-            </div>
-        }
-        else if (!_loading && _users.Count == 0)
-        {
-            <div class="admin-card admin-empty">
-                <div class="admin-empty-title">No users found</div>
-                <p class="mb-0">@(string.IsNullOrWhiteSpace(_searchTerm) ? "No users in the system yet." : $"No results for \"{_searchTerm}\".")</p>
-            </div>
-        }
-        else
-        {
-            <div class="admin-card au-table-wrap">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>
-                                <button class="au-sort-header @(_sortByColumn == "FirstName" ? "active" : "")"
-                                        @onclick='() => SetSort("FirstName")'>
-                                    User
-                                    @if (_sortByColumn == "FirstName")
-                                    {
-                                        <i class="bi @(_sortAscending ? "bi-caret-up-fill" : "bi-caret-down-fill")"></i>
-                                    }
-                                </button>
-                            </th>
-                            <th>
-                                <button class="au-sort-header @(_sortByColumn == "Email" ? "active" : "")"
-                                        @onclick='() => SetSort("Email")'>
-                                    Email
-                                    @if (_sortByColumn == "Email")
-                                    {
-                                        <i class="bi @(_sortAscending ? "bi-caret-up-fill" : "bi-caret-down-fill")"></i>
-                                    }
-                                </button>
-                            </th>
-                            <th>Status</th>
-                            <th>
-                                <button class="au-sort-header @(_sortByColumn == "DateCreated" ? "active" : "")"
-                                        @onclick='() => SetSort("DateCreated")'>
-                                    Joined
-                                    @if (_sortByColumn == "DateCreated")
-                                    {
-                                        <i class="bi @(_sortAscending ? "bi-caret-up-fill" : "bi-caret-down-fill")"></i>
-                                    }
-                                </button>
-                            </th>
-                            <th>
-                                <button class="au-sort-header @(_sortByColumn == "LastLoginDate" ? "active" : "")"
-                                        @onclick='() => SetSort("LastLoginDate")'>
-                                    Last seen
-                                    @if (_sortByColumn == "LastLoginDate")
-                                    {
-                                        <i class="bi @(_sortAscending ? "bi-caret-up-fill" : "bi-caret-down-fill")"></i>
-                                    }
-                                </button>
-                            </th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var u in _users)
-                        {
-                            <tr data-label-user="User" data-label-email="Email" data-label-status="Status"
-                                data-label-joined="Joined" data-label-seen="Last seen">
-                                <td data-label="User">
-                                    <div class="au-user-cell">
-                                        <div class="user-avatar-circle au-avatar">
-                                            <span>@(u.Initials ?? "?")</span>
-                                        </div>
-                                        <div>
-                                            <div class="au-name">@(u.FullName?.Trim() is { Length: > 0 } n ? n : "(no name)")</div>
-                                            @if (!string.IsNullOrWhiteSpace(u.UserName))
+            }
+            else if (_users.Count == 0)
+            {
+                <div class="au-empty">
+                    <i class="bi bi-people"></i>
+                    <p class="mb-0">@(string.IsNullOrWhiteSpace(_searchTerm)
+                        ? EmptyStateMessage()
+                        : $"No results for \"{_searchTerm}\".")</p>
+                </div>
+            }
+            else
+            {
+                <div class="au-tbl-scroll @(_isPageLoading ? "is-loading" : "")">
+                    <table class="au-tbl">
+                        <thead>
+                            <tr>
+                                <th class="au-col-user">
+                                    <button class="au-th-btn @(_sortByColumn == "FirstName" ? "au-th-btn--active" : "")"
+                                            @onclick='() => SetSort("FirstName")'>
+                                        <span class="au-th">
+                                            User
+                                            @if (_sortByColumn == "FirstName")
                                             {
-                                                <div class="au-username">@@@u.UserName</div>
+                                                <i class="bi @(_sortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
+                                            }
+                                        </span>
+                                    </button>
+                                </th>
+                                <th class="au-col-email au-col-md">
+                                    <button class="au-th-btn @(_sortByColumn == "Email" ? "au-th-btn--active" : "")"
+                                            @onclick='() => SetSort("Email")'>
+                                        <span class="au-th">
+                                            Email
+                                            @if (_sortByColumn == "Email")
+                                            {
+                                                <i class="bi @(_sortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
+                                            }
+                                        </span>
+                                    </button>
+                                </th>
+                                <th class="au-col-status">
+                                    <span class="au-th">Status</span>
+                                </th>
+                                <th class="au-col-date au-col-lg">
+                                    <button class="au-th-btn @(_sortByColumn == "DateCreated" ? "au-th-btn--active" : "")"
+                                            @onclick='() => SetSort("DateCreated")'>
+                                        <span class="au-th">
+                                            Joined
+                                            @if (_sortByColumn == "DateCreated")
+                                            {
+                                                <i class="bi @(_sortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
+                                            }
+                                        </span>
+                                    </button>
+                                </th>
+                                <th class="au-col-date au-col-md">
+                                    <button class="au-th-btn @(_sortByColumn == "LastLoginDate" ? "au-th-btn--active" : "")"
+                                            @onclick='() => SetSort("LastLoginDate")'>
+                                        <span class="au-th">
+                                            Last seen
+                                            @if (_sortByColumn == "LastLoginDate")
+                                            {
+                                                <i class="bi @(_sortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
+                                            }
+                                        </span>
+                                    </button>
+                                </th>
+                                <th class="au-col-actions">
+                                    <span class="au-th"></span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var u in _users)
+                            {
+                                <tr @key="u.UserId">
+                                    <td class="au-col-user">
+                                        <div class="au-user-cell">
+                                            <div class="user-avatar-circle au-avatar">
+                                                <span>@(u.Initials ?? "?")</span>
+                                            </div>
+                                            <div class="au-user-info">
+                                                <div class="au-name">@(u.FullName?.Trim() is { Length: > 0 } n ? n : "(no name)")</div>
+                                                @* Fold email + username under name on small screens *@
+                                                <div class="au-name-sub d-md-none">
+                                                    @if (!string.IsNullOrWhiteSpace(u.Email))
+                                                    {
+                                                        <span>@u.Email</span>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(u.UserName))
+                                                    {
+                                                        <span class="au-username">@@@u.UserName</span>
+                                                    }
+                                                </div>
+                                                @if (!string.IsNullOrWhiteSpace(u.UserName))
+                                                {
+                                                    <div class="au-username d-none d-md-block">@@@u.UserName</div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="au-col-email au-col-md au-email">@(u.Email ?? "—")</td>
+                                    <td class="au-col-status">
+                                        <div class="au-badges">
+                                            @{
+                                                bool isPremium = u.BillingStatus is BillingStatus.PremiumTrial
+                                                    or BillingStatus.ActiveRecurring
+                                                    or BillingStatus.ActiveLifetime
+                                                    && (u.BillingExpiresAt == null || u.BillingExpiresAt > DateTimeOffset.UtcNow);
+                                            }
+                                            @if (isPremium)
+                                            {
+                                                <span class="admin-pill au-pill-premium"><i class="bi bi-star-fill"></i> Premium</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="admin-chip au-chip-free">Free</span>
+                                            }
+                                            @if (u.IsActive == false)
+                                            {
+                                                <span class="admin-pill au-pill-disabled"><i class="bi bi-slash-circle"></i> Blocked</span>
+                                            }
+                                            @if (u.UserType is UserType.SuperAdmin or UserType.TenantAdmin)
+                                            {
+                                                <span class="admin-chip au-chip-role">@u.UserType</span>
+                                            }
+                                            @if (u.DateCreated.HasValue && u.DateCreated.Value > DateTimeOffset.UtcNow.AddDays(-7))
+                                            {
+                                                <span class="admin-pill au-pill-new">New</span>
                                             }
                                         </div>
-                                    </div>
-                                </td>
-                                <td data-label="Email" class="au-email">@(u.Email ?? "—")</td>
-                                <td data-label="Status">
-                                    <div class="au-badges">
-                                        @* Premium / Free badge *@
-                                        @{
-                                            bool isPremium = u.BillingStatus is BillingStatus.PremiumTrial
-                                                or BillingStatus.ActiveRecurring
-                                                or BillingStatus.ActiveLifetime
-                                                && (u.BillingExpiresAt == null || u.BillingExpiresAt > DateTimeOffset.UtcNow);
-                                        }
-                                        @if (isPremium)
-                                        {
-                                            <span class="admin-pill au-pill-premium"><i class="bi bi-star-fill"></i> Premium</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="admin-chip au-chip-free">Free</span>
-                                        }
-                                        @* Disabled badge *@
-                                        @if (u.IsActive == false)
-                                        {
-                                            <span class="admin-pill au-pill-disabled"><i class="bi bi-slash-circle"></i> Disabled</span>
-                                        }
-                                        @* Role pill (only non-User roles) *@
-                                        @if (u.UserType is UserType.SuperAdmin or UserType.TenantAdmin)
-                                        {
-                                            <span class="admin-chip au-chip-role">@u.UserType</span>
-                                        }
-                                        @* New badge *@
-                                        @if (u.DateCreated.HasValue && u.DateCreated.Value > DateTimeOffset.UtcNow.AddDays(-7))
-                                        {
-                                            <span class="admin-pill au-pill-new">New</span>
-                                        }
-                                    </div>
-                                </td>
-                                <td data-label="Joined" class="au-date">@RelativeTime(u.DateCreated)</td>
-                                <td data-label="Last seen" class="au-date">@RelativeTime(u.LastLoginDate)</td>
-                                <td class="text-end" data-label="Actions">
-                                    <span class="admin-row-actions">
-                                        <a class="admin-btn icon-only" title="View profile"
-                                           href="/user-profile/@u.UserId">
-                                            <i class="bi bi-person"></i>
-                                        </a>
-                                        @if (u.IsActive == false)
-                                        {
-                                            <button class="admin-btn icon-only" title="Enable user"
-                                                    @onclick="() => EnableUser(u)">
-                                                <i class="bi bi-check-circle"></i>
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <button class="admin-btn icon-only danger" title="Disable user"
-                                                    @onclick="() => OpenDisable(u)">
-                                                <i class="bi bi-slash-circle"></i>
-                                            </button>
-                                        }
-                                    </span>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                                    </td>
+                                    <td class="au-col-date au-col-lg au-date">@RelativeTime(u.DateCreated)</td>
+                                    <td class="au-col-date au-col-md au-date">@RelativeTime(u.LastLoginDate)</td>
+                                    <td class="au-col-actions">
+                                        <span class="au-row-actions">
+                                            <a class="admin-btn icon-only" title="View profile"
+                                               href="/user-profile/@u.UserId">
+                                                <i class="bi bi-person"></i>
+                                            </a>
+                                            @if (_filter == UserAccountFilter.Active)
+                                            {
+                                                @if (!(u.UserType is UserType.SuperAdmin or UserType.TenantAdmin))
+                                                {
+                                                    <button class="admin-btn icon-only danger" title="Block user"
+                                                            @onclick="() => OpenBlock(u)">
+                                                        <i class="bi bi-slash-circle"></i>
+                                                    </button>
+                                                }
+                                            }
+                                            else if (_filter == UserAccountFilter.Blocked)
+                                            {
+                                                <button class="admin-btn icon-only" title="Unblock user"
+                                                        @onclick="() => UnblockUser(u)">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </button>
+                                            }
+                                            else if (_filter == UserAccountFilter.Deleted)
+                                            {
+                                                <button class="admin-btn icon-only" title="Restore account"
+                                                        @onclick="() => OpenRestore(u)">
+                                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                                </button>
+                                            }
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
 
-            @* ── Load-more sentinel + button ── *@
-            <div class="au-load-more-area" @ref="_sentinelRef">
-                @if (_loading)
-                {
-                    <div class="admin-skeleton" style="height:36px;width:120px;margin:0 auto;"></div>
-                }
-                else if (_hasMore)
-                {
-                    <button class="admin-btn au-load-more-btn" @onclick="LoadMore">
-                        <i class="bi bi-chevron-down"></i> Load more
-                    </button>
-                }
-                else if (_users.Count > 0)
-                {
-                    <p class="au-count-label">Showing @_users.Count of @_totalSize</p>
-                }
-            </div>
-        }
+                @* ── Numbered pager ── *@
+                <div class="au-pager">
+                    <div class="au-pager__info">
+                        @if (_isPageLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                        }
+                        <span>
+                            <strong>@RangeStart.ToString("N0")</strong>–<strong>@RangeEnd.ToString("N0")</strong>
+                            of <strong>@_totalItems.ToString("N0")</strong>
+                        </span>
+                    </div>
+
+                    @if (_totalPages > 1)
+                    {
+                        <div class="au-pager__nav" role="navigation" aria-label="Pagination">
+                            <button class="au-pager-btn" title="First page"
+                                    disabled="@(_currentPage <= 1 || _isPageLoading)"
+                                    @onclick="() => GoToPage(1)">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </button>
+                            <button class="au-pager-btn" title="Previous page"
+                                    disabled="@(_currentPage <= 1 || _isPageLoading)"
+                                    @onclick="() => GoToPage(_currentPage - 1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+
+                            @foreach (var p in GetPageWindow())
+                            {
+                                @if (p < 0)
+                                {
+                                    <span class="au-pager-ellipsis">…</span>
+                                }
+                                else
+                                {
+                                    <button class="au-pager-btn @(p == _currentPage ? "au-pager-btn--active" : "")"
+                                            disabled="@_isPageLoading"
+                                            @onclick="() => GoToPage(p)">
+                                        @p
+                                    </button>
+                                }
+                            }
+
+                            <button class="au-pager-btn" title="Next page"
+                                    disabled="@(_currentPage >= _totalPages || _isPageLoading)"
+                                    @onclick="() => GoToPage(_currentPage + 1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                            <button class="au-pager-btn" title="Last page"
+                                    disabled="@(_currentPage >= _totalPages || _isPageLoading)"
+                                    @onclick="() => GoToPage(_totalPages)">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </button>
+                        </div>
+                    }
+
+                    <div class="au-pager__size">
+                        <label for="au-page-size">Rows</label>
+                        <select id="au-page-size" @bind="PageSize" disabled="@_isPageLoading">
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+            }
+        </div>
 
         @if (!string.IsNullOrEmpty(_error))
         {
@@ -223,112 +324,124 @@
     }
 </AuthGuard>
 
-@* ── Disable confirm dialog ── *@
-<ConfirmDialog Visible="_showDisable"
-               Title="Disable user"
+@* ── Block confirm dialog ── *@
+<ConfirmDialog Visible="_showBlock"
+               Title="Block user"
                Icon="bi-slash-circle"
                Destructive="true"
-               ConfirmLabel="Disable"
+               ConfirmLabel="Block"
                Busy="_saving"
-               OnCancel="@(() => _showDisable = false)"
-               OnConfirm="ConfirmDisable">
+               OnCancel="@(() => _showBlock = false)"
+               OnConfirm="ConfirmBlock">
     <BodyContent>
-        <p class="mb-0">Disable <strong>@_disableTarget?.FullName</strong>? They will be unable to log in until re-enabled.</p>
+        <p class="mb-0">Block <strong>@_actionTarget?.FullName</strong>? They will be unable to sign in or re-register until unblocked.</p>
+    </BodyContent>
+</ConfirmDialog>
+
+@* ── Restore confirm dialog ── *@
+<ConfirmDialog Visible="_showRestore"
+               Title="Restore account"
+               Icon="bi-arrow-counterclockwise"
+               Destructive="false"
+               ConfirmLabel="Restore"
+               Busy="_saving"
+               OnCancel="@(() => _showRestore = false)"
+               OnConfirm="ConfirmRestore">
+    <BodyContent>
+        <p class="mb-0">Restore <strong>@_actionTarget?.FullName</strong>'s account? They will be able to sign in again.</p>
     </BodyContent>
 </ConfirmDialog>
 
 @code {
-    private const int PageSize = 20;
+    // ── Pagination state ──────────────────────────────────────────────────
+    private int _currentPage = 1;
+    private int _pageSize = 25;
+    private int _totalItems;
+    private bool _isInitialLoading = true;
+    private bool _isPageLoading;
 
+    private int _totalPages => _totalItems <= 0 ? 0 : (int)Math.Ceiling(_totalItems / (double)_pageSize);
+    private int RangeStart => _totalItems == 0 ? 0 : ((_currentPage - 1) * _pageSize) + 1;
+    private int RangeEnd => Math.Min(_currentPage * _pageSize, _totalItems);
+
+    private int PageSize
+    {
+        get => _pageSize;
+        set
+        {
+            if (value == _pageSize) return;
+            _pageSize = value <= 0 ? 25 : value;
+            _ = LoadPage(1);
+        }
+    }
+
+    // ── Data ─────────────────────────────────────────────────────────────
     private List<AppUserDto> _users = new();
-    private bool _loading;
     private bool _isSuperAdmin;
-    private bool _hasMore;
-    private int _offset;
-    private int _totalSize;
     private string? _error;
     private string _searchTerm = string.Empty;
     private string _sortByColumn = "DateCreated";
     private bool _sortAscending = false;
+    private UserAccountFilter _filter = UserAccountFilter.Active;
 
-    // Disable modal
-    private bool _showDisable;
+    // ── Action modal state ────────────────────────────────────────────────
+    private bool _showBlock;
+    private bool _showRestore;
     private bool _saving;
-    private AppUserDto? _disableTarget;
+    private AppUserDto? _actionTarget;
 
-    // Sentinel ref for IntersectionObserver
-    private ElementReference _sentinelRef;
-    private DotNetObjectReference<AdminUsersPage>? _selfRef;
-    private bool _observerAttached;
-
-    // Search debounce
+    // ── Search debounce ───────────────────────────────────────────────────
     private CancellationTokenSource? _searchCts;
 
+    // ─────────────────────────────────────────────────────────────────────
     protected override async Task OnInitializedAsync()
     {
         var userResult = await _globalAuth.GetAuthenticatedUserAsync();
         _isSuperAdmin = userResult.IsSuccess && userResult.Data?.UserType == UserType.SuperAdmin;
         if (_isSuperAdmin)
-            await LoadPage(reset: true);
+            await LoadPage(1);
+        else
+            _isInitialLoading = false;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    // ── Page loading ──────────────────────────────────────────────────────
+    private async Task LoadPage(int page)
     {
-        if (_isSuperAdmin && _hasMore && !_observerAttached && _selfRef is not null)
-        {
-            try
-            {
-                await JsRt.InvokeVoidAsync("eval", @"
-                    if (!window.__setupAdminUsersScroll) {
-                        window.__setupAdminUsersScroll = function(dotNetRef, sentinel) {
-                            if (!sentinel || sentinel.__auObserved) return;
-                            sentinel.__auObserved = true;
-                            const observer = new IntersectionObserver(function(entries) {
-                                entries.forEach(function(e) {
-                                    if (e.isIntersecting) dotNetRef.invokeMethodAsync('OnSentinelVisible');
-                                });
-                            }, { rootMargin: '200px' });
-                            observer.observe(sentinel);
-                            sentinel.__auObserver = observer;
-                        };
-                    }");
-                await JsRt.InvokeVoidAsync("__setupAdminUsersScroll", _selfRef, _sentinelRef);
-                _observerAttached = true;
-            }
-            catch { /* SSR / prerender */ }
-        }
-    }
+        if (page < 1) page = 1;
 
-    [JSInvokable]
-    public async Task OnSentinelVisible()
-    {
-        if (!_loading && _hasMore)
-            await LoadPage(reset: false);
-    }
-
-    private async Task LoadPage(bool reset)
-    {
-        _loading = true;
+        _isPageLoading = true;
         _error = null;
-        if (reset) { _offset = 0; _users.Clear(); _observerAttached = false; }
         StateHasChanged();
 
         try
         {
-            _selfRef ??= DotNetObjectReference.Create(this);
+            var offset = (page - 1) * _pageSize;
             IApiResponse<PaginationDetails<AppUserDto>> resp;
 
             if (!string.IsNullOrWhiteSpace(_searchTerm))
-                resp = await _usersApi.SearchForUsers(_searchTerm, _offset, PageSize, _sortByColumn, _sortAscending);
+                resp = await _usersApi.SearchForUsers(_searchTerm, offset, _pageSize, _sortByColumn, _sortAscending, _filter);
             else
-                resp = await _usersApi.GetAllUsers(_offset, PageSize, _sortByColumn, _sortAscending);
+                resp = await _usersApi.GetAllUsers(offset, _pageSize, _sortByColumn, _sortAscending, _filter);
 
             if (resp.IsSuccessStatusCode && resp.Content is not null)
             {
-                _users.AddRange(resp.Content.Data ?? new());
-                _offset = _users.Count;
-                _hasMore = resp.Content.HasMore;
-                _totalSize = resp.Content.TotalSize;
+                var items = resp.Content.Data ?? new();
+                var total = resp.Content.TotalSize;
+
+                // Snap to last page if the requested page fell off the end (e.g. after an action)
+                if (items.Count == 0 && total > 0 && page > 1)
+                {
+                    var lastPage = (int)Math.Ceiling(total / (double)_pageSize);
+                    if (page > lastPage)
+                    {
+                        await LoadPage(lastPage);
+                        return;
+                    }
+                }
+
+                _users = items;
+                _totalItems = total;
+                _currentPage = page;
             }
             else
             {
@@ -341,14 +454,42 @@
         }
         finally
         {
-            _loading = false;
-            _observerAttached = false; // re-attach after render
+            _isInitialLoading = false;
+            _isPageLoading = false;
             StateHasChanged();
         }
     }
 
-    private async Task LoadMore() => await LoadPage(reset: false);
+    // ── Pager helpers ─────────────────────────────────────────────────────
+    private async Task GoToPage(int page)
+    {
+        if (page < 1) page = 1;
+        if (_totalPages > 0 && page > _totalPages) page = _totalPages;
+        if (page == _currentPage || _isPageLoading) return;
+        await LoadPage(page);
+    }
 
+    private IEnumerable<int> GetPageWindow()
+    {
+        var total = _totalPages;
+        if (total <= 0) yield break;
+
+        var shown = new SortedSet<int> { 1, total };
+        for (var p = _currentPage - 1; p <= _currentPage + 1; p++)
+        {
+            if (p >= 1 && p <= total) shown.Add(p);
+        }
+
+        var prev = 0;
+        foreach (var p in shown)
+        {
+            if (prev != 0 && p - prev > 1) yield return -1; // ellipsis marker
+            yield return p;
+            prev = p;
+        }
+    }
+
+    // ── Search + sort ─────────────────────────────────────────────────────
     private async Task OnSearchInput(ChangeEventArgs e)
     {
         _searchTerm = e.Value?.ToString() ?? string.Empty;
@@ -357,15 +498,12 @@
         try
         {
             await Task.Delay(350, _searchCts.Token);
-            await LoadPage(reset: true);
+            await LoadPage(1);
         }
         catch (TaskCanceledException) { /* debounced */ }
     }
 
-    private async Task OnSortChanged()
-    {
-        await LoadPage(reset: true);
-    }
+    private async Task OnSortChanged() => await LoadPage(1);
 
     private async Task SetSort(string column)
     {
@@ -376,33 +514,43 @@
             _sortByColumn = column;
             _sortAscending = true;
         }
-        await LoadPage(reset: true);
+        await LoadPage(1);
     }
 
     private async Task ToggleSortDirection()
     {
         _sortAscending = !_sortAscending;
-        await LoadPage(reset: true);
+        await LoadPage(1);
     }
 
-    private void OpenDisable(AppUserDto u)
+    // ── Tab filter ────────────────────────────────────────────────────────
+    private async Task SetFilter(UserAccountFilter filter)
     {
-        _disableTarget = u;
-        _showDisable = true;
+        if (_filter == filter) return;
+        _filter = filter;
+        _searchTerm = string.Empty;
+        await LoadPage(1);
     }
 
-    private async Task ConfirmDisable()
+    // ── Row actions ───────────────────────────────────────────────────────
+    private void OpenBlock(AppUserDto u)
     {
-        if (_disableTarget?.UserId is null) return;
+        _actionTarget = u;
+        _showBlock = true;
+    }
+
+    private async Task ConfirmBlock()
+    {
+        if (_actionTarget?.UserId is null) return;
         _saving = true;
         try
         {
-            var resp = await _usersApi.DisableUser(_disableTarget.UserId);
+            var resp = await _usersApi.DisableUser(_actionTarget.UserId);
             if (resp.IsSuccessStatusCode)
             {
-                _toastService.Show("User disabled.", ToastType.Success);
-                _showDisable = false;
-                await LoadPage(reset: true);
+                _toastService.Show("User blocked.", ToastType.Success);
+                _showBlock = false;
+                await LoadPage(_currentPage);
             }
             else
             {
@@ -419,7 +567,7 @@
         }
     }
 
-    private async Task EnableUser(AppUserDto u)
+    private async Task UnblockUser(AppUserDto u)
     {
         if (u.UserId is null) return;
         try
@@ -427,8 +575,8 @@
             var resp = await _usersApi.EnableUser(u.UserId);
             if (resp.IsSuccessStatusCode)
             {
-                _toastService.Show("User enabled.", ToastType.Success);
-                await LoadPage(reset: true);
+                _toastService.Show("User unblocked.", ToastType.Success);
+                await LoadPage(_currentPage);
             }
             else
             {
@@ -440,6 +588,48 @@
             _toastService.Show(ex.Message, ToastType.Error);
         }
     }
+
+    private void OpenRestore(AppUserDto u)
+    {
+        _actionTarget = u;
+        _showRestore = true;
+    }
+
+    private async Task ConfirmRestore()
+    {
+        if (_actionTarget?.UserId is null) return;
+        _saving = true;
+        try
+        {
+            var resp = await _usersApi.RestoreUser(_actionTarget.UserId);
+            if (resp.IsSuccessStatusCode)
+            {
+                _toastService.Show("Account restored.", ToastType.Success);
+                _showRestore = false;
+                await LoadPage(_currentPage);
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+    private string EmptyStateMessage() => _filter switch
+    {
+        UserAccountFilter.Blocked => "No blocked accounts.",
+        UserAccountFilter.Deleted => "No soft-deleted accounts.",
+        _ => "No users in the system yet."
+    };
 
     private static string RelativeTime(DateTimeOffset? dt)
     {

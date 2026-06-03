@@ -1,5 +1,6 @@
 /* ══════════════════════════════════════
    Admin · Users  (au- prefix)
+   Mobile-first · dense table · pager
    ══════════════════════════════════════ */
 
 /* ── Toolbar ── */
@@ -23,7 +24,7 @@
     transform: translateY(-50%);
     color: var(--text-secondary);
     pointer-events: none;
-    /* Override the nav-menu icon behaviour */
+    /* Override nav-menu icon behaviour */
     width: auto !important;
     height: auto !important;
     margin: 0 !important;
@@ -74,43 +75,226 @@
     cursor: pointer;
 }
 
-/* ── Table wrap ── */
-.au-table-wrap {
-    overflow-x: auto;
+/* ── Filter tabs ── */
+.au-tabs {
+    display: flex;
+    gap: var(--k-space-1, 4px);
+    margin-bottom: var(--k-space-3, 12px);
+    padding: 3px;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: var(--k-radius-sm, 6px);
+    width: fit-content;
+    max-width: 100%;
 }
 
-/* ── Sortable header buttons ── */
-.au-sort-header {
-    background: none;
-    border: none;
-    color: inherit;
-    cursor: pointer;
-    font-size: inherit;
-    font-weight: 600;
-    padding: 0;
-    display: flex;
+.au-tab {
+    display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border: none;
+    border-radius: calc(var(--k-radius-sm, 6px) - 2px);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: var(--k-font-size-sm, 0.85rem);
+    font-weight: 500;
+    cursor: pointer;
     white-space: nowrap;
-    transition: color var(--k-transition-fast, 0.15s) ease;
+    transition: background-color var(--k-transition-fast, 120ms ease),
+                color var(--k-transition-fast, 120ms ease),
+                box-shadow var(--k-transition-fast, 120ms ease);
 }
 
-.au-sort-header:hover {
-    color: var(--bs-primary);
+.au-tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover, rgba(0, 0, 0, 0.05));
 }
 
-.au-sort-header.active {
-    color: var(--bs-primary);
+.au-tab--active {
+    background: var(--modal-content-bg);
+    color: var(--text-primary);
+    box-shadow: var(--k-shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
+    font-weight: 600;
 }
 
-.au-sort-header .bi {
+.au-tab .bi {
+    /* Override nav-menu icon behaviour */
     width: auto !important;
     height: auto !important;
     margin: 0 !important;
     top: 0 !important;
     background-image: none !important;
     filter: none !important;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+@media (max-width: 575.98px) {
+    .au-sort-wrap {
+        width: 100%;
+    }
+
+    .au-tabs {
+        width: 100%;
+    }
+
+    .au-tab {
+        flex: 1;
+        justify-content: center;
+        padding: 0.4rem 0.5rem;
+        font-size: var(--k-font-size-xs, 0.75rem);
+    }
+}
+
+/* ── Table card wrapper ── */
+.au-table-card {
+    overflow: clip;
+    position: relative;
+    margin-bottom: var(--k-space-3, 12px);
+}
+
+/* Scrollable area keeps header sticky */
+.au-tbl-scroll {
+    width: 100%;
+    max-height: clamp(20rem, 70vh, 52rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    transition: opacity var(--k-transition-fast, 120ms ease);
+}
+
+/* Dim in-place on page change (no skeleton flash) */
+.au-tbl-scroll.is-loading {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+@media (max-width: 575.98px) {
+    .au-tbl-scroll {
+        max-height: calc(100dvh - 16rem);
+    }
+}
+
+/* ── Table ── */
+.au-tbl {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    font-size: var(--k-font-size-sm, 0.85rem);
+    color: var(--text-primary);
+    background: transparent;
+}
+
+/* Sticky header */
+.au-tbl thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 8px 10px;
+    text-align: left;
+    background: var(--modal-content-bg);
+    border-bottom: 2px solid var(--border-light, var(--input-border));
+    white-space: nowrap;
+    user-select: none;
+}
+
+/* Body rows */
+.au-tbl tbody tr {
+    transition: background-color var(--k-transition-fast, 120ms ease);
+}
+
+.au-tbl tbody tr:hover {
+    background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+}
+
+.au-tbl tbody td {
+    padding: 8px 10px;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border-light, var(--input-border));
+}
+
+/* ── Column widths ── */
+.au-col-user {
+    /* Takes remaining space */
+    min-width: 10rem;
+}
+
+.au-col-email {
+    width: 13rem;
+}
+
+.au-col-status {
+    width: 9rem;
+}
+
+.au-col-date {
+    width: 6.5rem;
+}
+
+.au-col-actions {
+    width: 6rem;
+    text-align: right;
+}
+
+/* ── Responsive column hiding ── */
+/* Hidden below 768 px (Bootstrap md) */
+@media (max-width: 767.98px) {
+    .au-col-md {
+        display: none;
+    }
+}
+
+/* Hidden below 992 px (Bootstrap lg) */
+@media (max-width: 991.98px) {
+    .au-col-lg {
+        display: none;
+    }
+}
+
+/* ── Sortable header button ── */
+.au-th-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: block;
+    width: 100%;
+}
+
+.au-th {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: var(--k-font-size-xs, 0.7rem);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary, #6b7280);
+    transition: color var(--k-transition-fast, 120ms ease);
+}
+
+.au-th-btn:hover .au-th {
+    color: var(--text-primary);
+}
+
+.au-th-btn--active .au-th {
+    color: var(--bs-primary);
+}
+
+.au-th .bi {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    top: 0 !important;
+    background-image: none !important;
+    filter: none !important;
+    font-size: 0.75rem;
+    color: var(--bs-primary);
+    opacity: 0.85;
 }
 
 /* ── User cell ── */
@@ -118,12 +302,18 @@
     display: flex;
     align-items: center;
     gap: var(--k-space-2, 8px);
+    overflow: hidden;
+}
+
+.au-user-info {
+    overflow: hidden;
+    min-width: 0;
 }
 
 .au-avatar {
-    width: 34px;
-    height: 34px;
-    font-size: 0.75rem;
+    width: 32px;
+    height: 32px;
+    font-size: 0.72rem;
     flex-shrink: 0;
 }
 
@@ -131,31 +321,53 @@
     font-weight: 600;
     font-size: var(--k-font-size-sm, 0.85rem);
     color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .au-username {
-    font-size: var(--k-font-size-xs, 0.75rem);
+    font-size: var(--k-font-size-xs, 0.72rem);
     color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Secondary line visible only < md (email + username folded under name) */
+.au-name-sub {
+    font-size: var(--k-font-size-xs, 0.72rem);
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     margin-top: 1px;
+}
+
+.au-name-sub span + span {
+    margin-left: 0.4rem;
 }
 
 .au-email {
     font-size: var(--k-font-size-sm, 0.85rem);
     color: var(--text-secondary);
-    word-break: break-all;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .au-date {
-    font-size: var(--k-font-size-xs, 0.75rem);
+    font-size: var(--k-font-size-xs, 0.72rem);
     color: var(--text-secondary);
     white-space: nowrap;
 }
 
-/* ── Badges ── */
+/* ── Status badges (compact, always visible) ── */
 .au-badges {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3rem;
+    gap: 0.25rem;
+    align-items: center;
 }
 
 .au-pill-premium {
@@ -200,71 +412,172 @@
 }
 
 .au-pill-new {
-    background: var(--k-info-soft);
-    color: var(--k-info-soft-text);
+    background: var(--k-info-soft, rgba(59, 130, 246, 0.12));
+    color: var(--k-info-soft-text, #1d4ed8);
 }
 
-/* ── Load more ── */
-.au-load-more-area {
+/* ── Row actions (reveal on hover; always on touch) ── */
+.au-row-actions {
     display: flex;
-    justify-content: center;
     align-items: center;
-    padding: var(--k-space-4, 16px);
-    min-height: 56px;
+    justify-content: flex-end;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity var(--k-transition-fast, 120ms ease);
 }
 
-.au-load-more-btn {
-    min-width: 120px;
+tr:hover .au-row-actions {
+    opacity: 1;
 }
 
-.au-count-label {
-    font-size: var(--k-font-size-xs, 0.75rem);
-    color: var(--text-secondary);
-    margin: 0;
+@media (hover: none) {
+    .au-row-actions {
+        opacity: 1;
+    }
 }
 
-/* ── Responsive: stack as cards on narrow viewports ── */
-@media (max-width: 640px) {
-    .admin-table thead {
-        display: none;
+/* ── Empty state ── */
+.au-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 3rem 1rem;
+    color: var(--text-secondary, #6b7280);
+    text-align: center;
+}
+
+.au-empty .bi {
+    font-size: 2rem;
+    opacity: 0.5;
+    /* Override nav-menu icon behaviour */
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    top: 0 !important;
+    background-image: none !important;
+    filter: none !important;
+}
+
+/* ── Pager ── */
+.au-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    border-top: 1px solid var(--border-light, var(--input-border));
+    background: var(--modal-content-bg);
+}
+
+.au-pager__info {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--k-font-size-sm, 0.82rem);
+    color: var(--text-secondary, #6b7280);
+}
+
+.au-pager__info strong {
+    color: var(--text-primary);
+}
+
+.au-pager__nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    order: 3;
+    flex: 1 1 100%;
+    justify-content: center;
+}
+
+/* Desktop: nav sits inline between info and size */
+@media (min-width: 576px) {
+    .au-pager__nav {
+        order: 0;
+        flex: 0 1 auto;
+    }
+}
+
+.au-pager__size {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--k-font-size-sm, 0.82rem);
+    color: var(--text-secondary, #6b7280);
+}
+
+.au-pager__size select {
+    padding: 0.2rem 1.4rem 0.2rem 0.5rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--k-radius-sm, 6px);
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    font-size: var(--k-font-size-sm, 0.82rem);
+    cursor: pointer;
+}
+
+.au-pager-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.45rem;
+    border: 1px solid transparent;
+    border-radius: var(--k-radius-sm, 6px);
+    background: none;
+    color: var(--text-secondary, #6b7280);
+    font-size: var(--k-font-size-sm, 0.82rem);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--k-transition-fast, 120ms ease),
+                color var(--k-transition-fast, 120ms ease);
+}
+
+.au-pager-btn .bi {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    top: 0 !important;
+    background-image: none !important;
+    filter: none !important;
+}
+
+.au-pager-btn:hover:not(:disabled) {
+    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+    color: var(--text-primary);
+}
+
+.au-pager-btn--active {
+    background: var(--bs-primary);
+    color: #fff;
+}
+
+.au-pager-btn--active:hover:not(:disabled) {
+    background: var(--bs-primary);
+    color: #fff;
+}
+
+.au-pager-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.au-pager-ellipsis {
+    padding: 0 0.25rem;
+    color: var(--text-secondary, #6b7280);
+}
+
+/* ── Mobile tweaks ── */
+@media (max-width: 575.98px) {
+    .au-tbl thead th,
+    .au-tbl tbody td {
+        padding: 6px 8px;
     }
 
-    .admin-table,
-    .admin-table tbody,
-    .admin-table tr,
-    .admin-table td {
-        display: block;
-        width: 100%;
-    }
-
-    .admin-table tr {
-        border: 1px solid var(--input-border);
-        border-radius: var(--k-radius-sm, 6px);
-        margin-bottom: var(--k-space-3, 12px);
-        padding: var(--k-space-3, 12px);
-    }
-
-    .admin-table td {
-        padding: 0.3rem 0;
-        border: none;
-    }
-
-    .admin-table td[data-label]::before {
-        content: attr(data-label);
-        display: block;
-        font-size: var(--k-font-size-xs, 0.75rem);
-        font-weight: 600;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 2px;
-    }
-
-    .admin-table td.text-end {
-        text-align: left !important;
-    }
-
-    .au-sort-wrap {
-        width: 100%;
+    .au-col-actions {
+        width: 5rem;
     }
 }

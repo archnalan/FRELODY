@@ -24,6 +24,9 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
 
         // User-scoped methods (owner-only — scoped to current _userId)
         Task<ServiceResult<List<UserFeedbackDto>>> GetMyFeedbackAsync();
+        Task<ServiceResult<PaginationDetails<UserFeedbackDto>>> GetMyFeedbackPagedAsync(
+            string? keywords, int offSet, int limit,
+            string sortByColumn, bool sortAscending, CancellationToken cancellationToken);
         Task<ServiceResult<bool>> HasMyFeedbackAsync();
         Task<ServiceResult<UserFeedbackDto>> AddUserReplyAsync(string feedbackId, string body);
     }

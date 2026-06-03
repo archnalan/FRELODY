@@ -371,6 +371,115 @@
     margin-top: var(--k-space-2, 8px);
 }
 
+/* ── Numbered pager (mf-pager) ── */
+.mf-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    margin-top: var(--k-space-3, 12px);
+    border: 1px solid var(--input-border);
+    border-radius: var(--k-radius-md, 10px);
+    background: var(--modal-content-bg);
+}
+
+.mf-pager__info {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--k-font-size-sm, 0.82rem);
+    color: var(--text-secondary);
+}
+
+.mf-pager__info strong {
+    color: var(--text-primary);
+}
+
+.mf-pager__nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    order: 3;
+    flex: 1 1 100%;
+    justify-content: center;
+}
+
+.mf-pager__size {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--k-font-size-sm, 0.82rem);
+    color: var(--text-secondary);
+}
+
+.mf-pager__size select {
+    padding: 0.2rem 1.4rem 0.2rem 0.5rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--k-radius-sm, 6px);
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    font-size: var(--k-font-size-sm, 0.82rem);
+    cursor: pointer;
+}
+
+.mf-pager-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.45rem;
+    border: 1px solid transparent;
+    border-radius: var(--k-radius-sm, 6px);
+    background: none;
+    color: var(--text-secondary);
+    font-size: var(--k-font-size-sm, 0.82rem);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--k-transition-fast, 0.12s), color var(--k-transition-fast, 0.12s);
+}
+
+.mf-pager-btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.mf-pager-btn--active {
+    background: var(--bs-primary);
+    color: #fff;
+}
+
+.mf-pager-btn--active:hover:not(:disabled) {
+    background: var(--bs-primary);
+    color: #fff;
+}
+
+.mf-pager-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.mf-pager-ellipsis {
+    padding: 0 0.25rem;
+    color: var(--text-secondary);
+}
+
+/* Dim list while page is loading */
+.mf-thread-list.is-loading {
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity var(--k-transition-fast, 0.15s) ease;
+}
+
+/* Desktop: nav sits inline between info and size */
+@media (min-width: 576px) {
+    .mf-pager__nav {
+        order: 0;
+        flex: 0 1 auto;
+    }
+}
+
 /* ── Error alert ── */
 .mf-alert {
     margin-top: var(--k-space-3, 12px);

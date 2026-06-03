@@ -159,23 +159,111 @@
     color: var(--k-success-soft-text);
 }
 
-/* ── Load more ── */
-.af-load-more-area {
+/* ── Numbered pager (af-pager) ── */
+.af-pager {
     display: flex;
-    justify-content: center;
+    flex-wrap: wrap;
     align-items: center;
-    padding: var(--k-space-4, 16px);
-    min-height: 56px;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    border-top: 1px solid var(--input-border);
+    background: var(--modal-content-bg);
 }
 
-.af-load-more-btn {
-    min-width: 120px;
-}
-
-.af-count-label {
-    font-size: var(--k-font-size-xs, 0.75rem);
+.af-pager__info {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--k-font-size-sm, 0.82rem);
     color: var(--text-secondary);
-    margin: 0;
+}
+
+.af-pager__info strong {
+    color: var(--text-primary);
+}
+
+.af-pager__nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    order: 3;
+    flex: 1 1 100%;
+    justify-content: center;
+}
+
+.af-pager__size {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--k-font-size-sm, 0.82rem);
+    color: var(--text-secondary);
+}
+
+.af-pager__size select {
+    padding: 0.2rem 1.4rem 0.2rem 0.5rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--k-radius-sm, 6px);
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    font-size: var(--k-font-size-sm, 0.82rem);
+    cursor: pointer;
+}
+
+.af-pager-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.45rem;
+    border: 1px solid transparent;
+    border-radius: var(--k-radius-sm, 6px);
+    background: none;
+    color: var(--text-secondary);
+    font-size: var(--k-font-size-sm, 0.82rem);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--k-transition-fast, 0.12s), color var(--k-transition-fast, 0.12s);
+}
+
+.af-pager-btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.af-pager-btn--active {
+    background: var(--bs-primary);
+    color: #fff;
+}
+
+.af-pager-btn--active:hover:not(:disabled) {
+    background: var(--bs-primary);
+    color: #fff;
+}
+
+.af-pager-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.af-pager-ellipsis {
+    padding: 0 0.25rem;
+    color: var(--text-secondary);
+}
+
+/* Dim table while page is loading (but don't hide it) */
+.af-table-wrap.is-loading {
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity var(--k-transition-fast, 0.15s) ease;
+}
+
+/* Desktop: nav sits inline between info and size */
+@media (min-width: 576px) {
+    .af-pager__nav {
+        order: 0;
+        flex: 0 1 auto;
+    }
 }
 
 /* ══════════════════════════
@@ -232,6 +320,13 @@
     font-size: var(--k-font-size-sm, 0.85rem);
     outline: none;
     cursor: pointer;
+}
+
+.af-status-staged-hint {
+    font-size: var(--k-font-size-xs, 0.75rem);
+    color: var(--k-warning-soft-text, #92400e);
+    margin-left: 0.4rem;
+    font-style: italic;
 }
 
 /* ── Thread bubbles ── */

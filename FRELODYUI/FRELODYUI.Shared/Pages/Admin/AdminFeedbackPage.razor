@@ -43,7 +43,7 @@
             </div>
         </div>
 
-        @if (_loading && _items.Count == 0)
+        @if (_isInitialLoading)
         {
             <div class="admin-card">
                 <div class="admin-card-pad">
@@ -54,7 +54,7 @@
                 </div>
             </div>
         }
-        else if (!_loading && _items.Count == 0)
+        else if (!_isInitialLoading && _items.Count == 0)
         {
             <div class="admin-card admin-empty">
                 <div class="admin-empty-title">No feedback found</div>
@@ -76,7 +76,7 @@
         }
         else
         {
-            <div class="admin-card af-table-wrap">
+            <div class="admin-card af-table-wrap @(_isPageLoading ? "is-loading" : "")">
                 <table class="admin-table">
                     <thead>
                         <tr>
@@ -126,24 +126,72 @@
                         }
                     </tbody>
                 </table>
-            </div>
 
-            @* ── Load-more sentinel + button ── *@
-            <div class="af-load-more-area" @ref="_sentinelRef">
-                @if (_loading)
-                {
-                    <div class="admin-skeleton" style="height:36px;width:120px;margin:0 auto;"></div>
-                }
-                else if (_hasMore)
-                {
-                    <button class="admin-btn af-load-more-btn" @onclick="LoadMore">
-                        <i class="bi bi-chevron-down"></i> Load more
-                    </button>
-                }
-                else if (_items.Count > 0)
-                {
-                    <p class="af-count-label">Showing @_items.Count of @_totalSize</p>
-                }
+                @* ── Numbered pager ── *@
+                <div class="af-pager">
+                    <div class="af-pager__info">
+                        @if (_isPageLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                        }
+                        <span>
+                            <strong>@AfRangeStart.ToString("N0")</strong>–<strong>@AfRangeEnd.ToString("N0")</strong>
+                            of <strong>@_totalItems.ToString("N0")</strong>
+                        </span>
+                    </div>
+
+                    @if (_totalPages > 1)
+                    {
+                        <div class="af-pager__nav" role="navigation" aria-label="Pagination">
+                            <button class="af-pager-btn" title="First page"
+                                    disabled="@(_currentPage <= 1 || _isPageLoading)"
+                                    @onclick="() => GoToPage(1)">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </button>
+                            <button class="af-pager-btn" title="Previous page"
+                                    disabled="@(_currentPage <= 1 || _isPageLoading)"
+                                    @onclick="() => GoToPage(_currentPage - 1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+
+                            @foreach (var p in GetPageWindow())
+                            {
+                                @if (p < 0)
+                                {
+                                    <span class="af-pager-ellipsis">…</span>
+                                }
+                                else
+                                {
+                                    <button class="af-pager-btn @(p == _currentPage ? "af-pager-btn--active" : "")"
+                                            disabled="@_isPageLoading"
+                                            @onclick="() => GoToPage(p)">
+                                        @p
+                                    </button>
+                                }
+                            }
+
+                            <button class="af-pager-btn" title="Next page"
+                                    disabled="@(_currentPage >= _totalPages || _isPageLoading)"
+                                    @onclick="() => GoToPage(_currentPage + 1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                            <button class="af-pager-btn" title="Last page"
+                                    disabled="@(_currentPage >= _totalPages || _isPageLoading)"
+                                    @onclick="() => GoToPage(_totalPages)">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </button>
+                        </div>
+                    }
+
+                    <div class="af-pager__size">
+                        <label for="af-page-size">Rows</label>
+                        <select id="af-page-size" @bind="AfPageSize" disabled="@_isPageLoading">
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
             </div>
         }
 
@@ -160,11 +208,11 @@
 <ConfirmDialog Visible="_showThread"
                Title="@(_thread?.Subject ?? "Feedback")"
                Icon="bi-chat-left-text"
-               ConfirmLabel="Done"
-               CancelLabel="Close"
+               ConfirmLabel="Apply changes"
+               CancelLabel="Cancel"
                Busy="_threadBusy"
-               OnCancel="@(() => _showThread = false)"
-               OnConfirm="@(() => _showThread = false)">
+               OnCancel="CancelThread"
+               OnConfirm="ApplyThreadChanges">
     <BodyContent>
         @if (_threadLoading)
         {
@@ -195,12 +243,19 @@
                 }
                 <div class="af-thread-meta-row">
                     <span class="af-meta-label">Status</span>
-                    <select class="af-status-select" value="@_thread.Status" @onchange="OnStatusChange">
+                    @* Status select now updates only local staging state — no API call *@
+                    <select class="af-status-select" value="@_pendingStatus" @onchange="OnStatusChange">
                         @foreach (var s in Enum.GetValues<FeedbackStatus>())
                         {
-                            <option value="@s" selected="@(_thread.Status == s)">@StatusLabel(s)</option>
+                            <option value="@s" selected="@(_pendingStatus == s)">@StatusLabel(s)</option>
                         }
                     </select>
+                    @if (_pendingStatus != _thread.Status)
+                    {
+                        <span class="af-status-staged-hint">
+                            (staged — was @StatusLabel(_thread.Status))
+                        </span>
+                    }
                 </div>
             </div>
 
@@ -232,24 +287,18 @@
                 }
             </div>
 
-            @* ── Reply composer ── *@
+            @* ── Reply composer — staged, sent only on Apply ── *@
             @if (!string.IsNullOrWhiteSpace(_thread.Email))
             {
                 <div class="af-composer">
                     <label class="af-composer-label">Reply to @(_thread.Email)</label>
                     <textarea class="af-composer-input" rows="3"
-                              placeholder="Write a reply…"
+                              placeholder="Write a reply… (sent when you click Apply changes)"
                               @bind="_replyBody"></textarea>
-                    <div class="d-flex gap-2 justify-content-end mt-2">
-                        <button class="admin-btn primary" disabled="@(_threadBusy || string.IsNullOrWhiteSpace(_replyBody))"
-                                @onclick="SendReply">
-                            @if (_threadBusy) { <span>Sending…</span> } else { <span><i class="bi bi-send"></i> Send reply</span> }
-                        </button>
-                    </div>
                 </div>
             }
 
-            @* ── Log user reply (secondary, understated) ── *@
+            @* ── Log user reply (staged) ── *@
             <div class="af-log-section">
                 @if (!_showLogUserReply)
                 {
@@ -262,14 +311,10 @@
                     <div class="af-composer">
                         <label class="af-composer-label">Paste the user's reply</label>
                         <textarea class="af-composer-input" rows="3"
-                                  placeholder="Paste text from user's email…"
+                                  placeholder="Paste text from user's email… (logged when you click Apply changes)"
                                   @bind="_logBody"></textarea>
                         <div class="d-flex gap-2 mt-2">
-                            <button class="admin-btn" @onclick="@(() => _showLogUserReply = false)">Cancel</button>
-                            <button class="admin-btn primary" disabled="@(_threadBusy || string.IsNullOrWhiteSpace(_logBody))"
-                                    @onclick="LogUserReply">
-                                Log reply
-                            </button>
+                            <button class="admin-btn" @onclick="@(() => { _showLogUserReply = false; _logBody = string.Empty; })">Cancel</button>
                         </div>
                     </div>
                 }
@@ -293,39 +338,52 @@
 </ConfirmDialog>
 
 @code {
-    private const int PageSize = 20;
+    // ── Pager state ──
+    private int _currentPage = 1;
+    private int _pageSize = 25;
+    private int _totalItems;
+    private bool _isPageLoading;
+    private bool _isInitialLoading = true;
 
-    // List state
+    private int _totalPages => _totalItems <= 0 ? 0 : (int)Math.Ceiling(_totalItems / (double)_pageSize);
+    private int AfRangeStart => _totalItems == 0 ? 0 : ((_currentPage - 1) * _pageSize) + 1;
+    private int AfRangeEnd => Math.Min(_currentPage * _pageSize, _totalItems);
+
+    private int AfPageSize
+    {
+        get => _pageSize;
+        set
+        {
+            if (value == _pageSize) return;
+            _pageSize = value <= 0 ? 25 : value;
+            _ = LoadPage(1);
+        }
+    }
+
+    // ── List state ──
     private List<UserFeedbackDto> _items = new();
-    private bool _loading;
     private bool _isSuperAdmin;
-    private bool _hasMore;
-    private int _offset;
-    private int _totalSize;
     private string? _error;
     private string _searchTerm = string.Empty;
     private FeedbackStatus? _filterStatus;
     private string _sortByColumn = "DateCreated";
     private bool _sortAscending = false;
 
-    // Load-more sentinel
-    private ElementReference _sentinelRef;
-    private DotNetObjectReference<AdminFeedbackPage>? _selfRef;
-    private bool _observerAttached;
-
-    // Search debounce
+    // ── Search debounce ──
     private CancellationTokenSource? _searchCts;
 
-    // Thread modal
+    // ── Thread modal ──
     private bool _showThread;
     private bool _threadLoading;
     private bool _threadBusy;
     private UserFeedbackDto? _thread;
+    // Staging state — nothing is committed until Apply is clicked
+    private FeedbackStatus? _pendingStatus;
     private string _replyBody = string.Empty;
     private string _logBody = string.Empty;
     private bool _showLogUserReply;
 
-    // Delete
+    // ── Delete ──
     private bool _showDelete;
     private bool _deleting;
     private UserFeedbackDto? _deleteTarget;
@@ -343,61 +401,43 @@
         var userResult = await _globalAuth.GetAuthenticatedUserAsync();
         _isSuperAdmin = userResult.IsSuccess && userResult.Data?.UserType == UserType.SuperAdmin;
         if (_isSuperAdmin)
-            await LoadPage(reset: true);
+            await LoadPage(1);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private async Task LoadPage(int page)
     {
-        if (_isSuperAdmin && _hasMore && !_observerAttached && _selfRef is not null)
-        {
-            try
-            {
-                await JsRt.InvokeVoidAsync("eval", @"
-                    if (!window.__setupAdminFeedbackScroll) {
-                        window.__setupAdminFeedbackScroll = function(dotNetRef, sentinel) {
-                            if (!sentinel || sentinel.__afObserved) return;
-                            sentinel.__afObserved = true;
-                            const observer = new IntersectionObserver(function(entries) {
-                                entries.forEach(function(e) {
-                                    if (e.isIntersecting) dotNetRef.invokeMethodAsync('OnSentinelVisible');
-                                });
-                            }, { rootMargin: '200px' });
-                            observer.observe(sentinel);
-                        };
-                    }");
-                await JsRt.InvokeVoidAsync("__setupAdminFeedbackScroll", _selfRef, _sentinelRef);
-                _observerAttached = true;
-            }
-            catch { /* SSR / prerender */ }
-        }
-    }
+        if (page < 1) page = 1;
 
-    [JSInvokable]
-    public async Task OnSentinelVisible()
-    {
-        if (!_loading && _hasMore)
-            await LoadPage(reset: false);
-    }
-
-    private async Task LoadPage(bool reset)
-    {
-        _loading = true;
+        _isPageLoading = true;
         _error = null;
-        if (reset) { _offset = 0; _items.Clear(); _observerAttached = false; }
         StateHasChanged();
 
         try
         {
-            _selfRef ??= DotNetObjectReference.Create(this);
+            var offset = (page - 1) * _pageSize;
             var resp = await _feedbackApi.GetFeedbackPaged(
-                _searchTerm, _filterStatus, _offset, PageSize, _sortByColumn, _sortAscending);
+                _searchTerm, _filterStatus, offset, _pageSize, _sortByColumn, _sortAscending);
 
             if (resp.IsSuccessStatusCode && resp.Content is not null)
             {
-                _items.AddRange(resp.Content.Data ?? new());
-                _offset = _items.Count;
-                _hasMore = resp.Content.HasMore;
-                _totalSize = resp.Content.TotalSize;
+                var data = resp.Content;
+                _totalItems = data.TotalSize;
+
+                // Snap to last page if current page fell off the end
+                if ((data.Data is null || data.Data.Count == 0) && _totalItems > 0 && page > 1)
+                {
+                    var lastPage = (int)Math.Ceiling(_totalItems / (double)_pageSize);
+                    if (page > lastPage)
+                    {
+                        _isPageLoading = false;
+                        _isInitialLoading = false;
+                        await LoadPage(lastPage);
+                        return;
+                    }
+                }
+
+                _items = data.Data ?? new();
+                _currentPage = page;
             }
             else
             {
@@ -410,13 +450,39 @@
         }
         finally
         {
-            _loading = false;
-            _observerAttached = false;
+            _isInitialLoading = false;
+            _isPageLoading = false;
             StateHasChanged();
         }
     }
 
-    private async Task LoadMore() => await LoadPage(reset: false);
+    private async Task GoToPage(int page)
+    {
+        if (page < 1) page = 1;
+        if (_totalPages > 0 && page > _totalPages) page = _totalPages;
+        if (page == _currentPage || _isPageLoading) return;
+        await LoadPage(page);
+    }
+
+    private IEnumerable<int> GetPageWindow()
+    {
+        var total = _totalPages;
+        if (total <= 0) yield break;
+
+        var shown = new SortedSet<int> { 1, total };
+        for (var p = _currentPage - 1; p <= _currentPage + 1; p++)
+        {
+            if (p >= 1 && p <= total) shown.Add(p);
+        }
+
+        var prev = 0;
+        foreach (var p in shown)
+        {
+            if (prev != 0 && p - prev > 1) yield return -1; // ellipsis marker
+            yield return p;
+            prev = p;
+        }
+    }
 
     private async Task OnSearchInput(ChangeEventArgs e)
     {
@@ -426,7 +492,7 @@
         try
         {
             await Task.Delay(350, _searchCts.Token);
-            await LoadPage(reset: true);
+            await LoadPage(1);
         }
         catch (TaskCanceledException) { /* debounced */ }
     }
@@ -434,7 +500,7 @@
     private async Task SetStatusFilter(FeedbackStatus? status)
     {
         _filterStatus = status;
-        await LoadPage(reset: true);
+        await LoadPage(1);
     }
 
     // ── Thread modal ──
@@ -447,6 +513,7 @@
         _replyBody = string.Empty;
         _logBody = string.Empty;
         _showLogUserReply = false;
+        _pendingStatus = null;
         _thread = null;
         StateHasChanged();
 
@@ -454,9 +521,15 @@
         {
             var resp = await _feedbackApi.GetFeedbackById(id);
             if (resp.IsSuccessStatusCode && resp.Content is not null)
+            {
                 _thread = resp.Content;
+                // Initialise staging state from the loaded thread
+                _pendingStatus = _thread.Status;
+            }
             else
+            {
                 _toastService.Show("Could not load feedback thread.", ToastType.Error);
+            }
         }
         catch (Exception ex)
         {
@@ -469,96 +542,105 @@
         }
     }
 
-    private async Task OnStatusChange(ChangeEventArgs e)
+    // Updates ONLY the local staging state — no API call
+    private void OnStatusChange(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<FeedbackStatus>(e.Value?.ToString(), out var newStatus))
+            _pendingStatus = newStatus;
+    }
+
+    // Cancel — discard everything, no API calls
+    private void CancelThread()
+    {
+        _pendingStatus = null;
+        _replyBody = string.Empty;
+        _logBody = string.Empty;
+        _showLogUserReply = false;
+        _showThread = false;
+    }
+
+    // Apply — commit staged changes in prescribed order
+    private async Task ApplyThreadChanges()
     {
         if (_thread?.Id is null) return;
-        if (!Enum.TryParse<FeedbackStatus>(e.Value?.ToString(), out var newStatus)) return;
-        _threadBusy = true;
-        try
-        {
-            var resp = await _feedbackApi.UpdateFeedbackStatus(_thread.Id, newStatus);
-            if (resp.IsSuccessStatusCode && resp.Content is not null)
-            {
-                _thread.Status = resp.Content.Status;
-                // Update list row in-place
-                var row = _items.FirstOrDefault(x => x.Id == _thread.Id);
-                if (row is not null) row.Status = _thread.Status;
-                _toastService.Show("Status updated.", ToastType.Success);
-            }
-            else
-            {
-                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            _toastService.Show(ex.Message, ToastType.Error);
-        }
-        finally
-        {
-            _threadBusy = false;
-        }
-    }
 
-    private async Task SendReply()
-    {
-        if (_thread?.Id is null || string.IsNullOrWhiteSpace(_replyBody)) return;
-        _threadBusy = true;
-        try
-        {
-            var resp = await _feedbackApi.ReplyToFeedback(_thread.Id,
-                new FeedbackReplyCreateDto { Body = _replyBody });
-            if (resp.IsSuccessStatusCode && resp.Content is not null)
-            {
-                _thread = resp.Content;
-                // Update list row status in-place
-                var row = _items.FirstOrDefault(x => x.Id == _thread.Id);
-                if (row is not null) row.Status = _thread.Status;
-                _replyBody = string.Empty;
-                _toastService.Show($"Reply sent to {_thread.Email}.", ToastType.Success);
-            }
-            else
-            {
-                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            _toastService.Show(ex.Message, ToastType.Error);
-        }
-        finally
-        {
-            _threadBusy = false;
-        }
-    }
+        // If nothing changed, just close
+        var hasLog = !string.IsNullOrWhiteSpace(_logBody);
+        var hasReply = !string.IsNullOrWhiteSpace(_replyBody);
+        var statusChanged = _pendingStatus.HasValue && _pendingStatus != _thread.Status;
 
-    private async Task LogUserReply()
-    {
-        if (_thread?.Id is null || string.IsNullOrWhiteSpace(_logBody)) return;
+        if (!hasLog && !hasReply && !statusChanged)
+        {
+            _showThread = false;
+            return;
+        }
+
+        // Capture the original status before any mutations
+        var originalStatus = _thread.Status;
+
         _threadBusy = true;
+        StateHasChanged();
         try
         {
-            var resp = await _feedbackApi.LogUserReply(_thread.Id,
-                new FeedbackReplyCreateDto { Body = _logBody });
-            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            // 1. Log user reply first (if provided)
+            if (hasLog)
             {
-                _thread = resp.Content;
-                _logBody = string.Empty;
-                _showLogUserReply = false;
-                _toastService.Show("User reply logged.", ToastType.Success);
+                var logResp = await _feedbackApi.LogUserReply(_thread.Id,
+                    new FeedbackReplyCreateDto { Body = _logBody });
+                if (!logResp.IsSuccessStatusCode)
+                {
+                    _toastService.Show(_apiResponseHandler.GetApiErrorMessage(logResp), ToastType.Error);
+                    return;
+                }
+                if (logResp.Content is not null)
+                    _thread = logResp.Content;
             }
-            else
+
+            // 2. Send admin reply (server may auto-advance Pending→UnderReview as side effect)
+            if (hasReply)
             {
-                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+                var replyResp = await _feedbackApi.ReplyToFeedback(_thread.Id,
+                    new FeedbackReplyCreateDto { Body = _replyBody });
+                if (!replyResp.IsSuccessStatusCode)
+                {
+                    _toastService.Show(_apiResponseHandler.GetApiErrorMessage(replyResp), ToastType.Error);
+                    return;
+                }
+                if (replyResp.Content is not null)
+                    _thread = replyResp.Content;
             }
+
+            // 3. Apply explicit status override LAST so admin's choice wins over auto-advance
+            if (statusChanged && _pendingStatus.HasValue)
+            {
+                // Compare against the original status we captured before step 2 mutated _thread
+                var statusResp = await _feedbackApi.UpdateFeedbackStatus(_thread.Id, _pendingStatus.Value);
+                if (!statusResp.IsSuccessStatusCode)
+                {
+                    _toastService.Show(_apiResponseHandler.GetApiErrorMessage(statusResp), ToastType.Error);
+                    return;
+                }
+                if (statusResp.Content is not null)
+                    _thread = statusResp.Content;
+            }
+
+            // Update the matching list row in-place
+            var row = _items.FirstOrDefault(x => x.Id == _thread.Id);
+            if (row is not null)
+                row.Status = _thread.Status;
+
+            _toastService.Show("Changes applied.", ToastType.Success);
+            _showThread = false;
         }
         catch (Exception ex)
         {
             _toastService.Show(ex.Message, ToastType.Error);
+            // Keep dialog open so admin can retry
         }
         finally
         {
             _threadBusy = false;
+            StateHasChanged();
         }
     }
 
@@ -581,7 +663,10 @@
                 _toastService.Show("Feedback deleted.", ToastType.Success);
                 _showDelete = false;
                 _items.RemoveAll(x => x.Id == _deleteTarget.Id);
-                _totalSize = Math.Max(0, _totalSize - 1);
+                _totalItems = Math.Max(0, _totalItems - 1);
+                // If the current page is now empty (and not the only page), go back
+                if (_items.Count == 0 && _currentPage > 1)
+                    await LoadPage(_currentPage - 1);
             }
             else
             {

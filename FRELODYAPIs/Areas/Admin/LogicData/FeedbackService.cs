@@ -583,6 +583,75 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         }
         #endregion
 
+        #region Get My Feedback Paged (user-scoped, keyword search)
+        public async Task<ServiceResult<PaginationDetails<UserFeedbackDto>>> GetMyFeedbackPagedAsync(
+            string? keywords, int offSet, int limit,
+            string sortByColumn, bool sortAscending, CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_userId))
+                    return ServiceResult<PaginationDetails<UserFeedbackDto>>.Success(
+                        new PaginationDetails<UserFeedbackDto> { OffSet = offSet, Limit = limit, TotalSize = 0, HasMore = false, Data = new List<UserFeedbackDto>() });
+
+                var query = _context.UserFeedback
+                    .AsNoTracking()
+                    .Where(f => f.UserId == _userId);
+
+                if (!string.IsNullOrWhiteSpace(keywords))
+                {
+                    query = query.Where(f =>
+                        (f.Subject != null && f.Subject.Contains(keywords)) ||
+                        (f.Comment != null && f.Comment.Contains(keywords)));
+                }
+
+                var result = await query
+                    .Select(f => new UserFeedbackDto
+                    {
+                        Id = f.Id,
+                        DateCreated = f.DateCreated,
+                        DateModified = f.DateModified,
+                        CreatedBy = f.CreatedBy,
+                        ModifiedBy = f.ModifiedBy,
+                        IsDeleted = f.IsDeleted,
+                        TenantId = f.TenantId,
+                        Subject = f.Subject,
+                        Comment = f.Comment,
+                        Title = f.Title,
+                        Email = f.Email,
+                        FullName = f.FullName,
+                        SongId = f.SongId,
+                        UserId = f.UserId,
+                        Status = f.Status,
+                        Song = f.Song == null ? null : new FRELODYAPP.Dtos.SongDto
+                        {
+                            Id = f.Song.Id,
+                            Title = f.Song.Title
+                        },
+                        Replies = f.Replies == null ? null : f.Replies
+                            .OrderBy(r => r.DateCreated)
+                            .Select(r => new FeedbackReplyDto
+                            {
+                                Id = r.Id,
+                                Body = r.Body,
+                                Direction = r.Direction,
+                                DateCreated = r.DateCreated,
+                                AuthorUserId = r.AuthorUserId,
+                                FeedbackId = r.FeedbackId
+                            }).ToList()
+                    })
+                    .ToPaginatedResultAsync(offSet, limit, cancellationToken, sortByColumn, sortAscending);
+
+                return ServiceResult<PaginationDetails<UserFeedbackDto>>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving paged feedback for user {UserId}", _userId);
+                return ServiceResult<PaginationDetails<UserFeedbackDto>>.Failure(ex);
+            }
+        }
+        #endregion
+
         #region Has My Feedback (cheap existence check)
         public async Task<ServiceResult<bool>> HasMyFeedbackAsync()
         {

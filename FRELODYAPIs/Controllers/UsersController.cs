@@ -5,6 +5,7 @@ using FRELODYLIB.ServiceHandler;
 using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos.HybridDtos;
 using FRELODYSHRD.Dtos.UserDtos;
+using FRELODYSHRD.ModelTypes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -95,9 +96,10 @@ namespace FRELODYAPIs.Controllers
             [FromQuery] int limit = 10,
             [FromQuery] string sortByColumn = "FirstName",
             [FromQuery] bool sortAscending = true,
+            [FromQuery] UserAccountFilter filter = UserAccountFilter.Active,
             CancellationToken cancellationToken = default)
         {
-            var result = await _userService.GetAllUsers(offSet, limit, sortByColumn, sortAscending, cancellationToken);
+            var result = await _userService.GetAllUsers(offSet, limit, sortByColumn, sortAscending, cancellationToken, filter);
 
             if (!result.IsSuccess)
             {
@@ -116,10 +118,11 @@ namespace FRELODYAPIs.Controllers
             [FromQuery] int limit = 10,
             [FromQuery] string sortByColumn = "FirstName",
             [FromQuery] bool sortAscending = true,
+            [FromQuery] UserAccountFilter filter = UserAccountFilter.Active,
             CancellationToken cancellationToken = default)
         {
             var result = await _userService.SearchForUsers(
-                keywords ?? string.Empty, offSet, limit, sortByColumn, sortAscending, cancellationToken);
+                keywords ?? string.Empty, offSet, limit, sortByColumn, sortAscending, cancellationToken, filter);
 
             if (!result.IsSuccess)
             {
@@ -167,6 +170,19 @@ namespace FRELODYAPIs.Controllers
         public async Task<IActionResult> EnableUser([FromQuery] string userId)
         {
             var result = await _userService.EnableUser(userId);
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, result.Error);
+            }
+            return Ok(result.Data);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = UserRoles.SuperAdmin)]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> RestoreUser([FromQuery] string userId)
+        {
+            var result = await _userService.RestoreUser(userId);
             if (!result.IsSuccess)
             {
                 return StatusCode(result.StatusCode, result.Error);
