@@ -30,8 +30,6 @@
     [Parameter] public string SongId { get; set; } = string.Empty;
     [SupplyParameterFromQuery(Name = "shared")] public bool Shared { get; set; }
 
-    [Inject] private NavigationManager _navManager { get; set; } = default!;
-
     private bool IsPreview => string.IsNullOrEmpty(SongId)
         && _navManager.Uri.Contains("/preview", StringComparison.OrdinalIgnoreCase);
 }

@@ -24,7 +24,7 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<OAuthConfigDto>> GetGoogleOAuthConfig();
 
         [Get("/api/authorization/get-user-profile")]
-        Task<IApiResponse<UpdateUserProfileOutDto>> GetUserProfile([Query] string id = null, [Query] string userName = null);
+        Task<IApiResponse<UpdateUserProfileOutDto>> GetUserProfile([Query] string? id = null, [Query] string? userName = null);
 
         [Get("/api/authorization/get-users-for-combo-boxes")]
         Task<IApiResponse<List<ComboBoxDto>>> GetUsersForComboBoxes();
