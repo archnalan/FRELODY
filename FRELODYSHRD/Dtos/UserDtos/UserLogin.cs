@@ -10,7 +10,8 @@ namespace FRELODYAPP.Dtos.UserDtos
         [MinLength(4)]
         public string Password { get; set; }
         [Phone]
-        public string? PhoneNumber { get; set; } 
-
+        public string? PhoneNumber { get; set; }
+        public string? DeviceId { get; set; }
+        public string? DeviceName { get; set; }
     }
 }

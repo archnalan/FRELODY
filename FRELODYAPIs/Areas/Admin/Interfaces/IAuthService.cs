@@ -25,6 +25,7 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         Task<ServiceResult<LoginResponseDto>> RefreshToken(string accessToken, string refreshToken);
         Task<ServiceResult<bool>> RevokeToken(string refreshToken);
         Task<ServiceResult<bool>> LogSecurityEvent(string userId, string eventType, string description, string ipAddress);
-
+        Task<ServiceResult<List<DeviceSessionDto>>> GetActiveSessions(string userId, string? currentDeviceId);
+        Task<ServiceResult<bool>> RevokeOtherDeviceSessions(string userId, string currentDeviceId);
     }
 }

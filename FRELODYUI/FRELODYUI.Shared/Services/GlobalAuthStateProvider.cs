@@ -22,14 +22,17 @@ namespace FRELODYUI.Shared.Services
         private readonly NavigationManager _navigationManager;
         private readonly ILogger<GlobalAuthStateProvider> _logger;
         
-        // Static in-memory cache so we don't lose state across scoped instances or when storage is temporarily unavailable
-        private static LoginResponseDto? _cachedSession;
+        // Instance-level cache (NOT static) — each DI scope gets its own instance.
+        // In Blazor WASM a scope = one browser tab; in SSR a scope = one HTTP request.
+        // A static field here caused cross-user session leakage during server-side
+        // pre-rendering: User A's session would bleed into User B's rendered HTML.
+        private LoginResponseDto? _cachedSession;
 
         /// <summary>
-        /// Returns the in-memory cached session. Used by AuthHeaderHandler as a fallback
-        /// when localStorage is unavailable (e.g. during server-side prerendering).
+        /// Returns the instance-level cached session. Used by AuthHeaderHandler as a
+        /// fallback when localStorage is unavailable during server-side pre-rendering.
         /// </summary>
-        public static LoginResponseDto? CachedSession => _cachedSession;
+        public LoginResponseDto? CachedSession => _cachedSession;
 
         public GlobalAuthStateProvider(
             IStorageService localStorage, 
@@ -201,11 +204,15 @@ namespace FRELODYUI.Shared.Services
             {
                 _cachedSession = null;
                 await ClearSessionAsync();
-                
+
+                // Clear the remembered-user key so ContinueAsPrompt won't offer
+                // this account to the next person who uses the same device.
+                try { await _localStorage.RemoveItemAsync(RememberedUserKey); } catch { }
+
                 var identity = new ClaimsIdentity();
                 var user = new ClaimsPrincipal(identity);
                 NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
-                
+
                 _logger.LogInformation("User logged out successfully");
                 return ServiceResult<bool>.Success(true);
             }

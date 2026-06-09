@@ -18,14 +18,21 @@ namespace FRELODYUI.Shared.Services
         private readonly ILogger<AuthHeaderHandler> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly SessionEndedNotifier _sessionEnded;
+        private readonly GlobalAuthStateProvider _globalAuth;
         private static readonly SemaphoreSlim _refreshLock = new(1, 1);
 
-        public AuthHeaderHandler(IStorageService localStorage, ILogger<AuthHeaderHandler> logger, IHttpClientFactory httpClientFactory, SessionEndedNotifier sessionEnded)
+        public AuthHeaderHandler(
+            IStorageService localStorage,
+            ILogger<AuthHeaderHandler> logger,
+            IHttpClientFactory httpClientFactory,
+            SessionEndedNotifier sessionEnded,
+            GlobalAuthStateProvider globalAuth)
         {
             _localStorage = localStorage;
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _sessionEnded = sessionEnded;
+            _globalAuth = globalAuth;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -34,9 +41,10 @@ namespace FRELODYUI.Shared.Services
             {
                 var sessionModel = await _localStorage.GetItemAsync<LoginResponseDto>("sessionState");
 
-                // Fall back to the static in-memory cache when localStorage is unavailable
-                // (e.g. during server-side prerendering where JS interop isn't available)
-                sessionModel ??= GlobalAuthStateProvider.CachedSession;
+                // Fall back to the instance cache when localStorage is unavailable
+                // (e.g. during server-side prerendering where JS interop isn't ready yet).
+                // Using the scoped instance (not a static field) prevents cross-user leakage.
+                sessionModel ??= _globalAuth.CachedSession;
 
                 if (sessionModel != null && IsTokenExpired(sessionModel.Token))
                 {

@@ -1,8 +1,30 @@
 @page "/login"
 @layout LandingLayout
 @inject ILogger<Login> _logger
+@inject DeviceService _deviceService
 
 <PageTitle>Login - FRELODY</PageTitle>
+
+@if (_showOtherDevicesPrompt)
+{
+    <div class="other-devices-banner">
+        <div class="other-devices-inner">
+            <div class="other-devices-body">
+                <i class="bi bi-devices me-2"></i>
+                <span>You're signed in on <strong>@_otherDevicesCount other device@(_otherDevicesCount == 1 ? "" : "s")</strong>.</span>
+            </div>
+            <div class="other-devices-actions">
+                <button class="btn btn-sm btn-danger" @onclick="RevokeOtherDevicesAsync">
+                    Log out of all others
+                </button>
+                <button class="btn btn-sm btn-outline-light" @onclick="() => { _showOtherDevicesPrompt = false; _ = NavigateToReturnUrlAsync(); }">
+                    Keep all
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @if (showSignUp)
 {
     <Register FullBody="true" ReturnUrl="@ReturnUrl" OnRegisterSuccess="@HandleRegisterSuccess" GoBackToSignInModal=@(() => showSignUp=false) />
@@ -316,6 +338,8 @@ else
     private string successMessage = "";
     private string resetErrorMessage = "";
     private string resetSuccessMessage = "";
+    private bool _showOtherDevicesPrompt = false;
+    private int _otherDevicesCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -349,13 +373,24 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !string.IsNullOrEmpty(_pendingOAuthCode))
+        if (firstRender)
         {
-            var code = _pendingOAuthCode;
-            _pendingOAuthCode = null;
-            // Clean URL so refresh won't re-process the one-time code
-            await JsRt.InvokeVoidAsync("history.replaceState", null, "", "/login");
-            await HandleGoogleOAuthCallback(code);
+            // Pre-populate device info so it's sent with the login request.
+            try
+            {
+                loginModel.DeviceId = await _deviceService.GetOrCreateDeviceIdAsync();
+                loginModel.DeviceName = await _deviceService.GetDeviceNameAsync();
+            }
+            catch { }
+
+            if (!string.IsNullOrEmpty(_pendingOAuthCode))
+            {
+                var code = _pendingOAuthCode;
+                _pendingOAuthCode = null;
+                // Clean URL so refresh won't re-process the one-time code
+                await JsRt.InvokeVoidAsync("history.replaceState", null, "", "/login");
+                await HandleGoogleOAuthCallback(code);
+            }
         }
     }
 
@@ -376,14 +411,30 @@ else
                 if (authResult.IsSuccess)
                 {
                     _logger.LogInformation("User logged in successfully");
-                    successMessage = "Login successful! Redirecting...";
-                    StateHasChanged();
+
                     var userId = await _globalAuth.GetCurrentUserId();
-                    if(!string.IsNullOrEmpty(userId))
+                    if (!string.IsNullOrEmpty(userId))
                     {
                         await _userSettings.LoadUserSettingsAsync(userId);
                     }
-                    await Task.Delay(1000); // Brief delay to show success message
+
+                    // Show other-devices prompt before redirecting (non-blocking)
+                    var otherCount = response.Content?.OtherActiveSessionsCount ?? 0;
+                    if (otherCount > 0)
+                    {
+                        _otherDevicesCount = otherCount;
+                        _showOtherDevicesPrompt = true;
+                        StateHasChanged();
+                        // Give the user 8 s to act; then redirect automatically
+                        await Task.Delay(8000);
+                        _showOtherDevicesPrompt = false;
+                    }
+                    else
+                    {
+                        successMessage = "Login successful! Redirecting...";
+                        StateHasChanged();
+                        await Task.Delay(800);
+                    }
 
                     if (OnLoginSuccess.HasDelegate)
                     {
@@ -699,6 +750,27 @@ else
         catch
         {
             return "An error occurred. Please try again.";
+        }
+    }
+
+    private async Task RevokeOtherDevicesAsync()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(loginModel.DeviceId)) return;
+            await _authApi.RevokeOtherSessions(new FRELODYSHRD.Dtos.AuthDtos.RevokeOtherSessionsDto
+            {
+                DeviceId = loginModel.DeviceId
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not revoke other device sessions");
+        }
+        finally
+        {
+            _showOtherDevicesPrompt = false;
+            await NavigateToReturnUrlAsync();
         }
     }
 

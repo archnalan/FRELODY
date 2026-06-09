@@ -506,3 +506,37 @@
         padding: 2.5rem;
     }
 }
+
+/* ── Other-devices banner ─────────────────────────────────────── */
+
+.other-devices-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 99999;
+    background: #1a1a2e;
+    color: #fff;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(255,255,255,.15);
+}
+
+.other-devices-inner {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.other-devices-body {
+    flex: 1;
+    font-size: var(--k-font-size-sm);
+}
+
+.other-devices-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}

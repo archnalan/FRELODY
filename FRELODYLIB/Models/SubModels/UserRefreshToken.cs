@@ -25,6 +25,14 @@ namespace FRELODYAPP.Models.SubModels
 
         public string? UserAgent { get; set; }
 
+        [MaxLength(128)]
+        public string? DeviceId { get; set; }
+
+        [MaxLength(250)]
+        public string? DeviceName { get; set; }
+
+        public DateTime? LastSeenAt { get; set; }
+
         [ForeignKey("UserId")]
         public virtual User? User { get; set; }
     }

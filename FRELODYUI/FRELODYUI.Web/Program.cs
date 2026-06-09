@@ -48,6 +48,7 @@ builder.Services.AddScoped<ISongExtractionAiService, SongExtractionAiService>();
 builder.Services.AddScoped<TabManagementService>();
 builder.Services.AddScoped<HeroDataService>();
 builder.Services.AddScoped<UserSettingsService>();
+builder.Services.AddScoped<DeviceService>();
 builder.Services.AddScoped<GlobalAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
                 provider.GetRequiredService<GlobalAuthStateProvider>());

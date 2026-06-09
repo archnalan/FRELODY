@@ -238,14 +238,40 @@ namespace FRELODYAPIs.Controllers
         public async Task<IActionResult> LogSecurityEvent([FromBody] LogSecurityEventDto logSecurityEventDto)
         {
             var result = await _authorizationDAL.LogSecurityEvent(
-                logSecurityEventDto.UserId, 
-                logSecurityEventDto.EventType, 
-                logSecurityEventDto.Description, 
+                logSecurityEventDto.UserId,
+                logSecurityEventDto.EventType,
+                logSecurityEventDto.Description,
                 logSecurityEventDto.IpAddress);
             if (!result.IsSuccess)
             {
                 return StatusCode(result.StatusCode, result.Error);
             }
+            return Ok(result.Data);
+        }
+
+        [HttpGet]
+        [Authorize]
+        [ProducesResponseType(typeof(List<DeviceSessionDto>), 200)]
+        public async Task<IActionResult> GetSessions([FromQuery] string? deviceId)
+        {
+            var userId = User.FindFirst("UserId")?.Value
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var result = await _authorizationDAL.GetActiveSessions(userId!, deviceId);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result.Error);
+            return Ok(result.Data);
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> RevokeOtherSessions([FromBody] RevokeOtherSessionsDto dto)
+        {
+            var userId = User.FindFirst("UserId")?.Value
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var result = await _authorizationDAL.RevokeOtherDeviceSessions(userId!, dto.DeviceId);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result.Error);
             return Ok(result.Data);
         }
     }

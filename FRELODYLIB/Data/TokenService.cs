@@ -14,6 +14,7 @@ using System.Security.Cryptography;
 using System.Text;
 using FRELODYLIB.ServiceHandler.ResultModels;
 using Mapster;
+using FRELODYSHRD.Dtos.AuthDtos;
 
 namespace FRELODYAPP.Data
 {
@@ -36,7 +37,7 @@ namespace FRELODYAPP.Data
             _logger = logger;
         }
 
-        public async Task<LoginResponseDto> GenerateTokens(User user, string? tenantId)
+        public async Task<LoginResponseDto> GenerateTokens(User user, string? tenantId, string? deviceId = null, string? deviceName = null)
         {
             //var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
             //var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -122,44 +123,115 @@ namespace FRELODYAPP.Data
             var accessToken = tokenHandler.WriteToken(token);
 
             string refreshToken = GenerateRefreshToken();
-            await StoreRefreshToken(user.Id, refreshToken);
+            await StoreRefreshToken(user.Id, refreshToken, deviceId, deviceName);
+
+            int otherSessions = deviceId != null
+                ? await CountOtherActiveSessions(user.Id, deviceId)
+                : 0;
 
             var result = new LoginResponseDto
             {
                 Token = accessToken,
                 TenantId = user.TenantId,
                 RefreshToken = refreshToken,
-                User = userClaimsDto
+                User = userClaimsDto,
+                DeviceId = deviceId,
+                OtherActiveSessionsCount = otherSessions
             };
 
             return result;
         }
 
-        private async Task StoreRefreshToken(string userId, string refreshToken)
+        private async Task StoreRefreshToken(string userId, string refreshToken, string? deviceId = null, string? deviceName = null)
         {
             int refreshTokenExpiryDays = _config.GetValue<int>("Jwt:RefreshTokenExpirationDays", 30);
-            // Save refresh token to database
-            var userRefreshToken = new UserRefreshToken
+            var now = DateTime.UtcNow;
+
+            UserRefreshToken? existing;
+            if (deviceId != null)
             {
-                UserId = userId,
-                Token = refreshToken,
-                ExpiryDate = DateTime.UtcNow.AddDays(refreshTokenExpiryDays)
-            };
-            // Check if user already has a refresh token
-            var existingToken = await _context.UserRefreshTokens
-                .FirstOrDefaultAsync(t => t.UserId == userId);
-            if (existingToken != null)
-            {
-                existingToken.Token = refreshToken;
-                existingToken.ExpiryDate = DateTime.UtcNow.AddDays(refreshTokenExpiryDays);
-                _context.UserRefreshTokens.Update(existingToken);
+                // Per-device: upsert by userId + deviceId
+                existing = await _context.UserRefreshTokens
+                    .FirstOrDefaultAsync(t => t.UserId == userId && t.DeviceId == deviceId);
             }
             else
             {
-                await _context.UserRefreshTokens.AddAsync(userRefreshToken);
+                // Legacy: one token per user (no device tracking)
+                existing = await _context.UserRefreshTokens
+                    .FirstOrDefaultAsync(t => t.UserId == userId && t.DeviceId == null);
+            }
+
+            if (existing != null)
+            {
+                existing.Token = refreshToken;
+                existing.ExpiryDate = now.AddDays(refreshTokenExpiryDays);
+                existing.RevokedDate = null;
+                existing.LastSeenAt = now;
+                if (deviceName != null) existing.DeviceName = deviceName;
+                _context.UserRefreshTokens.Update(existing);
+            }
+            else
+            {
+                await _context.UserRefreshTokens.AddAsync(new UserRefreshToken
+                {
+                    UserId = userId,
+                    Token = refreshToken,
+                    ExpiryDate = now.AddDays(refreshTokenExpiryDays),
+                    DeviceId = deviceId,
+                    DeviceName = deviceName,
+                    LastSeenAt = now
+                });
             }
             await _context.SaveChangesAsync();
+        }
 
+        private async Task<int> CountOtherActiveSessions(string userId, string currentDeviceId)
+        {
+            return await _context.UserRefreshTokens.CountAsync(t =>
+                t.UserId == userId &&
+                t.DeviceId != null &&
+                t.DeviceId != currentDeviceId &&
+                t.RevokedDate == null &&
+                t.ExpiryDate > DateTime.UtcNow);
+        }
+
+        public async Task<List<DeviceSessionDto>> GetActiveSessions(string userId, string? currentDeviceId)
+        {
+            var sessions = await _context.UserRefreshTokens
+                .Where(t => t.UserId == userId && t.RevokedDate == null && t.ExpiryDate > DateTime.UtcNow)
+                .OrderByDescending(t => t.LastSeenAt)
+                .Select(t => new DeviceSessionDto
+                {
+                    Id = t.Id,
+                    DeviceId = t.DeviceId,
+                    DeviceName = t.DeviceName ?? "Unknown device",
+                    IpAddress = t.IpAddress,
+                    LastSeenAt = t.LastSeenAt,
+                    IsCurrentDevice = t.DeviceId != null && t.DeviceId == currentDeviceId
+                })
+                .ToListAsync();
+            return sessions;
+        }
+
+        public async Task<ServiceResult<bool>> RevokeOtherDeviceSessions(string userId, string currentDeviceId)
+        {
+            try
+            {
+                var others = await _context.UserRefreshTokens
+                    .Where(t => t.UserId == userId &&
+                                t.DeviceId != currentDeviceId &&
+                                t.RevokedDate == null)
+                    .ToListAsync();
+                foreach (var t in others)
+                    t.RevokedDate = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error revoking other device sessions for user {UserId}", userId);
+                return ServiceResult<bool>.Failure(new ServerErrorException("Could not revoke other sessions"));
+            }
         }
 
         public async Task<ServiceResult<LoginResponseDto>> RefreshToken(string accessToken, string refreshToken)
@@ -206,14 +278,21 @@ namespace FRELODYAPP.Data
                     return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Invalid refresh token"));
                 }
 
+                if (storedRefreshToken.RevokedDate != null)
+                {
+                    return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Refresh token has been revoked"));
+                }
+
                 if (storedRefreshToken.ExpiryDate < DateTime.UtcNow)
                 {
-                    // Remove expired refresh token
-                    _context.UserRefreshTokens.Remove(storedRefreshToken);
+                    storedRefreshToken.RevokedDate = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
-
                     return ServiceResult<LoginResponseDto>.Failure(new BadRequestException("Refresh token expired"));
                 }
+
+                // Touch LastSeenAt on the stored record before rotating
+                storedRefreshToken.LastSeenAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
 
                 // Get tenant ID from the token
                 var tenantClaim = principal.Claims.FirstOrDefault(c => c.Type == "TenantId");
@@ -235,8 +314,8 @@ namespace FRELODYAPP.Data
                     return ServiceResult<LoginResponseDto>.Failure(new NotFoundException("User not found"));
                 }
 
-                // Generate new tokens
-                var newTokens = await GenerateTokens(user, tenantId);
+                // Generate new tokens, preserving the device association
+                var newTokens = await GenerateTokens(user, tenantId, storedRefreshToken.DeviceId, storedRefreshToken.DeviceName);
 
                 return ServiceResult<LoginResponseDto>.Success(newTokens);
             }
@@ -247,16 +326,16 @@ namespace FRELODYAPP.Data
             }
         }
 
-        public async Task<ServiceResult<bool>> RevokeRefreshToken(string userId)
+        public async Task<ServiceResult<bool>> RevokeRefreshToken(string tokenValue)
         {
             try
             {
-                var refreshToken = await _context.UserRefreshTokens
-                    .FirstOrDefaultAsync(t => t.UserId == userId);
+                var record = await _context.UserRefreshTokens
+                    .FirstOrDefaultAsync(t => t.Token == tokenValue);
 
-                if (refreshToken != null)
+                if (record != null)
                 {
-                    _context.UserRefreshTokens.Remove(refreshToken);
+                    record.RevokedDate = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
                 }
 

@@ -1,0 +1,25 @@
+.share-cta-bar {
+    background: var(--bs-primary);
+    color: #fff;
+    padding: 0.6rem 1rem;
+}
+
+.share-cta-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.share-cta-text {
+    flex: 1;
+    font-size: var(--k-font-size-sm);
+}
+
+.share-cta-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}

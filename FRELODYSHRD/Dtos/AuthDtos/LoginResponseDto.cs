@@ -10,5 +10,7 @@ namespace FRELODYAPP.Dtos.AuthDtos
         public string? TenantId { get; set; }
         public UserType? UserType { get; set; }
         public UserClaimsDto User { get; set; }
+        public string? DeviceId { get; set; }
+        public int OtherActiveSessionsCount { get; set; }
     }
 }

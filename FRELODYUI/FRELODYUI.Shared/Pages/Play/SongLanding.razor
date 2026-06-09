@@ -1,11 +1,36 @@
-﻿@page "/songs/landing/{SongId}"
+@page "/songs/landing/{SongId}"
 @page "/songs/landing/preview"
 @layout LandingLayout
+
+@if (Shared)
+{
+    <CascadingAuthenticationState>
+        <AuthorizeView>
+            <NotAuthorized>
+                <div class="share-cta-bar">
+                    <div class="share-cta-inner">
+                        <span class="share-cta-text">
+                            <i class="bi bi-music-note-beamed me-2"></i>
+                            Create a free account to save songs, build playlists, and more.
+                        </span>
+                        <div class="share-cta-actions">
+                            <a href="/register" class="btn btn-sm btn-primary">Sign up free</a>
+                            <a href="/login?returnUrl=@Uri.EscapeDataString(_navManager.ToBaseRelativePath(_navManager.Uri))" class="btn btn-sm btn-outline-secondary">Sign in</a>
+                        </div>
+                    </div>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </CascadingAuthenticationState>
+}
 
 <Song SongId="@SongId" IsPreview="@IsPreview" />
 
 @code {
     [Parameter] public string SongId { get; set; } = string.Empty;
+    [SupplyParameterFromQuery(Name = "shared")] public bool Shared { get; set; }
+
+    [Inject] private NavigationManager _navManager { get; set; } = default!;
 
     private bool IsPreview => string.IsNullOrEmpty(SongId)
         && _navManager.Uri.Contains("/preview", StringComparison.OrdinalIgnoreCase);

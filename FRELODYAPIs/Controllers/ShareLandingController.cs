@@ -78,10 +78,10 @@ public sealed class ShareLandingController : Controller
         if (link is null) return appOrigin;
 
         if (isPlaylist && !string.IsNullOrEmpty(link.PlaylistId))
-            return $"{appOrigin}/playlists/landing/{link.PlaylistId}/detail";
+            return $"{appOrigin}/playlists/landing/{link.PlaylistId}/detail?shared=1";
 
         if (!isPlaylist && !string.IsNullOrEmpty(link.SongId))
-            return $"{appOrigin}/songs/landing/{link.SongId}";
+            return $"{appOrigin}/songs/landing/{link.SongId}?shared=1";
 
         return appOrigin;
     }

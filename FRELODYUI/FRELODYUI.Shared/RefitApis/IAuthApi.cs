@@ -58,5 +58,11 @@ namespace FRELODYUI.Shared.RefitApis
 
         [Post("/api/authorization/log-security-event")]
         Task<IApiResponse<bool>> LogSecurityEvent([Body] LogSecurityEventDto logSecurityEventDto);
+
+        [Get("/api/authorization/get-sessions")]
+        Task<IApiResponse<List<DeviceSessionDto>>> GetSessions([Query] string? deviceId = null);
+
+        [Post("/api/authorization/revoke-other-sessions")]
+        Task<IApiResponse<bool>> RevokeOtherSessions([Body] RevokeOtherSessionsDto dto);
     }
 }

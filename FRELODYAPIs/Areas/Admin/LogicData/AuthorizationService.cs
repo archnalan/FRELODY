@@ -346,7 +346,7 @@ namespace FRELODYAPP.Data
                         }
                     }
 
-                    var token = await _tokenService.GenerateTokens(user, user.TenantId);
+                    var token = await _tokenService.GenerateTokens(user, user.TenantId, userLogin.DeviceId, userLogin.DeviceName);
 
                     // **NEW: Set claims in HTTP context**
                     await SetUserClaimsInContext(user, user.TenantId);
@@ -1152,7 +1152,8 @@ namespace FRELODYAPP.Data
             if (storedToken == null)
                 return ServiceResult<bool>.Failure(new NotFoundException("Refresh token not found"));
 
-            var result = await _tokenService.RevokeRefreshToken(storedToken.UserId);
+            // Revoke only the specific token (device-scoped logout)
+            var result = await _tokenService.RevokeRefreshToken(refreshToken);
             if (result.IsSuccess)
             {
                 await _securityUtilityService.LogSecurityEvent(
@@ -1164,6 +1165,36 @@ namespace FRELODYAPP.Data
             }
             return result;
         }
+
+        public async Task<ServiceResult<List<DeviceSessionDto>>> GetActiveSessions(string userId, string? currentDeviceId)
+        {
+            try
+            {
+                var sessions = await _tokenService.GetActiveSessions(userId, currentDeviceId);
+                return ServiceResult<List<DeviceSessionDto>>.Success(sessions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching active sessions for user {UserId}", userId);
+                return ServiceResult<List<DeviceSessionDto>>.Failure(new ServerErrorException("Could not retrieve sessions"));
+            }
+        }
+
+        public async Task<ServiceResult<bool>> RevokeOtherDeviceSessions(string userId, string currentDeviceId)
+        {
+            var result = await _tokenService.RevokeOtherDeviceSessions(userId, currentDeviceId);
+            if (result.IsSuccess)
+            {
+                await _securityUtilityService.LogSecurityEvent(
+                    userId,
+                    "TokenRevoke",
+                    "All other device sessions revoked",
+                    _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString()
+                );
+            }
+            return result;
+        }
+
         public async Task<ServiceResult<bool>> LogSecurityEvent(string userId, string eventType, string description, string ipAddress)
         {
             await _securityUtilityService.LogSecurityEvent(userId, eventType, description, ipAddress);
