@@ -24,6 +24,15 @@ namespace FRELODYLIB.Models
 
         public DateTime UnlockedAt { get; set; } = DateTime.UtcNow;
 
+        /// <summary>
+        /// Play-audit trail: how many times the song was opened within its window and
+        /// when it was last opened. The unlock itself is play #1; re-plays bump these
+        /// without consuming quota.
+        /// </summary>
+        public int PlayCount { get; set; } = 1;
+
+        public DateTime LastPlayedAt { get; set; } = DateTime.UtcNow;
+
         // Denormalized snapshots so the "Today's songs" page renders without a
         // cross-platform join to YouTubeVideo / TikTokVideo.
         [StringLength(500)]

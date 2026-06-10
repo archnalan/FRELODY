@@ -38,6 +38,8 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -260,6 +262,38 @@ builder.Services.AddRazorPages();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, OrgRolePolicyProvider>();
 builder.Services.AddSingleton<IAuthorizationHandler, OrgRoleAuthorizationHandler>();
 builder.Services.AddAuthorization();
+
+// Burst protection on the expensive analysis endpoints, partitioned by user — not IP —
+// so one user can't flood ChordMini while NAT'd users aren't punished collectively.
+// The daily quota meters spend; this meters request rate. Anonymous callers (who can't
+// consume quota anyway) fall back to a per-IP partition.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, ct) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync(
+            "{\"message\":\"Too many analysis requests. Give it a minute and try again.\"}", ct);
+    };
+    options.AddPolicy("analysis", httpContext =>
+    {
+        // The JWT packs the user payload into a single "user" claim; its raw value is
+        // unique per user, which is all a partition key needs.
+        var userKey = httpContext.User?.Claims?
+            .FirstOrDefault(c => c.Type.Equals("user", StringComparison.OrdinalIgnoreCase))?.Value;
+        var key = !string.IsNullOrEmpty(userKey)
+            ? $"u:{userKey}"
+            : $"ip:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
+});
 
 // Startup seeders for Identity roles + SuperAdmin.
 builder.Services.AddScoped<RoleSeeder>();
@@ -496,6 +530,8 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthentication();
+// After authentication so the "analysis" policy can partition by the user claim.
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllerRoute(

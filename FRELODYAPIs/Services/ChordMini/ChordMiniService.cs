@@ -128,6 +128,59 @@ namespace FRELODYAPIs.Services.ChordMini
             }
         }
 
+        public async Task<LyricsResult> GetLyricsAsync(
+            string? artist, string? title, string? searchQuery, CancellationToken ct = default)
+        {
+            var miss = new LyricsResult(false, false, null, [], null);
+            try
+            {
+                object body = !string.IsNullOrWhiteSpace(artist) && !string.IsNullOrWhiteSpace(title)
+                    ? new { artist, title }
+                    : new { search_query = searchQuery ?? title ?? string.Empty };
+
+                using var resp = await _chordmini.PostAsync("/api/lrclib-lyrics", JsonContent(body), ct);
+                var raw = await resp.Content.ReadAsStringAsync(ct);
+                if (!resp.IsSuccessStatusCode)
+                    return miss;
+
+                var parsed = JsonSerializer.Deserialize<LrclibResponse>(raw, _json);
+                if (parsed is null || !parsed.Found)
+                    return miss;
+
+                return new LyricsResult(
+                    true,
+                    parsed.HasSynchronized,
+                    parsed.Metadata?.Duration,
+                    (parsed.SynchronizedLyrics ?? []).Select(l => new LyricsLine(l.Text ?? string.Empty, l.Time)).ToList(),
+                    parsed.PlainLyrics);
+            }
+            catch when (!ct.IsCancellationRequested)
+            {
+                // Lyrics are an enhancement — a lookup failure must never sink the caller.
+                return miss;
+            }
+        }
+
+        private sealed class LrclibResponse
+        {
+            [JsonPropertyName("found")] public bool Found { get; set; }
+            [JsonPropertyName("has_synchronized")] public bool HasSynchronized { get; set; }
+            [JsonPropertyName("plain_lyrics")] public string? PlainLyrics { get; set; }
+            [JsonPropertyName("metadata")] public LrclibMetadata? Metadata { get; set; }
+            [JsonPropertyName("synchronized_lyrics")] public List<LrclibLine>? SynchronizedLyrics { get; set; }
+        }
+
+        private sealed class LrclibMetadata
+        {
+            [JsonPropertyName("duration")] public double? Duration { get; set; }
+        }
+
+        private sealed class LrclibLine
+        {
+            [JsonPropertyName("text")] public string? Text { get; set; }
+            [JsonPropertyName("time")] public double Time { get; set; }
+        }
+
         private async Task<T> PostAudioPathAsync<T>(
             string endpoint, string audioPath,
             Dictionary<string, string> fields, CancellationToken ct)

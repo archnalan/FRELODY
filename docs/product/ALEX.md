@@ -1,4 +1,4 @@
-# FRELODY Product Brief — "Alex" (v0.1)
+# FRELODY Product Brief — "Alex" (v0.2)
 
 > **Source of truth.** This file shapes ALL user-facing messaging (email templates,
 > page copy, button labels, paywall) and feature prioritization. When writing copy or
@@ -6,7 +6,7 @@
 > down, loop the hard part, and master a song in 30 minutes — then convert at the 3rd
 > analyzed song?"* If not, it's off-target.
 
-_Last updated: 2026-05-29._
+_Last updated: 2026-06-10 (post end-to-end verification of the money loop)._
 
 ## The avatar — "Alex" (pays $10/mo)
 
@@ -19,57 +19,80 @@ _Last updated: 2026-05-29._
 
 ## Core experience (the $10 value to protect)
 
-1. Search any **YouTube/TikTok** link → chords detected automatically.
-2. **Slow down** 50–100%, pitch preserved.
-3. **Loop** any section. *(The current beat-grid loop is considered DONE — no waveform required.)*
-4. **2 free analyzed songs/day.** Sign-in required.
-5. **Upgrade at the 3rd analyzed song:** $10/mo or $99/yr. **No free trial** — the free
+1. Search any **YouTube/TikTok** link → chords detected automatically. *(Verified E2E:
+   ~90–180s for a fresh analysis; instant on cache hit.)*
+2. **Slow down** 50–100%, pitch preserved. *(YouTube only — TikTok's embed API exposes
+   no rate control, so the control renders as visibly unavailable there.)*
+3. **Loop** any section via the beat grid (A→B picked directly on the chord grid).
+4. **Save to library** → a real chart with **chords over lyrics** (LRCLib synced lyrics,
+   beat-aligned), not a bare chord progression. Falls back to chords-only when no
+   confident lyric match exists.
+5. **2 free analyzed songs/day.** Sign-in required.
+6. **Upgrade at the 3rd analyzed song:** $10/mo or $99/yr. **No free trial** — the free
    tier (2/day, forever) *is* the trial.
+
+> ⚠️ **Regression guard.** The speed + loop controls live in
+> `FRELODYUI.Shared/Pages/Discover/YoutubePlaybackView.razor`. They were once silently
+> wiped by an unrelated commit (6f230c3) that checked in a stale copy of the file and
+> nobody noticed for 9 days — the single most expensive bug this product has had,
+> because it deleted the exact thing Alex pays for. Before committing changes that touch
+> the Discover playback files, grep for `pv-speed` and `pv-loop` in the diff.
 
 ## What counts toward the daily limit
 
 - **Metered (counts):** analysis-flow content only — YouTube/TikTok songs that require
-  chord detection.
+  chord detection. The unit is a **distinct (platform, video) per UTC day**.
 - **Free & unlimited (never counts):** public / lyric-chord songs **not** created from
   the analysis flow. Anonymous and free users play these with zero friction.
-- Each unlocked analyzed song stays **available for 24h** to the signed-in user, then
-  expires (not available on day 2). Re-playing an already-unlocked song within its 24h
-  window does **not** consume a new slot.
-- Surface the day's unlocked songs on a dedicated **"Today's songs"** page reachable from
-  the **avatar dropdown**, so Alex can find what he worked on today.
-- Log analyzed-song plays in `SongPlayHistory`.
+- Each unlocked analyzed song stays **available for a rolling 24h** to the signed-in
+  user, then expires. Re-playing an already-unlocked song within its window does **not**
+  consume a new slot (verified: cached re-play returns in ~0.1s and the counter holds).
+- If an analysis *fails* after consuming a slot (bot-wall, timeout), the slot is
+  **refunded**; if the server dies mid-analysis the slot is burned but the song remains
+  re-openable free within the window, so Alex never pays twice for one song.
+- The day's unlocked songs live on **"Today's songs"** (avatar dropdown), with a 7-day
+  history + practice streak + 30-day activity heatmap behind it.
+- Analyzed plays are logged on the unlock row itself (`AnalyzedSongUnlock.PlayCount`,
+  `LastPlayedAt`) — *not* `SongPlayHistory`, which tracks library/playlist plays of
+  saved songs. Together they are the audit trail of Alex's practice.
 
 ## Frictionless flow
 
 ```
 Browse/play public songs freely (anon)
   → paste a link / Play on analyzed content
-  → "Sign in to play your first free song"
+  → "Sign in to play your first free song"   (402 reason=unauthenticated → sheet)
   → 1-click social login
-  → song plays, "1 of 2 today" counter, kept for 24h on the Today's songs page
-  → daily reset builds habit
-  → paywall (PayPal / Pesapal) at analyzed song #3
+  → song plays, "1 of 2 today" counter, kept 24h on Today's songs
+  → daily reset (UTC midnight) builds habit
+  → paywall (402 reason=limit-reached → in-context sheet) at analyzed song #3
+  → /pricing: choose PayPal (buttons, USD) or Pesapal (iframe, mobile money/local)
 ```
 
-## Decisions (2026-05-29)
+## Decisions (updated 2026-06-10)
 
-- **Auth:** social login **preferred but not exclusive** — keep email/password. Have
-  Google OAuth + One Tap; **add "Continue with Facebook" and "Continue with TikTok"**
+- **Auth:** social login **preferred but not exclusive** — keep email/password.
+  Google OAuth + One Tap **live**. "Continue with Facebook / TikTok" still TODO
   (effort-permitting). **Apple: not yet.**
-- **Payments:** at the paywall the user **chooses PayPal or Pesapal**. PayPal is new work;
-  Pesapal is already wired.
-- **Pricing/currency:** localize the displayed price to the machine's culture and charge
-  in a familiar currency where the gateway supports it — Alex shouldn't feel he's paying a
-  foreign corporation. Canonical base price = **USD $10/mo, $99/yr**. **Default to USD**
-  when region detection fails. (The converter + magnitude-normalizer already exist — see
-  the plan doc.)
-- **Strategy:** **B2C-first.** Organizations apply for **custom pricing** (multi-user
-  config) — *future* work; `TenantId` stays optional for now.
+- **Payments:** at the paywall the user **chooses PayPal or Pesapal** on /pricing.
+  - **PayPal**: Orders v2 + JS buttons, capture activates premium server-side — live.
+  - **Pesapal**: iframe flow wired; IPN now activates premium on COMPLETED and the
+    browser-return reconciles idempotently (needs a sandbox run before prod).
+- **Pricing/currency:** localize the displayed price to the machine's culture; charge in
+  the gateway's nearest supported currency. Canonical base price = **USD $10/mo, $99/yr**.
+  **Default to USD** when region detection fails.
+- **Strategy:** **B2C-first.** Organizations apply for **custom pricing** — *future*
+  work; `TenantId` stays optional for now.
 
 ## Technical compass
 
-- Cache chord detection **per song URL** (near-zero cost after the first request).
-- Rate-limit by **user ID**, not IP.
+- Chord detection **cached per (video, model)** in `*Transcriptions` — the 2nd user (or
+  2nd play) costs ~0. Verified.
+- **Rate-limit by user ID**, not IP — live: 10 analysis requests/min per user (per-IP
+  for anonymous), 429 with a JSON body so the UI can message it.
+- Lyrics come from **LRCLib via the ChordMini backend** (`/api/lrclib-lyrics`), matched
+  by artist/title parsed from the video title, with a ±15% duration guard against
+  wrong-song matches. Strictly best-effort: a miss saves chords-only.
 - Guest mode (1 song ever via localStorage) is low priority.
 
 ## Anti-goals (for now)

@@ -140,6 +140,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("analysis")]
         [ProducesResponseType(typeof(YouTubeTranscriptionDto), 200)]
         public async Task<ActionResult<YouTubeTranscriptionDto>> Analyze(
             [FromBody] YouTubeAnalyzeRequest request,
@@ -300,7 +301,30 @@ namespace FRELODYAPIs.Controllers
                 ? request.Title!.Trim()
                 : video?.Title ?? request.VideoId;
 
-            var songDto = YouTubeSongMapper.Map(dto, title);
+            // Chords-only charts are hard to follow — enrich the save with LRCLib synced
+            // lyrics when a confident match exists. Strictly best-effort: any miss falls
+            // back to the chord-only chart.
+            IReadOnlyList<LyricsLine>? lyricLines = null;
+            try
+            {
+                var (artist, songTitle) = YouTubeSongMapper.ParseArtistTitle(title);
+                var lyrics = await _chordMini.GetLyricsAsync(
+                    artist ?? video?.ChannelTitle, songTitle, searchQuery: title, ct);
+
+                // Wrong-song guard: when both durations are known they must roughly agree.
+                var durationOk = lyrics.DurationSeconds is not double d ||
+                                 video?.DurationSeconds is not > 0 ||
+                                 Math.Abs(d - video.DurationSeconds) <= Math.Max(20, video.DurationSeconds * 0.15);
+
+                if (lyrics.Found && lyrics.HasSynchronized && durationOk)
+                    lyricLines = lyrics.Synchronized;
+            }
+            catch
+            {
+                // Lyrics enrichment must never block saving the chart.
+            }
+
+            var songDto = YouTubeSongMapper.Map(dto, title, lyricLines);
 
             var result = await _songService.CreateSong(songDto);
             if (!result.IsSuccess)

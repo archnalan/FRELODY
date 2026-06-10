@@ -90,6 +90,7 @@ namespace FRELODYAPIs.Controllers
         }
 
         [HttpPost]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("analysis")]
         [ProducesResponseType(typeof(YouTubeTranscriptionDto), 200)]
         public async Task<ActionResult<YouTubeTranscriptionDto>> Analyze(
             [FromBody] TikTokAnalyzeRequest request, CancellationToken ct)

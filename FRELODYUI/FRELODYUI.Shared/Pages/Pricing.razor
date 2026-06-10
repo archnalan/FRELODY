@@ -683,6 +683,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await HandlePesaPalReturnAsync();
+
         await LoadPricingPlans();
         await LoadPayPalAvailability();
 
@@ -695,6 +697,69 @@
             {
                 await _storageService.SetItemAsync("returnUrl", returnUrl);
             }
+        }
+    }
+
+    // PesaPal sends the shopper back to this page with OrderTrackingId +
+    // OrderMerchantReference appended to the callback URL — and because checkout runs in
+    // the modal iframe, this return render happens INSIDE that iframe. Reconcile
+    // server-side (the API re-verifies the status with PesaPal and activates premium on
+    // COMPLETED; the transition guard makes it idempotent against the IPN), then hop the
+    // top window to the receipt so the result isn't trapped in the frame.
+    private async Task HandlePesaPalReturnAsync()
+    {
+        var uri = _navManager.ToAbsoluteUri(_navManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+
+        // Receipt leg: the top window re-landed here after reconciliation.
+        var paid = query["paid"];
+        if (paid == "1")
+        {
+            await HandlePayPalSuccess(); // same "You're Premium" receipt + /discover redirect
+            return;
+        }
+        if (paid == "0")
+        {
+            _modalService.Show(new ModalOptionDto
+            {
+                Title = "Payment Pending",
+                Message = "We haven't received a payment confirmation yet. If you completed the "
+                        + "payment, your account will be upgraded as soon as it is confirmed.",
+                ButtonText = "Close",
+                OptionType = OptionType.Warning
+            });
+            return;
+        }
+
+        // Reconcile leg: PesaPal's redirect carries the tracking id.
+        var trackingId = query["OrderTrackingId"];
+        var merchantRef = query["OrderMerchantReference"];
+        if (string.IsNullOrEmpty(trackingId) || string.IsNullOrEmpty(merchantRef)) return;
+
+        var confirmed = false;
+        try
+        {
+            await _pesaPalApi.IPNCallbackGet(trackingId, merchantRef, "CALLBACK");
+            var status = await _pesaPalApi.GetTransactionStatus(trackingId);
+            confirmed = status.IsSuccessStatusCode && string.Equals(
+                status.Content?.PaymentStatusDescription, "COMPLETED",
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "PesaPal return reconciliation failed for {TrackingId}", trackingId);
+        }
+
+        var target = $"{_navManager.BaseUri}pricing?paid={(confirmed ? "1" : "0")}";
+        try
+        {
+            // Same-origin iframe → drive the top window to the receipt (full load so the
+            // fresh billing state is picked up everywhere).
+            await JsRt.InvokeVoidAsync("window.top.location.replace", target);
+        }
+        catch
+        {
+            _navManager.NavigateTo(target, forceLoad: true);
         }
     }
 

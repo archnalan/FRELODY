@@ -1,29 +1,32 @@
 # Plan — Laser-focus FRELODY on "Alex"
 
 Companion to **[ALEX.md](./ALEX.md)** (the product brief / messaging source of truth).
-This is a **plan only** — no implementation has been done. _Last updated: 2026-05-29._
+_Last updated: 2026-06-10 — the money loop is now built and verified end to end._
 
 ## TL;DR
 
-The practice engine is ~80% built and polished. The **conversion mechanic Alex pays
-for does not exist**, and the app's copy speaks to a B2B worship-team admin rather than a
-solo hobbyist. The work is mostly *focus, monetization wiring, and messaging* — not net-new
-engineering.
+The conversion mechanic exists and works: anon nudge (402) → 2 free analyzed songs/day →
+paywall at #3 → PayPal/Pesapal on /pricing → premium activation. Verified live against
+the running stack on 2026-06-10. Remaining work is polish (Facebook/TikTok login,
+Pesapal sandbox run, admin per-user activity view) — not net-new engineering.
 
-## Build-vs-gap audit
+## Build-vs-gap audit (verified 2026-06-10)
 
 | Alex's value | Status | Notes |
 |---|---|---|
-| Paste YouTube/TikTok → auto chords | ✅ Done | `Discover.razor`, `YouTubeController`/`TikTokController` → ChordMini. Cached in `*Transcriptions`. |
-| Slow down, pitch preserved | ✅ Done (YouTube) | `YoutubePlaybackView.razor` + `youtubePlayer.js`. Disabled on TikTok (no rate API). |
-| Loop a section | ✅ Done | Beat-grid A/B loop. No waveform — accepted as-is. |
-| Chord timeline synced | ✅ Done | `ChordTimeline.razor`. |
-| 2 free **analyzed** songs/day | ❌ Missing | `SongPlayHistory` logs plays for analytics only; no quota/reset/enforcement. |
-| Paywall at 3rd analyzed song | ❌ Missing | No trigger. `IsPremiumUser()` is hardcoded `return true; //testing` — gate welded open. |
+| Paste YouTube/TikTok → auto chords | ✅ Verified E2E | Fresh analysis ~90–180s; cache hit ~0.1s, reused across users. |
+| Slow down, pitch preserved | ✅ Restored | Was silently deleted by commit 6f230c3 (stale file in the docs commit) — restored 2026-06-10. YouTube only; TikTok shows controls as unavailable (no rate API). |
+| Loop a section | ✅ Restored | Beat-grid A→B loop, same 6f230c3 deletion + restore. Grep `pv-speed`/`pv-loop` in any diff touching Discover playback. |
+| Chord timeline synced | ✅ Done | `ChordTimeline.razor`, Grid/Timeline view pill. |
+| 2 free **analyzed** songs/day | ✅ Verified E2E | `AnalyzedAccessService` + `AnalyzedSongUnlock`; distinct (platform,video) per UTC day; failed analyses refund the slot; re-plays bump `PlayCount`/`LastPlayedAt` (audit trail). |
+| Paywall at 3rd analyzed song | ✅ Verified E2E | 3rd distinct song → immediate 402 `limit-reached` → `AnalyzedAccessSheet` → /pricing. |
+| Payments | ✅ PayPal / ⚠️ Pesapal | PayPal buttons + capture + activation live. Pesapal fixed 2026-06-10 (merchant ref was the ProductId → IPN orphaned every payment; no premium activation on COMPLETED; no browser-return reconcile) — needs one sandbox run before prod. |
 | Social login | ⚠️ Partial | Google OAuth + One Tap done. Facebook/TikTok TODO. Apple deferred. Email/password kept. |
-| Localized currency | ✅ Built, unwired | `FRELODYSHRD/Services/CurrencyConverter.cs` (magnitude-normalizes) + `FRELODYUI.Shared/Services/CurrencyDisplayService.cs` (region detection) + `CurrencyConverterController`. Base/fallback currently UGX. |
-| Cache chords per URL | ⚠️ Partial | Web-scrape HTML cached 24h; confirm chord results are keyed by URL and reused across users. |
-| Rate-limit by user ID | ⚠️ Partial | Only auth-attempt limiting; no usage quotas. |
+| Localized currency | ✅ Wired | USD base on /pricing with converted display via `CurrencyDisplayService`. |
+| Cache chords per URL | ✅ Verified | `YouTubeTranscriptions`/`TikTokTranscriptions` keyed by (video, models); 2nd request is a DB read. |
+| Rate-limit by user ID | ✅ Done | 10 analysis req/min per user (per-IP anon), 429 + JSON body. `Program.cs` "analysis" policy. |
+| Chords **over lyrics** on save | ✅ New 2026-06-10 | Save-to-library fetches LRCLib synced lyrics (ChordMini `/api/lrclib-lyrics`), aligns chords to words by time window, ±15% duration guard; falls back to chords-only. |
+| Admin per-user activity view | ❌ Missing | Operators reconstruct journeys via SQL (`AnalyzedSongUnlocks`, `SongPlayHistory`, `Orders`/`Payments`, device sessions) or Jaeger traces; no admin UI yet. |
 
 ## Currency: what's actually left
 
@@ -40,6 +43,10 @@ The robust converter already exists. Remaining work is small:
    before confirm. EA → Pesapal in local currency; elsewhere → PayPal in USD.
 
 ## Workstreams (sequenced by leverage)
+
+> **Status 2026-06-10:** A is done and verified; B is done pending a Pesapal sandbox run;
+> C/D/E are partially done (Google live, metered-vs-free boundary live, hero copy updated);
+> F remains future. The lists below are kept for the record.
 
 ### A — The money loop (build first; existential)
 1. **Daily analyzed-play quota.** Count per user per UTC day, **only** for analysis-flow

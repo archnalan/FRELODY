@@ -20,6 +20,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         private readonly ILogger<PesaPalService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
+        private readonly IBillingActivationService _billingActivation;
         private readonly string _baseUrl;
         private readonly string _sandboxUrl;
         private readonly bool _useSandbox;
@@ -31,12 +32,14 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             SongDbContext context,
             ILogger<PesaPalService> logger,
             IHttpClientFactory httpClientFactory,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IBillingActivationService billingActivation)
         {
             _context = context;
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
+            _billingActivation = billingActivation;
 
             _baseUrl = _configuration["PesaPal:BaseUrl"] ?? "https://pay.pesapal.com/v3";
             _sandboxUrl = _configuration["PesaPal:SandboxUrl"] ?? "https://cybqa.pesapal.com/pesapalv3";
@@ -444,7 +447,10 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                         var orderRequest = new PesaOrderRequest
                         {
-                            Id = initiatePesaPalDto.ProductId,
+                            // Merchant reference must be OUR order id — the IPN echoes it back as
+                            // OrderMerchantReference and ProcessIPNNotificationAsync looks the order
+                            // up by it. Sending the product id here orphans the payment.
+                            Id = order.Id,
                             Currency = initiatePesaPalDto.Currency,
                             Amount = initiatePesaPalDto.Amount,
                             Description = initiatePesaPalDto.Description,
@@ -769,6 +775,18 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 order.Status = MapPaymentStatusToOrderStatus(transactionResult.Data.PaymentStatusDescription ?? "");
 
                 _context.Orders.Update(order);
+
+                // Keep the Payment row in sync with the verified gateway status.
+                var payment = await _context.Payments
+                    .FirstOrDefaultAsync(p => p.OrderTrackingId == orderTrackingId);
+                if (payment != null)
+                {
+                    payment.Status = MapPaymentStatusToPaymentStatus(transactionResult.Data.PaymentStatusDescription ?? "");
+                    payment.ConfirmationCode = transactionResult.Data.ConfirmationCode ?? payment.ConfirmationCode;
+                    if (payment.Status == PaymentStatus.COMPLETED && payment.CompletedDate is null)
+                        payment.CompletedDate = DateTimeOffset.UtcNow;
+                }
+
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation(
@@ -776,6 +794,34 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     order.Id,
                     previousStatus,
                     order.Status);
+
+                // Grant premium exactly once — on the transition into COMPLETED. The IPN and the
+                // browser-return reconcile can both land here; the transition guard keeps the
+                // expiry from being extended twice for one charge.
+                if (order.Status == OrderStatus.COMPLETED &&
+                    previousStatus != OrderStatus.COMPLETED &&
+                    !string.IsNullOrEmpty(order.CustomerId))
+                {
+                    var product = await _context.OrderDetails
+                        .Where(d => d.OrderId == order.Id && d.ProductId != null)
+                        .Join(_context.Products, d => d.ProductId, p => p.Id, (d, p) => p)
+                        .FirstOrDefaultAsync();
+
+                    if (product is null)
+                    {
+                        _logger.LogError(
+                            "Completed PesaPal order {OrderId} has no resolvable product; premium NOT activated for user {UserId}",
+                            order.Id, order.CustomerId);
+                    }
+                    else
+                    {
+                        var activation = await _billingActivation.ActivatePremiumAsync(order.CustomerId, product);
+                        if (!activation.IsSuccess)
+                            _logger.LogError(
+                                "Premium activation failed after PesaPal payment for user {UserId}, order {OrderId}",
+                                order.CustomerId, order.Id);
+                    }
+                }
 
                 return ServiceResult<bool>.Success(true);
             }
@@ -797,6 +843,19 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 "INVALID" => OrderStatus.INVALID,
                 "CANCELLED" => OrderStatus.CANCELLED,
                 _ => OrderStatus.PENDING
+            };
+        }
+
+        private static PaymentStatus MapPaymentStatusToPaymentStatus(string paymentStatus)
+        {
+            return paymentStatus.ToUpperInvariant() switch
+            {
+                "COMPLETED" => PaymentStatus.COMPLETED,
+                "FAILED" => PaymentStatus.FAILED,
+                "REVERSED" => PaymentStatus.REVERSED,
+                "INVALID" => PaymentStatus.INVALID,
+                "CANCELLED" => PaymentStatus.CANCELLED,
+                _ => PaymentStatus.PENDING
             };
         }
 

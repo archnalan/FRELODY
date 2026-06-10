@@ -91,7 +91,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 }
 
                 // Already unlocked within the availability window → free re-play.
-                var alreadyUnlocked = await _db.AnalyzedSongUnlocks.AnyAsync(u =>
+                var unlockRow = await _db.AnalyzedSongUnlocks.FirstOrDefaultAsync(u =>
                     u.UserId == userId &&
                     u.Platform == platform &&
                     u.VideoId == videoId &&
@@ -101,10 +101,20 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 var result = NewResult();
                 result.IsPremium = isPremium;
-                result.AlreadyUnlocked = alreadyUnlocked;
+                result.AlreadyUnlocked = unlockRow is not null;
 
-                if (alreadyUnlocked)
+                if (unlockRow is not null)
                 {
+                    // Audit trail of the practice session: count the re-play and self-heal
+                    // metadata captured as null when the song was first gated (e.g. the
+                    // video row didn't exist yet at unlock time).
+                    unlockRow.PlayCount++;
+                    unlockRow.LastPlayedAt = now;
+                    unlockRow.Title ??= title;
+                    unlockRow.ThumbnailUrl ??= thumbnailUrl;
+                    unlockRow.SourceUrl ??= sourceUrl;
+                    await _db.SaveChangesAsync();
+
                     result.Allowed = true;
                     result.UsedToday = usedToday;
                     result.Remaining = isPremium ? 0 : Math.Max(0, limit - usedToday);
