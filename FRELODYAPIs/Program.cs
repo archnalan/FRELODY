@@ -113,6 +113,7 @@ builder.Services.AddScoped<ISmtpSenderService,SmtpSenderService>();
 builder.Services.AddScoped<IShareLinkService, ShareLinkService>();
 builder.Services.AddScoped<IOgCardService, OgCardService>();
 builder.Services.AddSingleton<FRELODYAPIs.Services.DocsMedia.IDocMediaService, FRELODYAPIs.Services.DocsMedia.DocMediaService>();
+builder.Services.AddSingleton<FRELODYAPIs.Services.YoutubeCookies.IYoutubeCookieService, FRELODYAPIs.Services.YoutubeCookies.YoutubeCookieService>();
 builder.Services.Configure<ShareLandingOptions>(
     builder.Configuration.GetSection(ShareLandingOptions.SectionName));
 
@@ -533,6 +534,26 @@ app.UseAuthentication();
 // After authentication so the "analysis" policy can partition by the user claim.
 app.UseRateLimiter();
 app.UseAuthorization();
+
+// ── Health endpoints ────────────────────────────────────────────────────────
+// Liveness: cheap, no dependencies — answers "is the process up?". Used by Docker
+// and uptime monitors. The OpenTelemetry trace filter already excludes /health.
+app.MapGet("/health", () => Results.Ok(new
+{
+    status  = "healthy",
+    version = otelServiceVer,
+    time    = DateTimeOffset.UtcNow
+})).AllowAnonymous();
+
+// Readiness: verifies the API can actually serve Alex by pinging the database.
+// Returns 503 when the DB is unreachable so orchestrators hold traffic off.
+app.MapGet("/health/ready", async (SongDbContext db, CancellationToken ct) =>
+{
+    var canConnect = await db.Database.CanConnectAsync(ct);
+    return canConnect
+        ? Results.Ok(new { status = "ready" })
+        : Results.Json(new { status = "unavailable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+}).AllowAnonymous();
 
 app.MapControllerRoute(
 	name: "default",

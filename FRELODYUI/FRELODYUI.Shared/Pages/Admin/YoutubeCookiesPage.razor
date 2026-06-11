@@ -1,0 +1,292 @@
+@page "/admin/youtube-cookies"
+@layout AdminLayout
+@using FRELODYSHRD.Dtos.YoutubeCookieDtos
+@inject IYoutubeCookiesApi _cookiesApi
+
+<PageTitle>YouTube cookies - FRELODY</PageTitle>
+
+<AuthGuard RequirePremium="false">
+    @if (!_isSuperAdmin)
+    {
+        <div class="admin-card admin-card-pad">
+            <h2 class="admin-title">Not authorized</h2>
+            <p class="text-muted mb-3">Only platform administrators can manage YouTube cookies.</p>
+            <a class="admin-btn primary" href="/dashboard">Back to dashboard</a>
+        </div>
+    }
+    else
+    {
+        <div class="admin-header">
+            <div>
+                <h1 class="admin-title">YouTube cookies</h1>
+                <p class="admin-subtitle">Paste a fresh cookie export to keep the YouTube extraction working. The refresher picks it up within 60 s.</p>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <a class="admin-btn" href="/admin/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                <button class="admin-btn" @onclick="LoadStatusAsync" disabled="@_loadingStatus"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+            </div>
+        </div>
+
+        @* ── Status card ── *@
+        <div class="admin-card admin-card-pad yc-status-card">
+            @if (_loadingStatus)
+            {
+                <div class="admin-skeleton mb-2" style="height:28px;max-width:200px;"></div>
+                <div class="admin-skeleton mb-2" style="height:20px;max-width:320px;"></div>
+                <div class="admin-skeleton" style="height:20px;max-width:260px;"></div>
+            }
+            else if (_status is not null)
+            {
+                <div class="yc-status-row">
+                    @if (!_status.Published)
+                    {
+                        <span class="yc-chip yc-chip-warn"><i class="bi bi-hourglass-split"></i> Waiting for first cycle</span>
+                        <span class="yc-status-note">The refresher hasn't run yet — status will appear after its first 60 s poll.</span>
+                    }
+                    else if (_status.Authenticated)
+                    {
+                        <span class="yc-chip yc-chip-ok"><i class="bi bi-check-circle-fill"></i> Authenticated</span>
+                        @if (_status.ExpiresInDays.HasValue)
+                        {
+                            <span class="yc-chip @(_status.ExpiresInDays < 14 ? "yc-chip-warn" : "yc-chip-info")">
+                                <i class="bi bi-clock"></i> @_status.ExpiresInDays.Value.ToString("0.0") days to expiry
+                            </span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="yc-chip yc-chip-bad"><i class="bi bi-x-circle-fill"></i> Not authenticated</span>
+                    }
+                </div>
+                @if (!string.IsNullOrWhiteSpace(_status.ActiveSlot))
+                {
+                    <div class="yc-detail"><span class="yc-label">Active slot</span><span class="yc-value yc-mono">@_status.ActiveSlot</span></div>
+                }
+                @if (_status.LastRun.HasValue)
+                {
+                    <div class="yc-detail"><span class="yc-label">Last run</span><span class="yc-value">@FormatRelative(_status.LastRun.Value)</span></div>
+                }
+                @if (!string.IsNullOrWhiteSpace(_status.Note) && _status.Note != "authenticated")
+                {
+                    <div class="yc-detail"><span class="yc-label">Note</span><span class="yc-value">@_status.Note</span></div>
+                }
+            }
+        </div>
+
+        @* ── Slots ── *@
+        @if (_status?.Slots is { Count: > 0 })
+        {
+            <div class="admin-card admin-card-pad">
+                <h2 class="yc-section-title">Rotation slots</h2>
+                <div class="yc-slots-list">
+                    @foreach (var slot in _status.Slots)
+                    {
+                        <div class="yc-slot-row">
+                            <div class="yc-slot-main">
+                                <span class="yc-mono yc-slot-name">@slot.Name</span>
+                                @if (slot.HasAuthCookies)
+                                {
+                                    <span class="yc-chip yc-chip-ok yc-chip-sm"><i class="bi bi-key-fill"></i> auth</span>
+                                }
+                                @if (slot.ExpiresInDays.HasValue)
+                                {
+                                    <span class="yc-chip @(slot.ExpiresInDays < 14 ? "yc-chip-warn" : "yc-chip-info") yc-chip-sm">@slot.ExpiresInDays.Value.ToString("0") d</span>
+                                }
+                            </div>
+                            <div class="yc-slot-meta">
+                                @if (slot.UpdatedAt.HasValue)
+                                {
+                                    <span class="yc-slot-date">@FormatRelative(slot.UpdatedAt.Value)</span>
+                                }
+                                @if (_deletingSlot == slot.Name)
+                                {
+                                    <span class="yc-delete-confirm">Delete this slot?
+                                        <button class="admin-btn danger yc-btn-xs" @onclick="() => ConfirmDeleteSlotAsync(slot.Name)">Yes, delete</button>
+                                        <button class="admin-btn yc-btn-xs" @onclick="CancelDelete">Cancel</button>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <button class="admin-btn yc-btn-xs" @onclick="() => AskDeleteSlot(slot.Name)" disabled="@_savingCookies"><i class="bi bi-trash3"></i></button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @* ── Paste form ── *@
+        <div class="admin-card admin-card-pad">
+            <h2 class="yc-section-title">Paste new cookies</h2>
+            <p class="yc-hint">
+                Export your YouTube account cookies in <strong>Netscape format</strong> (Firefox → Cookie-Editor → Export → Netscape),
+                then paste here. The export must include a logged-in session.
+            </p>
+            <p class="yc-cred-note"><i class="bi bi-shield-lock-fill"></i> Cookies are credentials. They are stored securely on the server and never shown back here.</p>
+
+            <div class="yc-form">
+                <textarea class="yc-textarea form-control" @bind="_pasteText" @bind:event="oninput"
+                          placeholder="# Netscape HTTP Cookie File&#10;# ..." rows="8"
+                          disabled="@_savingCookies"></textarea>
+
+                <div class="yc-form-row">
+                    <input class="form-control yc-label-input" type="text" @bind="_pasteLabel" placeholder="Label (optional, e.g. alex-june)" disabled="@_savingCookies" maxlength="40" />
+                    <button class="admin-btn primary" @onclick="SaveCookiesAsync"
+                            disabled="@(string.IsNullOrWhiteSpace(_pasteText) || _savingCookies)">
+                        @if (_savingCookies)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                            <span> Saving…</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-floppy2-fill"></i><span> Save cookies</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</AuthGuard>
+
+@code {
+    private bool _isSuperAdmin;
+    private bool _loadingStatus = true;
+    private bool _savingCookies;
+    private CookieStatusDto? _status;
+
+    private string _pasteText = string.Empty;
+    private string _pasteLabel = string.Empty;
+    private string? _deletingSlot;
+
+    private CancellationTokenSource? _pollCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+        _isSuperAdmin = userResult.IsSuccess && userResult.Data?.UserType == UserType.SuperAdmin;
+        if (_isSuperAdmin)
+            await LoadStatusAsync();
+    }
+
+    private async Task LoadStatusAsync()
+    {
+        _loadingStatus = true;
+        try
+        {
+            var resp = await _cookiesApi.GetStatus();
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+                _status = resp.Content;
+            else
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _loadingStatus = false;
+        }
+    }
+
+    private async Task SaveCookiesAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_pasteText)) return;
+        _savingCookies = true;
+        try
+        {
+            var resp = await _cookiesApi.SaveCookies(new SaveCookiesRequestDto
+            {
+                CookieText = _pasteText,
+                Label = string.IsNullOrWhiteSpace(_pasteLabel) ? null : _pasteLabel.Trim(),
+            });
+
+            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            {
+                var r = resp.Content;
+                _toastService.Show($"Saved {r.SlotName} ({r.CookieCount} cookies, {r.SlotCount} slot{(r.SlotCount == 1 ? "" : "s")}). Refresher activates it within ~60 s.", ToastType.Success, 6000);
+                _pasteText = string.Empty;
+                _pasteLabel = string.Empty;
+                await LoadStatusAsync();
+                StartPostSavePoll();
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _savingCookies = false;
+        }
+    }
+
+    private void AskDeleteSlot(string name) { _deletingSlot = name; }
+    private void CancelDelete() { _deletingSlot = null; }
+
+    private async Task ConfirmDeleteSlotAsync(string name)
+    {
+        _deletingSlot = null;
+        try
+        {
+            var resp = await _cookiesApi.DeleteSlot(name);
+            if (resp.IsSuccessStatusCode)
+            {
+                _toastService.Show($"Slot {name} deleted.", ToastType.Success);
+                await LoadStatusAsync();
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+    }
+
+    /// <summary>After a paste, auto-poll GetStatus every 10 s for 90 s so Alex sees the refresher flip to green.</summary>
+    private void StartPostSavePoll()
+    {
+        _pollCts?.Cancel();
+        _pollCts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+        var ct = _pollCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (!ct.IsCancellationRequested)
+                {
+                    await Task.Delay(10_000, ct);
+                    var resp = await _cookiesApi.GetStatus();
+                    if (resp.IsSuccessStatusCode && resp.Content is not null)
+                    {
+                        await InvokeAsync(() =>
+                        {
+                            _status = resp.Content;
+                            StateHasChanged();
+                        });
+                        if (resp.Content.Authenticated) break;
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+        }, ct);
+    }
+
+    private static string FormatRelative(DateTimeOffset dt)
+    {
+        var diff = DateTimeOffset.UtcNow - dt;
+        if (diff.TotalSeconds < 60) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} min ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} hr ago";
+        return $"{(int)diff.TotalDays} day{((int)diff.TotalDays == 1 ? "" : "s")} ago";
+    }
+}

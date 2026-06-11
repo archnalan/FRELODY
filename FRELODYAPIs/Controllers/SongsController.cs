@@ -46,6 +46,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpPost]
+        [Authorize]
         [ProducesResponseType(typeof(SongDto), 200)]
         public async Task<ActionResult> CreateSong([FromBody] SimpleSongCreateDto song)
         {
@@ -106,6 +107,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpPut]
+        [Authorize]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> MarkSongAccessStatus([FromQuery] string songId, [FromQuery]Access accessLevel)
         {
@@ -139,6 +141,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpPut]
+        [Authorize]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> RateSong([FromQuery] string songId, [FromQuery] decimal rating)
         {
@@ -171,6 +174,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
+        [Authorize]
         [ProducesResponseType(typeof(SimpleSongCreateDto), 200)]
         public async Task<IActionResult> GetSongDetailsByRecoveryId([FromQuery] string recoveryId)
         {
@@ -191,6 +195,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpGet]
+        [Authorize]
         [ProducesResponseType(typeof(PaginationDetails<SongRecoveryDto>), 200)]
         public async Task<IActionResult> GetRecoverySongs([FromQuery] string? userId = null, [FromQuery] int? offset = 0, [FromQuery] int? limit = 10)
         {
@@ -201,6 +206,7 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
         }
 
         [HttpDelete]
+        [Authorize]
         [ProducesResponseType(typeof(bool), 200)]
         public async Task<IActionResult> DeleteRecoverySongItem([FromQuery] string recoveryId)
         {

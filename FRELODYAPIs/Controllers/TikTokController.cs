@@ -67,7 +67,9 @@ namespace FRELODYAPIs.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(502, new { message = ex.Message });
+                // App-level resolve failure → 422 so the UI shows the friendly message
+                // instead of a Cloudflare/nginx 502 page. Mirrors YouTubeController.
+                return StatusCode(422, new { message = ex.Message });
             }
 
             var dto = await UpsertAndMapAsync(info, ct);
@@ -98,6 +100,17 @@ namespace FRELODYAPIs.Controllers
             if (string.IsNullOrWhiteSpace(request.Url) || !IsTikTokUrl(request.Url))
                 return BadRequest(new { message = "A valid TikTok URL is required." });
 
+            // Anonymous users don't need a (costly, bot-wall-prone) resolve to be told to
+            // sign in — short-circuit to the same 402 nudge YouTube shows, before any
+            // network call. The placeholder id is never persisted on the anon path.
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                var (anonDenied, _) = await GateAnalyzedAccessAsync(
+                    request.Url, null, null, request.Url, null);
+                if (anonDenied is not null)
+                    return anonDenied;
+            }
+
             // Resolve id + metadata first so we can cache by id.
             MediaInfo info;
             try
@@ -106,7 +119,10 @@ namespace FRELODYAPIs.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(502, new { message = ex.Message });
+                // App-level failure (region/copyright/bot-wall) — 422 not 502 so
+                // Cloudflare/nginx don't swap in a generic Bad Gateway HTML page and
+                // the UI can surface the friendly message. Mirrors YouTubeController.
+                return StatusCode(422, new { message = ex.Message });
             }
 
             // Meter the analyzed play before returning any chord data (cached or fresh).
@@ -137,7 +153,8 @@ namespace FRELODYAPIs.Controllers
             {
                 // Analysis failed — refund the slot so the user keeps their daily song.
                 await ReleaseUnlockIfRecorded(access, info.Id);
-                return StatusCode(502, new { message = ex.Message });
+                // 422 (not 502) so the friendly message reaches the UI past Cloudflare/nginx.
+                return StatusCode(422, new { message = ex.Message });
             }
 
             // Ensure the parent video row exists (FK), then persist the transcription.

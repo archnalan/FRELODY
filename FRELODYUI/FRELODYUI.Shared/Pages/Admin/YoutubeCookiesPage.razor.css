@@ -1,0 +1,203 @@
+/* ══════════════════════════════════════
+   Admin · YouTube cookies
+   ══════════════════════════════════════ */
+
+.yc-status-card {
+    border-left: 3px solid var(--bs-primary);
+}
+
+.yc-status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--k-space-2, 0.5rem);
+    align-items: center;
+    margin-bottom: var(--k-space-2, 0.5rem);
+}
+
+.yc-status-note {
+    font-size: var(--k-font-size-sm, 0.85rem);
+    color: var(--text-secondary);
+}
+
+/* ── Chips ── */
+.yc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    font-size: var(--k-font-size-sm, 0.85rem);
+    font-weight: 600;
+    border-radius: var(--k-radius-pill, 999px);
+    white-space: nowrap;
+}
+
+.yc-chip-ok {
+    background: var(--k-success-soft, #d1fae5);
+    color: var(--k-success-soft-text, #065f46);
+}
+
+.yc-chip-bad {
+    background: var(--k-danger-soft, #fee2e2);
+    color: var(--k-danger-soft-text, #991b1b);
+}
+
+.yc-chip-warn {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.yc-chip-info {
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+}
+
+.yc-chip-sm {
+    padding: 0.15rem 0.45rem;
+    font-size: var(--k-font-size-xs, 0.75rem);
+    font-weight: 500;
+}
+
+/* ── Key/value detail rows ── */
+.yc-detail {
+    display: flex;
+    gap: var(--k-space-2, 0.5rem);
+    align-items: baseline;
+    margin-top: 0.35rem;
+    font-size: var(--k-font-size-sm, 0.85rem);
+}
+
+.yc-label {
+    color: var(--text-secondary);
+    min-width: 6rem;
+    flex-shrink: 0;
+}
+
+.yc-value {
+    color: var(--text-primary);
+}
+
+.yc-mono {
+    font-family: ui-monospace, "Cascadia Code", Menlo, monospace;
+    font-size: 0.82rem;
+}
+
+/* ── Section title ── */
+.yc-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--k-space-3, 0.75rem);
+}
+
+/* ── Slots list ── */
+.yc-slots-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-2, 0.5rem);
+}
+
+.yc-slot-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--k-space-2, 0.5rem);
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--k-radius-md, 0.5rem);
+    background: var(--input-bg);
+    flex-wrap: wrap;
+}
+
+.yc-slot-main {
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-2, 0.5rem);
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.yc-slot-name {
+    word-break: break-all;
+}
+
+.yc-slot-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-2, 0.5rem);
+    flex-shrink: 0;
+}
+
+.yc-slot-date {
+    font-size: var(--k-font-size-xs, 0.75rem);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.yc-delete-confirm {
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-2, 0.5rem);
+    font-size: var(--k-font-size-sm, 0.85rem);
+    color: var(--text-secondary);
+}
+
+.yc-btn-xs {
+    padding: 0.2rem 0.55rem;
+    font-size: var(--k-font-size-xs, 0.75rem);
+}
+
+/* ── Paste form ── */
+.yc-hint {
+    font-size: var(--k-font-size-sm, 0.85rem);
+    color: var(--text-secondary);
+    margin-bottom: var(--k-space-2, 0.5rem);
+}
+
+.yc-cred-note {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--k-font-size-sm, 0.85rem);
+    color: var(--text-secondary);
+    background: var(--k-accent-soft);
+    color: var(--k-accent-soft-text);
+    padding: 0.45rem 0.75rem;
+    border-radius: var(--k-radius-sm, 0.35rem);
+    margin-bottom: var(--k-space-3, 0.75rem);
+}
+
+.yc-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-3, 0.75rem);
+}
+
+.yc-textarea {
+    font-family: ui-monospace, "Cascadia Code", Menlo, monospace;
+    font-size: 0.8rem;
+    resize: vertical;
+    min-height: 9rem;
+}
+
+.yc-form-row {
+    display: flex;
+    gap: var(--k-space-2, 0.5rem);
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.yc-label-input {
+    flex: 1;
+    min-width: 10rem;
+    max-width: 22rem;
+}
+
+@media (max-width: 576px) {
+    .yc-form-row {
+        flex-direction: column;
+    }
+
+    .yc-label-input {
+        max-width: 100%;
+    }
+}

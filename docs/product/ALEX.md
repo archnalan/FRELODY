@@ -94,6 +94,16 @@ Browse/play public songs freely (anon)
   by artist/title parsed from the video title, with a ±15% duration guard against
   wrong-song matches. Strictly best-effort: a miss saves chords-only.
 - Guest mode (1 song ever via localStorage) is low priority.
+- ⚠️ **Prod reality check — the bot-wall gates the core promise.** "Paste a link → play
+  along" only works on prod when the ChordMini sidecar can fetch audio. The box exits
+  through a datacenter IP that YouTube/TikTok bot-wall *even with a valid PO token*; the
+  escalation (logged-in **cookies**, `docker/cookies/youtube.txt`) must be **armed** or
+  *fresh* analyses fail (cache hits and the whole paywall path still work). Check
+  `docker exec frelody-chordmini curl -s localhost:8081/api/ytdlp/health` → `cookies:true`.
+  If `false`, Alex cannot analyze a new song today. This is the #1 thing to keep green.
+- App-level analysis failures (bot-wall, region, copyright, timeout) return **422** with a
+  JSON body — never 502/503 — so the friendly message survives Cloudflare/nginx. The slot
+  is refunded so Alex never pays for a failed analysis.
 
 ## Anti-goals (for now)
 

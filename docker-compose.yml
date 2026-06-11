@@ -109,6 +109,12 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     volumes:
       - frelody_media:/app/media
     networks:
@@ -148,7 +154,8 @@ services:
     volumes:
       - frelody_dp_keys:/app/dp-keys
     depends_on:
-      - frelody-api
+      frelody-api:
+        condition: service_healthy
     networks:
       - frelody-net
 
@@ -215,7 +222,7 @@ services:
     command:
       - "sh"
       - "-c"
-      - "PLUGDIR=/tmp/ytdlp-plugins; /opt/venv/bin/pip install -q --no-cache-dir --target=$$PLUGDIR yt-dlp bgutil-ytdlp-pot-provider || true; export PYTHONPATH=$$PLUGDIR:$${PYTHONPATH}; gunicorn --bind 0.0.0.0:8080 --workers 2 --timeout 600 --worker-class sync --max-requests 1000 --max-requests-jitter 100 --preload app:app & python /app/ytdlp_server.py"
+      - "PLUGDIR=/tmp/ytdlp-plugins; /opt/venv/bin/pip install -q --no-cache-dir -U --target=$$PLUGDIR yt-dlp bgutil-ytdlp-pot-provider || true; export PYTHONPATH=$$PLUGDIR:$${PYTHONPATH}; gunicorn --bind 0.0.0.0:8080 --workers 2 --timeout 600 --worker-class sync --max-requests 1000 --max-requests-jitter 100 --preload app:app & python /app/ytdlp_server.py"
     ports:
       - "5001:8080"
       - "5002:8081"
@@ -223,13 +230,23 @@ services:
       FLASK_ENV: production
       MAX_CONTENT_LENGTH_MB: "150"
       # yt-dlp bot-wall bypass tunables (see docker/ytdlp_server.py)
-      YTDLP_PLAYER_CLIENT: "default,tv"
+      # NOTE (2026-06-11): "tv" now returns only un-downloadable SABR/storyboard
+      # streams (YouTube server-side change), so "default,tv" yields "no audio
+      # format". "default" (web) is the only client that actually downloads with
+      # our cookies. It still gets IP-walled on most videos from this datacenter
+      # IP — the residential/mobile proxy (YTDLP_PROXY) is the real fix.
+      YTDLP_PLAYER_CLIENT: "default"
       YTDLP_POT_BASE_URL: "http://bgutil-provider:4416"
       # Datacenter IPs (this is a Contabo VPS) get bot-walled even WITH a valid PO
       # token, so we escalate to logged-in cookies. Export a throwaway YouTube
       # account's cookies into ./docker/cookies/youtube.txt (Netscape format) — see
       # CLAUDE.md "AI Analysis / YouTube bot-wall". Absent file → sidecar no-ops.
       YTDLP_COOKIES_FILE: "/app/cookies/youtube.txt"
+      # Last-resort escalation: route yt-dlp through a residential/mobile proxy —
+      # the only lever that repairs the datacenter IP's reputation without a
+      # logged-in account. Stacks with the PO token + cookies. Off unless set in
+      # .env (e.g. YTDLP_PROXY=http://user:pass@host:port or socks5://host:port).
+      YTDLP_PROXY: "${YTDLP_PROXY:-}"
     depends_on:
       - bgutil-provider
     volumes:
@@ -242,11 +259,60 @@ services:
     networks:
       - frelody-net
 
+  # ── YouTube cookie refresher ────────────────────────────────────────────
+  # Keeps a logged-in cookie jar alive so the datacenter-IP bot-wall stays
+  # bypassed without a human re-exporting cookies every ~2 weeks. Bootstrap is a
+  # one-time human step: export a throwaway account's cookies from Firefox and
+  # drop them as ./docker/cookies/youtube.seed.txt; this then keeps youtube.txt
+  # fresh. Official MS Playwright image (Chromium + deps baked in) — no build.
+  # Runs as root to write the root-owned cookies mount; Chromium uses --no-sandbox.
+  # Shares the host egress IP with chordmini, so cookies match yt-dlp's call IP.
+  cookie-refresher:
+    image: mcr.microsoft.com/playwright/python:v1.60.0-jammy
+    container_name: frelody-cookie-refresher
+    restart: unless-stopped
+    user: root
+    # The MS image bundles the browsers (/ms-playwright) + OS deps but NOT the
+    # playwright pip package — install the matching version at startup (it reuses
+    # the bundled chromium via PLAYWRIGHT_BROWSERS_PATH; no browser download).
+    command: ["bash", "-lc", "pip install -q playwright==1.60.0 && exec python /app/cookie_refresher.py"]
+    environment:
+      COOKIES_DIR: "/cookies"
+      PROFILE_DIR: "/profile"
+      REFRESH_INTERVAL_HOURS: "24"
+      # Rotation slots + published status live in the shared frelody_media volume
+      # so the FRELODY API (which already mounts it) can write fresh-cookie pastes
+      # and read liveness for the SuperAdmin UI. Refresher tries slots newest→oldest.
+      SLOTS_DIR: "/media/cookie-seeds"
+      STATUS_PUBLISH: "/media/cookie-status.json"
+      MAX_SLOTS: "3"
+      SLOT_POLL_SECONDS: "60"
+      # Set true ONLY to test the browser→file→sidecar plumbing without a real
+      # login; never leave on in prod (would write a junk anonymous jar).
+      REFRESH_ALLOW_UNAUTHENTICATED: "${COOKIE_REFRESH_ALLOW_ANON:-false}"
+    volumes:
+      - ./docker/cookie_refresher.py:/app/cookie_refresher.py:ro
+      # RW: this service owns youtube.txt; chordmini mounts the same dir :ro.
+      - ./docker/cookies:/cookies
+      - cookie_profile:/profile
+      # Shared with frelody-api: API writes rotation slots here, refresher reads
+      # them + publishes status back for the SuperAdmin UI.
+      - frelody_media:/media
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os,time,sys; p='/cookies/.refresher-status.json'; sys.exit(0 if os.path.exists(p) and time.time()-os.path.getmtime(p) < float(os.environ.get('REFRESH_INTERVAL_HOURS','24'))*7200+600 else 1)\""]
+      interval: 300s
+      timeout: 15s
+      retries: 3
+      start_period: 180s
+    networks:
+      - frelody-net
+
 volumes:
   sqlserver_data:
   frelody_media:
   frelody_dp_keys:
   chordmini_models:
+  cookie_profile:
 
 networks:
   frelody-net:

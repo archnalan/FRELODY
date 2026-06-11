@@ -11,10 +11,20 @@ Bot-wall strategy (no end-user auth, no cookies by default):
   A Netscape cookies.txt remains an OPTIONAL one-line escalation via the
   YTDLP_COOKIES_FILE env var; it is neither set nor required by default.
 
+Escalation ladder against the datacenter-IP bot-wall (least→most invasive):
+  1. PO token (bgutil)        — necessary but NOT sufficient on a datacenter IP
+                                (verified live 2026-06-11: ~1/4 videos succeed alone).
+  2. Logged-in cookies        — YTDLP_COOKIES_FILE; the #1 fix, fixes most videos.
+  3. Residential/mobile proxy — YTDLP_PROXY; the only lever that repairs IP reputation
+                                without an account. Robust for scale; combine with (1).
+Cookies and proxy are independent and stack — set either, both, or neither.
+
 Tunables (all via env, so the bypass can be adjusted without code changes):
   YTDLP_PLAYER_CLIENT  yt-dlp youtube player_client list   (default: "default,tv")
   YTDLP_POT_BASE_URL   bgutil HTTP provider base url        (default: http://bgutil-provider:4416)
   YTDLP_COOKIES_FILE   optional Netscape cookies.txt path   (default: unset)
+  YTDLP_PROXY          optional HTTP/HTTPS/SOCKS proxy URL  (default: unset)
+                       e.g. http://user:pass@host:port or socks5://host:port
 """
 
 import os
@@ -37,6 +47,17 @@ PORT = 8081
 PLAYER_CLIENT = os.environ.get("YTDLP_PLAYER_CLIENT", "default,tv").strip()
 POT_BASE_URL = os.environ.get("YTDLP_POT_BASE_URL", "http://bgutil-provider:4416").strip()
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "").strip()
+PROXY = os.environ.get("YTDLP_PROXY", "").strip()
+
+
+def _proxy_args() -> list:
+    """Route every yt-dlp request through a proxy when YTDLP_PROXY is set.
+
+    A residential/mobile proxy is the only escalation that repairs the
+    datacenter IP's reputation without a logged-in account; it stacks with the
+    PO token and cookies. Empty/unset = direct connection (default).
+    """
+    return ["--proxy", PROXY] if PROXY else []
 
 
 def _ytdlp_version() -> str:
@@ -128,6 +149,7 @@ class Handler(BaseHTTPRequestHandler):
             "playerClient": PLAYER_CLIENT,
             "potProvider": POT_BASE_URL or None,
             "cookies": bool(COOKIES_FILE and os.path.isfile(COOKIES_FILE)),
+            "proxy": bool(PROXY),
         })
 
     def _read_body(self) -> dict:
@@ -163,6 +185,7 @@ class Handler(BaseHTTPRequestHandler):
             "--no-warnings",
         ]
         cmd += _extractor_args()
+        cmd += _proxy_args()
         cookie_flags, cookie_tmp = _cookie_args()
         cmd += cookie_flags
         cmd.append(url)
@@ -206,6 +229,7 @@ class Handler(BaseHTTPRequestHandler):
 
         cmd = [*YTDLP_CMD, "-J", "--skip-download", "--no-playlist", "--no-warnings"]
         cmd += _extractor_args()
+        cmd += _proxy_args()
         cookie_flags, cookie_tmp = _cookie_args()
         cmd += cookie_flags
         cmd.append(url)
@@ -278,7 +302,8 @@ if __name__ == "__main__":
     print(
         f"ytdlp-server listening on port {PORT} | yt-dlp {_ytdlp_version()} | "
         f"player_client={PLAYER_CLIENT} | pot={POT_BASE_URL or 'off'} | "
-        f"cookies={'on' if (COOKIES_FILE and os.path.isfile(COOKIES_FILE)) else 'off'}",
+        f"cookies={'on' if (COOKIES_FILE and os.path.isfile(COOKIES_FILE)) else 'off'} | "
+        f"proxy={'on' if PROXY else 'off'}",
         flush=True,
     )
     server = HTTPServer(("0.0.0.0", PORT), Handler)

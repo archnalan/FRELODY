@@ -1020,7 +1020,10 @@
         var authState = await _globalAuth.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated != true)
         {
-            var returnUrl = Uri.EscapeDataString($"/discover/{Transcription.VideoId}");
+            // Return to wherever Alex actually is (/play/* landing or /discover/* app),
+            // preserving the layout family — don't force-switch to /discover/.
+            var current = "/" + _navManager.ToBaseRelativePath(_navManager.Uri);
+            var returnUrl = Uri.EscapeDataString(current);
             _navManager.NavigateTo($"/login?returnUrl={returnUrl}");
             return;
         }

@@ -204,7 +204,9 @@
 
         if (!string.IsNullOrWhiteSpace(v))
         {
-            _nav.NavigateTo($"/discover/{v}", replace: true);
+            // Stay within the current layout family: landing (/) → /play/{v}
+            // (LandingLayout), app (/discover) → /discover/{v} (MainLayout).
+            _nav.NavigateTo(IsLanding ? $"/play/{v}" : $"/discover/{v}", replace: true);
             return;
         }
         if (!string.IsNullOrWhiteSpace(q))

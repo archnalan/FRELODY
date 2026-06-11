@@ -528,7 +528,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         new BadRequestException("Invalid recovery ID."));
 
                 var recovery = await _context.SongRecoveries
-                    .FirstOrDefaultAsync(r => r.Id == recoveryId);
+                    .FirstOrDefaultAsync(r => r.Id == recoveryId && r.CreatedBy == _userId);
 
                 if (recovery == null)
                 {
@@ -1013,6 +1013,9 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 var song = await _context.Songs.FirstOrDefaultAsync(s => s.Id == songId);
                 if (song == null)
                     return ServiceResult<bool>.Failure(new NotFoundException("Song not found."));
+                if (song.CreatedBy != _userId && !_tenantProvider.IsSuperAdmin())
+                    return ServiceResult<bool>.Failure(
+                        new ForbiddenException("You can only change visibility of your own songs."));
                 song.Access = access;
                 song.ModifiedBy = _userId;
                 await _context.SaveChangesAsync();
@@ -1237,7 +1240,7 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         new BadRequestException("Recovery ID is required."));
                 }
                 var recoveryItem = await _context.SongRecoveries
-                    .FirstOrDefaultAsync(s => s.Id == recoveryId);
+                    .FirstOrDefaultAsync(s => s.Id == recoveryId && s.CreatedBy == _userId);
 
                 if (recoveryItem == null) return ServiceResult<bool>.Failure(
                     new NotFoundException("Recovery item not found."));

@@ -12,6 +12,13 @@ using Refit;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
+// Keep the production browser console clean: only warnings/errors surface.
+// Development keeps full Information-level logs for debugging.
+if (!builder.HostEnvironment.IsDevelopment())
+{
+    builder.Logging.SetMinimumLevel(LogLevel.Warning);
+}
+
 var baseAddressApi = new Uri(builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7077");
 
 builder.Services.AddAuthorizationCore();
@@ -117,6 +124,10 @@ builder.Services.AddRefitClient<IPesaPalApi>()
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<IProductsApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddRefitClient<IYoutubeCookiesApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
