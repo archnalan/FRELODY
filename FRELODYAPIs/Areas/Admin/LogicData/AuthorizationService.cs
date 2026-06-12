@@ -227,42 +227,45 @@ namespace FRELODYAPP.Data
         // or create a brand-new user + tenant. Caller is responsible for verifying the token.
         private async Task<ServiceResult<LoginResponseDto>> ProcessGoogleUserAsync(GoogleJsonWebSignature.Payload objFromGoogle)
         {
-            // Check if user exists by external login provider
-            var userFromDb = await _userManager.FindByLoginAsync("google", objFromGoogle.Subject);
+            // FindByLoginAsync / FindByEmailAsync both go through the tenant-filtered DbContext.
+            // On unauthenticated requests _tenantId is null, which filters out every user whose
+            // TenantId is non-null (all Google sign-ups). Query IdentityUserLogin directly with
+            // AsNoTracking so we never put a stale entry in the change tracker.
+            var loginRecord = await _context.Set<IdentityUserLogin<string>>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(l => l.LoginProvider == "google" && l.ProviderKey == objFromGoogle.Subject);
 
-            if (userFromDb != null)
+            if (loginRecord != null)
             {
-                // Existing external login user - sign in directly
-                return await LoginUserNoPassword(userFromDb, userFromDb.TenantId);
+                var userFromLogin = await _context.Users
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(u => u.Id == loginRecord.UserId);
+                if (userFromLogin != null)
+                    return await LoginUserNoPassword(userFromLogin, userFromLogin.TenantId);
             }
 
-            // Check if user exists by email
-            userFromDb = await _userManager.FindByEmailAsync(objFromGoogle.Email);
-            if (userFromDb != null)
-            {
-                // Link Google login to existing account
-                await _userManager.AddLoginAsync(userFromDb, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
-                return await LoginUserNoPassword(userFromDb, userFromDb.TenantId);
-            }
-
-            // Guard: check for any account with this email that FindByEmailAsync may have missed
-            // (e.g. NormalizedEmail mismatch on accounts created outside Identity, or soft-deleted rows).
-            var existingAny = await _context.Users
+            // No login row yet — check by email, bypassing the tenant filter.
+            var normalizedEmail = objFromGoogle.Email?.ToUpperInvariant();
+            var userFromDb = await _context.Users
                 .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(u => u.Email == objFromGoogle.Email);
+                .FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail);
 
-            if (existingAny != null)
+            if (userFromDb != null)
             {
-                if (existingAny.IsActive == false || existingAny.IsDeleted == true)
+                if (userFromDb.IsActive == false || userFromDb.IsDeleted == true)
                 {
                     return ServiceResult<LoginResponseDto>.Failure(
                         new BadRequestException("This account has been suspended. Please contact support@frelody.com if you believe this is a mistake."));
                 }
 
-                // Active user found via IgnoreQueryFilters but missed by FindByEmailAsync —
-                // link the Google login so future sign-ins hit the fast path, then sign in.
-                await _userManager.AddLoginAsync(existingAny, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
-                return await LoginUserNoPassword(existingAny, existingAny.TenantId);
+                // Link the Google login only if it isn't already in the DB — guard against a
+                // duplicate-tracking exception if the loginRecord lookup above missed it.
+                var alreadyLinked = await _context.Set<IdentityUserLogin<string>>()
+                    .AnyAsync(l => l.LoginProvider == "google" && l.ProviderKey == objFromGoogle.Subject);
+                if (!alreadyLinked)
+                    await _userManager.AddLoginAsync(userFromDb, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
+
+                return await LoginUserNoPassword(userFromDb, userFromDb.TenantId);
             }
 
             // Create new user with a new tenant (each Google sign-up = new company/tenant)
