@@ -401,7 +401,7 @@
             @if (showChordPopover && hoveredChord != null)
             {
                 <div class="chord-popover-overlay"
-                     style="top: @(popoverTop)px; left: @(popoverLeft)px;"
+                     style="@GetPopoverStyle()"
                      @onmouseenter="() => isMouseOverPopover = true"
                      @onmouseleave="HideChordPopover">
                     <div class="chord-popover-content">
@@ -514,6 +514,7 @@
     private double popoverTop = 0;
     private double popoverLeft = 0;
     private bool isMouseOverPopover = false;
+    private bool _popoverAbove = true;
     private System.Threading.Timer? popoverTimer;
 
     private bool showCharts => songDisplayMode == SongDisplay.LyricsAndChordsAndCharts;
@@ -824,14 +825,13 @@
         if (hoveredChord != null)
         {
             currentChartIndex = 0;
-            var popoverHeight = 150;
-            var popoverWidth = 85;
 
-            popoverTop = e.ClientY - popoverHeight - 15;
-            popoverLeft = e.ClientX - (popoverWidth / 2);
-
-            if (popoverTop < 10)
-                popoverTop = e.ClientY + 15;
+            // Use transform:translateY(-100%) when above so the bottom edge sits
+            // exactly at the cursor, independent of actual rendered height.
+            // Flip below only when cursor is near the top of the viewport.
+            _popoverAbove = e.ClientY > 230;
+            popoverTop = _popoverAbove ? e.ClientY - 12 : e.ClientY + 15;
+            popoverLeft = e.ClientX - 70; // half of max-width (140px)
 
             if (popoverLeft < 10)
                 popoverLeft = 10;
@@ -909,6 +909,11 @@
             return chart.FilePath;
         return $"{ApiBaseUrl}/{chart.FilePath.TrimStart('/')}";
     }
+
+    private string GetPopoverStyle() =>
+        _popoverAbove
+            ? $"top:{popoverTop:0}px; left:{popoverLeft:0}px; transform:translateY(-100%);"
+            : $"top:{popoverTop:0}px; left:{popoverLeft:0}px;";
 
     private string GetSongContentStyle()
     {
