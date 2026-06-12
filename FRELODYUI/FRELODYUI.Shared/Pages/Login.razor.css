@@ -540,3 +540,49 @@
     gap: 0.5rem;
     flex-shrink: 0;
 }
+
+/* ── OAuth busy state ─────────────────────────────────────────── */
+.login-page--oauth-busy {
+    pointer-events: none;
+    user-select: none;
+}
+
+.login-container--center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: var(--k-space-4, 1rem);
+    padding: 2rem 1rem;
+}
+
+.login-card--oauth {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--k-space-3, 0.75rem);
+    padding: 2.5rem 2rem;
+    text-align: center;
+}
+
+.login-spinner--lg {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-width: 3px;
+    border-color: rgba(102, 126, 234, 0.25);
+    border-top-color: #667eea;
+}
+
+.login-oauth-busy-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.login-oauth-busy-sub {
+    font-size: var(--k-font-size-sm, 0.85rem);
+    color: var(--text-secondary);
+    margin: 0;
+}

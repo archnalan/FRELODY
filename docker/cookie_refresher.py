@@ -237,11 +237,27 @@ def slot_summaries() -> list:
 
 # ── one refresh cycle ───────────────────────────────────────────────────────
 
-def _export_if_authenticated(ctx, active_label: str) -> bool:
-    """After a YouTube visit, export the jar iff it carries a logged-in session."""
-    cookies = ctx.cookies()
-    yt = [c for c in cookies
-          if "youtube.com" in c.get("domain", "") or "google.com" in c.get("domain", "")]
+def _export_if_authenticated(ctx, active_label: str, seed_cookies=None) -> bool:
+    """After a YouTube visit, export the jar iff it carries a logged-in session.
+
+    On the reseed path, YouTube clears legacy auth cookies (SID, LOGIN_INFO,
+    __Secure-1PSID, etc.) during the page visit because the datacenter IP fails
+    its full session handshake.  ctx.cookies() therefore only returns ~11 of the
+    original 22 seed cookies.  Passing seed_cookies merges them back in: the seed
+    is the authoritative base (preserves all the cleared cookies), browser cookies
+    overlay any values YouTube freshened.  yt-dlp then gets the full 22-cookie jar.
+    """
+    browser = [c for c in ctx.cookies()
+               if "youtube.com" in c.get("domain", "") or "google.com" in c.get("domain", "")]
+    if seed_cookies:
+        filtered_seed = [c for c in seed_cookies
+                         if "youtube.com" in c.get("domain", "") or "google.com" in c.get("domain", "")]
+        merged = {c["name"]: c for c in filtered_seed}
+        for c in browser:
+            merged[c["name"]] = c
+        yt = list(merged.values())
+    else:
+        yt = browser
     has_auth, exp = auth_info(yt)
     if has_auth or ALLOW_ANON:
         atomic_write(OUT_FILE, to_netscape(yt))
@@ -274,10 +290,16 @@ def refresh_once(force_reseed: bool) -> None:
             # is asking us to switch — just revisit to renew expiries and export.
             have_login = any(c["name"] in AUTH_COOKIE_NAMES for c in ctx.cookies())
             if have_login and not force_reseed:
+                # Supply the best available seed for merging: YouTube strips legacy
+                # auth cookies (SID, LOGIN_INFO, …) from the browser during a visit
+                # from a datacenter IP.  Merging restores them so yt-dlp gets the
+                # full original jar even on the fast (profile-refresh) path.
+                _best = next(iter(list_seed_candidates()), None)
+                _seed = parse_netscape(_best[1]) if (_best and _best[3]) else None
                 page.goto("https://www.youtube.com", wait_until="domcontentloaded",
                           timeout=60000)
                 page.wait_for_timeout(4000)
-                if _export_if_authenticated(ctx, "profile"):
+                if _export_if_authenticated(ctx, "profile", seed_cookies=_seed):
                     return
                 log("warmed profile no longer authenticates — falling back to seeds")
 
@@ -297,13 +319,14 @@ def refresh_once(force_reseed: bool) -> None:
                 if not has_auth:
                     log(f"slot '{label}' has no auth cookies — skipping")
                     continue
+                seed_parsed = parse_netscape(path)
                 ctx.clear_cookies()
-                ctx.add_cookies(parse_netscape(path))
-                log(f"trying seed '{label}' ({len(parse_netscape(path))} cookies)")
+                ctx.add_cookies(seed_parsed)
+                log(f"trying seed '{label}' ({len(seed_parsed)} cookies)")
                 page.goto("https://www.youtube.com", wait_until="domcontentloaded",
                           timeout=60000)
                 page.wait_for_timeout(4000)
-                if _export_if_authenticated(ctx, label):
+                if _export_if_authenticated(ctx, label, seed_cookies=seed_parsed):
                     return
 
             log("no seed authenticated — leaving youtube.txt untouched")

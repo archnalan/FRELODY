@@ -29,6 +29,26 @@
 {
     <Register FullBody="true" ReturnUrl="@ReturnUrl" OnRegisterSuccess="@HandleRegisterSuccess" GoBackToSignInModal=@(() => showSignUp=false) />
 }
+else if (isGoogleOAuthInProgress)
+{
+    <div class="login-page login-page--oauth-busy">
+        <div class="login-container login-container--center">
+            <div class="login-branding">
+                <div class="login-logo" aria-hidden="true">
+                    <span class="login-logo-icon">
+                        <img width="100" height="100" src="_content/FRELODYUI.Shared/fet_melody_logo.png" alt="Frelody" class="nav-logo-img" />
+                    </span>
+                </div>
+                <h1 class="login-app-name">FRELODY</h1>
+            </div>
+            <div class="login-card login-card--oauth">
+                <span class="login-spinner login-spinner--lg" aria-hidden="true"></span>
+                <p class="login-oauth-busy-title">Completing sign in…</p>
+                <p class="login-oauth-busy-sub">Please wait, do not navigate away.</p>
+            </div>
+        </div>
+    </div>
+}
 else
 {
     <div class="login-page">

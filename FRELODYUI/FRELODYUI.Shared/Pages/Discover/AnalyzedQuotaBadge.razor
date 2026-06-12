@@ -8,7 +8,7 @@
 {
     <span class="qb @(_remaining == 0 ? "qb--empty" : "")" title="Free analyzed songs remaining today">
         <i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>
-        <span class="qb-text">@_remaining of @_limit free today</span>
+        <span class="qb-text">@_remaining of @_limit free song@(_limit == 1 ? "" : "s") left today</span>
     </span>
 }
 
