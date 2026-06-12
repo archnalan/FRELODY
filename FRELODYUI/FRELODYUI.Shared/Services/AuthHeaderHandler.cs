@@ -104,6 +104,8 @@ namespace FRELODYUI.Shared.Services
             }
             catch (Exception ex)
             {
+                if (ex is OperationCanceledException or TaskCanceledException)
+                    throw; // Normal — component unmounted or request timed out; not an error
                 _logger.LogError("Error in AuthHeaderHandler: {ex}", ex);
                 throw;
             }
