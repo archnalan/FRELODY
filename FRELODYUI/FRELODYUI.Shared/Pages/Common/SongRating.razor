@@ -151,6 +151,8 @@ else
         }
         catch (Exception ex)
         {
+            if (ex is OperationCanceledException or TaskCanceledException)
+                return; // Component unmounted or request cancelled — not an error
             _logger.LogError(ex, "Error loading rating info for {SongId}", SongId);
             error = "An error occurred while loading rating info.";
         }

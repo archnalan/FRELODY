@@ -192,19 +192,9 @@
             _video = resolved.Content;
 
             // Pre-gate over-long clips before any sign-in/analysis prompt.
+            // Cache check + paywall gate handled by Analyze (OnAfterRenderAsync).
             if (_video.DurationSeconds > 0 && await CheckTooLongAsync(_video.DurationSeconds))
                 return;
-
-            var cached = await TikTokApi.GetTranscription(_video.VideoId);
-            if (cached.IsSuccessStatusCode && cached.Content is not null)
-            {
-                _result = cached.Content;
-                _state = AnalysisState.Complete;
-            }
-            else if (cached.Error?.StatusCode == HttpStatusCode.PaymentRequired)
-            {
-                ShowPaywall(cached.Error.Content);
-            }
         }
         else
         {
