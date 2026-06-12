@@ -410,11 +410,6 @@
     // Both expose the same initialize/getCurrentTime/seekTo/destroy interface.
     [Parameter] public string PlayerApi { get; set; } = "ytPlayer";
 
-    // Fallback orientation hint used only when real pixel dimensions are unknown:
-    // vertical media (e.g. TikTok) gets a 9:16 stage + narrower window, landscape
-    // (YouTube) stays 16:9.
-    [Parameter] public bool PlayerVertical { get; set; }
-
     // Real clip dimensions (TikTok via yt-dlp). When present they drive the exact
     // stage aspect ratio so the player never letterboxes into a mismatched box.
     [Parameter] public int? VideoWidth { get; set; }
@@ -434,9 +429,6 @@
     private bool _seekSupported => PlayerApi == "ytPlayer";
     private const string TiktokNoCtrlTitle = "Not available for TikTok playback";
 
-    // Portrait → narrow window; landscape → standard. Driven by real dimensions
-    // when known, else the PlayerVertical hint.
-    private bool _floatVertical;
     // Inline aspect-ratio for the stage when real dimensions are known (else the
     // scoped CSS default for the orientation applies).
     private string? _stageStyle;
@@ -447,7 +439,6 @@
         {
             var c = "pv-float";
             if (_playerCollapsed) c += " pv-float--collapsed";
-            if (_floatVertical) c += " pv-float--vertical";
             return c;
         }
     }
@@ -661,17 +652,10 @@
         }
 
         // Size the player to the clip's real aspect ratio when yt-dlp reported it,
-        // killing the black bars; otherwise fall back to the orientation hint.
-        if (VideoWidth is > 0 && VideoHeight is > 0)
-        {
-            _stageStyle = $"aspect-ratio: {VideoWidth} / {VideoHeight};";
-            _floatVertical = VideoHeight > VideoWidth;
-        }
-        else
-        {
-            _stageStyle = null;
-            _floatVertical = PlayerVertical;
-        }
+        // killing the black bars; otherwise let the CSS default (16/9) apply.
+        _stageStyle = (VideoWidth is > 0 && VideoHeight is > 0)
+            ? $"aspect-ratio: {VideoWidth} / {VideoHeight};"
+            : null;
 
         // Rebuild the unique-chord list (and refetch diagrams) only when the
         // underlying transcription changes — not on every beat tick.

@@ -807,14 +807,6 @@
     background: #000;
 }
 
-/* Vertical sources (TikTok): taller-than-wide stage + a narrower window. */
-.pv-float--vertical {
-    width: min(12rem, calc(100vw - 2 * var(--k-space-4)));
-}
-
-.pv-float--vertical .pv-float-stage {
-    aspect-ratio: 9 / 16;
-}
 
 .pv-float-stage > div,
 .pv-float-stage iframe {
@@ -839,8 +831,7 @@
         padding-bottom: var(--k-space-3);
     }
 
-    .pv-float,
-    .pv-float--vertical {
+    .pv-float {
         position: static;
         left: auto;
         top: auto;
@@ -856,12 +847,5 @@
         cursor: default;
     }
 
-    /* Center a vertical (TikTok) stage and size it by height so it stays portrait
-       and never dominates the viewport. */
-    .pv-float--vertical .pv-float-stage {
-        aspect-ratio: 9 / 16;
-        height: 60vh;
-        width: auto;
-        margin: 0 auto;
-    }
+
 }
