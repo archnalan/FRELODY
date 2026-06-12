@@ -245,23 +245,36 @@ namespace FRELODYAPP.Data
                 return await LoginUserNoPassword(userFromDb, userFromDb.TenantId);
             }
 
-            // Guard: check for a soft-deleted or blocked account with this email before
-            // creating a new one — FindByEmailAsync respects query filters and would miss it,
-            // leading to a duplicate row.
+            // Guard: check for any account with this email that FindByEmailAsync may have missed
+            // (e.g. NormalizedEmail mismatch on accounts created outside Identity, or soft-deleted rows).
             var existingAny = await _context.Users
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(u => u.Email == objFromGoogle.Email);
 
-            if (existingAny != null && (existingAny.IsActive == false || existingAny.IsDeleted == true))
+            if (existingAny != null)
             {
-                return ServiceResult<LoginResponseDto>.Failure(
-                    new BadRequestException("This account has been suspended. Please contact support@frelody.com if you believe this is a mistake."));
+                if (existingAny.IsActive == false || existingAny.IsDeleted == true)
+                {
+                    return ServiceResult<LoginResponseDto>.Failure(
+                        new BadRequestException("This account has been suspended. Please contact support@frelody.com if you believe this is a mistake."));
+                }
+
+                // Active user found via IgnoreQueryFilters but missed by FindByEmailAsync —
+                // link the Google login so future sign-ins hit the fast path, then sign in.
+                await _userManager.AddLoginAsync(existingAny, new UserLoginInfo("google", objFromGoogle.Subject, objFromGoogle.Name));
+                return await LoginUserNoPassword(existingAny, existingAny.TenantId);
             }
 
             // Create new user with a new tenant (each Google sign-up = new company/tenant)
             var nameParts = (objFromGoogle.Name ?? "").Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
             var fullName = objFromGoogle.Name ?? "User";
             var emailPrefix = objFromGoogle.Email?.Split('@')[0] ?? "user";
+
+            // Ensure the generated username is unique — try @prefix, @prefix2, @prefix3, …
+            var candidateUsername = $"@{emailPrefix}";
+            var suffix = 2;
+            while (await _userManager.FindByNameAsync(candidateUsername) != null)
+                candidateUsername = $"@{emailPrefix}{suffix++}";
 
             var newTenant = new Tenant
             {
@@ -273,7 +286,7 @@ namespace FRELODYAPP.Data
             var newUser = new User()
             {
                 Email = objFromGoogle.Email,
-                UserName = $"@{emailPrefix}",
+                UserName = candidateUsername,
                 FirstName = nameParts.FirstOrDefault() ?? "",
                 LastName = nameParts.Length > 1 ? nameParts[1] : "",
                 EmailConfirmed = objFromGoogle.EmailVerified,

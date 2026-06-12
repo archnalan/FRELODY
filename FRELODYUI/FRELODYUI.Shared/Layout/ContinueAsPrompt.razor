@@ -72,7 +72,10 @@
 
     private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        if (IsAuthRoute() && _visible)
+        // Cancel One Tap regardless of _visible — the prompt can be initialized but
+        // hidden (no remembered user), and if we don't cancel it here it will race
+        // a PKCE callback that's already in flight on the login page.
+        if (IsAuthRoute())
         {
             _visible = false;
             if (_module is not null)
