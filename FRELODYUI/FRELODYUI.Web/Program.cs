@@ -27,6 +27,10 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
+// Bridge the circuit's DI scope into IHttpClientFactory handler scopes so
+// AuthHeaderHandler can read the browser session on the Server render path.
+builder.Services.AddCircuitServicesAccessor();
+
 builder.Services.AddAuthenticationCore();
 builder.Services.AddAuthorizationCore();
 

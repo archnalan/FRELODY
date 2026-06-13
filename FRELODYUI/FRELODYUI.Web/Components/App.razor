@@ -11,15 +11,60 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="_content/FRELODYUI.Shared/fet_melody_logo.png" />
-    <HeadOutlet @rendermode="InteractiveAuto" />
+    <HeadOutlet @rendermode="@(new InteractiveAutoRenderMode(prerender: false))" />
     <ImportMap />
+
+    <script>
+        // Apply the persisted theme before first paint so the page never flashes
+        // light-then-dark. Blazored.LocalStorage writes key "Theme" as a JSON-quoted
+        // string (e.g. "dark"), so parse it rather than reading the raw value.
+        (function () {
+            try {
+                var raw = localStorage.getItem('Theme');
+                if (!raw) return;
+                var theme;
+                try { theme = JSON.parse(raw); } catch (e) { theme = raw; }
+                if (theme === 'dark' || theme === 'light') {
+                    document.documentElement.setAttribute('data-bs-theme', theme);
+                }
+            } catch (e) { /* storage blocked — fall back to default theme */ }
+        })();
+    </script>
+    <style>
+        /* Boot splash shown until Blazor starts (prerendering is disabled, so the
+           server sends no page markup). Theme-aware via the attribute set above. */
+        #blazor-boot-splash {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            transition: opacity .2s ease;
+        }
+        [data-bs-theme="dark"] #blazor-boot-splash { background: #121212; }
+        #blazor-boot-splash .bbs-spinner {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            border: 3px solid rgba(127, 127, 127, .25);
+            border-top-color: #6366f1;
+            animation: bbs-spin .8s linear infinite;
+        }
+        @@keyframes bbs-spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveAuto" />
+    <div id="blazor-boot-splash" aria-hidden="true">
+        <div class="bbs-spinner" role="status"></div>
+    </div>
+    <Routes @rendermode="@(new InteractiveAutoRenderMode(prerender: false))" />
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["_framework/blazor.web.js"]" autostart="false"></script>
     <script src="_content/FRELODYUI.Shared/ShareUtils.js"></script>
     <script src="_content/FRELODYUI.Shared/dragdrop.js"></script>
     <script src="_content/FRELODYUI.Shared/cameraInterop.js"></script>
@@ -28,6 +73,16 @@
     <script src="_content/FRELODYUI.Shared/tiktokPlayer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script>
+        // blazor.web.js is loaded with autostart="false"; start it manually so we can
+        // dismiss the boot splash once the runtime is up and the first render lands.
+        Blazor.start().then(function () {
+            var el = document.getElementById('blazor-boot-splash');
+            if (!el) return;
+            el.style.opacity = '0';
+            setTimeout(function () { el.remove(); }, 200);
+        });
+    </script>
 </body>
 
 </html>

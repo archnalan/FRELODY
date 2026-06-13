@@ -303,6 +303,9 @@ h1:focus {
     --k-aspect-chord: 4 / 5;
     /* Typography */
     --k-font-sans: inherit;
+    /* Editorial display face for hero/section headings — pairs a characterful
+       optical serif against the Kanit sans body. Roll out to headings gradually. */
+    --k-font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
     --k-font-size-xs: 0.7rem;
     --k-font-size-sm: 0.85rem;
     --k-font-size: 0.9rem;

@@ -54,6 +54,7 @@
                            placeholder="@(_mode == SearchMode.YouTube ? "Song title, artist, or YouTube URL…" : "Paste a TikTok video link…")"
                            @bind="_query"
                            @bind:event="oninput"
+                           @bind:after="OnQueryChanged"
                            @onfocus="() => _focused = true"
                            @onblur="() => _focused = false"
                            @onkeydown="HandleKeyDown"
@@ -285,6 +286,17 @@
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") await HandleSearch();
+    }
+
+    // Clearing the box (manually or via the native ✕) should snap back to the
+    // landing state — results/marquee — instead of stranding stale results.
+    private void OnQueryChanged()
+    {
+        if (!string.IsNullOrWhiteSpace(_query)) return;
+        _results = null;
+        _hasSearched = false;
+        _error = null;
+        _searchedQuery = string.Empty;
     }
 
     private async Task QuickSearch(string term)

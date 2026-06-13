@@ -1,5 +1,6 @@
 ﻿using FRELODYAPP.Dtos.AuthDtos;
 using FRELODYSHRD.Dtos.AuthDtos;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -19,6 +20,7 @@ namespace FRELODYUI.Shared.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly SessionEndedNotifier _sessionEnded;
         private readonly GlobalAuthStateProvider _globalAuth;
+        private readonly IServiceProvider _serviceProvider;
         private static readonly SemaphoreSlim _refreshLock = new(1, 1);
 
         public AuthHeaderHandler(
@@ -26,13 +28,15 @@ namespace FRELODYUI.Shared.Services
             ILogger<AuthHeaderHandler> logger,
             IHttpClientFactory httpClientFactory,
             SessionEndedNotifier sessionEnded,
-            GlobalAuthStateProvider globalAuth)
+            GlobalAuthStateProvider globalAuth,
+            IServiceProvider serviceProvider)
         {
             _localStorage = localStorage;
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _sessionEnded = sessionEnded;
             _globalAuth = globalAuth;
+            _serviceProvider = serviceProvider;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -45,6 +49,19 @@ namespace FRELODYUI.Shared.Services
                 // (e.g. during server-side prerendering where JS interop isn't ready yet).
                 // Using the scoped instance (not a static field) prevents cross-user leakage.
                 sessionModel ??= _globalAuth.CachedSession;
+
+                // Blazor Server render path: IHttpClientFactory builds this handler in its
+                // own DI scope, so our IStorageService/GlobalAuthStateProvider above are a
+                // different scope than the circuit and can't reach the browser's localStorage
+                // — dropping the token and making the API treat a signed-in user as anonymous.
+                // Bridge to the circuit's services to read the real session. Null/no-op on
+                // WASM and MAUI (single scope, localStorage already works).
+                if (sessionModel is null)
+                {
+                    var circuitFallback = _serviceProvider.GetService<ICircuitTokenFallback>();
+                    if (circuitFallback is not null)
+                        sessionModel = await circuitFallback.GetSessionAsync();
+                }
 
                 if (sessionModel != null && IsTokenExpired(sessionModel.Token))
                 {
