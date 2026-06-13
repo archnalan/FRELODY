@@ -9,7 +9,7 @@
     }
     else if (_cards.Length > 0)
     {
-        <div class="cm-scroll">
+        <div class="cm-scroll @(Reverse ? "cm-scroll--reverse" : "")">
             @foreach (var card in _cards)
             {
                 <div class="cm-card">
@@ -29,6 +29,9 @@
 </div>
 
 @code {
+    /// <summary>Flips the scroll direction — used to mirror the YouTube ⇆ TikTok source toggle.</summary>
+    [Parameter] public bool Reverse { get; set; }
+
     private static readonly string[] ChordNames = ["C", "Am", "F", "G", "Em", "Dm", "A", "E", "Bm", "D"];
 
     private record ChordCard(MarkupString Svg, string Name);

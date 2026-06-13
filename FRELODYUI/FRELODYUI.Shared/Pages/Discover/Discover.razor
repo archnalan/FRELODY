@@ -11,9 +11,9 @@
 
     @* ── Hero ─────────────────────────────────────────────────────── *@
     <section class="dc-hero @(_hasSearched ? "dc-hero--compact" : "")">
-        <div class="dc-hero-glow" aria-hidden="true"></div>
+        <div class="k-hero-glow" aria-hidden="true"></div>
 
-        <div class="dc-hero-inner">
+        <div class="dc-hero-inner k-rise-stack">
 
             @* ── Source toggle (YouTube ⇆ TikTok) ──────────────────── *@
             <div class="dc-mode-toggle" role="tablist" aria-label="Choose a source">
@@ -33,7 +33,7 @@
 
             @if (!_hasSearched)
             {
-                <h1 class="dc-heading">
+                <h1 class="dc-heading k-display">
                     @(_mode == SearchMode.YouTube
                         ? "Find songs. Start playing."
                         : "Hear a sound. Learn the chords.")
@@ -137,7 +137,7 @@
         }
         else
         {
-            <ChordMarquee />
+            <ChordMarquee Reverse="@(_mode == SearchMode.TikTok)" />
         }
 
     </section>

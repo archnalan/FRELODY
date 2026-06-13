@@ -399,6 +399,68 @@ h1:focus {
     animation: k-shimmer 1.4s ease-in-out infinite;
 }
 
+/* ── Landing character primitives ──────────────────────────────────
+   Shared design language for landing / marketing / public surfaces:
+   an editorial display heading, a layered accent hero glow, and an
+   orchestrated staggered reveal. Global (not scoped) so any public page
+   can opt in — same pattern as .k-shimmer above. Motion is guarded by
+   prefers-reduced-motion. Set font-size per surface; the rest is shared. */
+@keyframes k-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes k-glow-drift {
+    from { transform: translate3d(-1.5%, 0, 0) scale(1); }
+    to   { transform: translate3d(1.5%, 1%, 0) scale(1.06); }
+}
+
+/* Editorial display heading — optical serif against the sans body. */
+.k-display {
+    font-family: var(--k-font-display);
+    font-optical-sizing: auto;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+    text-wrap: balance;
+}
+
+/* Layered accent glow for hero sections — a primary crown plus two soft
+   off-axis pools for depth. Place inside a position:relative hero with
+   the content above it (z-index). */
+.k-hero-glow {
+    position: absolute;
+    inset: -10% -10% 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 65% 52% at 50% 0%, var(--k-accent-soft) 0%, transparent 72%),
+        radial-gradient(circle 32% at 16% 8%, var(--k-accent-soft) 0%, transparent 60%),
+        radial-gradient(circle 36% at 86% 4%, var(--k-accent-soft) 0%, transparent 62%);
+    opacity: 0.9;
+}
+
+[data-bs-theme="dark"] .k-hero-glow {
+    opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .k-hero-glow {
+        animation: k-glow-drift 18s ease-in-out infinite alternate;
+    }
+
+    /* One staggered rise of a stack's direct children — more delight than
+       scattered micro-interactions. Covers up to 6 children. */
+    .k-rise-stack > * {
+        animation: k-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .k-rise-stack > *:nth-child(1) { animation-delay: 40ms; }
+    .k-rise-stack > *:nth-child(2) { animation-delay: 120ms; }
+    .k-rise-stack > *:nth-child(3) { animation-delay: 200ms; }
+    .k-rise-stack > *:nth-child(4) { animation-delay: 280ms; }
+    .k-rise-stack > *:nth-child(5) { animation-delay: 360ms; }
+    .k-rise-stack > *:nth-child(6) { animation-delay: 440ms; }
+}
+
 /* ==================== Admin layout shell ==================== */
 .admin-page {
     background: var(--k-bg-app);

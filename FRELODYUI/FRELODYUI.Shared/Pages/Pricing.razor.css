@@ -10,8 +10,7 @@
 
 .pr-section-title {
     text-align: center;
-    font-size: 1.4rem;
-    font-weight: 700;
+    font-size: 1.5rem;
     color: var(--text-primary);
     margin-bottom: var(--k-space-6, 1.5rem);
 }
@@ -36,9 +35,6 @@
 
 .pr-hero-title {
     font-size: clamp(1.7rem, 6vw, 2.6rem);
-    font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
     color: var(--text-primary);
     margin: 0 auto var(--k-space-3, 0.75rem);
     max-width: 22ch;
@@ -544,7 +540,6 @@
 
 .pr-final-title {
     font-size: clamp(1.4rem, 5vw, 2rem);
-    font-weight: 800;
     margin: 0 0 var(--k-space-2, 0.5rem);
 }
 
