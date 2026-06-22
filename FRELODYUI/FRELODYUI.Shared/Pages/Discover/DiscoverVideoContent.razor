@@ -64,7 +64,7 @@
 
         @if (_state == AnalysisState.Complete && _result is not null)
         {
-            <YoutubePlaybackView
+            <VideoPlaybackView
                 Transcription="_result"
                 Video="_video"
                 AllowSaveToLibrary="true"
@@ -129,9 +129,14 @@
         }
         else
         {
-            <!-- Processing state -->
-            <AnalysisProgress StageIndex="_stageIndex"
-                              Subtitle="This may take a minute for longer videos." />
+            <!-- Processing state — let the user watch the real video while we analyze -->
+            <div class="dv-analyze">
+                <div class="dv-analyze-player">
+                    <YoutubePlayerMount Id="@AnalyzePlayerId" />
+                </div>
+                <AnalysisProgress StageIndex="_stageIndex"
+                                  Subtitle="@_progressSubtitle" />
+            </div>
         }
 
     </div>
@@ -160,6 +165,11 @@
     private bool _tooLongUpgradeable;
     private System.Threading.Timer? _stageTimer;
     private int _stageIndex;
+    private double[] _stageSeconds = [];
+    private bool _analyzePlayerMounted;
+    private string _progressSubtitle = "This may take a minute for longer videos.";
+
+    private const string AnalyzePlayerId = "dv-analyze-player";
 
     private string CurrentRelativeUrl =>
         "/" + Nav.ToBaseRelativePath(Nav.Uri);
@@ -187,6 +197,16 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Mount the YouTube player into the analysis placeholder so the user can watch the
+        // real video while the (slow) pipeline runs. Re-renders of the processing state are
+        // driven by the StageHasChanged below, so this fires once the player div exists.
+        if (_state == AnalysisState.Extracting && !_analyzePlayerMounted)
+        {
+            _analyzePlayerMounted = true;
+            try { await JsRt.InvokeVoidAsync("ytPlayer.initialize", VideoId, AnalyzePlayerId, null); }
+            catch { _analyzePlayerMounted = false; }
+        }
+
         if (firstRender && _state == AnalysisState.Idle)
             await RunAnalysisAsync(forceRefresh: false);
     }
@@ -209,14 +229,17 @@
     {
         _state = AnalysisState.Extracting;
         _stageIndex = 0;
+        _analyzePlayerMounted = false;
+        _progressSubtitle = "This may take a minute for longer videos.";
         _errorMessage = null;
         StateHasChanged();
 
-        _stageTimer = new System.Threading.Timer(_ =>
-        {
-            _stageIndex = Math.Min(_stageIndex + 1, Stages.Length - 1);
-            InvokeAsync(StateHasChanged);
-        }, null, TimeSpan.FromSeconds(12), TimeSpan.FromSeconds(12));
+        // Advance the stage checklist on a duration-scaled schedule (extract → beats →
+        // chords) so "Finalizing…" only appears near the real end, then holds there until
+        // the result arrives — instead of a blind timer that races to the last stage.
+        _stageSeconds = AnalysisStageEstimator.Estimate(_video?.DurationSeconds);
+        _stageTimer = new System.Threading.Timer(_ => InvokeAsync(AdvanceStage),
+            null, TimeSpan.FromSeconds(_stageSeconds[0]), Timeout.InfiniteTimeSpan);
 
         try
         {
@@ -256,8 +279,28 @@
         {
             _stageTimer?.Dispose();
             _stageTimer = null;
+            // On success the result view re-initializes the same player singleton (clean
+            // handoff); otherwise tear the placeholder player down so it doesn't linger.
+            if (_state != AnalysisState.Complete && _analyzePlayerMounted)
+            {
+                try { await JsRt.InvokeVoidAsync("ytPlayer.destroy"); } catch { }
+            }
+            _analyzePlayerMounted = false;
             StateHasChanged();
         }
+    }
+
+    // Walk extract → beats → chords on the estimated schedule, then hold on "Finalizing…"
+    // (the last stage) until RunAnalysisAsync flips to a terminal state.
+    private void AdvanceStage()
+    {
+        if (_stageIndex >= Stages.Length - 1) return;
+        _stageIndex++;
+        if (_stageIndex >= Stages.Length - 1)
+            _progressSubtitle = "Almost there — finishing up the analysis.";
+        StateHasChanged();
+        if (_stageIndex < _stageSeconds.Length)
+            _stageTimer?.Change(TimeSpan.FromSeconds(_stageSeconds[_stageIndex]), Timeout.InfiniteTimeSpan);
     }
 
     private void ShowPaywall(string? body)

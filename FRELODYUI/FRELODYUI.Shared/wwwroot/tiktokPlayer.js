@@ -1,6 +1,6 @@
 // TikTok playback shim — exposes the SAME interface as window.ytPlayer
 // (initialize / getCurrentTime / seekTo / destroy + OnPlayerReady /
-// OnPlayerStateChange callbacks) so YoutubePlaybackView can drive either player.
+// OnPlayerStateChange callbacks) so VideoPlaybackView can drive either player.
 //
 // TikTok's Player v1 iframe (https://www.tiktok.com/player/v1/{id}) talks over
 // postMessage: we send {type, value, 'x-tiktok-player':true} and it posts back

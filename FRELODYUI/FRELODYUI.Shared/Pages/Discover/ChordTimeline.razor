@@ -74,7 +74,7 @@
     // Beat times in seconds — drives the lead-sheet grid above the carousel strip.
     [Parameter] public List<float> Beats { get; set; } = [];
 
-    // Resolved chords + their charts. Parent (YoutubePlaybackView) already resolves
+    // Resolved chords + their charts. Parent (VideoPlaybackView) already resolves
     // these (with charts) for the "Chord shapes" section in one call — we share that
     // list so each slot renders from PreloadedCharts rather than re-fetching per slot.
     [Parameter] public List<ResolvedChordCard> ChordCards { get; set; } = [];

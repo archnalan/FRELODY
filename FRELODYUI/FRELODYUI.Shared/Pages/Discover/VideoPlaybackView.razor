@@ -432,6 +432,7 @@
     // Inline aspect-ratio for the stage when real dimensions are known (else the
     // scoped CSS default for the orientation applies).
     private string? _stageStyle;
+    private bool _isPortrait;
 
     private string FloatClass
     {
@@ -439,11 +440,12 @@
         {
             var c = "pv-float";
             if (_playerCollapsed) c += " pv-float--collapsed";
+            if (_isPortrait) c += " pv-float--portrait";
             return c;
         }
     }
 
-    private DotNetObjectReference<YoutubePlaybackView>? _dotNetRef;
+    private DotNetObjectReference<VideoPlaybackView>? _dotNetRef;
     private PeriodicTimer? _syncTimer;
     private CancellationTokenSource? _cts;
 
@@ -657,6 +659,10 @@
             ? $"aspect-ratio: {VideoWidth} / {VideoHeight};"
             : null;
 
+        // Portrait clips (TikTok) get bounded by height so they don't tower; the
+        // float footprint stays comparable to a landscape (YouTube) player.
+        _isPortrait = VideoWidth is > 0 && VideoHeight is > 0 && VideoHeight > VideoWidth;
+
         // Rebuild the unique-chord list (and refetch diagrams) only when the
         // underlying transcription changes — not on every beat tick.
         if (!ReferenceEquals(_builtChordsRef, Transcription.SyncedChords))
@@ -759,7 +765,7 @@
         try
         {
             _dragModule = await JS.InvokeAsync<IJSObjectReference>(
-                "import", "./_content/FRELODYUI.Shared/Pages/Discover/YoutubePlaybackView.razor.js");
+                "import", "./_content/FRELODYUI.Shared/Pages/Discover/VideoPlaybackView.razor.js");
             await _dragModule.InvokeVoidAsync("makeDraggable", _floatEl, "[data-pv-drag]");
         }
         catch { /* drag is a progressive enhancement */ }

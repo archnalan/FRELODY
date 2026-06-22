@@ -63,7 +63,7 @@
 
         @if (_state == AnalysisState.Complete && _result is not null)
         {
-            <YoutubePlaybackView
+            <VideoPlaybackView
                 Transcription="_result"
                 PlayerApi="tiktokPlayer"
                 VideoWidth="_video?.Width"
@@ -135,8 +135,17 @@
         }
         else
         {
-            <AnalysisProgress StageIndex="_stageIndex"
-                              Subtitle="Hang tight — this usually takes a few seconds for short clips." />
+            <!-- Processing state — let the user watch the clip while we analyze -->
+            <div class="dv-analyze">
+                @if (_video is not null)
+                {
+                    <div class="dv-analyze-player dv-analyze-player--tiktok" style="@_analyzePlayerStyle">
+                        <YoutubePlayerMount Id="@AnalyzePlayerId" />
+                    </div>
+                }
+                <AnalysisProgress StageIndex="_stageIndex"
+                                  Subtitle="@_progressSubtitle" />
+            </div>
         }
 
     </div>
@@ -165,6 +174,16 @@
     private bool _tooLongUpgradeable;
     private System.Threading.Timer? _stageTimer;
     private int _stageIndex;
+    private double[] _stageSeconds = [];
+    private bool _analyzePlayerMounted;
+    private string _progressSubtitle = "This can take up to a minute.";
+
+    private const string AnalyzePlayerId = "dv-analyze-player";
+
+    private string _analyzePlayerStyle =>
+        (_video?.Width is > 0 && _video?.Height is > 0)
+            ? $"aspect-ratio: {_video.Width} / {_video.Height};"
+            : "aspect-ratio: 9 / 16;";
 
     private string CurrentRelativeUrl =>
         "/" + Nav.ToBaseRelativePath(Nav.Uri);
@@ -206,6 +225,15 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Mount the TikTok player into the analysis placeholder so the user can watch the
+        // clip while the (slow) pipeline runs. Fires once the player div exists.
+        if (_state == AnalysisState.Extracting && !_analyzePlayerMounted && _video is not null)
+        {
+            _analyzePlayerMounted = true;
+            try { await JsRt.InvokeVoidAsync("tiktokPlayer.initialize", _video.VideoId, AnalyzePlayerId, null); }
+            catch { _analyzePlayerMounted = false; }
+        }
+
         if (firstRender && _state == AnalysisState.Idle && !string.IsNullOrWhiteSpace(Url))
             await RunAnalysisAsync(forceRefresh: false);
     }
@@ -226,14 +254,16 @@
 
         _state = AnalysisState.Extracting;
         _stageIndex = 0;
+        _analyzePlayerMounted = false;
+        _progressSubtitle = "This can take up to a minute.";
         _errorMessage = null;
         StateHasChanged();
 
-        _stageTimer = new System.Threading.Timer(_ =>
-        {
-            _stageIndex = Math.Min(_stageIndex + 1, Stages.Length - 1);
-            InvokeAsync(StateHasChanged);
-        }, null, TimeSpan.FromSeconds(8), TimeSpan.FromSeconds(8));
+        // Duration-scaled stage schedule so "Finalizing…" appears near the real end and then
+        // holds — not a blind timer that races to the last stage in a few seconds.
+        _stageSeconds = AnalysisStageEstimator.Estimate(_video?.DurationSeconds);
+        _stageTimer = new System.Threading.Timer(_ => InvokeAsync(AdvanceStage),
+            null, TimeSpan.FromSeconds(_stageSeconds[0]), Timeout.InfiniteTimeSpan);
 
         try
         {
@@ -272,8 +302,28 @@
         {
             _stageTimer?.Dispose();
             _stageTimer = null;
+            // On success the result view re-initializes the same player singleton (clean
+            // handoff); otherwise tear the placeholder player down so it doesn't linger.
+            if (_state != AnalysisState.Complete && _analyzePlayerMounted)
+            {
+                try { await JsRt.InvokeVoidAsync("tiktokPlayer.destroy"); } catch { }
+            }
+            _analyzePlayerMounted = false;
             StateHasChanged();
         }
+    }
+
+    // Walk extract → beats → chords on the estimated schedule, then hold on "Finalizing…"
+    // until RunAnalysisAsync flips to a terminal state.
+    private void AdvanceStage()
+    {
+        if (_stageIndex >= Stages.Length - 1) return;
+        _stageIndex++;
+        if (_stageIndex >= Stages.Length - 1)
+            _progressSubtitle = "Almost there — finishing up the analysis.";
+        StateHasChanged();
+        if (_stageIndex < _stageSeconds.Length)
+            _stageTimer?.Change(TimeSpan.FromSeconds(_stageSeconds[_stageIndex]), Timeout.InfiniteTimeSpan);
     }
 
     private void ShowPaywall(string? body)

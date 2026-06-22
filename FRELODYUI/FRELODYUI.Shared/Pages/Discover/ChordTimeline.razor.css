@@ -159,7 +159,7 @@
 }
 
 /* Maximised stage: let the grid breathe. .pv-stage--max is applied by
-   YoutubePlaybackView on an ancestor; Blazor's scope attribute is on the
+   VideoPlaybackView on an ancestor; Blazor's scope attribute is on the
    trailing .ct-grid so the descendant selector still resolves. */
 .pv-stage--max .ct-grid {
     max-height: 14rem;

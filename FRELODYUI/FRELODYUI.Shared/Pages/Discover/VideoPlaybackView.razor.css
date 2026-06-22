@@ -722,11 +722,16 @@
 
 /* ── Floating, draggable player window ─────────────────────────────────── */
 .pv-float {
+    /* Landscape width cap / portrait height cap — the stage uses whichever
+       dimension keeps the footprint comparable across YouTube and TikTok. */
+    --pv-float-w: min(20rem, calc(100vw - 2 * var(--k-space-4)));
+    --pv-float-h: min(60vh, 18rem);
     position: fixed;
     right: var(--k-space-4);
     bottom: var(--k-space-4);
     z-index: 1040;
-    width: min(20rem, calc(100vw - 2 * var(--k-space-4)));
+    width: fit-content;
+    max-width: calc(100vw - 2 * var(--k-space-4));
     border-radius: var(--k-radius-md);
     overflow: hidden;
     background: var(--k-bg-surface);
@@ -801,10 +806,21 @@
     color: var(--k-accent);
 }
 
-/* Video stage — the YT iframe replaces the mount div inside here. */
+/* Video stage — the YT iframe replaces the mount div inside here.
+   Landscape: width-bound (height follows aspect-ratio).
+   Portrait:  height-bound (width follows aspect-ratio), so vertical TikTok
+   clips don't tower over the chords. The aspect-ratio itself is set inline
+   from the clip's real dimensions; this just chooses the bounding axis. */
 .pv-float-stage {
     aspect-ratio: 16 / 9;
+    width: var(--pv-float-w);
+    height: auto;
     background: #000;
+}
+
+.pv-float--portrait .pv-float-stage {
+    width: auto;
+    height: var(--pv-float-h);
 }
 
 
@@ -840,6 +856,14 @@
         width: auto;
         margin: 0 var(--k-space-3) var(--k-space-3);
         box-shadow: var(--k-shadow-sm);
+    }
+
+    /* Docked: fill the card width and let aspect-ratio drive the height —
+       a vertical TikTok is welcome to be tall on a phone. */
+    .pv-float-stage,
+    .pv-float--portrait .pv-float-stage {
+        width: 100%;
+        height: auto;
     }
 
     /* Docked: the title bar is no longer a drag handle. */

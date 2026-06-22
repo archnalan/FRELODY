@@ -266,6 +266,15 @@ services:
     environment:
       FLASK_ENV: production
       MAX_CONTENT_LENGTH_MB: "150"
+      # CPU thread bounding (host = 6 cores, gunicorn runs 2 sync workers). Beat-Transformer
+      # is CPU-bound and torch/BLAS otherwise grab ALL cores per inference, so two concurrent
+      # analyses spawn ~12 threads on 6 cores and thrash — making concurrency *slower*, not
+      # faster. Cap each worker to cores ÷ workers = 3 threads; the 2 workers then act as a
+      # bounded queue (a 3rd first-time analysis waits at the socket instead of thrashing).
+      # Tradeoff: a lone request now uses 3 cores, not 6 — validate single-user latency.
+      OMP_NUM_THREADS: "3"
+      MKL_NUM_THREADS: "3"
+      OPENBLAS_NUM_THREADS: "3"
       # yt-dlp bot-wall bypass tunables (see docker/ytdlp_server.py)
       # NOTE (2026-06-22): YouTube tightened again — "default" (web) now returns
       # ONLY storyboard images (no audio/video formats) from this datacenter IP, so
