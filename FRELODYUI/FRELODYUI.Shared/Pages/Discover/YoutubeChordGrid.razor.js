@@ -23,8 +23,28 @@ export function beatRectAt(x, y) {
     return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
 }
 
+// Records the last *manual* scroll gesture so auto-scroll can yield to the user.
+// We listen to wheel/touchmove (real gestures) — NOT 'scroll', which also fires
+// for our own smooth scrollIntoView and would suppress ourselves forever. The
+// timestamp lives on window so other components (e.g. the mini-bar's
+// jump-to-player) can also defer auto-scroll by stamping it.
+let _scrollWatching = false;
+const SCROLL_YIELD_MS = 4000;
+
+function _watchUserScroll() {
+    if (_scrollWatching) return;
+    _scrollWatching = true;
+    const mark = () => { window.__pvLastUserScroll = Date.now(); };
+    window.addEventListener('wheel', mark, { passive: true });
+    window.addEventListener('touchmove', mark, { passive: true });
+}
+
 export function scrollActiveIntoView(grid) {
     if (!grid) return;
+    _watchUserScroll();
+    // Don't fight the user: if they scrolled/touched recently, hold off snapping
+    // the page back to the playhead so they can read ahead or reach the player.
+    if (Date.now() - (window.__pvLastUserScroll || 0) < SCROLL_YIELD_MS) return;
     const active = grid.querySelector('.ycg-beat--active');
     if (!active) return;
     // Breathing room: reserve one beat-button height above and below the active

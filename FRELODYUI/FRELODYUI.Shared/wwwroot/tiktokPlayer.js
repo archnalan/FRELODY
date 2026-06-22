@@ -11,6 +11,7 @@ window.tiktokPlayer = (function () {
     let _iframe = null;
     let _dotNetRef = null;
     let _currentTime = 0;
+    let _duration = 0;
     let _playing = false;
     let _stallTimer = null;
     let _listening = false;
@@ -43,6 +44,11 @@ window.tiktokPlayer = (function () {
             case 'onCurrentTime': {
                 const v = data.value;
                 const t = (v && typeof v === 'object') ? v.currentTime : v;
+                // Some Player v1 builds include the clip duration alongside the
+                // time tick — capture it so the mini-transport scrub has a span.
+                if (v && typeof v === 'object' && typeof v.duration === 'number' && v.duration > 0) {
+                    _duration = v.duration;
+                }
                 if (typeof t === 'number' && !isNaN(t)) {
                     _currentTime = t;
                     _setPlaying(true);
@@ -100,6 +106,15 @@ window.tiktokPlayer = (function () {
         getCurrentTime: function () {
             return _currentTime;
         },
+        getDuration: function () {
+            return _duration;
+        },
+        play: function () {
+            _post('play');
+        },
+        pause: function () {
+            _post('pause');
+        },
         seekTo: function (seconds) {
             _post('seekTo', seconds);
         },
@@ -118,6 +133,7 @@ window.tiktokPlayer = (function () {
             _iframe = null;
             _dotNetRef = null;
             _currentTime = 0;
+            _duration = 0;
             _playing = false;
         }
     };

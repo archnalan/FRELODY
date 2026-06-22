@@ -57,6 +57,15 @@ window.ytPlayer = (function () {
         getCurrentTime: function () {
             try { return _player ? _player.getCurrentTime() : 0; } catch (_) { return 0; }
         },
+        getDuration: function () {
+            try { return _player ? _player.getDuration() : 0; } catch (_) { return 0; }
+        },
+        play: function () {
+            try { if (_player) _player.playVideo(); } catch (_) {}
+        },
+        pause: function () {
+            try { if (_player) _player.pauseVideo(); } catch (_) {}
+        },
         seekTo: function (seconds) {
             try { if (_player) _player.seekTo(seconds, true); } catch (_) {}
         },

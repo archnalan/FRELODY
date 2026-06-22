@@ -89,13 +89,18 @@
         pointer-events: auto;
     }
 
-/* Logo image */
+/* Logo image — the blue brand mark sits on a white chip so it never lands on
+   the indigo .top-row gradient (the white "FRELODY" wordmark beside it stays on
+   the gradient). Light chip in both themes since the mark is blue-on-light. */
 .nav-logo-img {
     width: 28px;
     height: 28px;
-    border-radius: 6px;
+    border-radius: 7px;
     object-fit: contain;
     flex-shrink: 0;
+    background: #ffffff;
+    padding: 3px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }
 
 .nav-brand-text {

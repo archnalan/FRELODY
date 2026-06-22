@@ -837,14 +837,89 @@
     display: none;
 }
 
+/* ── Mobile mini-transport ─────────────────────────────────────────────────
+   Hidden on desktop (the floating player is always in view there). On small
+   screens it becomes a fixed bottom bar — see the media query below. */
+.pv-mini {
+    display: none;
+}
+
+.pv-mini-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: none;
+    border-radius: var(--k-radius-pill);
+    background: var(--k-accent);
+    color: #fff;
+    font-size: 1.15rem;
+    cursor: pointer;
+    transition: transform var(--k-transition-fast), filter var(--k-transition-fast);
+}
+
+.pv-mini-btn:active {
+    transform: scale(0.92);
+}
+
+.pv-mini-chord {
+    flex-shrink: 0;
+    min-width: 3.5rem;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--k-text-strong, var(--text-primary));
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pv-mini-idle {
+    font-weight: 500;
+    font-size: var(--k-font-size-sm);
+    color: var(--k-text-muted);
+}
+
+.pv-mini-scrub {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 1.5rem;
+    accent-color: var(--k-accent);
+    cursor: pointer;
+}
+
 /* ── Small screens: dock the player inline at the bottom of the content ──
    Screen real-estate is tight, so instead of floating over the chords the
    player drops into normal flow beneath pv-main and takes its own space. */
 @media (max-width: 600px) {
     .pv-main {
         padding: var(--k-space-3);
-        /* No floating overlap to clear anymore. */
-        padding-bottom: var(--k-space-3);
+    }
+
+    /* Reserve space below all content (incl. the docked player) so nothing
+       hides behind the fixed mini-transport bar. */
+    .pv {
+        padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Persistent transport: fixed to the viewport bottom, always in thumb reach.
+       z-index sits above the chord content but below the nav offcanvas (10000+). */
+    .pv-mini {
+        display: flex;
+        align-items: center;
+        gap: var(--k-space-3);
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1041;
+        padding: var(--k-space-2) var(--k-space-3);
+        padding-bottom: calc(var(--k-space-2) + env(safe-area-inset-bottom, 0px));
+        background: var(--k-bg-surface);
+        border-top: 1px solid var(--k-border);
+        box-shadow: var(--k-shadow-lg);
     }
 
     .pv-float {

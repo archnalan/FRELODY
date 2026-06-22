@@ -25,15 +25,27 @@
     margin-bottom: 2rem;
 }
 
+/* The brand mark is a blue-on-light logo, so it sits on a light chip (never on
+   the indigo accent — that muddies it, and a dark chip would too). The accent
+   shows only as a soft tinted lift, not a fill behind the mark. Light in both
+   themes by design so the blue logo always reads. */
 .login-logo {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 4rem;
-    height: 4rem;
-    background: linear-gradient(135deg, var(--gradient-primary-start) 0%, var(--gradient-primary-end) 100%);
-    border-radius: 1rem;
+    width: 5rem;
+    height: 5rem;
+    background: #ffffff;
+    border: 1px solid var(--border-light);
+    border-radius: 1.25rem;
     margin-bottom: 1rem;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.22);
+}
+
+.login-logo img {
+    width: 3.5rem;
+    height: 3.5rem;
+    object-fit: contain;
 }
 
 .login-logo-icon {

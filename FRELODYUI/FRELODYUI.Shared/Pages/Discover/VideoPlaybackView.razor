@@ -351,6 +351,52 @@
         </div>
     </div>
 
+    <!-- Persistent mobile transport. Fixed to the bottom of the viewport; CSS
+         hides it on desktop where the floating player is always in view. Keeps
+         play/pause + the live chord + a scrub line in thumb reach so the user
+         never has to scroll back to the docked player. When the player exposes
+         no programmatic transport (TikTok), it instead offers a jump-to-player
+         button — TikTok's own controls live inside its iframe. -->
+    @if (Transcription.SyncedChords.Count > 0)
+    {
+        <div class="pv-mini" role="group" aria-label="Playback controls">
+            @if (_seekSupported)
+            {
+                <button type="button" class="pv-mini-btn" @onclick="TogglePlayPauseAsync"
+                        aria-label="@(_isPlaying ? "Pause" : "Play")">
+                    <i class="bi @(_isPlaying ? "bi-pause-fill" : "bi-play-fill")" aria-hidden="true"></i>
+                </button>
+            }
+            else
+            {
+                <button type="button" class="pv-mini-btn" @onclick="ScrollToPlayerAsync"
+                        title="Controls are in the video — tap to jump to the player"
+                        aria-label="Jump to player">
+                    <i class="bi bi-chevron-bar-down" aria-hidden="true"></i>
+                </button>
+            }
+
+            <span class="pv-mini-chord">
+                @if (!string.IsNullOrEmpty(CurrentChordLabel))
+                {
+                    @CurrentChordLabel
+                }
+                else
+                {
+                    <span class="pv-mini-idle">@(_isPlaying ? "—" : (_seekSupported ? "Tap a beat to play" : "Play in the video"))</span>
+                }
+            </span>
+
+            @if (_seekSupported)
+            {
+                <input type="range" class="pv-mini-scrub" min="0" max="1000" step="1"
+                       value="@((int)(MiniProgress * 1000))"
+                       @oninput="OnScrubInput"
+                       aria-label="Seek through the song" />
+            }
+        </div>
+    }
+
     <!-- Chord-chart preview: hover (pointer) or tap (touch) on a grid chord.
          Pinned (touch) variant carries a "Play here" seek button so the grid
          stays two-way with the player even without a hover gesture. -->
@@ -452,6 +498,7 @@
     private int _activeSyncedIndex = -1;
     private int _activeBeatIndex = -1;
     private bool _isPlaying;
+    private double _duration;   // clip length (s); fetched lazily once playback starts
 
     private bool _isSaving;
     private bool _saved;
@@ -782,6 +829,9 @@
             StartSyncLoop();
         else
             StopSyncLoop();
+        // Reflect the play/pause icon (mini-bar + float title) right away — when
+        // paused the sync loop stops, so nothing else would trigger a re-render.
+        InvokeAsync(StateHasChanged);
     }
 
     private void StartSyncLoop()
@@ -808,6 +858,12 @@
             while (await _syncTimer!.WaitForNextTickAsync(ct))
             {
                 var t = (float)await JS.InvokeAsync<double>($"{PlayerApi}.getCurrentTime");
+
+                // Lazily grab the clip length once it's known (drives the mini scrub).
+                if (_duration <= 0)
+                {
+                    try { _duration = await JS.InvokeAsync<double>($"{PlayerApi}.getDuration"); } catch { }
+                }
 
                 // Loop A→B: when the playhead reaches (or just barely overshoots)
                 // B, snap back to A. The 50 ms lead is shorter than the tick
@@ -870,6 +926,47 @@
     {
         if (!_seekSupported) return;
         await JS.InvokeVoidAsync($"{PlayerApi}.seekTo", seconds);
+    }
+
+    // ── Mobile mini-transport ────────────────────────────────────────────────
+    // Capo-aware label of the chord under the playhead, shown in the mini-bar.
+    private string? CurrentChordLabel
+    {
+        get
+        {
+            if (_activeSyncedIndex < 0 || _activeSyncedIndex >= Transcription.SyncedChords.Count)
+                return null;
+            var raw = Transcription.SyncedChords[_activeSyncedIndex].Chord;
+            return ChordLabel.Display(ChordLabel.TransposeRaw(raw, -_capo, _preferFlat));
+        }
+    }
+
+    // Scrub fill (0–1). Beat-resolution (updates on the same renders as the grid)
+    // so we don't force a full re-render on every 100 ms sync tick.
+    private double MiniProgress =>
+        (_duration > 0 && _activeBeatIndex >= 0 && _activeBeatIndex < Transcription.Beats.Count)
+            ? Math.Clamp(Transcription.Beats[_activeBeatIndex] / _duration, 0, 1)
+            : 0;
+
+    private async Task TogglePlayPauseAsync()
+    {
+        if (!_seekSupported) return;
+        try { await JS.InvokeVoidAsync($"{PlayerApi}.{(_isPlaying ? "pause" : "play")}"); } catch { }
+    }
+
+    private async Task OnScrubInput(ChangeEventArgs e)
+    {
+        if (!_seekSupported || _duration <= 0) return;
+        if (!int.TryParse(e.Value?.ToString(), out var v)) return;
+        var frac = Math.Clamp(v / 1000.0, 0, 1);
+        await SeekToAsync((float)(frac * _duration));
+    }
+
+    // TikTok et al.: transport lives in the iframe's own controls, so just bring
+    // the docked player into view rather than poking an unsupported API.
+    private async Task ScrollToPlayerAsync()
+    {
+        try { if (_dragModule is not null) await _dragModule.InvokeVoidAsync("scrollIntoView", _floatEl); } catch { }
     }
 
     // ── Chord preview popover (raised by the grid) ───────────────────────────

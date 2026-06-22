@@ -89,6 +89,18 @@ export function unwatchEscape() {
     }
 }
 
+// Brings the docked/floating player into view — used by the mobile mini-bar's
+// "jump to player" affordance (e.g. TikTok, whose transport lives in its own
+// iframe controls rather than our programmatic API).
+export function scrollIntoView(el) {
+    if (!el) return;
+    // Stamp the shared timestamp the grid's auto-scroll yields to, so the next
+    // beat tick doesn't immediately yank the page back off the player.
+    window.__pvLastUserScroll = Date.now();
+    try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    catch { el.scrollIntoView(false); }
+}
+
 export function dispose(el) {
     const s = STATE.get(el);
     if (!s) return;
