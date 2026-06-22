@@ -180,17 +180,26 @@
         }
     }
 
-    public async Task Open()
+    public async Task Open(string? initialQuery = null)
     {
         IsOpen = true;
-        SearchQuery = string.Empty;
         SearchResults.Clear();
         SelectedResult = null;
         await LoadRecentSearches();
+
+        // Seed the input with a starting term (e.g. carried over from a page's
+        // search bar) and kick off the search immediately. Setting the backing
+        // field directly avoids the setter double-triggering the debounce.
+        _searchQuery = initialQuery ?? string.Empty;
         StateHasChanged();
 
         await Task.Delay(50);
         await searchInputRef.FocusAsync();
+
+        if (!string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            await HandleSearchInput();
+        }
     }
 
     public void Close()

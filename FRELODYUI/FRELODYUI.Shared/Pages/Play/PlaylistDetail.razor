@@ -195,7 +195,8 @@
                                   Group="@($"detail-{PlaylistId}")"
                                   OnUpdate="HandleSongReorder">
                         <SortableItemTemplate>
-                            <PlaylistSongItem Song="context"
+                            <PlaylistSongItem @key="context.Id"
+                                              Song="context"
                                               ShowActionBtns="true"
                                               ShowTransposeControls="true"
                                               IsDraggable="true"
@@ -681,7 +682,9 @@
     {
         if (searchModalRef != null)
         {
-            await searchModalRef.Open();
+            // Carry the current search-bar term into the add-song search so the
+            // user doesn't have to retype what they were just looking for.
+            await searchModalRef.Open(searchQuery);
         }
     }
 
@@ -711,6 +714,11 @@
 
             if (response.IsSuccessStatusCode)
             {
+                // Clear the search-bar term now that the song was added so the
+                // full playlist (including the new song) is visible again.
+                searchQuery = string.Empty;
+                ApplySearch();
+
                 await ShowSuccessMessage("Song added to playlist.");
                 // Background refresh to pick up Key and accurate data
                 _ = RefreshSongList();

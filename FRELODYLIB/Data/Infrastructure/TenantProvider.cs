@@ -9,7 +9,7 @@ namespace FRELODYAPP.Data.Infrastructure
     public interface ITenantProvider
     {
         string GetUserId();
-        string GetTenantId();
+        string? GetTenantId();
         UserClaimsDto GetCurrentUser();
         bool IsSuperAdmin(string? userId = null);
     }
@@ -25,7 +25,7 @@ namespace FRELODYAPP.Data.Infrastructure
             _logger = logger;
         }
 
-        public string GetTenantId()
+        public string? GetTenantId()
         {
             try
             {
@@ -71,19 +71,19 @@ namespace FRELODYAPP.Data.Infrastructure
                         }
 
                         _logger.LogWarning("TenantId is missing in the claims.");
-                        return string.Empty;
+                        return null;
                     }
 
                     return tenantIdString;
                 }
 
                 _logger.LogWarning("User identity is not available.");
-                return string.Empty;
+                return null;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while getting TenantId.");
-                return string.Empty;
+                return null;
             }
         }
 

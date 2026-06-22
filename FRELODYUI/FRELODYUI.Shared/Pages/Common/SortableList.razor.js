@@ -18,6 +18,38 @@ function ensureDragDropStyles() {
     document.head.appendChild(style);
 }
 
+// Ensure the SortableJS library is available before we try to use it.
+// The library is loaded via a CDN <script> in the host pages, but that can
+// fail or still be in-flight (CSP/adblock/offline MAUI/slow CDN) when a
+// SortableList first renders. Without this guard `new Sortable(...)` throws,
+// the interop call faults, and drag silently dies on every list.
+let _sortableLoader = null;
+function ensureSortableLoaded() {
+    if (typeof window.Sortable !== 'undefined') return Promise.resolve();
+    if (_sortableLoader) return _sortableLoader;
+
+    _sortableLoader = new Promise((resolve, reject) => {
+        // Reuse an existing tag if one is already loading.
+        const existing = document.querySelector('script[data-sortable-lib]');
+        if (existing) {
+            existing.addEventListener('load', () => resolve());
+            existing.addEventListener('error', reject);
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js';
+        script.async = true;
+        script.setAttribute('data-sortable-lib', '');
+        script.addEventListener('load', () => resolve());
+        script.addEventListener('error', reject);
+        document.head.appendChild(script);
+    }).catch(err => {
+        _sortableLoader = null; // allow a later retry
+        throw err;
+    });
+    return _sortableLoader;
+}
+
 // Check if a point (clientX, clientY) is over any remove button; returns the button or null.
 function getRemoveButtonAtPoint(x, y) {
     const buttons = document.querySelectorAll('[id^="remove-button-"]');
@@ -30,8 +62,16 @@ function getRemoveButtonAtPoint(x, y) {
     return null;
 }
 
-export function init(id, group, pull, put, sort, handle, filter, component) {
+export async function init(id, group, pull, put, sort, handle, filter, component) {
     ensureDragDropStyles();
+
+    try {
+        await ensureSortableLoaded();
+    } catch (err) {
+        console.error('Sortable init: failed to load SortableJS library; drag-and-drop disabled.', err);
+        return;
+    }
+
     const el = document.getElementById(id);
     if (!el) {
         console.warn(`Sortable init: container not found for id='${id}'`);
