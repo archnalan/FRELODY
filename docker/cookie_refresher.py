@@ -18,9 +18,10 @@ from a datacenter IP is exactly what Google's bot-detection flags (CAPTCHA / 2FA
 cookies (Firefox / Cookie-Editor — the only methods that work in 2026), and
 hands them over. From then on this keeps them alive.
 
-Critically: this container shares the host's public egress IP with ChordMini, so
-the cookies are minted from the same IP yt-dlp calls from (YouTube binds sessions
-to IP/fingerprint — mismatched-IP cookies get re-walled, see yt-dlp #15392).
+Critically: this container mints cookies through the SAME egress as ChordMini's
+yt-dlp — the Cloudflare WARP sidecar (set BROWSER_PROXY=socks5://warp:1080) — so
+the cookies come from the same IP yt-dlp calls from (YouTube binds sessions to
+IP/fingerprint — mismatched-IP cookies get re-walled, see yt-dlp #15392).
 
 Cookie slots (rotation)
 -----------------------
@@ -72,6 +73,11 @@ MAX_SLOTS = int(os.environ.get("MAX_SLOTS", "3"))
 INTERVAL_HOURS = float(os.environ.get("REFRESH_INTERVAL_HOURS", "24"))
 POLL_SECONDS = float(os.environ.get("SLOT_POLL_SECONDS", "60"))
 ALLOW_ANON = os.environ.get("REFRESH_ALLOW_UNAUTHENTICATED", "false").lower() == "true"
+# Optional egress proxy for the Chromium that mints cookies. Set to the WARP
+# sidecar (socks5://warp:1080) so cookies are created from the SAME clean IP
+# yt-dlp calls from — YouTube binds sessions to IP, so a mismatched-IP jar gets
+# re-walled (#15392). Unset = direct egress (legacy behavior).
+BROWSER_PROXY = os.environ.get("BROWSER_PROXY", "").strip()
 
 SEED_FILE = f"{COOKIES_DIR}/youtube.seed.txt"
 OUT_FILE = f"{COOKIES_DIR}/youtube.txt"
@@ -274,8 +280,7 @@ def _export_if_authenticated(ctx, active_label: str, seed_cookies=None) -> bool:
 
 def refresh_once(force_reseed: bool) -> None:
     with sync_playwright() as pw:
-        ctx = pw.chromium.launch_persistent_context(
-            PROFILE_DIR,
+        launch_kwargs = dict(
             headless=True,
             args=[
                 "--no-sandbox",
@@ -283,6 +288,10 @@ def refresh_once(force_reseed: bool) -> None:
                 "--disable-blink-features=AutomationControlled",
             ],
         )
+        if BROWSER_PROXY:
+            # Mint cookies through the same WARP egress yt-dlp uses (IP match).
+            launch_kwargs["proxy"] = {"server": BROWSER_PROXY}
+        ctx = pw.chromium.launch_persistent_context(PROFILE_DIR, **launch_kwargs)
         try:
             page = ctx.new_page()
 

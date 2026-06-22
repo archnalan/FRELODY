@@ -33,8 +33,9 @@ import json
 import shutil
 import subprocess
 import tempfile
+import time
 import uuid
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
 # The prebuilt image's bundled yt-dlp (/opt/venv) is too old for the bgutil PO
@@ -48,16 +49,54 @@ PLAYER_CLIENT = os.environ.get("YTDLP_PLAYER_CLIENT", "default,tv").strip()
 POT_BASE_URL = os.environ.get("YTDLP_POT_BASE_URL", "http://bgutil-provider:4416").strip()
 COOKIES_FILE = os.environ.get("YTDLP_COOKIES_FILE", "").strip()
 PROXY = os.environ.get("YTDLP_PROXY", "").strip()
+# How many times to attempt a yt-dlp call before giving up on a *transient*
+# bot-wall. With the WARP egress a single attempt already succeeds ~always, but
+# WARP exit IPs are shared so a video occasionally trips the wall; retrying lifts
+# the aggregate success rate (each attempt is a fresh process/connection).
+RETRIES = max(1, int(os.environ.get("YTDLP_RETRIES", "3")))
 
 
 def _proxy_args() -> list:
     """Route every yt-dlp request through a proxy when YTDLP_PROXY is set.
 
-    A residential/mobile proxy is the only escalation that repairs the
-    datacenter IP's reputation without a logged-in account; it stacks with the
-    PO token and cookies. Empty/unset = direct connection (default).
+    The active egress is the free Cloudflare WARP sidecar (socks5h://warp:1080) —
+    a clean, non-datacenter IP that repairs the datacenter IP's reputation. It
+    stacks with the PO token and cookies. Empty/unset = direct connection.
     """
     return ["--proxy", PROXY] if PROXY else []
+
+
+def _is_transient_wall(stderr: str) -> bool:
+    """True if stderr looks like a retryable bot-wall / transient failure.
+
+    These are IP/rate-reputation symptoms that a retry (often via a different
+    shared WARP exit IP) can clear. Hard failures (private/removed/age-restricted)
+    are deliberately excluded so they fail fast.
+    """
+    s = (stderr or "").lower()
+    return any(t in s for t in (
+        "sign in", "not a bot", "requested format is not available",
+        "unable to download", "failed to extract", "http error 403",
+        "read timed out", "unable to connect",
+    ))
+
+
+def _run_ytdlp(cmd: list, timeout: int) -> subprocess.CompletedProcess:
+    """Run yt-dlp, retrying only on transient bot-wall/format failures.
+
+    Bot-wall failures return in seconds, so the retries don't stack toward the
+    download timeout in practice; a genuine long download succeeds on attempt 1.
+    """
+    result = None
+    for attempt in range(1, RETRIES + 1):
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        if result.returncode == 0 or not _is_transient_wall(result.stderr):
+            return result
+        if attempt < RETRIES:
+            print(f"[ytdlp] attempt {attempt}/{RETRIES} hit a transient wall; retrying",
+                  file=sys.stderr, flush=True)
+            time.sleep(2 * attempt)
+    return result
 
 
 def _ytdlp_version() -> str:
@@ -70,6 +109,11 @@ def _ytdlp_version() -> str:
 
 def _extractor_args() -> list:
     """Build the --extractor-args flags shared by every download."""
+    # NOTE: do NOT add player_skip=webpage,configs here. ChordMiniApp uses it with
+    # android/ios clients, but with the tv_embedded/android_vr client that actually
+    # downloads from our datacenter IP it skips the player config needed to resolve
+    # format URLs, so a cold-cache container fails every extraction with "Requested
+    # format is not available". Verified live 2026-06-22.
     args = ["--extractor-args", f"youtube:player_client={PLAYER_CLIENT}"]
     if POT_BASE_URL:
         # bgutil HTTP PO-token provider plugin reads its server URL from here.
@@ -128,6 +172,15 @@ def _friendly_error(stderr: str) -> str:
 
 
 class Handler(BaseHTTPRequestHandler):
+    # The sidecar's port is reachable by internet scanners (Censys/Scaleway/AWS
+    # were observed opening half-open connections to it). BaseHTTPRequestHandler
+    # blocks on rfile.readline() with no socket timeout by default, so a single
+    # connection that opens but never sends a request would wedge its worker
+    # forever. Capping the per-request socket timeout makes such connections drop
+    # instead of hanging. Real downloads use their own subprocess timeout, so this
+    # only bounds the time spent reading the (tiny) request line + headers.
+    timeout = 30
+
     def log_message(self, fmt, *args):
         pass  # suppress default access log to keep container logs clean
 
@@ -191,7 +244,7 @@ class Handler(BaseHTTPRequestHandler):
         cmd.append(url)
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            result = _run_ytdlp(cmd, 300)
         finally:
             if cookie_tmp and os.path.exists(cookie_tmp):
                 os.remove(cookie_tmp)
@@ -235,7 +288,7 @@ class Handler(BaseHTTPRequestHandler):
         cmd.append(url)
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            result = _run_ytdlp(cmd, 120)
         finally:
             if cookie_tmp and os.path.exists(cookie_tmp):
                 os.remove(cookie_tmp)
@@ -306,5 +359,11 @@ if __name__ == "__main__":
         f"proxy={'on' if PROXY else 'off'}",
         flush=True,
     )
-    server = HTTPServer(("0.0.0.0", PORT), Handler)
+    # ThreadingHTTPServer (not the single-threaded HTTPServer): each connection is
+    # handled on its own thread, so one slow/half-open client — or one long
+    # extraction (downloads run up to 300s) — can no longer block health checks or
+    # other concurrent extraction requests. daemon_threads ensures worker threads
+    # don't keep the process alive on shutdown.
+    server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
+    server.daemon_threads = True
     server.serve_forever()

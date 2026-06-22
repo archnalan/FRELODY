@@ -210,6 +210,37 @@ services:
     networks:
       - frelody-net
 
+  # ── Cloudflare WARP egress proxy ────────────────────────────
+  # Free, non-datacenter egress IP for YouTube. This Contabo datacenter IP is
+  # bot-walled even WITH a valid PO token + logged-in cookies; routing yt-dlp
+  # (and the cookie-refresher's Chromium) through WARP gives a clean Cloudflare
+  # exit IP that YouTube does not blocklist. Verified live 2026-06-22: 12/12
+  # previously-walled videos resolved audio through WARP. Exposes SOCKS5+HTTP on
+  # :1080 (GOST), internal-only — reached as warp:1080 on frelody-net. See
+  # botwall-fix.md. The paid residential proxy (YTDLP_PROXY=BrightData) stays the
+  # documented upgrade path for higher-volume reliability.
+  warp:
+    image: caomingjun/warp:latest
+    container_name: frelody-warp
+    restart: unless-stopped
+    # WARP needs a TUN device + the capability/sysctl to bring up its WireGuard
+    # tunnel and mark its own packets (src_valid_mark). The image ships its own
+    # HEALTHCHECK (verifies the tunnel), so dependents can wait on service_healthy.
+    cap_add:
+      - NET_ADMIN
+      - MKNOD
+      - AUDIT_WRITE
+    devices:
+      - /dev/net/tun
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "0"
+      net.ipv4.conf.all.src_valid_mark: "1"
+    volumes:
+      # Persist the WARP registration so a restart keeps the same identity.
+      - warp_data:/var/lib/cloudflare-warp
+    networks:
+      - frelody-net
+
   # ── ChordMini Python ML backend ─────────────────────────────
   chordmini-backend:
     image: ptnghia/chordminiapp-backend:latest
@@ -223,19 +254,29 @@ services:
       - "sh"
       - "-c"
       - "PLUGDIR=/tmp/ytdlp-plugins; /opt/venv/bin/pip install -q --no-cache-dir -U --target=$$PLUGDIR yt-dlp bgutil-ytdlp-pot-provider || true; export PYTHONPATH=$$PLUGDIR:$${PYTHONPATH}; gunicorn --bind 0.0.0.0:8080 --workers 2 --timeout 600 --worker-class sync --max-requests 1000 --max-requests-jitter 100 --preload app:app & python /app/ytdlp_server.py"
+    # Bind the debug ports to loopback only. frelody-api reaches this service over
+    # the internal Docker network (chordmini-backend:8080/8081), so these host
+    # mappings exist purely for local debugging. Publishing them on 0.0.0.0 exposed
+    # the yt-dlp sidecar (8081) to internet scanners (Censys/Scaleway/AWS were seen
+    # opening half-open connections that wedged the server). Loopback keeps them
+    # usable from the host without exposing them publicly.
     ports:
-      - "5001:8080"
-      - "5002:8081"
+      - "127.0.0.1:5001:8080"
+      - "127.0.0.1:5002:8081"
     environment:
       FLASK_ENV: production
       MAX_CONTENT_LENGTH_MB: "150"
       # yt-dlp bot-wall bypass tunables (see docker/ytdlp_server.py)
-      # NOTE (2026-06-11): "tv" now returns only un-downloadable SABR/storyboard
-      # streams (YouTube server-side change), so "default,tv" yields "no audio
-      # format". "default" (web) is the only client that actually downloads with
-      # our cookies. It still gets IP-walled on most videos from this datacenter
-      # IP — the residential/mobile proxy (YTDLP_PROXY) is the real fix.
-      YTDLP_PLAYER_CLIENT: "default"
+      # NOTE (2026-06-22): YouTube tightened again — "default" (web) now returns
+      # ONLY storyboard images (no audio/video formats) from this datacenter IP, so
+      # every extraction failed with "Requested format is not available". Verified
+      # live against the running container: of every player_client tried
+      # (web/web_safari/mweb/tv/android/ios/web_embedded), only "tv_embedded"
+      # returns real downloadable audio (format 251/140) — and it does so WITH our
+      # logged-in cookies + bgutil PO token. Keep it first; "default" stays as a
+      # harmless fallback. If tv_embedded is later walled too, re-run the matrix
+      # (see chord-mini-ref.md) or escalate to YTDLP_PROXY.
+      YTDLP_PLAYER_CLIENT: "tv_embedded,default"
       YTDLP_POT_BASE_URL: "http://bgutil-provider:4416"
       # Datacenter IPs (this is a Contabo VPS) get bot-walled even WITH a valid PO
       # token, so we escalate to logged-in cookies. Export a throwaway YouTube
@@ -248,7 +289,12 @@ services:
       # .env (e.g. YTDLP_PROXY=http://user:pass@host:port or socks5://host:port).
       YTDLP_PROXY: "${YTDLP_PROXY:-}"
     depends_on:
-      - bgutil-provider
+      bgutil-provider:
+        condition: service_started
+      # Wait for the WARP tunnel to be healthy so yt-dlp never calls YouTube on
+      # the bare datacenter IP before the clean egress is up.
+      warp:
+        condition: service_healthy
     volumes:
       - frelody_media:/app/media
       - chordmini_models:/app/models
@@ -266,7 +312,9 @@ services:
   # drop them as ./docker/cookies/youtube.seed.txt; this then keeps youtube.txt
   # fresh. Official MS Playwright image (Chromium + deps baked in) — no build.
   # Runs as root to write the root-owned cookies mount; Chromium uses --no-sandbox.
-  # Shares the host egress IP with chordmini, so cookies match yt-dlp's call IP.
+  # Routes Chromium through the same WARP egress as chordmini (BROWSER_PROXY), so
+  # the logged-in cookies are minted from the SAME clean IP yt-dlp calls from —
+  # YouTube binds sessions to IP, so mismatched-IP cookies get re-walled (#15392).
   cookie-refresher:
     image: mcr.microsoft.com/playwright/python:v1.60.0-jammy
     container_name: frelody-cookie-refresher
@@ -290,6 +338,12 @@ services:
       # Set true ONLY to test the browser→file→sidecar plumbing without a real
       # login; never leave on in prod (would write a junk anonymous jar).
       REFRESH_ALLOW_UNAUTHENTICATED: "${COOKIE_REFRESH_ALLOW_ANON:-false}"
+      # Mint cookies through the WARP egress so they match yt-dlp's call IP.
+      # Chromium SOCKS5 proxies DNS remotely too; no auth needed for WARP.
+      BROWSER_PROXY: "socks5://warp:1080"
+    depends_on:
+      warp:
+        condition: service_healthy
     volumes:
       - ./docker/cookie_refresher.py:/app/cookie_refresher.py:ro
       # RW: this service owns youtube.txt; chordmini mounts the same dir :ro.
@@ -313,6 +367,7 @@ volumes:
   frelody_dp_keys:
   chordmini_models:
   cookie_profile:
+  warp_data:
 
 networks:
   frelody-net:
