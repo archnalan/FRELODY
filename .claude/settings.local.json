@@ -16,7 +16,8 @@
       "Bash(echo \"exit=$?\")",
       "Bash(awk '/chordmini-backend:/{f=1} f&&/ports:/{print NR\": \"$0; getline; print NR\": \"$0} f&&/^  [a-z]/&&!/chordmini/{f=0}' docker-compose.prod.yml)",
       "Bash(sed -n '1,60p' public/browser-ytdlp-worker.js)",
-      "Bash(sed -n '1,50p' src/app/api/audio/finalize-browser-extraction/route.ts)"
+      "Bash(sed -n '1,50p' src/app/api/audio/finalize-browser-extraction/route.ts)",
+      "Read(//tmp/**)"
     ],
     "ask": [
       "Bash(git commit:*)",

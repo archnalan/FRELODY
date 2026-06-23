@@ -5,6 +5,7 @@ using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYAPIs.Areas.Admin.Interfaces;
 using FRELODYAPIs.Services;
+using FRELODYAPIs.Services.Analysis;
 using FRELODYAPIs.Services.ChordMini;
 using FRELODYSHRD.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -26,14 +27,16 @@ namespace FRELODYAPIs.Controllers
         private readonly IChordMiniService _chordMini;
         private readonly ISongService _songService;
         private readonly IAnalyzedAccessService _access;
+        private readonly AnalysisJobService _jobs;
 
-        public YouTubeController(SongDbContext db, IChordMiniService chordMini, ISongService songService, IAnalyzedAccessService access)
+        public YouTubeController(SongDbContext db, IChordMiniService chordMini, ISongService songService, IAnalyzedAccessService access, AnalysisJobService jobs)
         {
             _db = db;
             _youtube = new YoutubeClient();
             _chordMini = chordMini;
             _songService = songService;
             _access = access;
+            _jobs = jobs;
         }
 
         // Authoritative daily-quota / 24h-availability gate for analyzed playback.
@@ -41,7 +44,7 @@ namespace FRELODYAPIs.Controllers
         // the caller must NOT receive the transcription; null when access is granted.
         // Access carries the evaluation so a downstream failure can refund a consumed
         // slot (see ReleaseUnlockIfRecorded).
-        private async Task<(ActionResult<YouTubeTranscriptionDto>? Denied, AnalyzedAccessResultDto? Access)> GateAnalyzedAccessAsync(string videoId)
+        private async Task<(ActionResult? Denied, AnalyzedAccessResultDto? Access)> GateAnalyzedAccessAsync(string videoId)
         {
             var meta = await _db.YouTubeVideos.AsNoTracking()
                 .Where(v => v.VideoId == videoId)
@@ -141,8 +144,8 @@ namespace FRELODYAPIs.Controllers
 
         [HttpPost]
         [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("analysis")]
-        [ProducesResponseType(typeof(YouTubeTranscriptionDto), 200)]
-        public async Task<ActionResult<YouTubeTranscriptionDto>> Analyze(
+        [ProducesResponseType(typeof(AnalysisStatusDto), 200)]
+        public async Task<ActionResult<AnalysisStatusDto>> Analyze(
             [FromBody] YouTubeAnalyzeRequest request,
             CancellationToken ct)
         {
@@ -150,11 +153,11 @@ namespace FRELODYAPIs.Controllers
                 return BadRequest(new { message = "videoId is required." });
 
             // Meter the analyzed play before returning any chord data (cached or fresh).
-            var (denied, access) = await GateAnalyzedAccessAsync(request.VideoId);
+            var (denied, _) = await GateAnalyzedAccessAsync(request.VideoId);
             if (denied is not null)
                 return denied;
 
-            // Return cached result when not forcing a refresh
+            // Fast path: a completed analysis is returned inline (already gated above).
             if (!request.ForceRefresh)
             {
                 var cached = await _db.YouTubeTranscriptions
@@ -167,74 +170,122 @@ namespace FRELODYAPIs.Controllers
                         ct);
 
                 if (cached is not null)
-                    return Ok(MapTranscriptionToDto(cached));
+                    return Ok(new AnalysisStatusDto
+                    {
+                        Stage = AnalysisStage.Done,
+                        VideoId = request.VideoId,
+                        Result = MapTranscriptionToDto(cached)
+                    });
             }
 
-            // Run full analysis via ChordMini sidecar
-            YouTubeTranscriptionDto result;
-            try
-            {
-                result = await _chordMini.AnalyzeAsync(request, ct);
-            }
-            catch (Exception ex)
-            {
-                // Analysis failed (bot-wall, timeout, …) — refund the slot we just
-                // consumed so the user keeps their daily song for another try.
-                await ReleaseUnlockIfRecorded(access, request.VideoId);
-                // Return 422 (Unprocessable Entity) for known analysis failures
-                // to avoid triggering the generic Cloudflare/Nginx 502 error page.
-                return StatusCode(422, new { message = ex.Message });
-            }
+            // Cache miss: run on a background task decoupled from this HTTP request. A client
+            // disconnect or Cloudflare ~100s edge cut can no longer cancel or discard the work;
+            // identical concurrent/retry requests attach to the one job. The client polls
+            // get-analysis-status and fetches the result via get-transcription when Done.
+            var key = AnalysisJobService.BuildKey(
+                "youtube", request.VideoId, request.BeatModel, request.ChordModel, request.ChordDict);
 
-            // Ensure the parent YouTubeVideo row exists (FK requirement)
-            var videoExists = await _db.YouTubeVideos.AnyAsync(v => v.VideoId == request.VideoId, ct);
-            if (!videoExists)
+            var req = request;
+            var job = _jobs.Submit(key, async (sp, progress, token) =>
             {
-                try
+                var chord = sp.GetRequiredService<IChordMiniService>();
+                var db = sp.GetRequiredService<SongDbContext>();
+
+                var result = await chord.AnalyzeAsync(req, progress, token);
+
+                // Ensure the parent YouTubeVideo row exists (FK requirement).
+                var videoExists = await db.YouTubeVideos.AnyAsync(v => v.VideoId == req.VideoId, token);
+                if (!videoExists)
                 {
-                    var video = await _youtube.Videos.GetAsync(request.VideoId, ct);
-                    await UpsertAndMapAsync(
-                        video.Id.Value,
-                        video.Title,
-                        video.Author.ChannelTitle,
-                        video.Thumbnails.GetWithHighestResolution()?.Url,
-                        (int)video.Duration.GetValueOrDefault().TotalSeconds);
+                    try
+                    {
+                        var video = await new YoutubeClient().Videos.GetAsync(req.VideoId, token);
+                        db.YouTubeVideos.Add(new YouTubeVideo
+                        {
+                            VideoId = video.Id.Value,
+                            Title = video.Title,
+                            ChannelTitle = video.Author.ChannelTitle,
+                            ThumbnailUrl = video.Thumbnails.GetWithHighestResolution()?.Url,
+                            DurationSeconds = (int)video.Duration.GetValueOrDefault().TotalSeconds
+                        });
+                    }
+                    catch
+                    {
+                        db.YouTubeVideos.Add(new YouTubeVideo { VideoId = req.VideoId, Title = req.VideoId });
+                    }
+                    await db.SaveChangesAsync(token);
                 }
-                catch
+
+                var existing = await db.YouTubeTranscriptions.FirstOrDefaultAsync(t =>
+                    t.VideoId == req.VideoId &&
+                    t.BeatModel == req.BeatModel &&
+                    t.ChordModel == req.ChordModel &&
+                    t.ChordDict == req.ChordDict, token);
+
+                if (existing is null)
                 {
-                    // Fallback: insert a minimal placeholder so the FK is satisfied
-                    _db.YouTubeVideos.Add(new YouTubeVideo { VideoId = request.VideoId, Title = request.VideoId });
-                    await _db.SaveChangesAsync(ct);
+                    existing = new YouTubeTranscription { VideoId = req.VideoId };
+                    db.YouTubeTranscriptions.Add(existing);
                 }
-            }
 
-            // Persist result (upsert by unique index)
-            var existing = await _db.YouTubeTranscriptions.FirstOrDefaultAsync(t =>
-                t.VideoId == request.VideoId &&
-                t.BeatModel == request.BeatModel &&
-                t.ChordModel == request.ChordModel &&
-                t.ChordDict == request.ChordDict, ct);
+                existing.BeatModel = req.BeatModel;
+                existing.ChordModel = req.ChordModel;
+                existing.ChordDict = req.ChordDict;
+                existing.BeatsJson = JsonSerializer.Serialize(result.Beats);
+                existing.ChordsJson = JsonSerializer.Serialize(result.Chords);
+                existing.SyncedChordsJson = JsonSerializer.Serialize(result.SyncedChords);
+                existing.Bpm = result.Bpm;
+                existing.TimeSignature = result.TimeSignature;
+                existing.TotalProcessingSeconds = result.TotalProcessingSeconds;
+                existing.CreatedAt = DateTimeOffset.UtcNow;
 
-            if (existing is null)
+                await db.SaveChangesAsync(token);
+            });
+
+            return Ok(new AnalysisStatusDto { Stage = job.Stage, VideoId = request.VideoId });
+        }
+
+        // Lightweight poll for an in-flight (or just-finished) analysis. Returns the live
+        // stage only — the gated get-transcription hands back the actual chords once Done —
+        // so a long analysis is driven by short requests no proxy/edge timeout can cut.
+        [HttpGet]
+        [ProducesResponseType(typeof(AnalysisStatusDto), 200)]
+        public async Task<ActionResult<AnalysisStatusDto>> GetAnalysisStatus(
+            [FromQuery] string videoId,
+            [FromQuery] string beatModel = "beat-transformer",
+            [FromQuery] string chordModel = "chord-cnn-lstm",
+            [FromQuery] string chordDict = "full")
+        {
+            if (string.IsNullOrWhiteSpace(videoId))
+                return BadRequest(new { message = "videoId is required." });
+
+            var key = AnalysisJobService.BuildKey("youtube", videoId, beatModel, chordModel, chordDict);
+            var job = _jobs.Get(key);
+
+            // Completed (or completed then evicted): the persisted row is the source of truth.
+            if (job is null || job.Stage == AnalysisStage.Done)
             {
-                existing = new YouTubeTranscription { VideoId = request.VideoId };
-                _db.YouTubeTranscriptions.Add(existing);
+                var done = await _db.YouTubeTranscriptions.AsNoTracking().AnyAsync(t =>
+                    t.VideoId == videoId && t.BeatModel == beatModel &&
+                    t.ChordModel == chordModel && t.ChordDict == chordDict);
+
+                if (done)
+                    return Ok(new AnalysisStatusDto { Stage = AnalysisStage.Done, VideoId = videoId });
+
+                if (job is null)
+                    return Ok(new AnalysisStatusDto { Stage = AnalysisStage.NotStarted, VideoId = videoId });
             }
 
-            existing.BeatModel = request.BeatModel;
-            existing.ChordModel = request.ChordModel;
-            existing.ChordDict = request.ChordDict;
-            existing.BeatsJson = JsonSerializer.Serialize(result.Beats);
-            existing.ChordsJson = JsonSerializer.Serialize(result.Chords);
-            existing.SyncedChordsJson = JsonSerializer.Serialize(result.SyncedChords);
-            existing.Bpm = result.Bpm;
-            existing.TimeSignature = result.TimeSignature;
-            existing.TotalProcessingSeconds = result.TotalProcessingSeconds;
-            existing.CreatedAt = DateTimeOffset.UtcNow;
+            if (job!.Stage == AnalysisStage.Failed)
+            {
+                // Refund here, in a request scope where the user identity is available
+                // (the background job has no HttpContext). ReleaseUnlock is a safe no-op
+                // when nothing was recorded / already refunded.
+                await _access.ReleaseUnlock(AnalyzedPlatform.YouTube, videoId);
+                return Ok(new AnalysisStatusDto { Stage = AnalysisStage.Failed, VideoId = videoId, Error = job.Error });
+            }
 
-            await _db.SaveChangesAsync(ct);
-            result.Id = existing.Id;
-            return Ok(result);
+            return Ok(new AnalysisStatusDto { Stage = job.Stage, VideoId = videoId });
         }
 
         [HttpGet]

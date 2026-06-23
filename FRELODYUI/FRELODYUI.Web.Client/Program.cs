@@ -152,11 +152,22 @@ builder.Services.AddRefitClient<IWebSongExtractionApi>()
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<IYouTubeApi>()
-                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .ConfigureHttpClient(c =>
+                {
+                    c.BaseAddress = baseAddressApi;
+                    // Analysis (extract + beats + chords) runs synchronously and can take
+                    // several minutes; the default 100s HttpClient timeout cancels it mid-run.
+                    // Mirror the server host (FRELODYUI.Web/Program.cs) at 10 minutes.
+                    c.Timeout = TimeSpan.FromMinutes(10);
+                })
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddRefitClient<ITikTokApi>()
-                .ConfigureHttpClient(c => c.BaseAddress = baseAddressApi)
+                .ConfigureHttpClient(c =>
+                {
+                    c.BaseAddress = baseAddressApi;
+                    c.Timeout = TimeSpan.FromMinutes(10);
+                })
                 .AddHttpMessageHandler<AuthHeaderHandler>();
 
 // Add device-specific services used by the FRELODYUI.Shared project

@@ -4,6 +4,7 @@ using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.CreateDtos;
 using FRELODYAPIs.Areas.Admin.Interfaces;
+using FRELODYAPIs.Services.Analysis;
 using FRELODYAPIs.Services.ChordMini;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,19 +19,21 @@ namespace FRELODYAPIs.Controllers
         private readonly SongDbContext _db;
         private readonly IChordMiniService _chordMini;
         private readonly IAnalyzedAccessService _access;
+        private readonly AnalysisJobService _jobs;
 
-        public TikTokController(SongDbContext db, IChordMiniService chordMini, IAnalyzedAccessService access)
+        public TikTokController(SongDbContext db, IChordMiniService chordMini, IAnalyzedAccessService access, AnalysisJobService jobs)
         {
             _db = db;
             _chordMini = chordMini;
             _access = access;
+            _jobs = jobs;
         }
 
         // Authoritative daily-quota / 24h-availability gate for analyzed playback.
         // Denied is a non-null IActionResult (402 + paywall payload, or an error) when
         // the caller must NOT receive the transcription; null when access is granted.
         // Access carries the evaluation so a downstream failure can refund a consumed slot.
-        private async Task<(ActionResult<YouTubeTranscriptionDto>? Denied, AnalyzedAccessResultDto? Access)> GateAnalyzedAccessAsync(string videoId, string? title, string? thumbnailUrl, string? sourceUrl, int? durationSeconds)
+        private async Task<(ActionResult? Denied, AnalyzedAccessResultDto? Access)> GateAnalyzedAccessAsync(string videoId, string? title, string? thumbnailUrl, string? sourceUrl, int? durationSeconds)
         {
             var access = await _access.EvaluateAndRecord(
                 AnalyzedPlatform.TikTok, videoId, title, thumbnailUrl, sourceUrl, durationSeconds);
@@ -93,8 +96,8 @@ namespace FRELODYAPIs.Controllers
 
         [HttpPost]
         [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("analysis")]
-        [ProducesResponseType(typeof(YouTubeTranscriptionDto), 200)]
-        public async Task<ActionResult<YouTubeTranscriptionDto>> Analyze(
+        [ProducesResponseType(typeof(AnalysisStatusDto), 200)]
+        public async Task<ActionResult<AnalysisStatusDto>> Analyze(
             [FromBody] TikTokAnalyzeRequest request, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(request.Url) || !IsTikTokUrl(request.Url))
@@ -126,7 +129,7 @@ namespace FRELODYAPIs.Controllers
             }
 
             // Meter the analyzed play before returning any chord data (cached or fresh).
-            var (denied, access) = await GateAnalyzedAccessAsync(info.Id, Truncate(info.Title, 500), Truncate(info.Thumbnail, 1000), info.WebpageUrl, info.DurationSeconds);
+            var (denied, _) = await GateAnalyzedAccessAsync(info.Id, Truncate(info.Title, 500), Truncate(info.Thumbnail, 1000), info.WebpageUrl, info.DurationSeconds);
             if (denied is not null)
                 return denied;
 
@@ -139,53 +142,113 @@ namespace FRELODYAPIs.Controllers
                         t.ChordModel == request.ChordModel &&
                         t.ChordDict == request.ChordDict, ct);
                 if (cached is not null)
-                    return Ok(MapTranscriptionToDto(cached));
+                    return Ok(new AnalysisStatusDto
+                    {
+                        Stage = AnalysisStage.Done,
+                        VideoId = info.Id,
+                        Result = MapTranscriptionToDto(cached)
+                    });
             }
 
-            YouTubeTranscriptionDto result;
-            try
+            // Cache miss: run on a background task decoupled from this HTTP request (immune to
+            // client disconnect / Cloudflare ~100s edge cut). The client polls get-analysis-status
+            // and fetches the result via get-transcription when Done.
+            var key = AnalysisJobService.BuildKey(
+                "tiktok", info.Id, request.BeatModel, request.ChordModel, request.ChordDict);
+
+            var req = request;
+            var media = info;
+            var job = _jobs.Submit(key, async (sp, progress, token) =>
             {
-                result = await _chordMini.AnalyzeUrlAsync(
-                    info.WebpageUrl, info.Id,
-                    request.BeatModel, request.ChordModel, request.ChordDict, ct);
-            }
-            catch (Exception ex)
+                var chord = sp.GetRequiredService<IChordMiniService>();
+                var db = sp.GetRequiredService<SongDbContext>();
+
+                var result = await chord.AnalyzeUrlAsync(
+                    media.WebpageUrl, media.Id,
+                    req.BeatModel, req.ChordModel, req.ChordDict, progress, token);
+
+                // Ensure the parent TikTokVideo row exists (FK requirement).
+                var videoExists = await db.TikTokVideos.AnyAsync(v => v.VideoId == media.Id, token);
+                if (!videoExists)
+                {
+                    db.TikTokVideos.Add(new TikTokVideo
+                    {
+                        VideoId = media.Id,
+                        Url = media.WebpageUrl,
+                        Title = Truncate(media.Title, 500),
+                        Uploader = Truncate(media.Uploader, 255),
+                        ThumbnailUrl = Truncate(media.Thumbnail, 1000),
+                        DurationSeconds = media.DurationSeconds
+                    });
+                    await db.SaveChangesAsync(token);
+                }
+
+                var existing = await db.TikTokTranscriptions.FirstOrDefaultAsync(t =>
+                    t.VideoId == media.Id &&
+                    t.BeatModel == req.BeatModel &&
+                    t.ChordModel == req.ChordModel &&
+                    t.ChordDict == req.ChordDict, token);
+
+                if (existing is null)
+                {
+                    existing = new TikTokTranscription { VideoId = media.Id };
+                    db.TikTokTranscriptions.Add(existing);
+                }
+
+                existing.BeatModel = req.BeatModel;
+                existing.ChordModel = req.ChordModel;
+                existing.ChordDict = req.ChordDict;
+                existing.BeatsJson = JsonSerializer.Serialize(result.Beats);
+                existing.ChordsJson = JsonSerializer.Serialize(result.Chords);
+                existing.SyncedChordsJson = JsonSerializer.Serialize(result.SyncedChords);
+                existing.Bpm = result.Bpm;
+                existing.TimeSignature = result.TimeSignature;
+                existing.TotalProcessingSeconds = result.TotalProcessingSeconds;
+                existing.CreatedAt = DateTimeOffset.UtcNow;
+
+                await db.SaveChangesAsync(token);
+            });
+
+            return Ok(new AnalysisStatusDto { Stage = job.Stage, VideoId = info.Id });
+        }
+
+        // Lightweight poll for an in-flight (or just-finished) TikTok analysis — see the
+        // YouTube equivalent. Returns the live stage; the gated get-transcription hands back
+        // the chords once Done, so the long run is driven by short, timeout-proof requests.
+        [HttpGet]
+        [ProducesResponseType(typeof(AnalysisStatusDto), 200)]
+        public async Task<ActionResult<AnalysisStatusDto>> GetAnalysisStatus(
+            [FromQuery] string videoId,
+            [FromQuery] string beatModel = "beat-transformer",
+            [FromQuery] string chordModel = "chord-cnn-lstm",
+            [FromQuery] string chordDict = "full")
+        {
+            if (string.IsNullOrWhiteSpace(videoId))
+                return BadRequest(new { message = "videoId is required." });
+
+            var key = AnalysisJobService.BuildKey("tiktok", videoId, beatModel, chordModel, chordDict);
+            var job = _jobs.Get(key);
+
+            if (job is null || job.Stage == AnalysisStage.Done)
             {
-                // Analysis failed — refund the slot so the user keeps their daily song.
-                await ReleaseUnlockIfRecorded(access, info.Id);
-                // 422 (not 502) so the friendly message reaches the UI past Cloudflare/nginx.
-                return StatusCode(422, new { message = ex.Message });
+                var done = await _db.TikTokTranscriptions.AsNoTracking().AnyAsync(t =>
+                    t.VideoId == videoId && t.BeatModel == beatModel &&
+                    t.ChordModel == chordModel && t.ChordDict == chordDict);
+
+                if (done)
+                    return Ok(new AnalysisStatusDto { Stage = AnalysisStage.Done, VideoId = videoId });
+
+                if (job is null)
+                    return Ok(new AnalysisStatusDto { Stage = AnalysisStage.NotStarted, VideoId = videoId });
             }
 
-            // Ensure the parent video row exists (FK), then persist the transcription.
-            await UpsertAndMapAsync(info, ct);
-
-            var existing = await _db.TikTokTranscriptions.FirstOrDefaultAsync(t =>
-                t.VideoId == info.Id &&
-                t.BeatModel == request.BeatModel &&
-                t.ChordModel == request.ChordModel &&
-                t.ChordDict == request.ChordDict, ct);
-
-            if (existing is null)
+            if (job!.Stage == AnalysisStage.Failed)
             {
-                existing = new TikTokTranscription { VideoId = info.Id };
-                _db.TikTokTranscriptions.Add(existing);
+                await _access.ReleaseUnlock(AnalyzedPlatform.TikTok, videoId);
+                return Ok(new AnalysisStatusDto { Stage = AnalysisStage.Failed, VideoId = videoId, Error = job.Error });
             }
 
-            existing.BeatModel = request.BeatModel;
-            existing.ChordModel = request.ChordModel;
-            existing.ChordDict = request.ChordDict;
-            existing.BeatsJson = JsonSerializer.Serialize(result.Beats);
-            existing.ChordsJson = JsonSerializer.Serialize(result.Chords);
-            existing.SyncedChordsJson = JsonSerializer.Serialize(result.SyncedChords);
-            existing.Bpm = result.Bpm;
-            existing.TimeSignature = result.TimeSignature;
-            existing.TotalProcessingSeconds = result.TotalProcessingSeconds;
-            existing.CreatedAt = DateTimeOffset.UtcNow;
-
-            await _db.SaveChangesAsync(ct);
-            result.Id = existing.Id;
-            return Ok(result);
+            return Ok(new AnalysisStatusDto { Stage = job.Stage, VideoId = videoId });
         }
 
         [HttpGet]

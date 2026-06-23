@@ -13,7 +13,14 @@ namespace FRELODYUI.Shared.RefitApis
         Task<IApiResponse<TikTokVideoDto>> GetVideo([Query] string videoId);
 
         [Post("/api/tik-tok/analyze")]
-        Task<IApiResponse<YouTubeTranscriptionDto>> Analyze([Body] TikTokAnalyzeRequest request);
+        Task<IApiResponse<AnalysisStatusDto>> Analyze([Body] TikTokAnalyzeRequest request);
+
+        [Get("/api/tik-tok/get-analysis-status")]
+        Task<IApiResponse<AnalysisStatusDto>> GetAnalysisStatus(
+            [Query] string videoId,
+            [Query] string beatModel = "beat-transformer",
+            [Query] string chordModel = "chord-cnn-lstm",
+            [Query] string chordDict = "full");
 
         [Get("/api/tik-tok/get-transcription")]
         Task<IApiResponse<YouTubeTranscriptionDto>> GetTranscription(

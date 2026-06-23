@@ -172,11 +172,11 @@
     private AnalyzedQuotaBadge? _quotaBadge;
     private string? _tooLongMessage;
     private bool _tooLongUpgradeable;
-    private System.Threading.Timer? _stageTimer;
     private int _stageIndex;
-    private double[] _stageSeconds = [];
     private bool _analyzePlayerMounted;
     private string _progressSubtitle = "This can take up to a minute.";
+    private CancellationTokenSource? _pollCts;
+    private const int PollIntervalMs = 2500;
 
     private const string AnalyzePlayerId = "dv-analyze-player";
 
@@ -259,38 +259,90 @@
         _errorMessage = null;
         StateHasChanged();
 
-        // Duration-scaled stage schedule so "Finalizing…" appears near the real end and then
-        // holds — not a blind timer that races to the last stage in a few seconds.
-        _stageSeconds = AnalysisStageEstimator.Estimate(_video?.DurationSeconds);
-        _stageTimer = new System.Threading.Timer(_ => InvokeAsync(AdvanceStage),
-            null, TimeSpan.FromSeconds(_stageSeconds[0]), Timeout.InfiniteTimeSpan);
+        _pollCts?.Cancel();
+        _pollCts = new CancellationTokenSource();
+        var token = _pollCts.Token;
 
         try
         {
-            var resp = await TikTokApi.Analyze(new TikTokAnalyzeRequest
+            // Submit starts (or attaches to) a background job and returns immediately. The
+            // analysis is decoupled from this request — a slow clip can't be cut by a
+            // client/proxy timeout.
+            var submit = await TikTokApi.Analyze(new TikTokAnalyzeRequest
             {
                 Url = Url,
                 ForceRefresh = forceRefresh
             });
 
-            if (resp.IsSuccessStatusCode && resp.Content is not null)
+            if (submit.Error?.StatusCode == HttpStatusCode.PaymentRequired)
             {
-                _result = resp.Content;
+                ShowPaywall(submit.Error.Content);
+                return;
+            }
+            if (!submit.IsSuccessStatusCode || submit.Content is null)
+            {
+                _errorMessage = AnalysisErrorMessage.FromResponse(
+                    submit.Error?.StatusCode, submit.Error?.Content, AnalysisErrorMessage.SourceKind.TikTok);
+                _state = AnalysisState.Error;
+                if (_quotaBadge is not null) await _quotaBadge.RefreshAsync();
+                return;
+            }
+
+            var status = submit.Content;
+            var videoId = status.VideoId;
+            ApplyStage(status.Stage);
+            StateHasChanged();
+
+            // Poll the lightweight status endpoint until the job finishes. Short requests, so
+            // no proxy/Cloudflare edge timeout can cut the long analysis.
+            while (status.Stage is not (AnalysisStage.Done or AnalysisStage.Failed))
+            {
+                await Task.Delay(PollIntervalMs, token);
+                var poll = await TikTokApi.GetAnalysisStatus(videoId);
+                if (poll.IsSuccessStatusCode && poll.Content is not null)
+                {
+                    status = poll.Content;
+                    ApplyStage(status.Stage);
+                    StateHasChanged();
+                }
+                // Ignore a transient poll failure — the job keeps running server-side.
+            }
+
+            if (status.Stage == AnalysisStage.Failed)
+            {
+                _errorMessage = !string.IsNullOrWhiteSpace(status.Error)
+                    ? status.Error
+                    : AnalysisErrorMessage.FromResponse(null, null, AnalysisErrorMessage.SourceKind.TikTok);
+                _state = AnalysisState.Error;
+                // The status poll refunds the metered slot on failure — resync the badge.
+                if (_quotaBadge is not null) await _quotaBadge.RefreshAsync();
+                return;
+            }
+
+            // Done — fetch the chords (gated; idempotent within the day's quota window).
+            var result = status.Result;
+            if (result is null)
+            {
+                var fetch = await TikTokApi.GetTranscription(videoId);
+                if (fetch.IsSuccessStatusCode) result = fetch.Content;
+            }
+
+            if (result is not null)
+            {
+                _result = result;
                 _state = AnalysisState.Complete;
                 if (_quotaBadge is not null) await _quotaBadge.RefreshAsync();
             }
-            else if (resp.Error?.StatusCode == HttpStatusCode.PaymentRequired)
-            {
-                ShowPaywall(resp.Error.Content);
-            }
             else
             {
-                _errorMessage = AnalysisErrorMessage.FromResponse(
-                    resp.Error?.StatusCode, resp.Error?.Content, AnalysisErrorMessage.SourceKind.TikTok);
+                _errorMessage = AnalysisErrorMessage.FromResponse(null, null, AnalysisErrorMessage.SourceKind.TikTok);
                 _state = AnalysisState.Error;
-                // Server refunds the metered slot on failure — resync the badge.
-                if (_quotaBadge is not null) await _quotaBadge.RefreshAsync();
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Component disposed / navigated away mid-poll — nothing to surface.
+            return;
         }
         catch (Exception ex)
         {
@@ -300,8 +352,6 @@
         }
         finally
         {
-            _stageTimer?.Dispose();
-            _stageTimer = null;
             // On success the result view re-initializes the same player singleton (clean
             // handoff); otherwise tear the placeholder player down so it doesn't linger.
             if (_state != AnalysisState.Complete && _analyzePlayerMounted)
@@ -313,17 +363,20 @@
         }
     }
 
-    // Walk extract → beats → chords on the estimated schedule, then hold on "Finalizing…"
-    // until RunAnalysisAsync flips to a terminal state.
-    private void AdvanceStage()
+    // Map the server's real analysis stage to the placeholder checklist index, holding on
+    // "Finalizing…" once reached. Driven by the live status poll — not a blind timer.
+    private void ApplyStage(AnalysisStage stage)
     {
-        if (_stageIndex >= Stages.Length - 1) return;
-        _stageIndex++;
+        _stageIndex = stage switch
+        {
+            AnalysisStage.Extracting => 0,
+            AnalysisStage.DetectingBeats => 1,
+            AnalysisStage.RecognizingChords => 2,
+            AnalysisStage.Finalizing or AnalysisStage.Done => 3,
+            _ => _stageIndex
+        };
         if (_stageIndex >= Stages.Length - 1)
             _progressSubtitle = "Almost there — finishing up the analysis.";
-        StateHasChanged();
-        if (_stageIndex < _stageSeconds.Length)
-            _stageTimer?.Change(TimeSpan.FromSeconds(_stageSeconds[_stageIndex]), Timeout.InfiniteTimeSpan);
     }
 
     private void ShowPaywall(string? body)
@@ -353,5 +406,9 @@
 
     private void DismissPaywall() => Nav.NavigateTo(BackUrl);
 
-    public void Dispose() => _stageTimer?.Dispose();
+    public void Dispose()
+    {
+        _pollCts?.Cancel();
+        _pollCts?.Dispose();
+    }
 }
