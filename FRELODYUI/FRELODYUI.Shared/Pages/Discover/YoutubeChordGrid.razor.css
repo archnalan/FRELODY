@@ -3,26 +3,39 @@
    viewport: 2 measures on phones, up to 4 on wide screens. */
 .ycg {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    /* minmax(0, 1fr) — NOT 1fr (= minmax(auto, 1fr)). A long, unbreakable chord label
+       like F♯m7♭5 has a wide min-content; with the auto floor it forces its track wider
+       than its siblings and the matrix stops being even. The 0 floor pins every track to
+       an equal width regardless of label length. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--k-space-2);
     align-content: start;
 }
 
 @media (min-width: 480px) {
-    .ycg { grid-template-columns: repeat(3, 1fr); }
+    .ycg { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (min-width: 760px) {
     .ycg {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: var(--k-space-3);
     }
+
+    /* Keep the barline centred: match the wider desktop column gap (see .ycg-measure note). */
+    .ycg-measure { padding-left: var(--k-space-3); }
 }
 
-/* ── Measure: a left bar + an even row of beat cells ── */
+/* ── Measure: a left barline + an even row of beat cells ──
+   The 3px barline sits on the box's left edge. Its left clearance is the inter-measure
+   column gap (.ycg `gap`); its right clearance is this `padding-left`. Keeping the two
+   EQUAL centres the barline crisply between measures with no lopsided dead region under
+   the neighbouring squares — so `padding-left` must mirror .ycg's column gap at every
+   breakpoint (space-2 here; space-3 at ≥760, see below). */
 .ycg-measure {
     display: grid;
-    grid-template-columns: repeat(var(--ycg-bpm, 4), 1fr);
+    /* Same equal-track guarantee within the measure (see .ycg note above). */
+    grid-template-columns: repeat(var(--ycg-bpm, 4), minmax(0, 1fr));
     gap: 2px;
     padding-left: var(--k-space-2);
     border-left: 3px solid var(--k-border-strong);
@@ -38,6 +51,10 @@
     aspect-ratio: 1 / 1;
     min-height: 2.25rem;
     padding: 0;
+    /* Clip a pathologically long label to the square so it can never visually spill
+       over a neighbour (the equal-track grid already keeps widths uniform). The
+       length-based shrink steps below keep realistic chord names well inside this. */
+    overflow: hidden;
     border: 1px solid transparent;
     border-radius: var(--k-radius-xs);
     background: var(--k-bg-surface-2);
@@ -67,13 +84,21 @@
     color: var(--k-accent-soft-text);
 }
 
-/* Printed chord label (only where the chord changes). */
+/* Printed chord label (only where the chord changes). Stays on one line and shrinks by
+   length so longer names (Cmaj7, F♯m7♭5, …) fit the uniform square without wrapping or
+   distorting the grid. Buckets are applied in the component from the display length. */
 .ycg-beat-label {
     font-size: var(--k-font-size-sm);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.01em;
+    white-space: nowrap;
+    max-width: 100%;
 }
+
+.ycg-beat-label--m  { font-size: var(--k-font-size-xs); letter-spacing: -0.02em; }
+.ycg-beat-label--l  { font-size: 0.62rem; letter-spacing: -0.02em; }
+.ycg-beat-label--xl { font-size: 0.52rem; letter-spacing: -0.03em; }
 
 /* Continuation beat — a quiet centred tick that carries the rhythm. */
 .ycg-beat-tick {

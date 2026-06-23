@@ -288,9 +288,10 @@
 
         <!-- Actions -->
         <div class="pv-actions">
-        @* Only offer the save once there are real chords to map — synced cells can be
-           all N/X rests, which would persist a blank chart. *@
-        @if (AllowSaveToLibrary && _uniqueRawChords.Count > 0)
+        @* Only offer the save once there are real chords to map AND the analysis can be
+           matched with synced lyrics (server pre-check). A chords-only grid makes a poor
+           library artifact, so we hide the action — and never promise it — otherwise. *@
+        @if (AllowSaveToLibrary && _uniqueRawChords.Count > 0 && _saveable == true)
         {
             <button type="button" class="pv-btn pv-btn--primary"
                     @onclick="SaveToLibraryAsync" disabled="@_isSaving">
@@ -503,6 +504,10 @@
     private bool _isSaving;
     private bool _saved;
     private string? _savedSongRef;
+
+    // null = saveability not yet determined (button hidden); true/false once the pre-check
+    // answers. We only show "Save to Library" when the analysis can be matched with lyrics.
+    private bool? _saveable;
 
     private ElementReference _floatEl;
     private IJSObjectReference? _dragModule;
@@ -717,7 +722,36 @@
             _builtChordsRef = Transcription.SyncedChords;
             BuildUniqueChords();
             _ = RefetchChordCardsAsync();
+            _ = CheckSaveabilityAsync();
         }
+    }
+
+    // A YouTube analysis is only worth saving as a chord chart when it can be matched with
+    // synced lyrics. We don't know that client-side, so ask the server. The save action stays
+    // hidden (and we never promise it) until this confirms saveable == true. Only runs where
+    // saving is offered at all (YouTube result page).
+    private async Task CheckSaveabilityAsync()
+    {
+        if (!AllowSaveToLibrary || string.IsNullOrEmpty(Transcription.VideoId))
+        {
+            _saveable = false;
+            return;
+        }
+
+        _saveable = null; // unknown → button hidden while we check
+        StateHasChanged();
+        try
+        {
+            var resp = await YoutubeApi.CanSaveToLibrary(
+                Transcription.VideoId, Transcription.BeatModel,
+                Transcription.ChordModel, Transcription.ChordDict);
+            _saveable = resp.IsSuccessStatusCode && resp.Content is { Saveable: true };
+        }
+        catch
+        {
+            _saveable = false;
+        }
+        StateHasChanged();
     }
 
     private void BuildUniqueChords()

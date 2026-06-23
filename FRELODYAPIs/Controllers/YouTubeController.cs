@@ -357,10 +357,82 @@ namespace FRELODYAPIs.Controllers
                 ? request.Title!.Trim()
                 : video?.Title ?? request.VideoId;
 
-            // Chords-only charts are hard to follow — enrich the save with LRCLib synced
-            // lyrics when a confident match exists. Strictly best-effort: any miss falls
-            // back to the chord-only chart.
-            IReadOnlyList<LyricsLine>? lyricLines = null;
+            // A chords-only grid makes a poor library artifact, so we only persist a chart
+            // we can align to synced lyrics. The UI gates the save on the same check
+            // (CanSaveToLibrary); this is the authoritative server-side guard so the rule
+            // can't be bypassed. 422 (not 5xx) — it's an expected application outcome.
+            var lyricLines = await ResolveSyncedLyricsAsync(video, title, ct);
+            if (lyricLines is not { Count: > 0 })
+                return UnprocessableEntity(new
+                {
+                    message = "This song couldn't be matched with lyrics yet, so it can't be saved as a chord chart."
+                });
+
+            var songDto = YouTubeSongMapper.Map(dto, title, lyricLines);
+
+            var result = await _songService.CreateSong(songDto);
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+
+            return Ok(result.Data);
+        }
+
+        /// <summary>
+        /// Lightweight pre-check: can this analysis be saved as a (lyric-aligned) chord chart?
+        /// The result page calls this after the chords load so it can hide the "Save to Library"
+        /// action — and never promise it — when no confident synced-lyric match exists. Mirrors
+        /// the exact saveability rule enforced in <see cref="SaveToLibrary"/>. Intentionally
+        /// unauthenticated: a logged-out viewer still sees the (valid) save affordance, and the
+        /// click itself routes through the login gate.
+        /// </summary>
+        [HttpGet]
+        [ProducesResponseType(typeof(SaveabilityDto), 200)]
+        public async Task<ActionResult<SaveabilityDto>> CanSaveToLibrary(
+            [FromQuery] string videoId,
+            [FromQuery] string beatModel = "beat-transformer",
+            [FromQuery] string chordModel = "chord-cnn-lstm",
+            [FromQuery] string chordDict = "full",
+            CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(videoId))
+                return Ok(new SaveabilityDto { Saveable = false, Reason = "no-video" });
+
+            var transcription = await _db.YouTubeTranscriptions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t =>
+                    t.VideoId == videoId &&
+                    t.BeatModel == beatModel &&
+                    t.ChordModel == chordModel &&
+                    t.ChordDict == chordDict,
+                    ct);
+
+            if (transcription is null)
+                return Ok(new SaveabilityDto { Saveable = false, Reason = "no-analysis" });
+
+            var dto = MapTranscriptionToDto(transcription);
+            if (dto.SyncedChords.Count == 0)
+                return Ok(new SaveabilityDto { Saveable = false, Reason = "no-chords" });
+
+            var video = await _db.YouTubeVideos
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.VideoId == videoId, ct);
+            var title = video?.Title ?? videoId;
+
+            var lyricLines = await ResolveSyncedLyricsAsync(video, title, ct);
+            return Ok(lyricLines is { Count: > 0 }
+                ? new SaveabilityDto { Saveable = true }
+                : new SaveabilityDto { Saveable = false, Reason = "no-lyrics" });
+        }
+
+        /// <summary>
+        /// Best-effort LRCLib lookup of synced lyrics for a video. Returns non-empty only when
+        /// a confident, duration-matched, synchronized set with real text exists — exactly the
+        /// condition under which <see cref="YouTubeSongMapper"/> produces a lyric-aligned chart.
+        /// Never throws: any miss/failure yields null.
+        /// </summary>
+        private async Task<IReadOnlyList<LyricsLine>?> ResolveSyncedLyricsAsync(
+            YouTubeVideo? video, string title, CancellationToken ct)
+        {
             try
             {
                 var (artist, songTitle) = YouTubeSongMapper.ParseArtistTitle(title);
@@ -372,21 +444,15 @@ namespace FRELODYAPIs.Controllers
                                  video?.DurationSeconds is not > 0 ||
                                  Math.Abs(d - video.DurationSeconds) <= Math.Max(20, video.DurationSeconds * 0.15);
 
-                if (lyrics.Found && lyrics.HasSynchronized && durationOk)
-                    lyricLines = lyrics.Synchronized;
+                if (lyrics.Found && lyrics.HasSynchronized && durationOk &&
+                    lyrics.Synchronized.Any(l => !string.IsNullOrWhiteSpace(l.Text)))
+                    return lyrics.Synchronized;
             }
             catch
             {
-                // Lyrics enrichment must never block saving the chart.
+                // Lyrics enrichment must never throw into the caller.
             }
-
-            var songDto = YouTubeSongMapper.Map(dto, title, lyricLines);
-
-            var result = await _songService.CreateSong(songDto);
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, new { message = result.Error.Message });
-
-            return Ok(result.Data);
+            return null;
         }
 
         private async Task<YouTubeVideoDto> UpsertAndMapAsync(

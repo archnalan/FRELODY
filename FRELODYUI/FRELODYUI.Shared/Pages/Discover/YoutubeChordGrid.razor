@@ -23,7 +23,7 @@ else
                                we want the eye drawn to. Chord identity lives in the cell itself. *@
                         @if (cell.ShowLabel)
                         {
-                            <span class="ycg-beat-label">@cell.Display</span>
+                            <span class="ycg-beat-label @LabelSizeClass(cell.Display)">@cell.Display</span>
                         }
                         else
                         {
@@ -141,6 +141,16 @@ else
     // Capo-shifted display label for a raw chord; rest detection stays on the original.
     private string DisplayFor(string? raw)
         => ChordLabel.Display(ChordLabel.TransposeRaw(raw, CapoShift, PreferFlat));
+
+    // Shrink the chord label by length so longer names fit the uniform square cell on one
+    // line (♯/♭ and the em-dash rest are single chars, so a plain .Length is the right metric).
+    private static string LabelSizeClass(string display) => display.Length switch
+    {
+        <= 2 => "",
+        3 => "ycg-beat-label--m",
+        4 => "ycg-beat-label--l",
+        _ => "ycg-beat-label--xl"
+    };
 
     // Lay the whole song out beat-by-beat so every position is its own cell.
     // The chord label is printed only when the chord *changes*; intervening
