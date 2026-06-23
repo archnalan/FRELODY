@@ -8,6 +8,7 @@ namespace FRELODYSHRD.Dtos
     public enum AnalysisStage
     {
         NotStarted = 0,
+        Queued = 7,            // accepted, waiting for a free analysis slot (bounded queue)
         Extracting = 1,
         DetectingBeats = 2,
         RecognizingChords = 3,
@@ -27,5 +28,11 @@ namespace FRELODYSHRD.Dtos
         public string VideoId { get; set; } = default!;
         public string? Error { get; set; }
         public YouTubeTranscriptionDto? Result { get; set; }
+
+        /// <summary>
+        /// When <see cref="Stage"/> is <see cref="AnalysisStage.Queued"/>: how many analyses
+        /// are ahead in line (0 = next up). Null otherwise. Lets the UI reassure a waiting user.
+        /// </summary>
+        public int? QueueAhead { get; set; }
     }
 }

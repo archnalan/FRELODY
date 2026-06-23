@@ -167,6 +167,7 @@
     private bool _analyzePlayerMounted;
     private string _progressSubtitle = "This may take a minute for longer videos.";
     private CancellationTokenSource? _pollCts;
+    private int _pollTick;
     private const int PollIntervalMs = 2500;
 
     private const string AnalyzePlayerId = "dv-analyze-player";
@@ -266,7 +267,7 @@
             // Poll the lightweight status endpoint until the job finishes. Each request is
             // short, so no proxy/Cloudflare edge timeout can ever cut the long analysis.
             var status = submit.Content;
-            ApplyStage(status.Stage);
+            ApplyStatus(status);
             StateHasChanged();
 
             while (status.Stage is not (AnalysisStage.Done or AnalysisStage.Failed))
@@ -276,7 +277,7 @@
                 if (poll.IsSuccessStatusCode && poll.Content is not null)
                 {
                     status = poll.Content;
-                    ApplyStage(status.Stage);
+                    ApplyStatus(status);
                     StateHasChanged();
                 }
                 // A transient poll failure is ignored — the job keeps running server-side.
@@ -339,9 +340,20 @@
 
     // Map the server's real analysis stage to the placeholder checklist index, holding on
     // "Finalizing…" once we reach it. Driven by the live status poll — not a blind timer.
-    private void ApplyStage(AnalysisStage stage)
+    // Drive the staged checklist + engaging, queue-aware microcopy off the live status poll.
+    private void ApplyStatus(AnalysisStatusDto s)
     {
-        _stageIndex = stage switch
+        if (s.Stage == AnalysisStage.Queued)
+        {
+            _stageIndex = 0;
+            var ahead = s.QueueAhead ?? 0;
+            _progressSubtitle = ahead <= 0
+                ? "You're next — starting any moment…"
+                : $"{ahead} {(ahead == 1 ? "song is" : "songs are")} ahead of you — your spot is held, hang tight.";
+            return;
+        }
+
+        _stageIndex = s.Stage switch
         {
             AnalysisStage.Extracting => 0,
             AnalysisStage.DetectingBeats => 1,
@@ -349,9 +361,25 @@
             AnalysisStage.Finalizing or AnalysisStage.Done => 3,
             _ => _stageIndex
         };
-        if (_stageIndex >= Stages.Length - 1)
-            _progressSubtitle = "Almost there — finishing up the analysis.";
+        _progressSubtitle = SubtitleFor(s.Stage, _pollTick++);
     }
+
+    private static string SubtitleFor(AnalysisStage stage, int tick) => stage switch
+    {
+        AnalysisStage.Extracting => "Grabbing the audio…",
+        // Beat detection is the long pole — rotate reassurance so it never feels stuck.
+        AnalysisStage.DetectingBeats => BeatMessages[(tick / 3) % BeatMessages.Length],
+        AnalysisStage.RecognizingChords => "Working out the chords…",
+        AnalysisStage.Finalizing or AnalysisStage.Done => "Almost there — finishing up.",
+        _ => "Analyzing the music…"
+    };
+
+    private static readonly string[] BeatMessages =
+    [
+        "Mapping the beat grid — this is the heavy part…",
+        "Quality beats a quick guess — hang tight.",
+        "Still working — feel free to watch the video while you wait.",
+    ];
 
     private void ShowPaywall(string? body)
     {

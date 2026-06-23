@@ -163,9 +163,10 @@ builder.Services.AddHttpClient("ChordMiniYtdlp", client =>
 });
 builder.Services.AddScoped<FRELODYAPIs.Services.ChordMini.IChordMiniService,
                             FRELODYAPIs.Services.ChordMini.ChordMiniService>();
-// Runs analysis on a background task decoupled from the HTTP request (singleton registry
-// so concurrent/retry requests for the same video dedupe onto one run).
+// Bounded, environment-aware analysis queue: a singleton registry/queue plus a consumer pool
+// (hosted service) so concurrent/retry requests dedupe and bursts wait instead of OOM-ing.
 builder.Services.AddSingleton<FRELODYAPIs.Services.Analysis.AnalysisJobService>();
+builder.Services.AddHostedService<FRELODYAPIs.Services.Analysis.AnalysisQueueWorker>();
 builder.Services.AddIdentity<User, IdentityRole>
             (options =>
             {

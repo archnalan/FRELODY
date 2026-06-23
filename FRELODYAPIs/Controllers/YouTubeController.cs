@@ -285,7 +285,12 @@ namespace FRELODYAPIs.Controllers
                 return Ok(new AnalysisStatusDto { Stage = AnalysisStage.Failed, VideoId = videoId, Error = job.Error });
             }
 
-            return Ok(new AnalysisStatusDto { Stage = job.Stage, VideoId = videoId });
+            return Ok(new AnalysisStatusDto
+            {
+                Stage = job.Stage,
+                VideoId = videoId,
+                QueueAhead = job.Stage == AnalysisStage.Queued ? _jobs.QueueAhead(job) : null
+            });
         }
 
         [HttpGet]
