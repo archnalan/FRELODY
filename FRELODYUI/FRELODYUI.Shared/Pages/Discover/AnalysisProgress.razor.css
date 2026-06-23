@@ -41,13 +41,15 @@
     color: var(--text-primary);
 }
 
-/* ── Stage checklist (a connected timeline) ──
-   Each marker is joined to the next by a vertical connector. Completed segments
-   light up (success) so the line visibly "fills in" as the background job walks
-   from stage to stage — the eye can read progress at a glance. */
+/* ── Stage checklist (a connected timeline with nested substeps) ──
+   Each stage is a column: a header row (marker + label) plus an expandable list
+   of substeps. The active stage auto-expands; completed stages collapse. A vertical
+   connector joins each marker to the next and "fills" with the success color as the
+   active stage's substeps tick off, so the eye reads forward motion at a glance. */
 .ap-stages {
-    --ap-stage-gap: 1.25rem;       /* doubles as the connector length */
+    --ap-stage-gap: 1.25rem;       /* spacing between stages = connector overshoot */
     --ap-marker-size: 1.5rem;
+    --ap-substep-indent: calc(var(--ap-marker-size) + var(--k-space-3));
     list-style: none;
     margin: 0;
     padding: 0;
@@ -60,11 +62,17 @@
 }
 
 .ap-stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    font-size: var(--k-font-size-sm);
+    transition: color var(--k-transition-fast);
+}
+
+.ap-stage-row {
     display: flex;
     align-items: center;
     gap: var(--k-space-3);
-    font-size: var(--k-font-size-sm);
-    transition: color var(--k-transition-fast);
 }
 
 .ap-stage-marker {
@@ -76,26 +84,37 @@
     width: var(--ap-marker-size);
     height: var(--ap-marker-size);
     border-radius: 50%;
+    z-index: 1;
 }
 
-/* Connector to the next stage's marker. Muted by default; turns "done" green
-   once this stage is complete, so the trail brightens as analysis advances. */
-.ap-stage:not(:last-child) .ap-stage-marker::after {
-    content: "";
+/* Connector: spans from below this marker down to the next stage's marker, regardless
+   of how tall the expanded substep list is (top/bottom anchored, not fixed-length). */
+.ap-connector {
     position: absolute;
-    top: 100%;
-    left: 50%;
+    top: var(--ap-marker-size);
+    bottom: calc(-1 * var(--ap-stage-gap));
+    left: calc(var(--ap-marker-size) / 2);
     transform: translateX(-50%);
     width: 2px;
-    height: var(--ap-stage-gap);
     border-radius: 1px;
     background: var(--k-border-strong);
-    transition: background var(--k-transition-slow);
+    overflow: hidden;
 }
 
-.ap-stage--done .ap-stage-marker::after {
+/* The green overlay that grows downward. Height is driven by --ap-fill (set inline on
+   the active stage from its substep progress); done stages are pinned full. */
+.ap-connector-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--ap-fill, 0%);
     background: var(--k-success-soft-text);
+    border-radius: 1px;
+    transition: height var(--k-transition-slow);
 }
+
+.ap-stage--done .ap-connector-fill { height: 100%; }
 
 .ap-stage-dot {
     width: 0.6rem;
@@ -105,9 +124,7 @@
 }
 
 /* Done */
-.ap-stage--done {
-    color: var(--k-text-muted);
-}
+.ap-stage--done { color: var(--k-text-muted); }
 
 .ap-stage--done .ap-stage-marker {
     background: var(--k-success-soft);
@@ -116,14 +133,12 @@
 }
 
 /* Active */
-.ap-stage--active {
+.ap-stage--active .ap-stage-label {
     color: var(--text-primary);
     font-weight: 600;
 }
 
-.ap-stage--active .ap-stage-marker {
-    background: var(--k-accent-soft);
-}
+.ap-stage--active .ap-stage-marker { background: var(--k-accent-soft); }
 
 .ap-stage--active .ap-stage-dot {
     background: var(--k-accent);
@@ -136,9 +151,71 @@
 }
 
 /* Pending */
-.ap-stage--pending {
-    color: var(--k-text-subtle);
+.ap-stage--pending { color: var(--k-text-subtle); }
+
+/* ── Nested substeps ── */
+.ap-substeps {
+    list-style: none;
+    margin: 0;
+    padding-left: var(--ap-substep-indent);
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-1);
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height var(--k-transition-fast),
+                opacity var(--k-transition-fast),
+                margin-top var(--k-transition-fast);
 }
+
+.ap-substeps--open {
+    max-height: 9rem;
+    opacity: 1;
+    margin-top: var(--k-space-2);
+}
+
+.ap-substep {
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-2);
+    font-size: var(--k-font-size-xs);
+    transition: color var(--k-transition-fast);
+}
+
+.ap-substep-marker {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.05rem;
+    height: 1.05rem;
+    border-radius: 50%;
+}
+
+.ap-substep-dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: var(--k-border-strong);
+}
+
+.ap-substep--done { color: var(--k-text-muted); }
+
+.ap-substep--done .ap-substep-marker {
+    background: var(--k-success-soft);
+    color: var(--k-success-soft-text);
+    font-size: 0.7rem;
+}
+
+.ap-substep--active { color: var(--text-primary); }
+
+.ap-substep--active .ap-substep-dot {
+    background: var(--k-accent);
+    animation: ap-pulse 1.2s ease-in-out infinite;
+}
+
+.ap-substep--pending { color: var(--k-text-subtle); }
 
 /* ── Indeterminate bar ── */
 .ap-bar {
@@ -189,8 +266,7 @@
     line-height: 1.4;
 }
 
-/* ── Large screens: the waiting card barely registered before — give it room
-   to breathe so the staged timeline reads as the focal point of the page. ── */
+/* ── Large screens: give the staged timeline room to be the focal point. ── */
 @media (min-width: 760px) {
     .ap {
         padding: 4rem var(--k-space-5) 3.5rem;
@@ -226,6 +302,15 @@
 
     .ap-stage--done .ap-stage-marker { font-size: 0.95rem; }
 
+    .ap-substep { font-size: var(--k-font-size-sm); }
+
+    .ap-substep-marker {
+        width: 1.2rem;
+        height: 1.2rem;
+    }
+
+    .ap-substeps--open { max-height: 11rem; }
+
     .ap-bar {
         max-width: 26rem;
         height: 0.45rem;
@@ -236,8 +321,13 @@
 @media (prefers-reduced-motion: reduce) {
     .ap-wave span,
     .ap-stage--active .ap-stage-dot,
+    .ap-substep--active .ap-substep-dot,
     .ap-bar-fill {
         animation: none;
     }
     .ap-bar-fill { width: 100%; left: 0; opacity: 0.7; }
+    .ap-connector-fill { transition: none; }
+    .ap-substeps {
+        transition: none;
+    }
 }

@@ -144,6 +144,8 @@
                     </div>
                 }
                 <AnalysisProgress StageIndex="_stageIndex"
+                                  DurationSeconds="_video?.DurationSeconds"
+                                  Queued="_isQueued"
                                   Subtitle="@_progressSubtitle" />
             </div>
         }
@@ -173,6 +175,7 @@
     private string? _tooLongMessage;
     private bool _tooLongUpgradeable;
     private int _stageIndex;
+    private bool _isQueued;
     private bool _analyzePlayerMounted;
     private string _progressSubtitle = "This can take up to a minute.";
     private CancellationTokenSource? _pollCts;
@@ -369,6 +372,7 @@
     // Drive the staged checklist + engaging, queue-aware microcopy off the live status poll.
     private void ApplyStatus(AnalysisStatusDto s)
     {
+        _isQueued = s.Stage == AnalysisStage.Queued;
         if (s.Stage == AnalysisStage.Queued)
         {
             _stageIndex = 0;

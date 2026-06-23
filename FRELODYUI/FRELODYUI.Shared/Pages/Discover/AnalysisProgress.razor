@@ -1,8 +1,14 @@
 @implements IDisposable
 
 @* Friendly, staged waiting screen shared by the YouTube and TikTok analysis pages.
-   The host page advances StageIndex on a timer; this component owns the soundwave,
-   the stage checklist, an indeterminate bar, and a rotating reassurance tip. *@
+   The host page advances StageIndex on the live status poll (server truth); this
+   component owns the soundwave, the stage checklist (with client-paced substeps),
+   an indeterminate bar, and a rotating reassurance tip.
+
+   Substeps are paced client-side off AnalysisStageEstimator — the backend reports
+   only the four coarse stages, so substeps tick on a duration-scaled timer. Honesty
+   rule: the timer only checks a stage's substeps down to the *last* one; the final
+   substep flips to done when the SERVER advances to the next stage, never before. *@
 <div class="ap">
     <div class="ap-wave" aria-hidden="true">
         <span></span><span></span><span></span><span></span><span></span>
@@ -14,18 +20,52 @@
         @for (int i = 0; i < _stages.Length; i++)
         {
             var state = i < StageIndex ? "done" : (i == StageIndex ? "active" : "pending");
-            <li class="ap-stage ap-stage--@state">
-                <span class="ap-stage-marker">
-                    @if (i < StageIndex)
-                    {
-                        <i class="bi bi-check-lg"></i>
-                    }
-                    else
-                    {
-                        <span class="ap-stage-dot"></span>
-                    }
-                </span>
-                <span class="ap-stage-label">@_stages[i]</span>
+            var subs = SubStepsFor(i);
+            var isActive = i == StageIndex && !Queued;
+            // Connector fill: done stages are full; the active stage fills with its
+            // substep progress; everything else stays empty (handled in CSS).
+            var fillStyle = isActive ? $"--ap-fill:{_fillPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)}%" : null;
+            <li class="ap-stage ap-stage--@state" style="@fillStyle">
+                @if (i < _stages.Length - 1)
+                {
+                    <span class="ap-connector" aria-hidden="true"><span class="ap-connector-fill"></span></span>
+                }
+                <div class="ap-stage-row">
+                    <span class="ap-stage-marker">
+                        @if (i < StageIndex)
+                        {
+                            <i class="bi bi-check-lg"></i>
+                        }
+                        else
+                        {
+                            <span class="ap-stage-dot"></span>
+                        }
+                    </span>
+                    <span class="ap-stage-label">@_stages[i]</span>
+                </div>
+
+                @if (subs.Length > 0)
+                {
+                    <ul class="ap-substeps @(isActive ? "ap-substeps--open" : null)">
+                        @for (int j = 0; j < subs.Length; j++)
+                        {
+                            var subState = SubState(i, j);
+                            <li class="ap-substep ap-substep--@subState">
+                                <span class="ap-substep-marker">
+                                    @if (subState == "done")
+                                    {
+                                        <i class="bi bi-check"></i>
+                                    }
+                                    else
+                                    {
+                                        <span class="ap-substep-dot"></span>
+                                    }
+                                </span>
+                                <span class="ap-substep-label">@subs[j]</span>
+                            </li>
+                        }
+                    </ul>
+                }
             </li>
         }
     </ol>
@@ -49,6 +89,12 @@
     [Parameter] public int StageIndex { get; set; }
     [Parameter] public string? Subtitle { get; set; }
 
+    /// <summary>Video length (seconds), used to pace substeps on a realistic schedule.</summary>
+    [Parameter] public int? DurationSeconds { get; set; }
+
+    /// <summary>True while the job is still queued (no slot yet) — freeze substeps at the start.</summary>
+    [Parameter] public bool Queued { get; set; }
+
     /// <summary>Optional override of the stage labels. Defaults to the audio→beats→chords→finalize flow.</summary>
     [Parameter] public string[]? Stages { get; set; }
 
@@ -62,6 +108,29 @@
         "Finalizing…"
     ];
 
+    // Real activities inside each major stage (see ChordMiniService + CLAUDE.md). Finalizing
+    // has none by design. Index matches the stage order above.
+    private static readonly string[][] DefaultSubSteps =
+    [
+        ["Connecting to the source", "Downloading the audio"],
+        ["Separating the instruments", "Tracking the beat grid", "Locking downbeats & meter"],
+        ["Extracting tonal features", "Identifying chords", "Aligning chords to the beat"],
+        [],
+    ];
+
+    // Per-substep share of the stage's estimated duration. Beats is Demucs-heavy up front;
+    // chords spends most time in the model. Each row sums to 1.0.
+    private static readonly double[][] SubWeights =
+    [
+        [0.5, 0.5],
+        [0.55, 0.30, 0.15],
+        [0.30, 0.45, 0.25],
+        [],
+    ];
+
+    private string[] SubStepsFor(int stage) =>
+        stage >= 0 && stage < DefaultSubSteps.Length ? DefaultSubSteps[stage] : [];
+
     private static readonly string[] _tips =
     [
         "Longer or more detailed songs take a little more time.",
@@ -72,6 +141,13 @@
 
     private int _tipIndex;
     private System.Threading.Timer? _tipTimer;
+    private System.Threading.Timer? _subTimer;
+
+    // Substep progress for the active stage, recomputed on the tick.
+    private int _activeDone;          // completed substeps in the active stage (capped at len-1)
+    private int _fillPercent;         // connector fill toward the next stage, 0–100
+    private int _lastStageIndex = -1;
+    private DateTime _stageEntryUtc = DateTime.UtcNow;
 
     protected override void OnInitialized()
     {
@@ -80,7 +156,90 @@
             _tipIndex = (_tipIndex + 1) % _tips.Length;
             InvokeAsync(StateHasChanged);
         }, null, TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(6));
+
+        // Fast tick so substeps and the connector fill advance smoothly within a stage.
+        _subTimer = new System.Threading.Timer(_ =>
+        {
+            if (Recompute())
+                InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromMilliseconds(250), TimeSpan.FromMilliseconds(250));
     }
 
-    public void Dispose() => _tipTimer?.Dispose();
+    protected override void OnParametersSet()
+    {
+        // Server advanced (or reset) the major stage — reset the substep clock so the new
+        // active stage paces from zero. Prior stages render fully done implicitly.
+        if (StageIndex != _lastStageIndex)
+        {
+            _lastStageIndex = StageIndex;
+            _stageEntryUtc = DateTime.UtcNow;
+            _activeDone = 0;
+            _fillPercent = 0;
+        }
+        Recompute();
+    }
+
+    // Map a substep to done/active/pending. Stages below the server stage are fully done.
+    private string SubState(int stage, int sub)
+    {
+        if (stage < StageIndex) return "done";
+        if (stage != StageIndex || Queued) return "pending";
+        if (sub < _activeDone) return "done";
+        return sub == _activeDone ? "active" : "pending";
+    }
+
+    // Recompute the active stage's substep progress from elapsed time vs. the estimate.
+    // Returns true if anything visible changed (so the timer only re-renders when needed).
+    private bool Recompute()
+    {
+        int prevDone = _activeDone, prevFill = _fillPercent;
+
+        var subs = SubStepsFor(StageIndex);
+        if (Queued || subs.Length == 0 || StageIndex >= 3)
+        {
+            _activeDone = 0;
+            _fillPercent = StageIndex >= _stages.Length - 1 ? 0 : _fillPercent;
+            return _activeDone != prevDone || _fillPercent != prevFill;
+        }
+
+        var weights = SubWeights[StageIndex];
+        var est = AnalysisStageEstimator.Estimate(DurationSeconds);
+        double stageSeconds = StageIndex < est.Length ? est[StageIndex] : 30.0;
+        double elapsed = (DateTime.UtcNow - _stageEntryUtc).TotalSeconds;
+        double frac = Math.Clamp(elapsed / Math.Max(stageSeconds, 0.5), 0, 1);
+
+        // Walk cumulative weights: how many substeps are complete + partial of the in-flight one.
+        double cum = 0;
+        int done = 0;
+        double partial = 0;
+        for (int i = 0; i < weights.Length; i++)
+        {
+            double next = cum + weights[i];
+            if (frac >= next) { done = i + 1; }
+            else { partial = (frac - cum) / weights[i]; break; }
+            cum = next;
+        }
+
+        // Honesty cap: never complete the last substep on a timer — the server confirms it
+        // by advancing the major stage. Hold the last one "active" with capped partial.
+        int maxDone = subs.Length - 1;
+        if (done >= maxDone)
+        {
+            done = maxDone;
+            double lastStart = cum >= 1 ? 1 - weights[^1] : cum;
+            partial = Math.Clamp((frac - lastStart) / Math.Max(weights[^1], 1e-6), 0, 0.95);
+        }
+
+        _activeDone = done;
+        // Connector fill toward the next stage: completed + partial of in-flight, capped < 100%.
+        _fillPercent = (int)Math.Round(Math.Min((done + partial) / subs.Length, 0.97) * 100);
+
+        return _activeDone != prevDone || _fillPercent != prevFill;
+    }
+
+    public void Dispose()
+    {
+        _tipTimer?.Dispose();
+        _subTimer?.Dispose();
+    }
 }
