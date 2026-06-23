@@ -18,7 +18,7 @@
         @* Mobile always sees expanded brand; desktop sees it only when not collapsed *@
         <a class="navbar-brand d-flex align-items-center gap-2 logo-home-link @(IsSidebarCollapsed ? "mobile-only" : "")" href="/">
             <img src="_content/FRELODYUI.Shared/fet_melody_logo.png" alt="Frelody" class="nav-logo-img" />
-            <span class="nav-brand-text">FRELODY</span>
+            <span class="nav-brand-text"><span class="nav-brand-fre">FRE</span><span class="nav-brand-lody">LODY</span></span>
         </a>
         <button class="sidebar-collapse-toggle d-desktop-flex" @onclick="OnToggleSidebar" title="@(IsSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")" aria-label="@(IsSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")">
             <i class="bi @(IsSidebarCollapsed ? "bi-layout-sidebar" : "bi-layout-sidebar-reverse")"></i>

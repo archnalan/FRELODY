@@ -104,9 +104,16 @@
 }
 
 .nav-brand-text {
+    font-family: var(--k-font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
     transition: opacity 0.2s, width 0.2s;
     overflow: hidden;
     white-space: nowrap;
+}
+
+.nav-brand-lody {
+    color: var(--bs-warning);
 }
 
 /* Sidebar expand / collapse toggle buttons */
@@ -145,7 +152,6 @@
 .mobile-drawer-close {
     display: flex;
     align-items: center;
-    justify-content: center;
     width: 32px;
     height: 32px;
     border: none;
@@ -157,8 +163,24 @@
     flex-shrink: 0;
 }
 
+.mobile-drawer-close .bi {
+    font-size: 1.1rem;
+    color: inherit;
+    line-height: 1;
+}
+
 .mobile-drawer-close:hover {
     background: rgba(255, 255, 255, 0.25);
+}
+
+/* Light mode: dark chip gives clear button boundary and proper icon contrast on the indigo gradient */
+[data-bs-theme="light"] .mobile-drawer-close {
+    background: rgba(0, 0, 0, 0.15);
+    color: white;
+}
+
+[data-bs-theme="light"] .mobile-drawer-close:hover {
+    background: rgba(0, 0, 0, 0.28);
 }
 
 @media (min-width: 641px) {
