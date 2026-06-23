@@ -678,6 +678,19 @@
     .ts-streak { font-size: var(--k-font-size-xs); padding: 0.25rem 0.65rem; }
     /* Calendar: cells shrink to 11px min on phones; 10px is the hard min */
     .ts-cal-grid { grid-auto-columns: minmax(10px, 1fr); }
+    /*
+     * Mobile fix: direction:rtl doesn't reliably scroll to the right end on
+     * iOS Safari. Switch to a scaleX(-1) flip instead — the outer flip makes
+     * scrollLeft=0 land on the newest (right-most) weeks, and the inner
+     * counter-flip restores the correct visual orientation.
+     */
+    .ts-cal-outer {
+        direction: ltr;
+        transform: scaleX(-1);
+    }
+    .ts-cal-grid {
+        transform: scaleX(-1);
+    }
 }
 
 @media (max-width: 360px) {
