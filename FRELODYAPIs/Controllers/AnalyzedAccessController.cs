@@ -83,6 +83,20 @@ namespace FRELODYAPIs.Controllers
             return Ok(result.Data);
         }
 
+        /// <summary>Most-unlocked analyzed songs across all users (Explore discovery strip).</summary>
+        [HttpGet]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(List<PopularAnalyzedSongDto>), 200)]
+        public async Task<IActionResult> PopularSongs([FromQuery] int count = 12)
+        {
+            var result = await _access.GetPopularSongs(count);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+
+            return Ok(result.Data);
+        }
+
         /// <summary>
         /// Last 7 days of song history with accessibility flags, quota info, practice streak,
         /// and a 30-day daily activity map for the calendar heatmap.

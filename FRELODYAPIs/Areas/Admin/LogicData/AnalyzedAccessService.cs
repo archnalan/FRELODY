@@ -361,6 +361,51 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
+        public async Task<ServiceResult<List<PopularAnalyzedSongDto>>> GetPopularSongs(int count = 12)
+        {
+            try
+            {
+                if (count < 1) count = 1;
+                if (count > 50) count = 50;
+
+                // Popularity = distinct learners (distinct users who unlocked the song)
+                // per (Platform, VideoId), so one user looping a song can't inflate the
+                // ranking. Metadata is the max non-null snapshot across the group.
+                var rows = await _db.AnalyzedSongUnlocks
+                    .AsNoTracking()
+                    .GroupBy(u => new { u.Platform, u.VideoId })
+                    .Select(g => new
+                    {
+                        g.Key.Platform,
+                        g.Key.VideoId,
+                        Learners = g.Select(x => x.UserId).Distinct().Count(),
+                        Title = g.Max(x => x.Title),
+                        ThumbnailUrl = g.Max(x => x.ThumbnailUrl),
+                        SourceUrl = g.Max(x => x.SourceUrl)
+                    })
+                    .OrderByDescending(x => x.Learners)
+                    .Take(count)
+                    .ToListAsync();
+
+                var list = rows.Select(r => new PopularAnalyzedSongDto
+                {
+                    Platform = r.Platform,
+                    VideoId = r.VideoId,
+                    Title = r.Title,
+                    ThumbnailUrl = r.ThumbnailUrl,
+                    SourceUrl = r.SourceUrl,
+                    UnlockCount = r.Learners
+                }).ToList();
+
+                return ServiceResult<List<PopularAnalyzedSongDto>>.Success(list);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving popular analyzed songs");
+                return ServiceResult<List<PopularAnalyzedSongDto>>.Failure(ex);
+            }
+        }
+
         public async Task<ServiceResult<SongHistoryDto>> GetSongHistory()
         {
             try

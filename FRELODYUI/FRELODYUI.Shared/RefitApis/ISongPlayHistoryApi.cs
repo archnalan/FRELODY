@@ -15,6 +15,9 @@ namespace FRELODYUI.Shared.RefitApis
         [Post("/api/song-play-history/log-song-play")]
         Task<IApiResponse<bool>> LogSongPlay([Query] string songId, [Query] string? playSource = null);
 
+        [Post("/api/song-play-history/log-discover-play")]
+        Task<IApiResponse<bool>> LogDiscoverPlay([Body] LogDiscoverPlayDto request);
+
         [Get("/api/song-play-history/get-user-play-history")]
         Task<IApiResponse<List<SongPlayHistoryDto>>> GetUserSongPlayHistory([Query] string? userId = null, [Query] int offset = 0, [Query] int limit = 10);
 

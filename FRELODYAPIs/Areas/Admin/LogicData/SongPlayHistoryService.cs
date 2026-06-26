@@ -2,6 +2,7 @@
 using FRELODYAPP.Data.Infrastructure;
 using FRELODYLIB.Models;
 using FRELODYLIB.ServiceHandler.ResultModels;
+using FRELODYSHRD.Constants;
 using FRELODYSHRD.Dtos;
 using FRELODYSHRD.Dtos.HybridDtos;
 using Microsoft.EntityFrameworkCore;
@@ -69,6 +70,48 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
             }
         }
 
+        public async Task<ServiceResult<bool>> LogDiscoverPlay(
+            AnalyzedPlatform platform, string videoId,
+            string? title = null, string? thumbnailUrl = null, string? sourceUrl = null)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(videoId))
+                    return ServiceResult<bool>.Failure(new BadRequestException("Video ID is required."));
+
+                // Only log for authenticated users (anonymous → silent success).
+                if (string.IsNullOrEmpty(_userId))
+                    return ServiceResult<bool>.Success(true);
+
+                var playHistory = new SongPlayHistory
+                {
+                    SongId = null,
+                    UserId = _userId,
+                    PlayedAt = DateTime.UtcNow,
+                    PlaySource = $"Discover-{platform}",
+                    SessionId = Guid.NewGuid().ToString(),
+                    Platform = platform,
+                    VideoId = videoId,
+                    MediaTitle = Truncate(title, 500),
+                    ThumbnailUrl = Truncate(thumbnailUrl, 1000),
+                    SourceUrl = Truncate(sourceUrl, 1000)
+                };
+
+                await _context.SongPlayHistories.AddAsync(playHistory);
+                await _context.SaveChangesAsync();
+
+                return ServiceResult<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error logging discover play for {Platform}/{VideoId}", platform, videoId);
+                return ServiceResult<bool>.Failure(ex);
+            }
+        }
+
+        private static string? Truncate(string? s, int max) =>
+            s is null ? null : s.Length <= max ? s : s[..max];
+
         public async Task<ServiceResult<List<SongPlayHistoryDto>>> GetUserSongPlayHistory(string? userId = null, int offset = 0, int limit = 10)
         {
             try
@@ -96,8 +139,12 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         PlayedAt = h.PlayedAt,
                         PlaySource = h.PlaySource,
                         SessionId = h.SessionId,
-                        SongTitle = h.Song.Title,
-                        SongNumber = h.Song.SongNumber
+                        SongTitle = h.SongId != null ? h.Song!.Title : h.MediaTitle,
+                        SongNumber = h.SongId != null ? h.Song!.SongNumber : null,
+                        Platform = h.Platform,
+                        VideoId = h.VideoId,
+                        ThumbnailUrl = h.ThumbnailUrl,
+                        SourceUrl = h.SourceUrl
                     })
                     .ToListAsync();
 
@@ -137,8 +184,12 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         PlayedAt = h.PlayedAt,
                         PlaySource = h.PlaySource,
                         SessionId = h.SessionId,
-                        SongTitle = h.Song.Title,
-                        SongNumber = h.Song.SongNumber
+                        SongTitle = h.SongId != null ? h.Song!.Title : h.MediaTitle,
+                        SongNumber = h.SongId != null ? h.Song!.SongNumber : null,
+                        Platform = h.Platform,
+                        VideoId = h.VideoId,
+                        ThumbnailUrl = h.ThumbnailUrl,
+                        SourceUrl = h.SourceUrl
                     })
                     .ToListAsync();
 
@@ -164,19 +215,39 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 limit = limit <= 0 ? 10 : Math.Min(limit, 50);
 
-                var mostPlayed = await _context.SongPlayHistories
+                // Spans library + Discover plays. Group key coalesces SongId (library) with
+                // a Platform/VideoId key (Discover). Grouping in memory keeps the null-Song
+                // join + coalesced-key logic out of the SQL translator.
+                var rows = await _context.SongPlayHistories
                     .Where(h => h.UserId == targetUserId)
-                    .Include(h => h.Song)
-                    .GroupBy(h => new { h.SongId, h.Song.Title })
-                    .Select(g => new MostPlayedSongDto
+                    .Select(h => new
                     {
-                        SongId = g.Key.SongId,
-                        Title = g.Key.Title,
-                        PlayCount = g.Count()
+                        h.SongId,
+                        h.Platform,
+                        h.VideoId,
+                        h.SourceUrl,
+                        Title = h.SongId != null ? h.Song!.Title : h.MediaTitle
+                    })
+                    .ToListAsync();
+
+                var mostPlayed = rows
+                    .GroupBy(r => r.SongId ?? $"v:{r.Platform}:{r.VideoId}")
+                    .Select(g =>
+                    {
+                        var f = g.First();
+                        return new MostPlayedSongDto
+                        {
+                            SongId = f.SongId,
+                            Title = string.IsNullOrWhiteSpace(f.Title) ? (f.VideoId ?? "Untitled") : f.Title!,
+                            PlayCount = g.Count(),
+                            Platform = f.Platform,
+                            VideoId = f.VideoId,
+                            SourceUrl = f.SourceUrl
+                        };
                     })
                     .OrderByDescending(x => x.PlayCount)
                     .Take(limit)
-                    .ToListAsync();
+                    .ToList();
 
                 return ServiceResult<List<MostPlayedSongDto>>.Success(mostPlayed);
             }
@@ -212,8 +283,9 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
 
                 var totalPlays = await query.CountAsync();
 
+                // Coalesce so distinct Discover videos (null SongId) each count as unique.
                 var uniqueSongs = await query
-                    .Select(h => h.SongId)
+                    .Select(h => h.SongId ?? h.VideoId)
                     .Distinct()
                     .CountAsync();
 
@@ -227,14 +299,21 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                     .Select(h => h.PlayedAt)
                     .FirstOrDefaultAsync();
 
-                var mostPlayedSong = await query
-                    .GroupBy(h => new { h.SongId, h.Song.Title })
-                    .Select(g => new {
-                        SongTitle = g.Key.Title,
-                        PlayCount = g.Count()
+                // Null-Song safe: title comes from Song (library) or MediaTitle (Discover);
+                // grouped in memory to avoid the null-join inside the SQL translator.
+                var titleRows = await query
+                    .Select(h => new
+                    {
+                        Key = h.SongId ?? h.VideoId,
+                        Title = h.SongId != null ? h.Song!.Title : h.MediaTitle
                     })
+                    .ToListAsync();
+
+                var mostPlayedSong = titleRows
+                    .GroupBy(x => x.Key)
+                    .Select(g => new { SongTitle = g.First().Title, PlayCount = g.Count() })
                     .OrderByDescending(x => x.PlayCount)
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefault();
 
                 var playsBySource = await query
                     .GroupBy(h => h.PlaySource ?? "Unknown")
@@ -301,8 +380,12 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                         PlayedAt = h.PlayedAt,
                         PlaySource = h.PlaySource,
                         SessionId = h.SessionId,
-                        SongTitle = h.Song.Title,
-                        SongNumber = h.Song.SongNumber
+                        SongTitle = h.SongId != null ? h.Song!.Title : h.MediaTitle,
+                        SongNumber = h.SongId != null ? h.Song!.SongNumber : null,
+                        Platform = h.Platform,
+                        VideoId = h.VideoId,
+                        ThumbnailUrl = h.ThumbnailUrl,
+                        SourceUrl = h.SourceUrl
                     })
                     .ToListAsync();
 

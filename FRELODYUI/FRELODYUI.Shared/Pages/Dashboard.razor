@@ -263,7 +263,7 @@
                                 <div class="song-list">
                                     @foreach (var play in recentPlays.Take(5))
                                     {
-                                        <div class="song-item" @onclick="() => PlaySong(play.SongId)">
+                                        <div class="song-item" @onclick="() => OpenRecent(play)">
                                             <div class="song-icon">
                                                 <i class="bi bi-music-note"></i>
                                             </div>
@@ -273,7 +273,7 @@
                                                     @play.PlayedAt.ToLocalTime().ToString("MMM dd, hh:mm tt")
                                                 </small>
                                             </div>
-                                            <button class="btn btn-sm btn-play" @onclick:stopPropagation="true" @onclick="() => PlaySong(play.SongId)">
+                                            <button class="btn btn-sm btn-play" @onclick:stopPropagation="true" @onclick="() => OpenRecent(play)">
                                                 <i class="bi bi-play-fill"></i>
                                             </button>
                                         </div>
@@ -399,13 +399,13 @@
                                     }
                                     @foreach (var song in mostPlayedSongs.Take(5))
                                     {
-                                        <div class="top-song-item" @onclick="() => PlaySong(song.SongId)">
+                                        <div class="top-song-item" @onclick="() => OpenMostPlayed(song)">
                                             <div class="song-rank rank-@rank">@rank</div>
                                             <div class="song-details flex-grow-1">
                                                 <h6 class="song-title mb-0">@song.Title</h6>
                                                 <small class="text-muted">@song.PlayCount plays</small>
                                             </div>
-                                            <button class="btn btn-sm btn-play" @onclick:stopPropagation="true" @onclick="() => PlaySong(song.SongId)">
+                                            <button class="btn btn-sm btn-play" @onclick:stopPropagation="true" @onclick="() => OpenMostPlayed(song)">
                                                 <i class="bi bi-play-fill"></i>
                                             </button>
                                         </div>
@@ -667,6 +667,37 @@
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading favorites count");
+        }
+    }
+
+    // Recent/most-played lists span both library songs (SongId) and Discover plays
+    // (null SongId → Platform/VideoId). Route each to the right player.
+    private void OpenRecent(SongPlayHistoryDto play)
+    {
+        if (string.IsNullOrEmpty(play.SongId) && !string.IsNullOrEmpty(play.VideoId))
+            OpenDiscover(play.Platform, play.VideoId, play.SourceUrl);
+        else if (!string.IsNullOrEmpty(play.SongId))
+            PlaySong(play.SongId);
+    }
+
+    private void OpenMostPlayed(MostPlayedSongDto song)
+    {
+        if (string.IsNullOrEmpty(song.SongId) && !string.IsNullOrEmpty(song.VideoId))
+            OpenDiscover(song.Platform, song.VideoId, song.SourceUrl);
+        else if (!string.IsNullOrEmpty(song.SongId))
+            PlaySong(song.SongId);
+    }
+
+    private void OpenDiscover(AnalyzedPlatform? platform, string videoId, string? sourceUrl)
+    {
+        if (platform == AnalyzedPlatform.TikTok)
+        {
+            if (!string.IsNullOrWhiteSpace(sourceUrl))
+                NavigateTo($"/discover/tiktok?url={Uri.EscapeDataString(sourceUrl)}");
+        }
+        else
+        {
+            NavigateTo($"/discover/{videoId}");
         }
     }
 

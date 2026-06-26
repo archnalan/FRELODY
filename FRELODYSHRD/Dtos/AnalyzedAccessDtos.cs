@@ -69,6 +69,22 @@ namespace FRELODYSHRD.Dtos
     }
 
     /// <summary>
+    /// A widely-unlocked analyzed song, surfaced in the "Explore" strip so users can
+    /// discover what others are learning. Counts are global (across all users).
+    /// </summary>
+    public class PopularAnalyzedSongDto
+    {
+        public AnalyzedPlatform Platform { get; set; }
+        public string VideoId { get; set; } = default!;
+        public string? Title { get; set; }
+        public string? ThumbnailUrl { get; set; }
+        /// <summary>Original source URL (TikTok replay needs it; null for YouTube).</summary>
+        public string? SourceUrl { get; set; }
+        /// <summary>How many times this song has been unlocked across all users.</summary>
+        public int UnlockCount { get; set; }
+    }
+
+    /// <summary>
     /// An analyzed song unlocked by the user and still within its availability
     /// window — surfaced on the "Today's songs" page.
     /// </summary>

@@ -265,9 +265,12 @@ namespace FRELODYAPP.Data.Infrastructure
 
             builder.Entity<SongPlayHistory>(b =>
             {
+                // Optional FK: Discover plays carry a null SongId (the play references a
+                // YouTube/TikTok video via Platform + VideoId instead of a library Song).
                 b.HasOne(h => h.Song)
                  .WithMany()
                  .HasForeignKey(h => h.SongId)
+                 .IsRequired(false)
                  .OnDelete(DeleteBehavior.Cascade);
 
                 b.HasOne(h => h.User)
@@ -275,9 +278,13 @@ namespace FRELODYAPP.Data.Infrastructure
                  .HasForeignKey(h => h.UserId)
                  .OnDelete(DeleteBehavior.Cascade);
 
+                b.Property(h => h.Platform).HasConversion<string>().HasMaxLength(20);
+
                 b.HasIndex(h => new { h.SongId, h.UserId });
                 b.HasIndex(h => h.PlayedAt);
                 b.HasIndex(h => h.PlaySource);
+                // Discover most-played / popularity lookups.
+                b.HasIndex(h => new { h.Platform, h.VideoId });
             });
 
             builder.Entity<SongUserFavorite>(b =>

@@ -68,10 +68,14 @@
  *  Layout overview (flex row):
  *    .ts-cal-wrap
  *      .ts-cal-dow    ← fixed-width DOW labels, always visible
- *      .ts-cal-outer  ← flex:1, overflow-x:auto, direction:rtl
- *                         so the initial scroll lands on the RIGHT
- *                         (most-recent weeks) on narrow screens.
- *        .ts-cal-grid ← direction:ltr, CSS grid
+ *      .ts-cal-outer  ← flex:1, overflow-x:auto
+ *        .ts-cal-grid ← CSS grid (52 week columns)
+ *
+ *  On narrow screens the grid overflows and scrolls. The initial scroll is
+ *  anchored to the right-most (most-recent) weeks via JS (scrollToEnd in
+ *  TodaysSongs.razor.js) — CSS-only tricks (direction:rtl, scaleX(-1)) only
+ *  mirror painting and never actually move the scroll position, so they left
+ *  the viewport stuck on the OLDEST weeks.
  *
  * ────────────────────────────────────────────────────────────── */
 .ts-cal-wrap {
@@ -101,20 +105,18 @@
     white-space: nowrap;
 }
 
-/* Scrollable area — direction:rtl anchors the scroll to the right end */
+/* Scrollable area — JS anchors the initial scroll to the newest (right) weeks */
 .ts-cal-outer {
     flex: 1;
     min-width: 0;
     overflow-x: auto;
-    direction: rtl;             /* scroll origin = right (newest weeks) */
     scrollbar-width: thin;
     scrollbar-color: var(--k-border) transparent;
     -webkit-overflow-scrolling: touch;
 }
 
-/* Full-year grid — direction:ltr restores normal rendering */
+/* Full-year grid */
 .ts-cal-grid {
-    direction: ltr;
     display: grid;
     /* 8 rows: 1 month-label row + 7 day rows */
     grid-template-rows: 0.85rem repeat(7, 13px);
@@ -671,26 +673,144 @@
     border-color: var(--k-border-strong);
 }
 
+/* ── Explore (popular analyzed songs) ─────────────────────────── */
+.ts-explore {
+    margin-top: var(--k-space-6);
+}
+
+.ts-explore-head {
+    margin-bottom: var(--k-space-3);
+}
+
+.ts-explore-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-primary);
+}
+
+    .ts-explore-title .bi-fire { color: var(--k-accent); }
+
+.ts-explore-sub {
+    margin: 0.15rem 0 0;
+    font-size: var(--k-font-size-sm);
+    color: var(--text-secondary);
+}
+
+/* Horizontal scroll strip — peeks the next card so it reads as scrollable */
+.ts-explore-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 160px;
+    gap: var(--k-space-3);
+    overflow-x: auto;
+    padding-bottom: var(--k-space-2);
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    scrollbar-color: var(--k-border) transparent;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ts-ex-card {
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    padding: 0;
+    border: 1px solid var(--k-border);
+    border-radius: var(--k-radius-md);
+    background: var(--k-bg-surface);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform var(--k-transition), box-shadow var(--k-transition), border-color var(--k-transition);
+}
+
+    .ts-ex-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--k-shadow-hover);
+        border-color: var(--k-border-strong);
+    }
+
+.ts-ex-thumb-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--k-bg-surface-2);
+    overflow: hidden;
+}
+
+.ts-ex-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.ts-ex-thumb--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: var(--k-text-subtle);
+}
+
+.ts-platform--ex {
+    width: 1.3rem;
+    height: 1.3rem;
+    font-size: 0.68rem;
+}
+
+.ts-ex-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.28);
+    opacity: 0;
+    transition: opacity var(--k-transition);
+}
+
+.ts-ex-card:hover .ts-ex-play,
+.ts-ex-card:focus-visible .ts-ex-play { opacity: 1; }
+
+.ts-ex-title {
+    margin: var(--k-space-2) var(--k-space-2) 0.15rem;
+    font-size: var(--k-font-size-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.ts-ex-meta {
+    margin: 0 var(--k-space-2) var(--k-space-2);
+    font-size: var(--k-font-size-xs);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+    .ts-ex-meta--new { color: var(--k-accent); font-weight: 600; }
+
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 600px) {
     .ts-grid { grid-template-columns: repeat(2, 1fr); }
     .ts-header-top { flex-wrap: wrap; }
     .ts-streak { font-size: var(--k-font-size-xs); padding: 0.25rem 0.65rem; }
-    /* Calendar: cells shrink to 11px min on phones; 10px is the hard min */
+    /* Calendar: cells hold a 10px min on phones, so the grid overflows and the
+       JS scroll-to-end lands the viewport on the most-recent weeks. */
     .ts-cal-grid { grid-auto-columns: minmax(10px, 1fr); }
-    /*
-     * Mobile fix: direction:rtl doesn't reliably scroll to the right end on
-     * iOS Safari. Switch to a scaleX(-1) flip instead — the outer flip makes
-     * scrollLeft=0 land on the newest (right-most) weeks, and the inner
-     * counter-flip restores the correct visual orientation.
-     */
-    .ts-cal-outer {
-        direction: ltr;
-        transform: scaleX(-1);
-    }
-    .ts-cal-grid {
-        transform: scaleX(-1);
-    }
+    .ts-explore-row { grid-auto-columns: 140px; }
 }
 
 @media (max-width: 360px) {

@@ -4,8 +4,10 @@
 @using FRELODYUI.Shared.RefitApis
 @inject IAnalyzedAccessApi AccessApi
 @inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<PageTitle>History · FRELODY</PageTitle>
+<PageTitle>Practice · FRELODY</PageTitle>
 
 <div class="ts-page" @onclick="DismissPaywall">
 
@@ -13,8 +15,8 @@
     <header class="ts-header">
         <div class="ts-header-top">
             <div class="ts-header-copy">
-                <h1 class="ts-title">Your History</h1>
-                <p class="ts-sub">Songs you've unlocked — available for 24 hours each.</p>
+                <h1 class="ts-title">Keep practicing</h1>
+                <p class="ts-sub">The songs you've unlocked — ready to play for 24 hours each.</p>
             </div>
             @if (!_loading && _history is not null && _history.Streak > 0)
             {
@@ -50,7 +52,7 @@
                     <span>M</span><span>T</span><span>W</span><span>T</span>
                     <span>F</span><span>S</span><span>S</span>
                 </div>
-                <div class="ts-cal-outer">
+                <div class="ts-cal-outer" @ref="_calOuter">
                     <div class="ts-cal-grid">
                         @foreach (var item in CalendarCells)
                         {
@@ -321,6 +323,52 @@
             </button>
         </div>
     }
+
+    <!-- ── Explore: most-popular analyzed songs ─────────────────── -->
+    @if (_popular is { Count: > 0 })
+    {
+        <section class="ts-explore" @onclick:stopPropagation="true">
+            <div class="ts-explore-head">
+                <h2 class="ts-explore-title">
+                    <i class="bi bi-fire" aria-hidden="true"></i> Popular right now
+                </h2>
+                <p class="ts-explore-sub">What other players are learning — tap to get the chords.</p>
+            </div>
+            <div class="ts-explore-row">
+                @foreach (var p in _popular)
+                {
+                    var song = p;
+                    <button class="ts-ex-card"
+                            title="@(string.IsNullOrWhiteSpace(song.Title) ? song.VideoId : song.Title)"
+                            @onclick="() => OpenPopular(song)">
+                        <div class="ts-ex-thumb-wrap">
+                            @if (!string.IsNullOrEmpty(song.ThumbnailUrl))
+                            {
+                                <img src="@song.ThumbnailUrl" alt="@song.Title" class="ts-ex-thumb" loading="lazy" />
+                            }
+                            else
+                            {
+                                <div class="ts-ex-thumb ts-ex-thumb--empty"><i class="bi bi-music-note-beamed" aria-hidden="true"></i></div>
+                            }
+                            <span class="ts-platform ts-platform--ex" title="@song.Platform">
+                                <i class="bi @(song.Platform == AnalyzedPlatform.TikTok ? "bi-tiktok" : "bi-youtube")" aria-hidden="true"></i>
+                            </span>
+                            <div class="ts-ex-play" aria-hidden="true"><i class="bi bi-play-fill"></i></div>
+                        </div>
+                        <p class="ts-ex-title">@(string.IsNullOrWhiteSpace(song.Title) ? song.VideoId : song.Title)</p>
+                        @if (song.UnlockCount > 1)
+                        {
+                            <span class="ts-ex-meta"><i class="bi bi-people" aria-hidden="true"></i> @song.UnlockCount learners</span>
+                        }
+                        else
+                        {
+                            <span class="ts-ex-meta ts-ex-meta--new">New</span>
+                        }
+                    </button>
+                }
+            </div>
+        </section>
+    }
 </div>
 
 @code {
@@ -330,11 +378,17 @@
 
     // ── State ────────────────────────────────────────────────────
     private SongHistoryDto? _history;
+    private List<PopularAnalyzedSongDto>? _popular;
     private bool _loading = true;
     private string _query = string.Empty;
     private bool _searchFocused;
     private string? _paywallVideoId;
     private List<CalendarItem>? _calendarCells;
+
+    // Activity-calendar scroll anchoring (lands on the most-recent weeks).
+    private ElementReference _calOuter;
+    private IJSObjectReference? _calModule;
+    private bool _calScrolled;
 
     // ── Computed ─────────────────────────────────────────────────
     private int Remaining =>
@@ -442,6 +496,42 @@
             _history = resp.Content;
 
         _loading = false;
+        StateHasChanged(); // render history now; don't wait on the Explore strip
+
+        // Explore strip loads in the background — never block the history render.
+        try
+        {
+            var pop = await AccessApi.PopularSongs(12);
+            if (pop.IsSuccessStatusCode && pop.Content is not null)
+            {
+                _popular = pop.Content;
+                StateHasChanged();
+            }
+        }
+        catch { /* discovery strip is optional */ }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Once the calendar is in the DOM, anchor its scroll to the newest weeks so
+        // the recent months (with their shading) are what the user sees on mobile.
+        if (_calScrolled || _loading || _history is null) return;
+        try
+        {
+            _calModule ??= await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/FRELODYUI.Shared/Pages/Discover/TodaysSongs.razor.js");
+            await _calModule.InvokeVoidAsync("scrollToEnd", _calOuter);
+            _calScrolled = true;
+        }
+        catch { /* non-fatal: calendar just stays at its default scroll */ }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_calModule is not null)
+        {
+            try { await _calModule.DisposeAsync(); } catch { }
+        }
     }
 
     // ── Event handlers ───────────────────────────────────────────
@@ -467,16 +557,25 @@
 
     private void ClearSearch() => _query = string.Empty;
 
-    private void Play(SongHistoryItemDto song)
+    private void Play(SongHistoryItemDto song) =>
+        Open(song.Platform, song.VideoId, song.SourceUrl);
+
+    private void OpenPopular(PopularAnalyzedSongDto song)
     {
-        if (song.Platform == AnalyzedPlatform.TikTok)
+        _paywallVideoId = null;
+        Open(song.Platform, song.VideoId, song.SourceUrl);
+    }
+
+    private void Open(AnalyzedPlatform platform, string videoId, string? sourceUrl)
+    {
+        if (platform == AnalyzedPlatform.TikTok)
         {
-            if (!string.IsNullOrWhiteSpace(song.SourceUrl))
-                Nav.NavigateTo($"/discover/tiktok?url={Uri.EscapeDataString(song.SourceUrl)}");
+            if (!string.IsNullOrWhiteSpace(sourceUrl))
+                Nav.NavigateTo($"/discover/tiktok?url={Uri.EscapeDataString(sourceUrl)}");
         }
         else
         {
-            Nav.NavigateTo($"/discover/{song.VideoId}");
+            Nav.NavigateTo($"/discover/{videoId}");
         }
     }
 

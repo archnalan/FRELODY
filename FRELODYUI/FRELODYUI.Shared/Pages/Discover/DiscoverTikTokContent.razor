@@ -6,6 +6,7 @@
 @implements IDisposable
 @inject ITikTokApi TikTokApi
 @inject IAnalyzedAccessApi AccessApi
+@inject ISongPlayHistoryApi PlayHistoryApi
 @inject NavigationManager Nav
 
 <PageTitle>@(_video?.Title ?? "Analyzing…") · FRELODY</PageTitle>
@@ -335,6 +336,7 @@
             {
                 _result = result;
                 _state = AnalysisState.Complete;
+                _ = LogDiscoverPlayAsync();
                 if (_quotaBadge is not null) await _quotaBadge.RefreshAsync();
             }
             else
@@ -448,6 +450,27 @@
         _tooLongUpgradeable = decision.Upgradeable;
         _state = AnalysisState.TooLong;
         return true;
+    }
+
+    // Count a successful Discover analysis/open as one play event (once per page load),
+    // so it feeds the same dashboard play charts as library songs. Best-effort.
+    private bool _playLogged;
+    private async Task LogDiscoverPlayAsync()
+    {
+        if (_playLogged) return;
+        _playLogged = true;
+        try
+        {
+            await PlayHistoryApi.LogDiscoverPlay(new LogDiscoverPlayDto
+            {
+                Platform = AnalyzedPlatform.TikTok,
+                VideoId = _video?.VideoId ?? string.Empty,
+                Title = _video?.Title,
+                ThumbnailUrl = _video?.ThumbnailUrl,
+                SourceUrl = _video?.Url
+            });
+        }
+        catch { /* play logging is best-effort; never disrupt playback */ }
     }
 
     private void DismissPaywall() => Nav.NavigateTo(BackUrl);

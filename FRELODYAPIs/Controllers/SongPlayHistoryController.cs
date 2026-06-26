@@ -29,6 +29,20 @@ namespace FRELODYAPIs.Areas.Admin.ApiControllers
             return Ok(result.Data);
         }
 
+        /// <summary>Logs a play of an analyzed Discover video so it counts in the play charts.</summary>
+        [HttpPost]
+        [ProducesResponseType(typeof(bool), 200)]
+        public async Task<IActionResult> LogDiscoverPlay([FromBody] LogDiscoverPlayDto request)
+        {
+            var result = await _playLog.LogDiscoverPlay(
+                request.Platform, request.VideoId, request.Title, request.ThumbnailUrl, request.SourceUrl);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+
+            return Ok(result.Data);
+        }
+
         [HttpGet]
         [ProducesResponseType(typeof(List<SongPlayHistoryDto>), 200)]
         public async Task<IActionResult> GetUserPlayHistory([FromQuery] string? userId = null, [FromQuery] int offset = 0, [FromQuery] int limit = 10)
