@@ -18,3 +18,20 @@
 }
 
 .qb i { font-size: 0.8em; }
+
+/* Narrow screens — let the pill wrap to two lines (like the 2-line video
+   title) instead of holding one wide nowrap line that crowds the title.
+   Soften the corners since a stadium radius reads oddly on a 2-line block,
+   and top-align the bolt so it sits with the first line. */
+@media (max-width: 480px) {
+    .qb {
+        white-space: normal;
+        align-items: flex-start;
+        max-width: 7.5rem;
+        line-height: 1.25;
+        border-radius: var(--k-radius-md);
+        padding: var(--k-space-1) var(--k-space-2);
+    }
+
+    .qb i { margin-top: 0.15em; }
+}

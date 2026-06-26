@@ -236,12 +236,27 @@
     gap: var(--k-space-3);
 }
 
+/* Sticky control bar — pins the promised capo / loop / speed controls (plus the
+   grid/timeline toggle and maximize) to the top of the scroll area so they never
+   scroll out of reach while the chord matrix auto-scrolls during playback.
+   The scroll container is the layout's overflow-auto <article>/<main>, whose top
+   already sits below the fixed layout chrome (sidebar / mobile topbar / landing
+   header) — so top:0 needs no header offset in either MainLayout or LandingLayout.
+   The opaque background masks grid rows sliding underneath; z-index stays above
+   the grid but well below the floating player (1040), mini-transport (1041) and
+   chord popover (1051). */
 .pv-stage-bar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--k-space-2);
     flex-wrap: wrap;
+    padding-block: var(--k-space-2);
+    background: var(--k-bg-app);
+    border-bottom: 1px solid var(--k-border);
 }
 
 /* ── View-mode pill: swaps between the lead-sheet grid and the sliding diagram
@@ -392,6 +407,8 @@
 @media (max-width: 420px) {
     .pv-loop-label { display: none; }
     .pv-loop { padding: 0.3rem 0.55rem; }
+    /* Reclaim width in the sticky bar — the +/- stepper reads on its own. */
+    .pv-stage-capo .pv-capo-label { display: none; }
 }
 
 /* ── Loop hint banner ────────────────────────────────────────────────
@@ -533,6 +550,9 @@
 
 .pv-stage--max .pv-stage-bar {
     justify-content: space-between;
+    /* The overlay surface differs from the app bg — match it so the pinned bar
+       blends in fullscreen while still masking cells scrolling beneath it. */
+    background: var(--k-bg-surface);
 }
 
 .pv-stage--max .pv-stage-capo {

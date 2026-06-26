@@ -120,6 +120,28 @@ chord matrix but creates three problems:
    the page back off the player. (Listens to gestures, not `scroll`, so our own
    smooth scrolls don't suppress us.)
 
+### Implemented 2026-06-26 — sticky control bar (fixes gap #3)
+
+The capo / loop / slow-down promise used to scroll out of reach: capo lived in
+`.pv-toolbar` and loop+speed in `.pv-stage-bar`, both in normal flow, so they
+vanished as the matrix auto-scrolled (and in the maximized overlay too).
+
+- **`.pv-stage-bar` is now `position: sticky; top: 0`** with an opaque
+  `--k-bg-app` background + bottom divider, so the grid/timeline toggle, loop,
+  speed, capo and maximize stay pinned to the top of the scroll across the whole
+  play. Works the same inside the maximized overlay (own scroll container; bg
+  overridden to `--k-bg-surface` there).
+- **No header offset needed.** The page renders inside the layout's
+  `overflow-auto` scroll container (MainLayout `article.content`, LandingLayout
+  `main.app-body`), whose top already sits *below* the fixed chrome — so
+  `top:0` can't collide with the sidebar/topbar/landing header in either layout.
+- **Capo consolidated into the bar** (removed from `.pv-toolbar`, which now
+  renders only when there are meta chips). The bar's capo carries the reset
+  button; on `≤420px` the "Capo" label is hidden to save width.
+- **Grid top scroll-margin bumped to `2 * h`** (`YoutubeChordGrid.razor.js`) so
+  a loop-back to A doesn't tuck the active row behind the pinned bar; bottom
+  stays `3 * h` to clear the docked player.
+
 ### Still pending — TikTok seek/transport verification (needs a live browser)
 
 `tiktokPlayer.js` now *implements* `play`/`pause`/`seekTo`/`getDuration` over

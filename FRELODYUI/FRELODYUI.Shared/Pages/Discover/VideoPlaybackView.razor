@@ -10,11 +10,14 @@
     <!-- Main column: meta + beat + chord grid. Full width — the player floats. -->
     <div class="pv-main">
 
-        <div class="pv-toolbar">
-            @if (!string.IsNullOrEmpty(Transcription.KeySignature) ||
-                 Transcription.Bpm is not null ||
-                 !string.IsNullOrEmpty(Transcription.TimeSignature))
-            {
+        @* Meta chips only — the capo control moved into the sticky stage bar
+           below so it stays reachable while the matrix auto-scrolls. The toolbar
+           renders only when there's meta to show (no empty row otherwise). *@
+        @if (!string.IsNullOrEmpty(Transcription.KeySignature) ||
+             Transcription.Bpm is not null ||
+             !string.IsNullOrEmpty(Transcription.TimeSignature))
+        {
+            <div class="pv-toolbar">
                 <div class="pv-meta">
                     @if (!string.IsNullOrEmpty(Transcription.KeySignature))
                     {
@@ -42,32 +45,8 @@
                         </span>
                     }
                 </div>
-            }
-
-            @if (Transcription.SyncedChords.Count > 0)
-            {
-                <div class="pv-capo">
-                    <span class="pv-capo-label">Capo</span>
-                    <div class="pv-capo-stepper">
-                        <button type="button" class="pv-capo-btn" @onclick="DecreaseCapo"
-                                disabled="@(_capo <= 0)" aria-label="Lower capo">
-                            <i class="bi bi-dash"></i>
-                        </button>
-                        <span class="pv-capo-value">@(_capo == 0 ? "Off" : _capo.ToString())</span>
-                        <button type="button" class="pv-capo-btn" @onclick="IncreaseCapo"
-                                disabled="@(_capo >= MaxCapo)" aria-label="Raise capo">
-                            <i class="bi bi-plus"></i>
-                        </button>
-                    </div>
-                    @if (_capo > 0)
-                    {
-                        <button type="button" class="pv-capo-reset" @onclick="ResetCapo" title="Reset capo">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                        </button>
-                    }
-                </div>
-            }
-        </div>
+            </div>
+        }
 
         @if (_capo > 0)
         {
@@ -136,23 +115,29 @@
                         </label>
                     </div>
 
-                    @if (_isMaximized)
-                    {
-                        <div class="pv-capo pv-stage-capo">
-                            <span class="pv-capo-label">Capo</span>
-                            <div class="pv-capo-stepper">
-                                <button type="button" class="pv-capo-btn" @onclick="DecreaseCapo"
-                                        disabled="@(_capo <= 0)" aria-label="Lower capo">
-                                    <i class="bi bi-dash"></i>
-                                </button>
-                                <span class="pv-capo-value">@(_capo == 0 ? "Off" : _capo.ToString())</span>
-                                <button type="button" class="pv-capo-btn" @onclick="IncreaseCapo"
-                                        disabled="@(_capo >= MaxCapo)" aria-label="Raise capo">
-                                    <i class="bi bi-plus"></i>
-                                </button>
-                            </div>
+                    @* Capo rides in the sticky bar alongside loop + speed so all
+                       three promised controls stay pinned and reachable across the
+                       whole play, not just at the top of the scroll. *@
+                    <div class="pv-capo pv-stage-capo">
+                        <span class="pv-capo-label">Capo</span>
+                        <div class="pv-capo-stepper">
+                            <button type="button" class="pv-capo-btn" @onclick="DecreaseCapo"
+                                    disabled="@(_capo <= 0)" aria-label="Lower capo">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <span class="pv-capo-value">@(_capo == 0 ? "Off" : _capo.ToString())</span>
+                            <button type="button" class="pv-capo-btn" @onclick="IncreaseCapo"
+                                    disabled="@(_capo >= MaxCapo)" aria-label="Raise capo">
+                                <i class="bi bi-plus"></i>
+                            </button>
                         </div>
-                    }
+                        @if (_capo > 0)
+                        {
+                            <button type="button" class="pv-capo-reset" @onclick="ResetCapo" title="Reset capo">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        }
+                    </div>
                     <button type="button" class="pv-stage-max-btn" @onclick="ToggleMaximize"
                             title="@(_isMaximized ? "Exit full view" : "Maximize chord chart")"
                             aria-label="@(_isMaximized ? "Exit full view" : "Maximize chord chart")">

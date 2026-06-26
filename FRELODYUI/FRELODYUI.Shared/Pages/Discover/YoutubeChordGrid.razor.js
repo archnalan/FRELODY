@@ -47,15 +47,18 @@ export function scrollActiveIntoView(grid) {
     if (Date.now() - (window.__pvLastUserScroll || 0) < SCROLL_YIELD_MS) return;
     const active = grid.querySelector('.ycg-beat--active');
     if (!active) return;
-    // Breathing room: reserve one beat-button height above and below the active
-    // cell so it never sits flush against the top or bottom edge. scroll-margin
-    // is honoured by scrollIntoView({block:'nearest'}), so the cell stops one row
-    // short of either edge — leaving the chords just ahead and just behind it
-    // readable instead of pinning the playhead to the viewport boundary.
+    // Breathing room: reserve two beat-button heights above and three below the
+    // active cell. The top clears the sticky control bar (capo/loop/speed pinned
+    // at the top of the scroll) so a loop-back to A doesn't tuck the active row
+    // behind it; the bottom clears the docked floating player.
+    // scroll-margin is honoured by scrollIntoView({block:'nearest'}), so the
+    // cell stops three rows short of the bottom edge — the player covers ~two
+    // rows, leaving at least one upcoming row visible so the next-to-highlight
+    // grid is readable without scrolling. The top keeps a single-row cushion.
     const h = active.offsetHeight || 0;
     if (h > 0) {
-        active.style.scrollMarginTop = `${h}px`;
-        active.style.scrollMarginBottom = `${2 * h}px`;
+        active.style.scrollMarginTop = `${2 * h}px`;
+        active.style.scrollMarginBottom = `${3 * h}px`;
     }
     try {
         active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
