@@ -1,0 +1,62 @@
+@using System.Linq
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="outcome-chart-wrapper">
+    @if (Data == null || Data.AnalyzedByDate == null || !Data.AnalyzedByDate.Any())
+    {
+        <div class="outcome-empty-state">
+            <i class="bi bi-bar-chart-line fs-1 text-muted"></i>
+            <p class="text-muted mt-2">No analysis activity yet</p>
+        </div>
+    }
+    else
+    {
+        <div class="outcome-legend">
+            <span class="outcome-legend-item"><span class="outcome-dot success"></span>Analyzed (@Data.TotalAnalyzed)</span>
+            <span class="outcome-legend-item"><span class="outcome-dot danger"></span>Denied (@Data.TotalDenied)</span>
+        </div>
+        <div id="@_chartId" class="outcome-chart-container"></div>
+    }
+</div>
+
+@code {
+    [Parameter] public AnalysisOutcomeStatsDto? Data { get; set; }
+
+    private IJSObjectReference? _module;
+    private readonly string _chartId = $"aoc-{Guid.NewGuid():N}";
+    private AnalysisOutcomeStatsDto? _lastRenderedData;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/FRELODYUI.Shared/Components/AnalysisOutcomeChart.razor.js");
+        }
+
+        if (_module != null
+            && Data?.AnalyzedByDate?.Any() == true
+            && !ReferenceEquals(Data, _lastRenderedData))
+        {
+            _lastRenderedData = Data;
+
+            // AnalyzedByDate is fully filled for every day in the window → canonical axis.
+            var days = Data.AnalyzedByDate.Keys.OrderBy(d => d).ToList();
+            var labels = days.Select(d => DateTime.TryParse(d, out var dt) ? dt.ToString("MMM dd") : d).ToArray();
+            var analyzed = days.Select(d => Data.AnalyzedByDate[d]).ToArray();
+            var denied = days.Select(d => Data.DeniedByDate.TryGetValue(d, out var v) ? v : 0).ToArray();
+
+            await _module.InvokeVoidAsync("renderChart", _chartId, labels, analyzed, denied);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module != null)
+        {
+            try { await _module.InvokeVoidAsync("destroyChart", _chartId); } catch { }
+            try { await _module.DisposeAsync(); } catch { }
+        }
+    }
+}

@@ -15,17 +15,20 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
         private readonly SongDbContext _db;
         private readonly ITenantProvider _tenantProvider;
         private readonly MonetizationOptions _options;
+        private readonly IAnalysisRequestsService _requests;
         private readonly ILogger<AnalyzedAccessService> _logger;
 
         public AnalyzedAccessService(
             SongDbContext db,
             ITenantProvider tenantProvider,
             IOptions<MonetizationOptions> options,
+            IAnalysisRequestsService requests,
             ILogger<AnalyzedAccessService> logger)
         {
             _db = db;
             _tenantProvider = tenantProvider;
             _options = options.Value;
+            _requests = requests;
             _logger = logger;
         }
 
@@ -44,6 +47,12 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 var freeDur = _options.FreeMaxDurationSeconds;
                 var premiumDur = _options.PremiumMaxDurationSeconds;
                 var userId = _tenantProvider.GetUserId();
+                var email = _tenantProvider.GetCurrentUser()?.Email;
+
+                // Superadmin override: a whitelisted video bypasses the duration caps
+                // (but not the daily quota). Lets a popular long song through without
+                // moving the global limit.
+                var whitelisted = await _requests.IsWhitelistedAsync(platform, videoId);
 
                 AnalyzedAccessResultDto NewResult() => new()
                 {
@@ -53,8 +62,12 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 };
 
                 // Hard duration cap: too long for even premium → no point signing in.
-                if (durationSeconds is int dur && premiumDur > 0 && dur > premiumDur)
+                if (!whitelisted && durationSeconds is int dur && premiumDur > 0 && dur > premiumDur)
                 {
+                    var prem = !string.IsNullOrEmpty(userId) && await IsPremiumAsync(userId);
+                    await _requests.RecordAsync(platform, videoId, GateDenialReason.TooLongHard,
+                        userId, email, prem, title, null, thumbnailUrl, sourceUrl, durationSeconds);
+
                     var tooLong = NewResult();
                     tooLong.Reason = "too-long";
                     tooLong.Allowed = !enforce;
@@ -65,6 +78,11 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 // enforcement is off we let playback through for now.
                 if (string.IsNullOrEmpty(userId))
                 {
+                    // Only a real (enforced) block is a denial worth logging.
+                    if (enforce)
+                        await _requests.RecordAsync(platform, videoId, GateDenialReason.Unauthenticated,
+                            null, null, false, title, null, thumbnailUrl, sourceUrl, durationSeconds);
+
                     var anon = NewResult();
                     anon.Allowed = !enforce;
                     anon.IsPremium = false;
@@ -81,8 +99,11 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 var isPremium = await IsPremiumAsync(userId);
 
                 // Free users are capped at the shorter free duration.
-                if (!isPremium && durationSeconds is int d2 && freeDur > 0 && d2 > freeDur)
+                if (!whitelisted && !isPremium && durationSeconds is int d2 && freeDur > 0 && d2 > freeDur)
                 {
+                    await _requests.RecordAsync(platform, videoId, GateDenialReason.TooLongUpgradeable,
+                        userId, email, false, title, null, thumbnailUrl, sourceUrl, durationSeconds);
+
                     var tooLong = NewResult();
                     tooLong.IsPremium = false;
                     tooLong.Reason = "too-long";
@@ -134,6 +155,10 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 // Non-premium, a new song for today.
                 if (usedToday >= limit)
                 {
+                    if (enforce)
+                        await _requests.RecordAsync(platform, videoId, GateDenialReason.LimitReached,
+                            userId, email, false, title, null, thumbnailUrl, sourceUrl, durationSeconds: null);
+
                     result.LimitReached = true;
                     result.Reason = "limit-reached";
                     result.UsedToday = usedToday;
@@ -237,6 +262,52 @@ namespace FRELODYAPIs.Areas.Admin.LogicData
                 return ServiceResult<bool>.Failure(ex);
             }
         }
+
+        public async Task<ServiceResult<BlockedRequestReportResultDto>> ReportBlockedRequestAsync(
+            BlockedRequestReportDto request)
+        {
+            try
+            {
+                if (request is null || string.IsNullOrWhiteSpace(request.VideoId))
+                    return ServiceResult<BlockedRequestReportResultDto>.Failure(
+                        new BadRequestException("videoId is required."));
+
+                var whitelisted = await _requests.IsWhitelistedAsync(request.Platform, request.VideoId);
+
+                // A whitelisted video isn't a denial — skip logging and tell the client to proceed.
+                if (!whitelisted)
+                {
+                    var userId = _tenantProvider.GetUserId();
+                    var email = _tenantProvider.GetCurrentUser()?.Email;
+                    var wasPremium = !string.IsNullOrEmpty(userId) && await IsPremiumAsync(userId);
+
+                    await _requests.RecordAsync(
+                        request.Platform, request.VideoId, NormalizeReason(request.Reason),
+                        string.IsNullOrEmpty(userId) ? null : userId, email, wasPremium,
+                        request.Title, request.ChannelTitle, request.ThumbnailUrl,
+                        request.SourceUrl, request.DurationSeconds);
+                }
+
+                return ServiceResult<BlockedRequestReportResultDto>.Success(
+                    new BlockedRequestReportResultDto { Whitelisted = whitelisted });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reporting blocked request for {Platform}/{VideoId}",
+                    request?.Platform, request?.VideoId);
+                return ServiceResult<BlockedRequestReportResultDto>.Failure(ex);
+            }
+        }
+
+        // The report endpoint is anonymous; only accept known reason codes so callers
+        // can't write arbitrary strings into the classification column.
+        private static string NormalizeReason(string? reason) => reason switch
+        {
+            GateDenialReason.TooLongHard => GateDenialReason.TooLongHard,
+            GateDenialReason.LimitReached => GateDenialReason.LimitReached,
+            GateDenialReason.Unauthenticated => GateDenialReason.Unauthenticated,
+            _ => GateDenialReason.TooLongUpgradeable
+        };
 
         public AnalyzedLimitsDto GetLimits() => new()
         {

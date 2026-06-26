@@ -1,0 +1,58 @@
+.outcome-chart-wrapper {
+    width: 100%;
+    height: 100%;
+}
+
+.outcome-chart-container {
+    width: 100%;
+    height: 100%;
+    min-height: 260px;
+}
+
+.outcome-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 260px;
+}
+
+.outcome-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--k-space-3);
+    margin-bottom: var(--k-space-2);
+}
+
+.outcome-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--k-space-1);
+    font-size: var(--k-font-size-sm);
+    color: var(--text-secondary);
+}
+
+.outcome-dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: var(--k-radius-pill);
+    flex-shrink: 0;
+}
+
+    .outcome-dot.success {
+        background: var(--bs-success);
+    }
+
+    .outcome-dot.danger {
+        background: var(--bs-danger);
+    }
+
+@media (max-width: 576px) {
+    .outcome-chart-container {
+        min-height: 200px;
+    }
+
+    .outcome-empty-state {
+        min-height: 200px;
+    }
+}

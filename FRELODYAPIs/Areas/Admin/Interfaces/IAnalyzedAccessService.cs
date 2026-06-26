@@ -33,6 +33,15 @@ namespace FRELODYAPIs.Areas.Admin.Interfaces
         /// <summary>Read-only quota snapshot for the current user (no slot consumed).</summary>
         Task<ServiceResult<AnalyzedAccessResultDto>> GetQuotaStatus();
 
+        /// <summary>
+        /// Records a request blocked at the client duration pre-gate for the superadmin
+        /// review, and reports whether the video has been whitelisted (so the client may
+        /// analyze it despite its length). Safe for anonymous callers; only known reason
+        /// codes are persisted.
+        /// </summary>
+        Task<ServiceResult<BlockedRequestReportResultDto>> ReportBlockedRequestAsync(
+            BlockedRequestReportDto request);
+
         /// <summary>Public monetization limits (no auth) for client-side pre-gating.</summary>
         AnalyzedLimitsDto GetLimits();
 

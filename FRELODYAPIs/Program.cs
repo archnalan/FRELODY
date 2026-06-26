@@ -97,6 +97,7 @@ builder.Services.AddScoped<ISongPlayHistoryService, SongPlayHistoryService>();
 builder.Services.Configure<FRELODYAPIs.Options.MonetizationOptions>(
     builder.Configuration.GetSection(FRELODYAPIs.Options.MonetizationOptions.SectionName));
 builder.Services.AddScoped<IAnalyzedAccessService, AnalyzedAccessService>();
+builder.Services.AddScoped<IAnalysisRequestsService, AnalysisRequestsService>();
 
 // PayPal one-time checkout (Orders v2) + premium activation.
 builder.Services.Configure<FRELODYAPIs.Options.PayPalOptions>(

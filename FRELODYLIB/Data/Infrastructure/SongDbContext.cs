@@ -66,6 +66,8 @@ namespace FRELODYAPP.Data.Infrastructure
         public DbSet<TikTokVideo> TikTokVideos { get; set; } = default!;
         public DbSet<TikTokTranscription> TikTokTranscriptions { get; set; } = default!;
         public DbSet<AnalyzedSongUnlock> AnalyzedSongUnlocks { get; set; } = default!;
+        public DbSet<AnalysisRequestLog> AnalysisRequestLogs { get; set; } = default!;
+        public DbSet<AnalyzedVideoWhitelist> AnalyzedVideoWhitelists { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -532,6 +534,32 @@ namespace FRELODYAPP.Data.Infrastructure
                 b.HasIndex(u => new { u.UserId, u.Platform, u.VideoId, u.UnlockedAt });
                 // Daily-quota count: unlocks for a user within a time window.
                 b.HasIndex(u => new { u.UserId, u.UnlockedAt });
+            });
+
+            builder.Entity<AnalysisRequestLog>(b =>
+            {
+                b.HasQueryFilter(r => r.IsDeleted == false || r.IsDeleted == null);
+
+                b.Property(r => r.Platform).HasConversion<string>().HasMaxLength(20);
+
+                // Upsert key: one row per (video, user, UTC day). SQL Server treats NULLs
+                // as equal in a unique index, so anonymous rows (UserId == null) collapse to
+                // exactly one shared row per (video, day) — which is what we want.
+                b.HasIndex(r => new { r.Platform, r.VideoId, r.UserId, r.RequestDate }).IsUnique();
+                // Demand-ranked grouping for the requests list.
+                b.HasIndex(r => new { r.Platform, r.VideoId });
+                // Daily denied series for the outcome chart.
+                b.HasIndex(r => r.RequestDate);
+            });
+
+            builder.Entity<AnalyzedVideoWhitelist>(b =>
+            {
+                b.HasQueryFilter(w => w.IsDeleted == false || w.IsDeleted == null);
+
+                b.Property(w => w.Platform).HasConversion<string>().HasMaxLength(20);
+
+                // One whitelist row per (platform, video); gate checks hit this index.
+                b.HasIndex(w => new { w.Platform, w.VideoId }).IsUnique();
             });
 
             OnModelCreatingPartial(builder);

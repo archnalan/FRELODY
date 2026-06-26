@@ -425,14 +425,29 @@
         var isPremium = premium.IsSuccess && premium.Data;
 
         var decision = AnalyzedDurationGate.Evaluate(limits, isPremium, durationSeconds);
-        if (decision.Blocked)
+        if (!decision.Blocked)
+            return false;
+
+        // Log the over-long request for the superadmin review. If they've whitelisted
+        // this video, the gate is lifted just for it — proceed with analysis.
+        var report = await AccessApi.ReportBlocked(new BlockedRequestReportDto
         {
-            _tooLongMessage = decision.Message;
-            _tooLongUpgradeable = decision.Upgradeable;
-            _state = AnalysisState.TooLong;
-            return true;
-        }
-        return false;
+            Platform = AnalyzedPlatform.TikTok,
+            VideoId = _video?.VideoId ?? string.Empty,
+            Reason = decision.Upgradeable ? GateDenialReason.TooLongUpgradeable : GateDenialReason.TooLongHard,
+            Title = _video?.Title,
+            ChannelTitle = _video?.Uploader,
+            ThumbnailUrl = _video?.ThumbnailUrl,
+            SourceUrl = _video?.Url,
+            DurationSeconds = durationSeconds
+        });
+        if (report.IsSuccessStatusCode && report.Content?.Whitelisted == true)
+            return false;
+
+        _tooLongMessage = decision.Message;
+        _tooLongUpgradeable = decision.Upgradeable;
+        _state = AnalysisState.TooLong;
+        return true;
     }
 
     private void DismissPaywall() => Nav.NavigateTo(BackUrl);

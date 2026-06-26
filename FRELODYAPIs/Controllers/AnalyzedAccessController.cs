@@ -41,6 +41,24 @@ namespace FRELODYAPIs.Controllers
         [ProducesResponseType(typeof(AnalyzedLimitsDto), 200)]
         public IActionResult Limits() => Ok(_access.GetLimits());
 
+        /// <summary>
+        /// Records a request blocked by the client duration pre-gate (for the superadmin
+        /// review) and returns whether the video is whitelisted so the client can proceed.
+        /// Anonymous so signed-out over-long requests are captured too.
+        /// </summary>
+        [HttpPost]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(BlockedRequestReportResultDto), 200)]
+        public async Task<IActionResult> ReportBlocked([FromBody] BlockedRequestReportDto request)
+        {
+            var result = await _access.ReportBlockedRequestAsync(request);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, new { message = result.Error.Message });
+
+            return Ok(result.Data);
+        }
+
         [HttpGet]
         [ProducesResponseType(typeof(AnalyzedAccessResultDto), 200)]
         public async Task<IActionResult> QuotaStatus()

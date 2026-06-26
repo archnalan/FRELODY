@@ -15,6 +15,9 @@ namespace FRELODYUI.Shared.RefitApis
         [Get("/api/analyzed-access/limits")]
         Task<IApiResponse<AnalyzedLimitsDto>> Limits();
 
+        [Post("/api/analyzed-access/report-blocked")]
+        Task<IApiResponse<BlockedRequestReportResultDto>> ReportBlocked([Body] BlockedRequestReportDto request);
+
         [Get("/api/analyzed-access/quota-status")]
         Task<IApiResponse<AnalyzedAccessResultDto>> QuotaStatus();
 

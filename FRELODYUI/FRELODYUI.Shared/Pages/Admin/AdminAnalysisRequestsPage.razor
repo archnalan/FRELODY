@@ -1,0 +1,395 @@
+@page "/admin/requests"
+@layout AdminLayout
+@using FRELODYUI.Shared.Components
+@inject IAnalysisRequestsApi _requestsApi
+
+<PageTitle>Analysis requests - FRELODY</PageTitle>
+
+<AuthGuard RequirePremium="false">
+    @if (!_isSuperAdmin)
+    {
+        <div class="admin-card admin-card-pad">
+            <h2 class="admin-title">Not authorized</h2>
+            <p class="text-muted mb-3">Only platform administrators can review analysis requests.</p>
+            <a class="admin-btn primary" href="/dashboard">Back to dashboard</a>
+        </div>
+    }
+    else
+    {
+        <div class="admin-header">
+            <div>
+                <h1 class="admin-title">Analysis requests</h1>
+                <p class="admin-subtitle">What people tried to analyze but couldn't — so you can whitelist a popular long song or tune the limits.</p>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <a class="admin-btn" href="/admin/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                <button class="admin-btn" @onclick="LoadAllAsync" disabled="@_loading"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+            </div>
+        </div>
+
+        @* ── Success vs denied chart ── *@
+        <div class="admin-card admin-card-pad ar-chart-card">
+            <h2 class="ar-section-title">Analyzed vs denied <span class="ar-muted">· last 30 days</span></h2>
+            <AnalysisOutcomeChart Data="_stats" />
+        </div>
+
+        @* ── View toggle ── *@
+        <div class="ar-toolbar admin-card admin-card-pad">
+            <div class="ar-chips">
+                <button class="ar-chip @(_view == View.Requests ? "active" : "")" @onclick="() => SetView(View.Requests)">
+                    Requests @if (_requests is not null) { <span class="ar-count">@_requests.Count</span> }
+                </button>
+                <button class="ar-chip @(_view == View.Whitelist ? "active" : "")" @onclick="() => SetView(View.Whitelist)">
+                    Whitelisted @if (_whitelist is not null) { <span class="ar-count">@_whitelist.Count</span> }
+                </button>
+            </div>
+            @if (_view == View.Requests)
+            {
+                <div class="ar-chips ar-chips-reason">
+                    @foreach (var f in ReasonFilters)
+                    {
+                        var v = f;
+                        <button class="ar-chip ar-chip-sm @(_reasonFilter == v.Value ? "active" : "")"
+                                @onclick="() => SetReasonFilter(v.Value)">@v.Label</button>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (_loading)
+        {
+            <div class="admin-card admin-card-pad">
+                <div class="admin-skeleton mb-2" style="height:64px;"></div>
+                <div class="admin-skeleton mb-2" style="height:64px;"></div>
+                <div class="admin-skeleton" style="height:64px;"></div>
+            </div>
+        }
+        else if (_view == View.Requests)
+        {
+            var rows = FilteredRequests();
+            @if (rows.Count == 0)
+            {
+                <div class="admin-card admin-card-pad ar-empty">
+                    <i class="bi bi-inbox"></i>
+                    <p>No blocked requests@(_reasonFilter is null ? "" : " for this filter") yet.</p>
+                </div>
+            }
+            else
+            {
+                <div class="ar-list">
+                    @foreach (var r in rows)
+                    {
+                        var row = r;
+                        <div class="admin-card ar-row">
+                            <div class="ar-thumb-wrap">
+                                @if (!string.IsNullOrEmpty(row.ThumbnailUrl))
+                                {
+                                    <img class="ar-thumb" src="@row.ThumbnailUrl" alt="" loading="lazy" />
+                                }
+                                else
+                                {
+                                    <div class="ar-thumb ar-thumb-empty"><i class="bi bi-music-note-beamed"></i></div>
+                                }
+                                <span class="ar-platform">@row.Platform</span>
+                            </div>
+
+                            <div class="ar-main">
+                                <div class="ar-title-line">
+                                    <span class="ar-title">@(string.IsNullOrEmpty(row.Title) ? row.VideoId : row.Title)</span>
+                                    @if (row.IsWhitelisted)
+                                    {
+                                        <span class="ar-badge ar-badge-ok"><i class="bi bi-check-circle-fill"></i> Whitelisted</span>
+                                    }
+                                </div>
+                                <div class="ar-meta">
+                                    @if (!string.IsNullOrEmpty(row.ChannelTitle))
+                                    {
+                                        <span>@row.ChannelTitle</span>
+                                    }
+                                    @if (row.DurationSeconds is int d && d > 0)
+                                    {
+                                        <span><i class="bi bi-clock"></i> @FormatDuration(d)</span>
+                                    }
+                                    <span><i class="bi bi-people"></i> @row.DistinctUsers user@(row.DistinctUsers == 1 ? "" : "s")</span>
+                                    <span><i class="bi bi-arrow-repeat"></i> @row.TotalRequests ask@(row.TotalRequests == 1 ? "" : "s")</span>
+                                    <span class="ar-muted">@FormatRelative(row.LastRequestedAt)</span>
+                                </div>
+                                <div class="ar-reasons">
+                                    @foreach (var kv in row.UsersByReason.OrderByDescending(k => k.Value))
+                                    {
+                                        <span class="ar-reason @ReasonClass(kv.Key)">@ReasonLabel(kv.Key) · @kv.Value</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="ar-actions">
+                                @if (!string.IsNullOrEmpty(row.SourceUrl))
+                                {
+                                    <a class="admin-btn ar-btn-sm" href="@row.SourceUrl" target="_blank" rel="noopener" title="Open source"><i class="bi bi-box-arrow-up-right"></i></a>
+                                }
+                                @if (row.IsWhitelisted)
+                                {
+                                    <button class="admin-btn ar-btn-sm" @onclick="() => RemoveAsync(row)" disabled="@_busyKey?.Equals(Key(row))">
+                                        <i class="bi bi-x-lg"></i> Remove
+                                    </button>
+                                }
+                                else if (row.IsTooLong)
+                                {
+                                    <button class="admin-btn primary ar-btn-sm" @onclick="() => ApproveAsync(row)" disabled="@_busyKey?.Equals(Key(row))">
+                                        <i class="bi bi-unlock"></i> Whitelist
+                                    </button>
+                                }
+                                else if (row.DominantReason == GateDenialReason.LimitReached)
+                                {
+                                    <span class="ar-hint" title="These users hit the daily free-song quota">Quota demand</span>
+                                }
+                                else
+                                {
+                                    <span class="ar-hint" title="Anonymous visitors blocked at sign-in">Sign-up demand</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            @if (_whitelist is null || _whitelist.Count == 0)
+            {
+                <div class="admin-card admin-card-pad ar-empty">
+                    <i class="bi bi-shield-check"></i>
+                    <p>No whitelisted videos. Whitelist an over-long song from the Requests tab to let it through.</p>
+                </div>
+            }
+            else
+            {
+                <div class="ar-list">
+                    @foreach (var w in _whitelist)
+                    {
+                        var item = w;
+                        <div class="admin-card ar-row ar-row-wl">
+                            <div class="ar-main">
+                                <div class="ar-title-line">
+                                    <span class="ar-title">@(string.IsNullOrEmpty(item.Title) ? item.VideoId : item.Title)</span>
+                                    <span class="ar-badge ar-badge-ok">@item.Platform</span>
+                                </div>
+                                <div class="ar-meta">
+                                    @if (item.DurationSeconds is int d && d > 0)
+                                    {
+                                        <span><i class="bi bi-clock"></i> @FormatDuration(d)</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.ApprovedByEmail))
+                                    {
+                                        <span><i class="bi bi-person-check"></i> @item.ApprovedByEmail</span>
+                                    }
+                                    @if (item.ApprovedAt.HasValue)
+                                    {
+                                        <span class="ar-muted">@FormatRelative(item.ApprovedAt.Value)</span>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrEmpty(item.Note))
+                                {
+                                    <div class="ar-reasons"><span class="ar-reason ar-reason-info">@item.Note</span></div>
+                                }
+                            </div>
+                            <div class="ar-actions">
+                                <button class="admin-btn ar-btn-sm" @onclick="() => RemoveWhitelistItemAsync(item)" disabled="@_busyKey?.Equals(item.Platform + ":" + item.VideoId)">
+                                    <i class="bi bi-x-lg"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    }
+</AuthGuard>
+
+@code {
+    private enum View { Requests, Whitelist }
+
+    private bool _isSuperAdmin;
+    private bool _loading = true;
+    private View _view = View.Requests;
+    private string? _reasonFilter; // null = all
+    private string? _busyKey;
+
+    private List<AnalysisRequestVideoDto>? _requests;
+    private List<WhitelistedVideoDto>? _whitelist;
+    private AnalysisOutcomeStatsDto? _stats;
+
+    private static readonly (string Label, string? Value)[] ReasonFilters = new[]
+    {
+        ("All", (string?)null),
+        ("Too long", "too-long"),
+        ("Daily limit", GateDenialReason.LimitReached),
+        ("Sign-in", GateDenialReason.Unauthenticated),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userResult = await _globalAuth.GetAuthenticatedUserAsync();
+        _isSuperAdmin = userResult.IsSuccess && userResult.Data?.UserType == UserType.SuperAdmin;
+        if (_isSuperAdmin)
+            await LoadAllAsync();
+    }
+
+    private async Task LoadAllAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+        try
+        {
+            var reqTask = _requestsApi.GetRequests();
+            var wlTask = _requestsApi.GetWhitelist();
+            var statsTask = _requestsApi.GetOutcomeStats(30);
+            await Task.WhenAll(reqTask, wlTask, statsTask);
+
+            var req = reqTask.Result;
+            var wl = wlTask.Result;
+            var stats = statsTask.Result;
+
+            if (req.IsSuccessStatusCode) _requests = req.Content ?? new();
+            else _toastService.Show(_apiResponseHandler.GetApiErrorMessage(req), ToastType.Error);
+
+            if (wl.IsSuccessStatusCode) _whitelist = wl.Content ?? new();
+            if (stats.IsSuccessStatusCode) _stats = stats.Content;
+        }
+        catch (Exception ex)
+        {
+            _toastService.Show(ex.Message, ToastType.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void SetView(View v) => _view = v;
+    private void SetReasonFilter(string? value) => _reasonFilter = value;
+
+    private List<AnalysisRequestVideoDto> FilteredRequests()
+    {
+        var src = _requests ?? new();
+        if (_reasonFilter is null) return src;
+        if (_reasonFilter == "too-long")
+            return src.Where(r => r.IsTooLong).ToList();
+        return src.Where(r => r.UsersByReason.ContainsKey(_reasonFilter)).ToList();
+    }
+
+    private async Task ApproveAsync(AnalysisRequestVideoDto row)
+    {
+        _busyKey = Key(row);
+        try
+        {
+            var resp = await _requestsApi.ApproveVideo(new WhitelistVideoRequestDto
+            {
+                Platform = row.Platform,
+                VideoId = row.VideoId,
+                Title = row.Title,
+                DurationSeconds = row.DurationSeconds
+            });
+            if (resp.IsSuccessStatusCode)
+            {
+                row.IsWhitelisted = true;
+                _toastService.Show("Video whitelisted — it can now be analyzed despite its length.", ToastType.Success);
+                var wl = await _requestsApi.GetWhitelist();
+                if (wl.IsSuccessStatusCode) _whitelist = wl.Content ?? new();
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex) { _toastService.Show(ex.Message, ToastType.Error); }
+        finally { _busyKey = null; }
+    }
+
+    private async Task RemoveAsync(AnalysisRequestVideoDto row)
+    {
+        _busyKey = Key(row);
+        try
+        {
+            var resp = await _requestsApi.RemoveWhitelist(new WhitelistVideoRequestDto
+            {
+                Platform = row.Platform,
+                VideoId = row.VideoId
+            });
+            if (resp.IsSuccessStatusCode)
+            {
+                row.IsWhitelisted = false;
+                _toastService.Show("Whitelist removed — the duration cap applies again.", ToastType.Success);
+                var wl = await _requestsApi.GetWhitelist();
+                if (wl.IsSuccessStatusCode) _whitelist = wl.Content ?? new();
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex) { _toastService.Show(ex.Message, ToastType.Error); }
+        finally { _busyKey = null; }
+    }
+
+    private async Task RemoveWhitelistItemAsync(WhitelistedVideoDto item)
+    {
+        _busyKey = item.Platform + ":" + item.VideoId;
+        try
+        {
+            var resp = await _requestsApi.RemoveWhitelist(new WhitelistVideoRequestDto
+            {
+                Platform = item.Platform,
+                VideoId = item.VideoId
+            });
+            if (resp.IsSuccessStatusCode)
+            {
+                _whitelist?.Remove(item);
+                var match = _requests?.FirstOrDefault(r => r.Platform == item.Platform && r.VideoId == item.VideoId);
+                if (match is not null) match.IsWhitelisted = false;
+                _toastService.Show("Whitelist removed.", ToastType.Success);
+            }
+            else
+            {
+                _toastService.Show(_apiResponseHandler.GetApiErrorMessage(resp), ToastType.Error);
+            }
+        }
+        catch (Exception ex) { _toastService.Show(ex.Message, ToastType.Error); }
+        finally { _busyKey = null; }
+    }
+
+    private static string Key(AnalysisRequestVideoDto r) => r.Platform + ":" + r.VideoId;
+
+    private static string ReasonLabel(string reason) => reason switch
+    {
+        GateDenialReason.TooLongUpgradeable => "Too long (free)",
+        GateDenialReason.TooLongHard => "Too long",
+        GateDenialReason.LimitReached => "Daily limit",
+        GateDenialReason.Unauthenticated => "Sign-in",
+        _ => reason
+    };
+
+    private static string ReasonClass(string reason) => reason switch
+    {
+        GateDenialReason.TooLongUpgradeable => "ar-reason-warn",
+        GateDenialReason.TooLongHard => "ar-reason-danger",
+        GateDenialReason.LimitReached => "ar-reason-info",
+        GateDenialReason.Unauthenticated => "ar-reason-muted",
+        _ => "ar-reason-muted"
+    };
+
+    private static string FormatDuration(int seconds)
+    {
+        var ts = TimeSpan.FromSeconds(seconds);
+        return ts.TotalHours >= 1 ? $"{(int)ts.TotalHours}:{ts.Minutes:00}:{ts.Seconds:00}" : $"{ts.Minutes}:{ts.Seconds:00}";
+    }
+
+    private static string FormatRelative(DateTimeOffset dt)
+    {
+        var diff = DateTimeOffset.UtcNow - dt;
+        if (diff.TotalSeconds < 60) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} min ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} hr ago";
+        return $"{(int)diff.TotalDays} day{((int)diff.TotalDays == 1 ? "" : "s")} ago";
+    }
+}
